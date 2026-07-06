@@ -91,4 +91,4 @@ if (agentrt_io_list_files("/tmp/agentos/logs/", &files, &count) == 0) {
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

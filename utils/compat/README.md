@@ -132,4 +132,4 @@ uint32_t leading_zeros = agentrt_clz32(0x0000FFFF); /* 16 */
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

@@ -239,4 +239,4 @@ if (agentrt_safe_strcpy(dest, sizeof(dest), user_input) == AGENTRT_SUCCESS) {
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

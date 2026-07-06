@@ -147,4 +147,4 @@ strategy_select_best_agent(nodes, 3, &lb_config, &lb_result);
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

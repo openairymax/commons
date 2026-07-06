@@ -247,4 +247,4 @@ request_duration_ms_count 1
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

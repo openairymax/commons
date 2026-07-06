@@ -286,4 +286,4 @@ if (string_starts_with("agentrt_task_001", "agentrt_", STRING_COMPARE_CASE_SENSI
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

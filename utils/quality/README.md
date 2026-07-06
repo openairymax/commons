@@ -197,4 +197,4 @@ if (safe_strcpy(dest, sizeof(dest), user_input) == 0) {
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

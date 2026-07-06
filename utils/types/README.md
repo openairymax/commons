@@ -385,4 +385,4 @@ sanitize_level_t level = SANITIZE_LEVEL_NORMAL;
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

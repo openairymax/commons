@@ -236,4 +236,4 @@ AGENTRT_LOG_COLOR=0 ./build/agentrt/daemons/gateway_d/src/gateway_d
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

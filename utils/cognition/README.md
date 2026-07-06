@@ -167,4 +167,4 @@ for (int i = 0; i < 3; i++) agent_info_cleanup(&agents[i]);
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.
