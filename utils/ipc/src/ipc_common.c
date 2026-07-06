@@ -318,7 +318,7 @@ agentrt_error_t ipc_init(void)
     WSADATA wsa_data;
     int wsa_err = WSAStartup(MAKEWORD(2, 2), &wsa_data);
     if (wsa_err != 0) {
-        return DAEMON_EINIT;
+        return AGENTRT_ERR_SVC_NOT_READY;
     }
 #endif
 

@@ -118,4 +118,4 @@ Compliance 模块在 CI 流水线中通过以下检查强制执行：
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

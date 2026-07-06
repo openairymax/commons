@@ -150,4 +150,4 @@ agentrt_cost_estimator_destroy(estimator);
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.

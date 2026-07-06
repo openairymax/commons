@@ -149,4 +149,4 @@ UUID v4 的标准格式为 `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`，其中：
 
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+© 2025-2026 SPHARX Ltd. All Rights Reserved.
