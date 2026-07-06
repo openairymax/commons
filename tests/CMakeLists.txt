@@ -20,6 +20,7 @@ set(UNIT_TEST_SOURCES
     # unit/test_ipc.c    # 禁用：需要cmocka测试框架
     # unit/test_network.c # 禁用：需要cmocka测试框架
     unit/test_arena_tcache.c
+    unit/test_print.c
 )
 
 set(INTEGRATION_TEST_SOURCES
@@ -46,6 +47,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/ipc/include
         ${COMMONS_ROOT}/utils/network/include
         ${COMMONS_ROOT}/utils/memory/include
+        ${COMMONS_ROOT}/utils/print/include
         ${AGENTRT_ROOT}/atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
