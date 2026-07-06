@@ -1,187 +1,212 @@
-# Commons — 统一基础库
+**Language:** English | [简体中文](README_zh.md)
 
-**模块路径**: `agentrt/commons/`
-**版本**: v0.1.0
+# Airymax Commons — Unified Foundation Library
 
-## 概述
+`agentrt/commons/`
 
-Commons 是 AgentRT 的统一基础库，为整个系统提供跨平台、跨语言、跨模块的通用基础设施。Commons 不依赖任何上层模块，所有原子核心、守护进程、安全组件均可基于它构建。作为全项目的类型定义权威源（Authoritative Source），Commons 确保了模块间类型一致性，消除了跨模块类型冲突。
+**Version:** 0.1.1
+**License:** AGPL-3.0-or-later OR Apache-2.0 (dual-licensed)
+**Branch:** `feature/official-hubs-01`
 
-## 设计目标
+---
 
-- **零依赖抽象**：平台无关的类型系统与接口定义，确保内核与外围代码分离
-- **统一错误契约**：全系统共享的错误码体系（`agentrt_error_t`）与异常传播机制
-- **高性能基础设施**：内存池、无锁队列、零拷贝数据管道等底层原语
-- **可观测性内建**：日志、指标、链路追踪的标准化采集接口
-- **安全默认**：所有 I/O 路径默认经过参数校验、边界检查和资源限制
+## 1. Module Positioning
 
-## 目录结构
+Commons is the **foundational layer** of the Airymax agent runtime. It provides
+the cross-platform, cross-language, cross-module infrastructure that every
+upper layer — atomic primitives, daemons, the security dome, the gateway,
+protocols — is built upon. Commons itself depends on **no** other Airymax
+module: it is the lowest layer in the dependency graph.
+
+As the project's authoritative source for type definitions
+(`agentrt_types.h`), Commons guarantees type consistency across modules and
+eliminates cross-module type conflicts. Its design goals are:
+
+- **Zero-dependency abstraction** — platform-agnostic type system and interface
+  definitions keep the kernel decoupled from peripheral code.
+- **Unified error contract** — a project-wide error code system
+  (`agentrt_error_t`) and propagation mechanism.
+- **High-performance infrastructure** — memory pools, lock-free queues,
+  zero-copy data pipelines and other low-level primitives.
+- **Built-in observability** — standardized capture interfaces for logs,
+  metrics and traces.
+- **Safe by default** — every I/O path goes through parameter validation,
+  boundary checks and resource limits.
+
+---
+
+## 2. Directory Structure
 
 ```
 commons/
-├── CMakeLists.txt               # CMake 构建配置
-├── README.md                    # 本文档
-├── platform/                    # 平台抽象层
+├── CMakeLists.txt               # CMake build configuration
+├── README.md                    # This file (English)
+├── README_zh.md                 # Chinese version
+├── LICENSE                      # Dual license texts (AGPL-3.0 + Apache-2.0)
+├── NOTICE                       # Copyright notice
+├── platform/                    # Platform abstraction layer
 │   ├── include/
-│   │   ├── platform.h           # 平台检测与基础定义
-│   │   └── export.h             # 符号导出控制
-│   ├── compat/                  # 平台兼容头文件
-│   │   ├── stdbool.h
-│   │   └── stdint.h
-│   └── platform.c               # 平台抽象实现
-├── include/                     # 全局公共头文件
-│   └── agentrt_types.h          # 统一类型与错误码定义
-├── utils/                       # 工具模块集合
-│   ├── include/                 # 跨模块共享头文件
-│   │   ├── atomic_compat.h      # 跨平台原子操作兼容层
-│   │   └── check.h              # 通用检查宏
-│   ├── cognition/               # 认知管理（Agent 信息、任务调度、计划生成）
-│   ├── config_unified/          # 统一配置管理（三层：Core→Source→Service）
-│   ├── execution/               # 命令执行引擎（安全校验、跨平台）
-│   ├── logging/                 # 日志系统（三层：Core→Atomic→Service）
-│   ├── strategy/                # 加权评分策略引擎
-│   ├── memory/                  # 内存管理（内存池、智能指针、零拷贝）
-│   ├── sync/                    # 同步原语（8+ 种锁与队列）
-│   ├── error/                   # 错误处理框架
-│   ├── observability/           # 可观测性（OpenTelemetry 指标/追踪）
-│   ├── token/                   # 令牌管理（API Key/JWT 生命周期）
-│   ├── cost/                    # 成本估算与控制
-│   ├── resource/                # 资源保护与配额
-│   ├── security/                # 输入校验与安全过滤
-│   ├── config/                  # 配置解析（JSON/YAML/TOML）[注：已合并至 config_unified]
-│   ├── cache/                   # 缓存管理（LRU/TTL）
-│   ├── compat/                  # 跨版本/跨平台兼容性适配
-│   ├── compliance/              # 合规性校验与策略执行
-│   ├── quality/                 # 代码质量检查
-│   ├── types/                   # 通用类型定义与转换
-│   ├── string/                  # 字符串操作与格式化
-│   ├── io/                      # 文件 I/O 工具
-│   ├── uuid/                    # UUID 生成与解析
-│   ├── network/                 # 网络工具（HTTP/URI/DNS）
-│   ├── ipc/                     # IPC 抽象层
-│   └── platform/                # 平台相关工具函数
-└── tests/                       # 测试套件
-    ├── utils/                   # 测试工具框架
-    ├── unit/                    # 单元测试
-    └── integration/             # 集成测试
+│   │   ├── platform.h           # Platform detection and base definitions
+│   │   └── export.h             # Symbol export control
+│   ├── compat/                  # Platform compatibility headers (stdbool.h, stdint.h)
+│   └── platform.c               # Platform abstraction implementation
+├── include/                     # Global public headers
+│   └── agentrt_types.h          # Unified type and error-code definitions
+├── utils/                       # Tooling module collection (24+ modules)
+│   ├── include/                 # Cross-module shared headers
+│   │   ├── atomic_compat.h      # Cross-platform atomic operation compat layer
+│   │   └── check.h              # Generic check macros
+│   ├── logging/                 # Logging (3-tier: Core → Atomic → Service)
+│   ├── sync/                    # Sync primitives (8+ locks & queues)
+│   ├── memory/                  # Memory management (pools, smart ptrs, zero-copy)
+│   ├── string/                  # String operations and formatting
+│   ├── ipc/                     # IPC abstraction layer
+│   ├── token/                   # Token management (API Key / JWT lifecycle)
+│   ├── cost/                    # Cost estimation and control
+│   ├── observability/           # Observability (OpenTelemetry metrics/traces)
+│   ├── platform/                # Platform-specific tooling functions
+│   ├── error/                   # Error handling framework
+│   ├── types/                   # Generic type definitions and conversions
+│   ├── config_unified/          # Unified config (3-tier: Core → Source → Service)
+│   ├── execution/               # Command execution engine (validation, cross-platform)
+│   ├── io/                      # File I/O utilities
+│   ├── cache/                   # Cache management (LRU / TTL)
+│   ├── compat/                  # Cross-version / cross-platform compatibility
+│   ├── cognition/               # Cognition mgmt (agent info, scheduling, planning)
+│   ├── strategy/                # Weighted scoring strategy engine
+│   ├── network/                 # Network utilities (HTTP / URI / DNS)
+│   ├── security/                # Input validation and security filtering
+│   ├── resource/                # Resource protection and quotas
+│   ├── uuid/                    # UUID generation and parsing
+│   ├── print/                   # Printing / formatting helpers
+│   ├── compliance/              # Compliance validation and policy enforcement
+│   └── quality/                 # Code quality checks
+└── tests/                       # Test suite
+    ├── utils/                   # Test utility framework
+    ├── unit/                    # Unit tests
+    └── integration/             # Integration tests
 ```
 
-## 核心组件
+### Core Components
 
-### AgentRT 类型系统（`agentrt_types.h`）
+#### Type system (`agentrt_types.h`)
 
-作为全项目唯一的类型定义权威源，定义了：
+The single authoritative source of type definitions for the entire project:
 
-| 类型 | 说明 |
-|------|------|
-| `agentrt_error_t` | 统一错误码类型（`int32_t`，负值为错误，0 为成功） |
-| `agentrt_ipc_header_t` | 应用级 IPC 消息头（magic/version/type/flags/msg_id 等） |
-| `agentrt_ipc_message_t` | 应用级 IPC 消息结构（header + payload） |
-| `agentrt_task_id_t` | 任务 ID 类型（`uint64_t`） |
-| `agentrt_message_id_t` | 消息 ID 类型（`uint64_t`） |
+| Type | Description |
+|------|-------------|
+| `agentrt_error_t` | Unified error code type (`int32_t`; negative = error, 0 = success) |
+| `agentrt_ipc_header_t` | Application-level IPC message header (magic/version/type/flags/msg_id) |
+| `agentrt_ipc_message_t` | Application-level IPC message struct (header + payload) |
+| `agentrt_task_id_t` | Task ID type (`uint64_t`) |
+| `agentrt_message_id_t` | Message ID type (`uint64_t`) |
 
-统一错误码体系（`AGENTRT_E*`）覆盖：参数无效、内存不足、权限不足、超时、I/O 错误、协议错误、配额超限等 29 种标准错误。
+The unified error code system (`AGENTRT_E*`) covers 29 standard errors
+including invalid argument, out of memory, permission denied, timeout,
+I/O error, protocol error, quota exceeded, etc.
 
-### 平台抽象层（`platform/`）
+#### Platform abstraction layer (`platform/`)
 
-屏蔽 OS 差异，提供统一 API：
+- **Platform detection** — auto-detects Linux / Windows / macOS.
+- **Filesystem** — path normalization and file-operation abstraction.
+- **Threads & sync** — `agentrt_thread_t`, `agentrt_mutex_t`, `agentrt_cond_t`.
+- **Dynamic library loading** — cross-platform FFI support.
+- **System info** — CPU core count, memory size, process ID.
 
-- **平台检测**：自动识别 Linux / Windows / macOS
-- **文件系统**：路径规范化、文件操作抽象
-- **线程与同步**：`agentrt_thread_t`、`agentrt_mutex_t`、`agentrt_cond_t` 等
-- **动态库加载**：跨平台 FFI 支持
-- **系统信息**：CPU 核心数、内存大小、进程 ID
+#### Atomic operation compat layer (`atomic_compat.h`)
 
-### 原子操作兼容层（`atomic_compat.h`）
+| Backend | Environment | Implementation |
+|---------|-------------|----------------|
+| C11 stdatomic | Linux / macOS (C11+ compiler) | `<stdatomic.h>` |
+| Windows Interlocked | Windows (MSVC / MinGW) | `<intrin.h>` Interlocked API |
+| POSIX fallback | Older GCC/Clang | `__atomic` builtins |
 
-| 后端 | 适用环境 | 实现方式 |
-|------|----------|----------|
-| C11 stdatomic | Linux / macOS（C11+ 编译器） | `<stdatomic.h>` |
-| Windows Interlocked | Windows（MSVC / MinGW） | `<intrin.h>` Interlocked API |
-| POSIX fallback | 旧版 GCC/Clang 环境 | `__atomic` builtins |
+Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`,
+`atomic_int64_t`, `atomic_uint64_t`, `atomic_size_t`.
 
-覆盖类型：`atomic_bool`、`atomic_int`、`atomic_uint`、`atomic_int64_t`、`atomic_uint64_t`、`atomic_size_t` 等 11 种。
+#### Unified memory management (`memory_compat.h`)
 
-### 统一内存管理（`memory_compat.h`）
+| Macro | Replaces | Description |
+|-------|----------|-------------|
+| `AGENTRT_MALLOC(size)` | `malloc(size)` | Unified allocation |
+| `AGENTRT_CALLOC(num, size)` | `calloc(num, size)` | Unified zero-init allocation |
+| `AGENTRT_FREE(ptr)` | `free(ptr)` | Unified deallocation |
 
-| 宏 | 替代 | 说明 |
-|------|------|------|
-| `AGENTRT_MALLOC(size)` | `malloc(size)` | 统一内存分配 |
-| `AGENTRT_CALLOC(num, size)` | `calloc(num, size)` | 统一零初始化分配 |
-| `AGENTRT_FREE(ptr)` | `free(ptr)` | 统一内存释放 |
+---
 
-## 接口说明
+## 3. Upstream / Downstream Dependencies
 
-### 日志系统
+### Upstream (Commons depends on)
 
-三层架构：Core 层（格式化/级别过滤）→ Atomic 层（无锁队列/批量写入）→ Service 层（远程聚合/告警/查询）
+| Dependency | Required | Purpose |
+|------------|----------|---------|
+| C11 compiler | Yes | `<stdatomic.h>` support |
+| pthreads / Win32 threads | Yes | Thread and sync primitives |
+| libyaml | No | Full YAML support |
+| cJSON | No | JSON config parsing |
 
-详见 [logging/README.md](utils/logging/README.md)
+> **BAN-12**: External dependencies are detected centrally by the umbrella
+> `CMakeLists.txt`; sub-modules MUST NOT call `find_package` independently.
+> Detection results propagate through CMake cache variables such as
+> `AGENTRT_HAS_CJSON`, `AGENTRT_HAS_YAML`.
 
-### 统一配置
+Commons has **no** upstream Airymax-module dependency — it is the lowest
+layer of the runtime.
 
-三层模型：Core 层（Schema/类型系统）→ Source 层（文件/环境变量/远程/内存）→ Service 层（热重载/加密/版本管理）
+### Downstream (consumers of Commons)
 
-详见 [config_unified/README.md](utils/config_unified/README.md)
+| Consumer | What it uses |
+|----------|--------------|
+| **atoms** | Platform abstraction, memory management, error framework, type system — every Atoms module pulls in ~18 commons sub-modules |
+| **cupolas** | Type system, sync primitives, memory macros |
+| **heapstore** | Logging, config_unified, memory pools, sync primitives |
+| **protocols** | Type system (`agentrt_ipc_header_t`), sync, observability |
+| **gateway** | Network utilities, token management, logging, config_unified |
+| **daemons** | Logging, config_unified, network, token, cost, observability, cognition, strategy — full surface |
 
-### 认知管理
+---
 
-Agent 信息管理、任务调度、计划生成与协调
+## 4. Build Instructions
 
-详见 [cognition/README.md](utils/cognition/README.md)
-
-### 命令执行引擎
-
-安全校验、跨平台命令执行、结果结构化
-
-详见 [execution/README.md](utils/execution/README.md)
-
-### 加权评分策略
-
-多维度加权评分、最优选择、权重归一化
-
-详见 [strategy/README.md](utils/strategy/README.md)
-
-### 同步原语（`sync/`）
-
-提供 8+ 种同步原语：互斥锁（普通/递归/超时）、读写锁、信号量、屏障、自旋锁、条件变量、事件、无锁队列。
-
-### 令牌管理（`token/`）
-
-- `counter.c`：Token 计数器
-- `budget.c`：预算控制
-- `token_standard.c`：标准定义
-
-### 可观测性（`observability/`）
-
-基于 OpenTelemetry：指标（`metrics.c`）、追踪（`trace.c`）、日志桥接（`logger.c`）。
-
-## 依赖关系
-
-| 依赖 | 必需 | 说明 |
-|------|------|------|
-| C11 编译器 | 是 | 支持 `<stdatomic.h>` |
-| pthreads / Win32 threads | 是 | 线程与同步原语 |
-| libyaml | 否 | 完整 YAML 支持 |
-| cJSON | 否 | JSON 配置解析 |
-
-> **BAN-12**：外部依赖由根 `CMakeLists.txt` 集中检测，子模块不得独立调用 `find_package`。检测结果通过 `AGENTRT_HAS_CJSON` 等 CMake 缓存变量传递。
-
-## 构建说明
+Commons builds a single static library `agentrt_common` aggregating all
+utility modules. Include paths are exported PUBLIC so consumers see every
+sub-module header through a single target link.
 
 ```bash
-# 在项目根目录
-mkdir build && cd build
-cmake .. -DBUILD_TESTS=ON
-cmake --build .
+# Standard build (from the umbrella root, or standalone)
+cmake -B build -DBUILD_TESTS=ON
+cmake --build build
+
+# Run the test suite
+ctest --test-dir build
 ```
 
-CMake 选项：
-- `BUILD_TESTS`（默认 ON）：构建单元测试和集成测试
-- `AGENTRT_HAS_CJSON`：由根 CMakeLists 自动检测
-- `AGENTRT_HAS_YAML`：由根 CMakeLists 自动检测
+### CMake Options
 
-## 使用示例
+| Option | Default | Description |
+|--------|---------|-------------|
+| `BUILD_TESTS` | `ON` | Build unit and integration tests |
+| `AGENTRT_HAS_CJSON` | auto | Auto-detected by umbrella CMake; gates cJSON-dependent code paths |
+| `AGENTRT_HAS_YAML` | auto | Auto-detected by umbrella CMake; gates libyaml-dependent code paths |
+
+When cJSON/YAML are unavailable, Commons degrades gracefully: `AGENTRT_NO_CJSON`
+is defined and the JSON/YAML parsers fall back to minimal built-in implementations
+(e.g. `yaml_minimal.c`).
+
+### Build Artifacts
+
+- `agentrt_common` — static library containing all utility modules
+- Public headers installed under `include/agentrt/{platform,utils/*}`
+
+### Installation
+
+```bash
+cmake --install build --prefix /opt/airymax
+```
+
+---
+
+## 5. Usage Example
 
 ```c
 #include "agentrt_types.h"
@@ -199,23 +224,30 @@ config_context_t *ctx = config_context_create("myapp");
 config_value_t *val = CONFIG_STRING("0.0.0.0");
 config_context_set(ctx, "server.host", val);
 
-LOG_INFO("系统初始化完成, host: %s",
+LOG_INFO("system initialized, host: %s",
          CONFIG_GET_STRING_SAFE(ctx, "server.host", "localhost"));
 
 log_cleanup();
 config_context_destroy(ctx);
 ```
 
-## 与其它模块的关系
-
-| 模块 | 关系 |
-|------|------|
-| **Atoms** | 直接使用 Commons 的平台抽象、内存管理、错误框架 |
-| **Daemon** | 依赖 Commons 的日志、配置、网络工具 |
-| **Cupolas** | 使用 Commons 的类型系统、同步原语、内存管理宏 |
-| **Gateway** | 使用 Commons 的网络工具、令牌管理 |
-| **Manager** | 构建于 Commons 的配置系统之上 |
-
 ---
 
-© 2026 SPHARX Ltd. All Rights Reserved.
+## 6. License
+
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
+
+This module is dual-licensed under the terms of either:
+
+- **GNU Affero General Public License v3.0 or later**
+  ([AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.txt)), or
+- **Apache License, Version 2.0**
+  ([Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0.txt))
+
+SPDX-License-Identifier: `AGPL-3.0-or-later OR Apache-2.0`
+
+The full license texts are in the [LICENSE](LICENSE) file; the copyright
+notice is in [NOTICE](NOTICE). You may select either license to comply with.
+The AGPL-3.0-or-later terms apply by default; the Apache-2.0 alternative is
+provided for downstream integration scenarios (e.g., closed-source or
+proprietary distribution) that the AGPL does not accommodate.
