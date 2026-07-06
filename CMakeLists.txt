@@ -170,6 +170,7 @@ target_include_directories(agentrt_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/network/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/print/include
 )
 
 target_compile_definitions(agentrt_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
