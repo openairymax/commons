@@ -6,7 +6,7 @@
  * Provides <stdint.h> for compilers that lack it.
  * Falls back to built-in types when necessary.
  *
- * 原位置: agentos/include/agentrt/compat/stdint.h
+ * 原位置: agentrt/include/agentrt/compat/stdint.h
  * 迁移至: agentrt/commons/platform/compat/ (2026-04-19 include/整合重构)
  */
 

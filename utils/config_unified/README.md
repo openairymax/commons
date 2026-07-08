@@ -148,7 +148,7 @@ config_unified/
 ```c
 #include "config_unified.h"
 
-config_context_t *ctx = config_service_create("agentos", NULL, true, false);
+config_context_t *ctx = config_service_create("agentrt", NULL, true, false);
 config_file_source_options_t file_opts = {
     .file_path = "config.yaml", .format = "yaml"
 };

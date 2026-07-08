@@ -91,7 +91,7 @@ typedef int32_t agentrt_error_t;
 /**
  * @section IPC类型架构说明
  *
- * AgentOS采用**分层IPC架构**，遵循微内核设计原则（Liedtke微内核原则）：
+ * AgentRT采用**分层IPC架构**，遵循微内核设计原则（Liedtke微内核原则）：
  *
  * **Level 1: 内核级IPC (Kernel-Level)**
  * - 类型：agentrt_kernel_ipc_message_t

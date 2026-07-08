@@ -5,7 +5,7 @@
  *
  * Provides <stdbool.h> for compilers that lack it.
  *
- * 原位置: agentos/include/agentrt/compat/stdbool.h
+ * 原位置: agentrt/include/agentrt/compat/stdbool.h
  * 迁移至: agentrt/commons/platform/compat/ (2026-04-19 include/整合重构)
  */
 

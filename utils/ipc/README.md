@@ -227,7 +227,7 @@ ipc_init();
 
 // === 服务端示例 ===
 ipc_config_t server_config = ipc_create_default_config(IPC_TYPE_SOCKET);
-server_config.name = "/tmp/agentos.sock";
+server_config.name = "/tmp/agentrt.sock";
 server_config.mode = IPC_MODE_READ_WRITE;
 
 ipc_server_t *server = ipc_server_create(&server_config);
@@ -248,7 +248,7 @@ ipc_server_destroy(server);
 
 // === 客户端示例 ===
 ipc_config_t client_config = ipc_create_default_config(IPC_TYPE_SOCKET);
-client_config.name = "/tmp/agentos.sock";
+client_config.name = "/tmp/agentrt.sock";
 client_config.mode = IPC_MODE_READ_WRITE;
 
 ipc_client_t *client = ipc_client_create(&client_config);

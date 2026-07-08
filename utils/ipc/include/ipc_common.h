@@ -915,7 +915,7 @@ agentrt_error_t ipc_flush(ipc_channel_t *channel);
  * @param agentrt_type AgentRT 统一 IPC 类型
  * @return IPC 模块内部类型
  */
-static inline ipc_type_t ipc_type_from_agentos(agentrt_ipc_type_t agentrt_type)
+static inline ipc_type_t ipc_type_from_agentrt(agentrt_ipc_type_t agentrt_type)
 {
     switch (agentrt_type) {
     case AGENTRT_IPC_PIPE:
@@ -938,7 +938,7 @@ static inline ipc_type_t ipc_type_from_agentos(agentrt_ipc_type_t agentrt_type)
  * @param ipc_type IPC 模块内部类型
  * @return AgentRT 统一 IPC 类型
  */
-static inline agentrt_ipc_type_t ipc_type_to_agentos(ipc_type_t ipc_type)
+static inline agentrt_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
 {
     switch (ipc_type) {
     case IPC_TYPE_PIPE:
