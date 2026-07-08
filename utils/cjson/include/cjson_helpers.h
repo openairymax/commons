@@ -109,6 +109,46 @@
     if (!(var)) { on_fail; }
 
 /**
+ * @def CJSON_DEEP_COPY(node)
+ * @brief 深拷贝 cJSON 节点（cJSON_PrintUnformatted + cJSON_Parse 的安全封装）
+ *
+ * 将 cJSON 节点序列化为字符串后重新解析，生成独立副本。修复原始
+ * `cJSON_Parse(cJSON_PrintUnformatted(node))` 模式的内存泄漏
+ * （cJSON_PrintUnformatted 返回的字符串未被释放）。
+ *
+ * 替换模式（修复前）：
+ * @code
+ *   cJSON_AddItemToObject(params, "model", cJSON_Parse(cJSON_PrintUnformatted(model)));
+ *   // ↑ cJSON_PrintUnformatted 返回的 char* 泄漏！
+ * @endcode
+ *
+ * 修复后：
+ * @code
+ *   cJSON_AddItemToObject(params, "model", CJSON_DEEP_COPY(model));
+ *   // ↑ 中间字符串自动释放，无泄漏
+ * @endcode
+ *
+ * @param node 待拷贝的 cJSON 节点（可为 NULL，返回 NULL）
+ * @return cJSON* 新的独立 cJSON 对象（调用方负责释放），node 为 NULL 时返回 NULL
+ */
+static inline cJSON *agentrt_cjson_deep_copy_impl(const cJSON *node)
+{
+    if (!node)
+        return NULL;
+    char *str = cJSON_PrintUnformatted(node);
+    if (!str)
+        return NULL;
+    cJSON *copy = cJSON_Parse(str);
+    /* P0.18.2: str 由 cJSON_PrintUnformatted 分配，须走 cJSON 分配器释放
+     * (cJSON_free)；同时规避 AGENTRT_COMPLIANCE_STRICT 下裸 free 被
+     * #pragma GCC poison 的问题——cJSON_free 不受该毒化影响 */
+    cJSON_free(str);
+    return copy;
+}
+
+#define CJSON_DEEP_COPY(node) agentrt_cjson_deep_copy_impl((node))
+
+/**
  * @def CJSON_GET_REQUIRED(out, parent, key, on_fail)
  * @brief 提取必需的 JSON 对象字段并执行 NULL 检查
  *
