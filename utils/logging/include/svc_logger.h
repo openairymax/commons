@@ -19,7 +19,9 @@
 #include "error.h"
 #include "platform.h"
 
-#include <logging.h>
+/* P0.18.4/BAN-305: 统一日志入口 — logging_compat.h 已包含 logging.h，
+ * 同时提供 AGENTRT_LOG_ERROR/WARN/INFO/DEBUG 等兼容宏，消除本地 #define。 */
+#include "logging_compat.h"
 #include <stdbool.h>
 #include <stdio.h>
 
