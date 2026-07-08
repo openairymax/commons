@@ -45,12 +45,12 @@
  *   cJSON *req = cJSON_Parse(buffer);
  *   if (!req) {
  *       AGENTRT_LOG_ERROR("parse failed");
- *       return -1;
+ *       return AGENTRT_ERR_PARSE_ERROR;
  *   }
  *   cJSON *jsonrpc = cJSON_GetObjectItem(req, "jsonrpc");
  *   if (!jsonrpc) {
  *       cJSON_Delete(req);
- *       return -1;
+ *       return AGENTRT_ERR_NOT_FOUND;
  *   }
  *   // ... 使用 ...
  *   cJSON_Delete(req);
@@ -59,11 +59,11 @@
  * 修复后：
  * @code
  *   CJSON_AUTO_FREE cJSON *req = cJSON_Parse(buffer);
- *   if (!req) { AGENTRT_LOG_ERROR("parse failed"); return -1; }
+ *   if (!req) { AGENTRT_LOG_ERROR("parse failed"); return AGENTRT_ERR_PARSE_ERROR; }
  *
  *   CJSON_GET_REQUIRED(jsonrpc, req, "jsonrpc", {
  *       AGENTRT_LOG_ERROR("missing jsonrpc");
- *       return -1;
+ *       return AGENTRT_ERR_NOT_FOUND;
  *   });
  *   // ... 使用 ...
  *   // 函数返回时 cJSON_Delete(req) 自动调用

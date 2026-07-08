@@ -1553,7 +1553,7 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
 
     /* ASCII 和 UTF-8 源：直接复制（ASCII 是 UTF-8 的子集） */
     if (src_enc == STRING_ENCODING_ASCII || src_enc == STRING_ENCODING_UTF8) {
-        if (src_len >= buf_size) return -1;
+        if (src_len >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
         __builtin_memcpy(buf, src, src_len);
         buf[src_len] = '\0';
         return (int)src_len;
@@ -1564,10 +1564,10 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
         for (size_t i = 0; i < src_len; i++) {
             unsigned char ch = (unsigned char)src[i];
             if (ch <= 0x7F) {
-                if (di + 1 >= buf_size) return -1;
+                if (di + 1 >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
                 buf[di++] = (char)ch;
             } else {
-                if (di + 2 >= buf_size) return -1;
+                if (di + 2 >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
                 buf[di++] = (char)(0xC0 | (ch >> 6));
                 buf[di++] = (char)(0x80 | (ch & 0x3F));
             }
@@ -1584,7 +1584,7 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
             if (ch >= 0x80 && ch <= 0x9F)
                 cp = win1252_special_map[ch - 0x80];
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
@@ -1603,22 +1603,22 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
             uint32_t cp;
             if (unit >= 0xD800 && unit <= 0xDBFF) {
                 /* 高代理项，需要低代理项 */
-                if (i + 3 >= src_len) return -1;
+                if (i + 3 >= src_len) return AGENTRT_ERR_PARSE_ERROR;
                 uint16_t low;
                 if (src_enc == STRING_ENCODING_UTF16_LE)
                     low = (uint16_t)((unsigned char)src[i+2] | ((unsigned char)src[i+3] << 8));
                 else
                     low = (uint16_t)(((unsigned char)src[i+2] << 8) | (unsigned char)src[i+3]);
-                if (low < 0xDC00 || low > 0xDFFF) return -1;
+                if (low < 0xDC00 || low > 0xDFFF) return AGENTRT_ERR_PARSE_ERROR;
                 cp = 0x10000 + ((uint32_t)(unit - 0xD800) << 10) + (low - 0xDC00);
                 i += 2; /* 额外消耗 2 字节 */
             } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
-                return -1; /* 孤立低代理项 */
+                return AGENTRT_ERR_PARSE_ERROR; /* 孤立低代理项 */
             } else {
                 cp = unit;
             }
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
@@ -1639,16 +1639,16 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
                      ((uint32_t)(unsigned char)src[i+1] << 16) |
                      ((uint32_t)(unsigned char)src[i+2] << 8) |
                      (uint32_t)(unsigned char)src[i+3];
-            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return -1;
+            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return AGENTRT_ERR_PARSE_ERROR;
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
         return (int)di;
     }
 
-    return -1; /* 不支持的源编码 */
+    return AGENTRT_ERR_NOT_SUPPORTED; /* 不支持的源编码 */
 }
 
 /**
@@ -1664,7 +1664,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* ASCII 目标：非 ASCII 字符替换为 '?' */
     if (dest_enc == STRING_ENCODING_ASCII) {
         for (size_t i = 0; i < utf8_len; i++) {
-            if (di + 1 >= dest_size) return -1;
+            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             unsigned char ch = (unsigned char)utf8[i];
             dest[di++] = (ch <= 0x7F) ? (char)ch : '?';
         }
@@ -1674,7 +1674,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
 
     /* UTF-8 目标：直接复制 */
     if (dest_enc == STRING_ENCODING_UTF8) {
-        if (utf8_len >= dest_size) return -1;
+        if (utf8_len >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
         __builtin_memcpy(dest, utf8, utf8_len);
         dest[utf8_len] = '\0';
         return (int)utf8_len;
@@ -1683,10 +1683,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* Latin-1 目标：U+0000-U+00FF 直接映射，超出范围替换为 '?' */
     if (dest_enc == STRING_ENCODING_LATIN1) {
         while (si < utf8_len) {
-            if (di + 1 >= dest_size) return -1;
+            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
             si += n;
             dest[di++] = (cp <= 0xFF) ? (char)cp : '?';
         }
@@ -1697,10 +1697,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* Windows-1252 目标：U+0000-U+00FF 映射（0x80-0x9F 逆映射） */
     if (dest_enc == STRING_ENCODING_WINDOWS_1252) {
         while (si < utf8_len) {
-            if (di + 1 >= dest_size) return -1;
+            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
             si += n;
             if (cp <= 0x7F || (cp >= 0xA0 && cp <= 0xFF)) {
                 dest[di++] = (char)cp;
@@ -1726,11 +1726,11 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
         while (si < utf8_len) {
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
             si += n;
 
             if (cp <= 0xFFFF) {
-                if (di + 2 >= dest_size) return -1;
+                if (di + 2 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
                 if (dest_enc == STRING_ENCODING_UTF16_LE) {
                     dest[di++] = (char)(cp & 0xFF);
                     dest[di++] = (char)((cp >> 8) & 0xFF);
@@ -1740,7 +1740,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
                 }
             } else {
                 /* 代理对编码 */
-                if (di + 4 >= dest_size) return -1;
+                if (di + 4 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
                 uint32_t adj = cp - 0x10000;
                 uint16_t high = (uint16_t)(0xD800 + (adj >> 10));
                 uint16_t low = (uint16_t)(0xDC00 + (adj & 0x3FF));
@@ -1764,10 +1764,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* UTF-32 目标：码点 → 4 字节 */
     if (dest_enc == STRING_ENCODING_UTF32_LE || dest_enc == STRING_ENCODING_UTF32_BE) {
         while (si < utf8_len) {
-            if (di + 4 >= dest_size) return -1;
+            if (di + 4 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return -1;
+            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
             si += n;
             if (dest_enc == STRING_ENCODING_UTF32_LE) {
                 dest[di++] = (char)(cp & 0xFF);
@@ -1785,7 +1785,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
         return (int)di;
     }
 
-    return -1; /* 不支持的目标编码 */
+    return AGENTRT_ERR_NOT_SUPPORTED; /* 不支持的目标编码 */
 }
 
 /**
