@@ -296,7 +296,7 @@ void arena_release(arena_mark_t *mark)
         /* 后续 chunk 也回退 */
         for (arena_chunk_t *nc = c->next; nc; nc = nc->next) {
             nc->bump = nc->start;
-            memset(nc->start, 0, nc->size);
+            AGENTRT_MEMSET(nc->start, 0, nc->size);
         }
     }
 

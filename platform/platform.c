@@ -543,7 +543,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
     sa.bInheritHandle = TRUE;
     HANDLE pipe_read = NULL, pipe_write = NULL;
     if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0)) {
-        return -1;
+        return AGENTRT_ERR_IO;
     }
     /* 确保管道读端不被子进程继承 */
     SetHandleInformation(pipe_read, HANDLE_FLAG_INHERIT, 0);
@@ -562,7 +562,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
     CloseHandle(pipe_write); /* 父进程关闭写端，以便读端收到 EOF */
     if (!ok) {
         CloseHandle(pipe_read);
-        return -1;
+        return AGENTRT_ERR_EXEC_FAIL;
     }
 
     /* 读取子进程输出 */
@@ -730,7 +730,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
 {
     agentrt_process_info_t proc;
     if (agentrt_process_start(executable, argv, envp, &proc) != 0)
-        return -1;
+        return AGENTRT_ERR_EXEC_FAIL;
 
     /* 读取 stdout + stderr 合并输出（select 多路复用，防止管道写满阻塞子进程） */
     size_t offset = 0;
