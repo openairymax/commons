@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file cmocka_stub.h
  * @brief CMocka 测试框架 stub 头文件（用于编译时无 CMocka 的情况）

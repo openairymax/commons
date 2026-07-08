@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file ipc_shared_buf.h
  * @brief P1.21.3: IPC 共享缓冲区 — 基于 refcounted_t 的引用计数管理

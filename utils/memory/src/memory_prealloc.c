@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file memory_prealloc.c
  * @brief Critical path pre-allocation for signal handling, OOM, audit, and shutdown

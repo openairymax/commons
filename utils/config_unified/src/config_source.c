@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file config_source.c
  * @brief 统一配置模块 - 源适配层实? * @copyright (c) 2026 SPHARX. All Rights Reserved.
