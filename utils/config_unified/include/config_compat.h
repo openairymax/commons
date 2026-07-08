@@ -298,7 +298,7 @@ int config_rollback_transaction(void);
 /* ==================== 迁移辅助函数 ==================== */
 
 /**
- * @brief 将agentrt_config对象迁移到统一配置上下? * @param agentrt_config agentos配置对象
+ * @brief 将agentrt_config对象迁移到统一配置上下? * @param agentrt_config agentrt配置对象
  * @param target_ctx 目标配置上下? * @return 错误? */
 config_error_t config_compat_migrate_agentrt_config(void *agentrt_config,
                                                     config_context_t *target_ctx);
@@ -311,7 +311,7 @@ config_error_t config_compat_migrate_svc_config(void *svc_config, config_context
 /**
  * @brief 从统一配置上下文创建agentrt_config对象
  * @param source_ctx 源配置上下文
- * @return agentos配置对象，失败返回NULL
+ * @return agentrt配置对象，失败返回NULL
  */
 void *config_compat_create_agentrt_config_from_ctx(const config_context_t *source_ctx);
 

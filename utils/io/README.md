@@ -63,19 +63,19 @@ if (agentrt_io_write_file("/tmp/output.txt", data, (size_t)-1) == 0) {
 }
 
 // 确保目录存在
-if (agentrt_io_ensure_dir("/tmp/agentos/logs/") == 0) {
+if (agentrt_io_ensure_dir("/tmp/agentrt/logs/") == 0) {
     printf("Directory ready\n");
 }
 
 // 递归创建目录
-if (agentrt_io_mkdir_p("/tmp/agentos/data/2026", 0755) == 0) {
+if (agentrt_io_mkdir_p("/tmp/agentrt/data/2026", 0755) == 0) {
     printf("Directories created\n");
 }
 
 // 列出目录文件
 char **files = NULL;
 size_t count = 0;
-if (agentrt_io_list_files("/tmp/agentos/logs/", &files, &count) == 0) {
+if (agentrt_io_list_files("/tmp/agentrt/logs/", &files, &count) == 0) {
     for (size_t i = 0; i < count; i++) {
         printf("  %s\n", files[i]);
     }

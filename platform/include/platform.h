@@ -107,30 +107,30 @@ extern "C" {
 #if AGENTRT_PLATFORM_WINDOWS
 /* Windows: 系统级数据目录（%ProgramData%） */
 #ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "C:\\ProgramData\\agentos\\run"
+#define AGENTRT_RUNTIME_DIR "C:\\ProgramData\\agentrt\\run"
 #endif
 #ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "C:\\ProgramData\\agentos\\logs"
+#define AGENTRT_LOG_DIR "C:\\ProgramData\\agentrt\\logs"
 #endif
 #ifndef AGENTRT_CONFIG_DIR
-#define AGENTRT_CONFIG_DIR "C:\\ProgramData\\agentos\\config"
+#define AGENTRT_CONFIG_DIR "C:\\ProgramData\\agentrt\\config"
 #endif
 #ifndef AGENTRT_DATA_DIR
-#define AGENTRT_DATA_DIR "C:\\ProgramData\\agentos\\data"
+#define AGENTRT_DATA_DIR "C:\\ProgramData\\agentrt\\data"
 #endif
 #ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "C:\\ProgramData\\agentos\\tmp"
+#define AGENTRT_TMP_DIR "C:\\ProgramData\\agentrt\\tmp"
 #endif
 #ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "C:\\ProgramData\\agentos\\cache"
+#define AGENTRT_CACHE_DIR "C:\\ProgramData\\agentrt\\cache"
 #endif
 #elif AGENTRT_PLATFORM_LINUX
 /* Linux: FHS 标准路径（保持原有行为不变） */
 #ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "/tmp/agentos"
+#define AGENTRT_RUNTIME_DIR "/tmp/agentrt"
 #endif
 #ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "/var/log/agentos"
+#define AGENTRT_LOG_DIR "/var/log/agentrt"
 #endif
 #ifndef AGENTRT_CONFIG_DIR
 #define AGENTRT_CONFIG_DIR "/etc/agentrt"
@@ -139,30 +139,30 @@ extern "C" {
 #define AGENTRT_DATA_DIR "/var/lib/agentrt"
 #endif
 #ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "/var/tmp/agentos"
+#define AGENTRT_TMP_DIR "/var/tmp/agentrt"
 #endif
 #ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "/var/cache/agentos"
+#define AGENTRT_CACHE_DIR "/var/cache/agentrt"
 #endif
 #else
 /* macOS 及其他 POSIX: 相对路径（避免硬编码 /var 与 /etc，保持 Linux 行为不变） */
 #ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "./agentos/run"
+#define AGENTRT_RUNTIME_DIR "./agentrt/run"
 #endif
 #ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "./agentos/logs"
+#define AGENTRT_LOG_DIR "./agentrt/logs"
 #endif
 #ifndef AGENTRT_CONFIG_DIR
-#define AGENTRT_CONFIG_DIR "./agentos/config"
+#define AGENTRT_CONFIG_DIR "./agentrt/config"
 #endif
 #ifndef AGENTRT_DATA_DIR
-#define AGENTRT_DATA_DIR "./agentos/data"
+#define AGENTRT_DATA_DIR "./agentrt/data"
 #endif
 #ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "./agentos/tmp"
+#define AGENTRT_TMP_DIR "./agentrt/tmp"
 #endif
 #ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "./agentos/cache"
+#define AGENTRT_CACHE_DIR "./agentrt/cache"
 #endif
 #endif
 

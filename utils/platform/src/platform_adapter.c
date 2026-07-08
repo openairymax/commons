@@ -395,7 +395,7 @@ char *platform_get_temp_file(const char *prefix)
     }
 
     char *path = NULL;
-    const char *base = prefix ? prefix : "agentos";
+    const char *base = prefix ? prefix : "agentrt";
 
 #if defined(_WIN32)
     char buffer[4096];
