@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file logger.c
  * @brief 日志实现（基于统一分层日志系统? * @copyright (c) 2026 SPHARX. All Rights Reserved.
