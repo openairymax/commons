@@ -540,7 +540,7 @@ typedef struct {
  *
  * @ownership registry_url: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_registry_init(const char *registry_url);
+AGENTRT_API agentrt_error_t agentrt_cross_registry_init(const char *registry_url);
 
 /**
  * @brief 向注册中心注册服务
