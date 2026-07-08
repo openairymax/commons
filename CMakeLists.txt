@@ -108,6 +108,8 @@ set(_inc_dirs
     utils/network/include
     utils/ipc/include
     utils/uuid/include
+    # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
+    utils/cjson/include
 )
 set(_inc_missing 0)
 foreach(_inc ${_inc_dirs})
@@ -171,6 +173,8 @@ target_include_directories(agentrt_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print/include
+    # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson/include
 )
 
 target_compile_definitions(agentrt_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
@@ -225,6 +229,8 @@ install(DIRECTORY utils/ipc/include/ DESTINATION include/agentrt/utils/ipc)
 install(DIRECTORY utils/platform/include/ DESTINATION include/agentrt/utils/platform)
 install(DIRECTORY utils/cognition/include/ DESTINATION include/agentrt/utils/cognition)
 install(DIRECTORY utils/strategy/include/ DESTINATION include/agentrt/utils/strategy)
+# P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
+install(DIRECTORY utils/cjson/include/ DESTINATION include/agentrt/utils/cjson)
 
 option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)
