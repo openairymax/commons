@@ -1105,6 +1105,107 @@ static inline void agentrt_memory_stats_extended_destroy(
 
 /** @} */  // end of memory_compat_api
 
+/* ==================== P0.18.3: AGENTRT_MALLOC_GUARD / AGENTRT_CALLOC_GUARD ==================== */
+
+/**
+ * @defgroup malloc_guard RAII 内存分配守卫（P0.18.3）
+ * @{
+ *
+ * AGENTRT_MALLOC_GUARD / AGENTRT_CALLOC_GUARD 将 malloc/calloc + NULL 检查 +
+ * 自动释放三步合一，消除 `ptr = malloc(size); if (!ptr) return -1;` 样板。
+ *
+ * 内置 AUTO_FREE 语义（GCC/Clang），变量离开作用域时自动释放。
+ * MSVC 回退到无自动释放（需手动 AGENTRT_FREE）。
+ *
+ * 用法：
+ *   AGENTRT_MALLOC_GUARD(buf, 1024, return -1);
+ *   char *str = (char *)buf;   // void* 可隐式转换为目标类型
+ *   // 使用 str...
+ *   // 函数返回时 buf 自动释放，无需 AGENTRT_FREE(buf)
+ *
+ *   AGENTRT_CALLOC_GUARD(arr, n, sizeof(item_t), return NULL);
+ *   item_t *items = (item_t *)arr;
+ *   // 使用 items...
+ */
+
+#if defined(__GNUC__) || defined(__clang__)
+
+/**
+ * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
+ * @brief RAII 内存分配守卫：malloc + NULL 检查 + 自动释放
+ *
+ * 声明一个 void* 变量，分配 size 字节内存。分配失败时执行 on_fail。
+ * 变量离开作用域时自动释放（AUTO_FREE 语义）。
+ *
+ * @param ptr     变量名（声明为 void*，可强制转换为目标类型）
+ * @param size    分配字节数
+ * @param on_fail 分配失败时执行的语句（如 return -1; / return NULL;）
+ *
+ * 使用示例：
+ *   AGENTRT_MALLOC_GUARD(buf, 1024, return -1);
+ *   memcpy(buf, src, 1024);
+ *   // 函数返回时 buf 自动释放
+ */
+#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
+    AUTO_FREE void *ptr = AGENTRT_MALLOC(size); \
+    if (!(ptr)) { on_fail; }
+
+/**
+ * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @brief RAII 内存分配守卫：calloc + NULL 检查 + 自动释放
+ *
+ * 声明一个 void* 变量，分配 num*size 字节内存并清零。
+ * 分配失败时执行 on_fail。变量离开作用域时自动释放。
+ *
+ * @param ptr     变量名（声明为 void*）
+ * @param num     元素数量
+ * @param size    每个元素大小
+ * @param on_fail 分配失败时执行的语句
+ */
+#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
+    AUTO_FREE void *ptr = AGENTRT_CALLOC(num, size); \
+    if (!(ptr)) { on_fail; }
+
+#elif defined(_MSC_VER)
+
+/**
+ * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
+ * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AGENTRT_FREE）
+ */
+#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
+    void *ptr = AGENTRT_MALLOC(size); \
+    if (!(ptr)) { on_fail; }
+
+/**
+ * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AGENTRT_FREE）
+ */
+#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
+    void *ptr = AGENTRT_CALLOC(num, size); \
+    if (!(ptr)) { on_fail; }
+
+#else
+
+/**
+ * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
+ * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AGENTRT_FREE）
+ */
+#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
+    void *ptr = AGENTRT_MALLOC(size); \
+    if (!(ptr)) { on_fail; }
+
+/**
+ * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AGENTRT_FREE）
+ */
+#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
+    void *ptr = AGENTRT_CALLOC(num, size); \
+    if (!(ptr)) { on_fail; }
+
+#endif
+
+/** @} */  // end of malloc_guard
+
 #ifdef __cplusplus
 }
 #endif
