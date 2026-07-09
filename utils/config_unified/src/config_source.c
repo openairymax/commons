@@ -585,6 +585,7 @@ static void yaml_ps_skip_ws(yaml_parse_state_t *s)
     }
 }
 
+__attribute__((unused))
 static void yaml_ps_skip_ws_nl(yaml_parse_state_t *s)
 {
     while (s->pos < s->len) {
