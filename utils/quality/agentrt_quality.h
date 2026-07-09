@@ -564,12 +564,14 @@ static inline size_t safe_strlen(const char *str)
  * @param[in] str2 字符串2
  * @return 比较结果，NULL视为空字符串
  */
+/* BAN-073 exempt: 本函数返回 strcmp 三态语义（负/0/正），非错误码。
+ * NULL 视为空字符串参与比较，-1 表示 str1 < str2，非 AGENTRT_ERR_* 错误码。 */
 static inline int safe_strcmp(const char *str1, const char *str2)
 {
     if (!str1 && !str2)
         return 0;
     if (!str1)
-        return -1;
+        return -1;  /* BAN-073 exempt: strcmp 比较语义 */
     if (!str2)
         return 1;
     return strcmp(str1, str2);

@@ -215,7 +215,7 @@ void *arena_calloc(agentrt_arena_t *arena, size_t size)
 {
     void *ptr = arena_alloc(arena, size);
     if (ptr) {
-        memset(ptr, 0, size);
+        AGENTRT_MEMSET(ptr, 0, size);  /* BAN-154 */
     }
     return ptr;
 }
@@ -233,7 +233,7 @@ void arena_reset(agentrt_arena_t *arena)
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         c->bump = c->start;
         /* 清零内存以辅助调试（检测 use-after-reset） */
-        memset(c->start, 0, c->size);
+        AGENTRT_MEMSET(c->start, 0, c->size);  /* BAN-154 */
     }
 
     /* 重置当前 chunk 为第一个 */
@@ -280,7 +280,7 @@ void arena_release(arena_mark_t *mark)
     arena_chunk_t *c = arena->first_chunk;
     while (c && c != target) {
         c->bump = c->start;  /* 回退较早的 chunk */
-        memset(c->start, 0, c->size);
+        AGENTRT_MEMSET(c->start, 0, c->size);  /* BAN-154 */
         c = c->next;
     }
 
@@ -290,7 +290,7 @@ void arena_release(arena_mark_t *mark)
 
         /* 清零已释放区域 */
         if (c->bump < c->end) {
-            memset(c->bump, 0, (size_t)(c->end - c->bump));
+            AGENTRT_MEMSET(c->bump, 0, (size_t)(c->end - c->bump));  /* BAN-154 */
         }
 
         /* 后续 chunk 也回退 */
