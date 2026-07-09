@@ -17,13 +17,21 @@
 extern "C" {
 #endif
 
-/* 统一日志级别常量 — 值越大越严重 */
-#ifndef AGENTRT_LOG_LEVEL_DEBUG_DEFINED
-#define AGENTRT_LOG_LEVEL_DEBUG_DEFINED
+/* 统一日志级别常量 — 值越大越严重
+ * 每个宏独立 #ifndef 保护，避免与 logging_compat.h 交叉包含时重定义 */
+#ifndef AGENTRT_LOG_LEVEL_DEBUG
 #define AGENTRT_LOG_LEVEL_DEBUG 0
+#endif
+#ifndef AGENTRT_LOG_LEVEL_INFO
 #define AGENTRT_LOG_LEVEL_INFO 1
+#endif
+#ifndef AGENTRT_LOG_LEVEL_WARN
 #define AGENTRT_LOG_LEVEL_WARN 2
+#endif
+#ifndef AGENTRT_LOG_LEVEL_ERROR
 #define AGENTRT_LOG_LEVEL_ERROR 3
+#endif
+#ifndef AGENTRT_LOG_LEVEL_FATAL
 #define AGENTRT_LOG_LEVEL_FATAL 4
 #endif
 
