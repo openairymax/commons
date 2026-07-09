@@ -1118,7 +1118,7 @@ static inline void agentrt_memory_stats_extended_destroy(
  * MSVC 回退到无自动释放（需手动 AGENTRT_FREE）。
  *
  * 用法：
- *   AGENTRT_MALLOC_GUARD(buf, 1024, return -1);
+ *   AGENTRT_MALLOC_GUARD(buf, 1024, return AGENTRT_ERR_OUT_OF_MEMORY);
  *   char *str = (char *)buf;   // void* 可隐式转换为目标类型
  *   // 使用 str...
  *   // 函数返回时 buf 自动释放，无需 AGENTRT_FREE(buf)
@@ -1139,11 +1139,11 @@ static inline void agentrt_memory_stats_extended_destroy(
  *
  * @param ptr     变量名（声明为 void*，可强制转换为目标类型）
  * @param size    分配字节数
- * @param on_fail 分配失败时执行的语句（如 return -1; / return NULL;）
+ * @param on_fail 分配失败时执行的语句（如 return AGENTRT_ERR_OUT_OF_MEMORY; / return NULL;） BAN-073
  *
  * 使用示例：
- *   AGENTRT_MALLOC_GUARD(buf, 1024, return -1);
- *   memcpy(buf, src, 1024);
+ *   AGENTRT_MALLOC_GUARD(buf, 1024, return AGENTRT_ERR_OUT_OF_MEMORY);
+ *   AGENTRT_MEMCPY(buf, src, 1024);  BAN-154
  *   // 函数返回时 buf 自动释放
  */
 #define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \

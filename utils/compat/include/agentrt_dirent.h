@@ -55,10 +55,11 @@ static inline struct dirent *readdir(DIR *dir)
     return &dir->ent;
 }
 
+/* BAN-073 exempt: POSIX closedir 兼容层，须返回 -1 以匹配 POSIX 语义 */
 static inline int closedir(DIR *dir)
 {
     if (!dir)
-        return -1;
+        return -1;  /* BAN-073 exempt: POSIX API contract */
     FindClose(dir->hFind);
     AGENTRT_FREE(dir);
     return 0;

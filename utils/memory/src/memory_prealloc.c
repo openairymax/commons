@@ -159,7 +159,7 @@ int agentrt_prealloc_init(void)
 fail:
     agentrt_mutex_unlock(&g_prealloc_lock);
     agentrt_mutex_destroy(&g_prealloc_lock);
-    return -1;
+    return AGENTRT_ERR_OUT_OF_MEMORY;  /* fail 路径均为 AGENTRT_MALLOC 返回 NULL */
 }
 
 void agentrt_prealloc_shutdown(void)

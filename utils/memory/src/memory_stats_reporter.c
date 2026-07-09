@@ -11,6 +11,7 @@
 
 #include "memory_stats_reporter.h"
 
+#include "error.h"
 #include "platform.h"
 #include "svc_logger.h"
 
@@ -123,7 +124,7 @@ void agentrt_mem_stats_reporter_shutdown(void)
 int agentrt_mem_stats_get(agentrt_mem_stats_t *stats)
 {
     if (!stats) {
-        return -1;
+        return AGENTRT_ERR_INVALID_PARAM;
     }
 
     agentrt_mutex_lock(&g_stats_mutex);

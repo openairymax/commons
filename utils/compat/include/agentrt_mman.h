@@ -19,6 +19,15 @@
 #define MAP_ANONYMOUS 0x20
 #define MAP_FAILED ((void *)-1)
 
+/*
+ * BAN-073 文件级豁免声明
+ * ================================
+ * 本文件为 Windows 平台 POSIX <sys/mman.h> 兼容层。
+ * munmap/mprotect/shm_open/shm_unlink 等函数必须返回 -1（并设置 errno）
+ * 以匹配 POSIX API 契约，调用方依赖 `if (fn() == -1)` 判断失败。
+ * 此处 return -1 不是 AGENTRT_ERR_* 错误码，属合法 POSIX 语义保留。
+ */
+
 static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
 {
     (void)addr;
@@ -60,8 +69,8 @@ static inline int munmap(void *addr, size_t len)
 {
     (void)len;
     if (!addr || addr == MAP_FAILED)
-        return -1;
-    return VirtualFree(addr, 0, MEM_RELEASE) ? 0 : -1;
+        return -1;  /* BAN-073 exempt: POSIX API contract */
+    return VirtualFree(addr, 0, MEM_RELEASE) ? 0 : -1;  /* BAN-073 exempt: POSIX API contract */
 }
 
 static inline int mprotect(void *addr, size_t len, int prot)
@@ -80,13 +89,13 @@ static inline int shm_open(const char *name, int oflag, mode_t mode)
     (void)name;
     (void)oflag;
     (void)mode;
-    return -1;
+    return -1;  /* BAN-073 exempt: POSIX API contract (stub) */
 }
 
 static inline int shm_unlink(const char *name)
 {
     (void)name;
-    return -1;
+    return -1;  /* BAN-073 exempt: POSIX API contract (stub) */
 }
 
 #else
