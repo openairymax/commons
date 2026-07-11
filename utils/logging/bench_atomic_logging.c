@@ -205,7 +205,7 @@ static double bench_multi_thread(int thread_count, int total_iterations)
 
     // 分配线程参数
     thread_params_t *params =
-        (thread_params_t *)AGENTRT_CALLOC(thread_count, sizeof(thread_params_t));
+        (thread_params_t *)AIRY_CALLOC(thread_count, sizeof(thread_params_t));
     if (!params) {
         printf("内存分配失败！\n");
         return 0.0;
@@ -221,13 +221,13 @@ static double bench_multi_thread(int thread_count, int total_iterations)
 
 // 创建并启动线?    uint64_t overall_start_time = get_nanoseconds();
 
-agentrt_thread_t *threads =
-    (agentrt_thread_t *)AGENTRT_CALLOC(thread_count, sizeof(agentrt_thread_t));
+airy_thread_t *threads =
+    (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
 for (int i = 0; i < thread_count; i++) {
-    if (agentrt_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
+    if (airy_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
         printf("创建线程 %d 失败！\n", i);
-        AGENTRT_FREE(params);
-        AGENTRT_FREE(threads);
+        AIRY_FREE(params);
+        AIRY_FREE(threads);
         return 0.0;
     }
 }
@@ -239,24 +239,24 @@ for (int i = 0; i < thread_count; i++) {
     CloseHandle(threads[i]);
 }
 
-AGENTRT_FREE(threads);
+AIRY_FREE(threads);
 #else
-agentrt_thread_t *threads =
-    (agentrt_thread_t *)AGENTRT_CALLOC(thread_count, sizeof(agentrt_thread_t));
+airy_thread_t *threads =
+    (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
 for (int i = 0; i < thread_count; i++) {
-    if (agentrt_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
+    if (airy_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
         printf("创建线程 %d 失败！\n", i);
-        AGENTRT_FREE(params);
-        AGENTRT_FREE(threads);
+        AIRY_FREE(params);
+        AIRY_FREE(threads);
         return 0.0;
     }
 }
 
 for (int i = 0; i < thread_count; i++) {
-    agentrt_thread_join(threads[i], NULL);
+    airy_thread_join(threads[i], NULL);
 }
 
-AGENTRT_FREE(threads);
+AIRY_FREE(threads);
 #endif
 
 uint64_t overall_end_time = get_nanoseconds();
@@ -292,7 +292,7 @@ printf("    平均: %.2f 毫秒\n", ns_to_ms(total_thread_time_ns / thread_count
 printf("    最： %.2f 毫秒\n", ns_to_ms(min_thread_time_ns));
 printf("    最： %.2f 毫秒\n", ns_to_ms(max_thread_time_ns));
 
-AGENTRT_FREE(params);
+AIRY_FREE(params);
 return records_per_second;
 }
 

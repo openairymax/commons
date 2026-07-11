@@ -22,7 +22,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_mutex *m = (struct sync_mutex *)AGENTRT_CALLOC(1, sizeof(struct sync_mutex));
+    struct sync_mutex *m = (struct sync_mutex *)AIRY_CALLOC(1, sizeof(struct sync_mutex));
     if (m == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -31,7 +31,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
     if (attr != NULL && attr->name != NULL) {
         m->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&m->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&m->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     InitializeCriticalSection(&m->mutex);
@@ -44,8 +44,8 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
     int result = pthread_mutex_init(&m->mutex, &attr_mutex);
     pthread_mutexattr_destroy(&attr_mutex);
     if (result != 0) {
-        AGENTRT_FREE(m->name);
-        AGENTRT_FREE(m);
+        AIRY_FREE(m->name);
+        AIRY_FREE(m);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -62,8 +62,8 @@ sync_result_t sync_mutex_free(sync_mutex_t mutex)
     }
 
     if (!mutex->initialized) {
-        AGENTRT_FREE(mutex->name);
-        AGENTRT_FREE(mutex);
+        AIRY_FREE(mutex->name);
+        AIRY_FREE(mutex);
         return SYNC_SUCCESS;
     }
 
@@ -73,8 +73,8 @@ sync_result_t sync_mutex_free(sync_mutex_t mutex)
     pthread_mutex_destroy(&mutex->mutex);
 #endif
 
-    AGENTRT_FREE(mutex->name);
-    AGENTRT_FREE(mutex);
+    AIRY_FREE(mutex->name);
+    AIRY_FREE(mutex);
     return SYNC_SUCCESS;
 }
 

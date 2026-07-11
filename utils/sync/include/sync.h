@@ -17,8 +17,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-3 资源确定性原则
  */
 
-#ifndef AGENTRT_SYNC_H
-#define AGENTRT_SYNC_H
+#ifndef AIRY_RT_SYNC_H
+#define AIRY_RT_SYNC_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -733,4 +733,4 @@ sync_result_t sync_get_option(void *lock, int option, void *value);
 }
 #endif
 
-#endif /* AGENTRT_SYNC_H */
+#endif /* AIRY_RT_SYNC_H */

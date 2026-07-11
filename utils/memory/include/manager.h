@@ -11,8 +11,8 @@
  * @owner team-A
  */
 
-#ifndef AGENTRT_COMMONS_UTILS_MANAGER_H
-#define AGENTRT_COMMONS_UTILS_MANAGER_H
+#ifndef AIRY_RT_COMMONS_UTILS_MANAGER_H
+#define AIRY_RT_COMMONS_UTILS_MANAGER_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -24,7 +24,7 @@ extern "C" {
 /**
  * @brief 兼容的配置句柄类型（不透明指针）
  */
-typedef struct agentrt_config_s agentrt_config_t;
+typedef struct airy_config_s airy_config_t;
 
 /**
  * @brief 向后兼容：加载配置文件
@@ -32,17 +32,17 @@ typedef struct agentrt_config_s agentrt_config_t;
  * @param path 配置文件路径
  * @return 配置句柄，失败返回 NULL
  */
-agentrt_config_t *agentrt_config_load(const char *path);
+airy_config_t *airy_config_load(const char *path);
 
 /**
  * @brief 向后兼容：释放配置资源
  *
  * @param config 配置句柄
  */
-void agentrt_config_free(agentrt_config_t *config);
+void airy_config_free(airy_config_t *config);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_COMMONS_UTILS_MANAGER_H */
+#endif /* AIRY_RT_COMMONS_UTILS_MANAGER_H */

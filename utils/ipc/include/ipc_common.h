@@ -34,8 +34,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-4 跨平台一致性原则
  */
 
-#ifndef AGENTRT_IPC_COMMON_H
-#define AGENTRT_IPC_COMMON_H
+#ifndef AIRY_RT_IPC_COMMON_H
+#define AIRY_RT_IPC_COMMON_H
 
 #include <error.h>
 #include <types.h>
@@ -55,14 +55,14 @@ extern "C" {
  *    - 提供更细粒度的控制（如 IPC_TYPE_NAMED_PIPE 单独类型）
  *    - 包含完整的 IPC 功能（服务端/客户端/SHM/MQ）
  *
- * 2. AgentRT 统一类型（types.h 定义，使用 agentrt_ 前缀）
+ * 2. AgentRT 统一类型（types.h 定义，使用 airy_ 前缀）
  *    - 用于跨模块接口契约
  *    - 提供简化的抽象层
  *    - 与其他 AgentRT 组件保持一致
  *
  * 使用建议：
  * - 在 IPC 模块内部实现中使用 ipc_* 类型
- * - 在跨模块接口中使用 agentrt_ipc_* 类型
+ * - 在跨模块接口中使用 airy_ipc_* 类型
  * - 两者可通过转换函数互转（见文件末尾的转换 API）
  */
 
@@ -178,7 +178,7 @@ typedef struct {
     char target[64];               /**< 目标标识 */
     uint64_t payload_len;          /**< 负载长度 */
     uint32_t checksum;             /**< 校验和 (CRC32) */
-    agentrt_timestamp_t timestamp; /**< 时间戳 */
+    airy_timestamp_t timestamp; /**< 时间戳 */
     uint8_t reserved[32];          /**< 保留字段 */
 } ipc_message_header_t;
 
@@ -265,7 +265,7 @@ typedef int (*ipc_message_callback_t)(ipc_channel_t *channel, const ipc_message_
  * @brief 初始化 IPC 子系统
  * @return 错误码
  */
-agentrt_error_t ipc_init(void);
+airy_err_t ipc_init(void);
 
 /**
  * @brief 清理 IPC 子系统
@@ -302,14 +302,14 @@ void ipc_channel_destroy(ipc_channel_t *channel);
  * @param channel 通道句柄
  * @return 错误码
  */
-agentrt_error_t ipc_channel_open(ipc_channel_t *channel);
+airy_err_t ipc_channel_open(ipc_channel_t *channel);
 
 /**
  * @brief 关闭 IPC 通道
  * @param channel 通道句柄
  * @return 错误码
  */
-agentrt_error_t ipc_channel_close(ipc_channel_t *channel);
+airy_err_t ipc_channel_close(ipc_channel_t *channel);
 
 /**
  * @brief 获取通道状态
@@ -338,7 +338,7 @@ ipc_type_t ipc_channel_get_type(const ipc_channel_t *channel);
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms);
+airy_err_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms);
 
 /**
  * @brief 设置事件回调
@@ -347,7 +347,7 @@ agentrt_error_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout
  * @param user_data 用户数据
  * @return 错误码
  */
-agentrt_error_t ipc_channel_set_event_callback(ipc_channel_t *channel,
+airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel,
                                                ipc_event_callback_t callback, void *user_data);
 
 /**
@@ -356,14 +356,14 @@ agentrt_error_t ipc_channel_set_event_callback(ipc_channel_t *channel,
  * @param stats [out] 统计信息
  * @return 错误码
  */
-agentrt_error_t ipc_channel_get_stats(const ipc_channel_t *channel, ipc_stats_t *stats);
+airy_err_t ipc_channel_get_stats(const ipc_channel_t *channel, ipc_stats_t *stats);
 
 /**
  * @brief 重置统计信息
  * @param channel 通道句柄
  * @return 错误码
  */
-agentrt_error_t ipc_channel_reset_stats(ipc_channel_t *channel);
+airy_err_t ipc_channel_reset_stats(ipc_channel_t *channel);
 
 /* ============================================================================
  * 消息发送 API
@@ -375,7 +375,7 @@ agentrt_error_t ipc_channel_reset_stats(ipc_channel_t *channel);
  * @param message 消息结构
  * @return 错误码
  */
-agentrt_error_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message);
+airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message);
 
 /**
  * @brief 发送数据（简化接口）
@@ -385,7 +385,7 @@ agentrt_error_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message);
  * @param sent [out] 实际发送字节数（可选）
  * @return 错误码
  */
-agentrt_error_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, size_t *sent);
+airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, size_t *sent);
 
 /**
  * @brief 发送请求并等待响应
@@ -395,7 +395,7 @@ agentrt_error_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t l
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
+airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
                                  ipc_message_t *response, uint32_t timeout_ms);
 
 /**
@@ -404,7 +404,7 @@ agentrt_error_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
  * @param message 消息结构
  * @return 错误码
  */
-agentrt_error_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message);
+airy_err_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message);
 
 /**
  * @brief 发送通知消息
@@ -413,7 +413,7 @@ agentrt_error_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *messa
  * @param len 数据长度
  * @return 错误码
  */
-agentrt_error_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t len);
+airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t len);
 
 /* ============================================================================
  * 消息接收 API
@@ -426,7 +426,7 @@ agentrt_error_t ipc_notify(ipc_channel_t *channel, const void *notification, siz
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms);
+airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms);
 
 /**
  * @brief 接收数据（简化接口）
@@ -436,16 +436,16 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
  * @param received [out] 实际接收字节数
  * @return 错误码
  */
-agentrt_error_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len,
+airy_err_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len,
                                  size_t *received);
 
 /**
  * @brief 尝试接收消息（非阻塞）
  * @param channel 通道句柄
  * @param message [out] 消息结构
- * @return 错误码，无消息时返回 AGENTRT_EBUSY
+ * @return 错误码，无消息时返回 AIRY_EBUSY
  */
-agentrt_error_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message);
+airy_err_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message);
 
 /**
  * @brief 设置消息回调
@@ -454,7 +454,7 @@ agentrt_error_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message);
  * @param user_data 用户数据
  * @return 错误码
  */
-agentrt_error_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
+airy_err_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
                                          void *user_data);
 
 /* ============================================================================
@@ -479,14 +479,14 @@ void ipc_server_destroy(ipc_server_t *server);
  * @param server 服务端句柄
  * @return 错误码
  */
-agentrt_error_t ipc_server_start(ipc_server_t *server);
+airy_err_t ipc_server_start(ipc_server_t *server);
 
 /**
  * @brief 停止 IPC 服务端
  * @param server 服务端句柄
  * @return 错误码
  */
-agentrt_error_t ipc_server_stop(ipc_server_t *server);
+airy_err_t ipc_server_stop(ipc_server_t *server);
 
 /**
  * @brief 接受客户端连接
@@ -510,7 +510,7 @@ size_t ipc_server_connection_count(const ipc_server_t *server);
  * @param message 消息结构
  * @return 错误码
  */
-agentrt_error_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *message);
+airy_err_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *message);
 
 /* ============================================================================
  * 客户端 API
@@ -535,14 +535,14 @@ void ipc_client_destroy(ipc_client_t *client);
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms);
+airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms);
 
 /**
  * @brief 断开连接
  * @param client 客户端句柄
  * @return 错误码
  */
-agentrt_error_t ipc_client_disconnect(ipc_client_t *client);
+airy_err_t ipc_client_disconnect(ipc_client_t *client);
 
 /**
  * @brief 获取客户端通道
@@ -597,7 +597,7 @@ void *ipc_shm_map(ipc_shm_t *shm);
  * @param shm 共享内存句柄
  * @return 错误码
  */
-agentrt_error_t ipc_shm_unmap(ipc_shm_t *shm);
+airy_err_t ipc_shm_unmap(ipc_shm_t *shm);
 
 /**
  * @brief 获取共享内存大小
@@ -611,7 +611,7 @@ size_t ipc_shm_get_size(const ipc_shm_t *shm);
  * @param shm 共享内存句柄
  * @return 错误码
  */
-agentrt_error_t ipc_shm_sync(ipc_shm_t *shm);
+airy_err_t ipc_shm_sync(ipc_shm_t *shm);
 
 /* ============================================================================
  * 消息队列 API
@@ -655,7 +655,7 @@ void ipc_mq_destroy(ipc_mq_t *mq);
  * @param priority 优先级（0 为最低）
  * @return 错误码
  */
-agentrt_error_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int priority);
+airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int priority);
 
 /**
  * @brief 从队列接收消息
@@ -667,7 +667,7 @@ agentrt_error_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned
  * @param timeout_ms 超时时间
  * @return 错误码
  */
-agentrt_error_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
+airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
                                unsigned int *priority, uint32_t timeout_ms);
 
 /**
@@ -682,7 +682,7 @@ size_t ipc_mq_count(const ipc_mq_t *mq);
  * @param mq 消息队列句柄
  * @return 错误码
  */
-agentrt_error_t ipc_mq_clear(ipc_mq_t *mq);
+airy_err_t ipc_mq_clear(ipc_mq_t *mq);
 
 /* ============================================================================
  * 消息辅助函数
@@ -733,7 +733,7 @@ bool ipc_message_verify(const ipc_message_t *message);
  * @param written [out] 实际写入字节数
  * @return 错误码
  */
-agentrt_error_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
+airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
                                       size_t *written);
 
 /**
@@ -743,7 +743,7 @@ agentrt_error_t ipc_message_serialize(const ipc_message_t *message, void *buffer
  * @param message [out] 消息结构
  * @return 错误码
  */
-agentrt_error_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t *message);
+airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t *message);
 
 /* ============================================================================
  * RPC 通道 API (基于传输通道的远程过程调用)
@@ -758,7 +758,7 @@ agentrt_error_t ipc_message_deserialize(const void *buffer, size_t len, ipc_mess
  * @param user_data 用户数据
  * @return 错误码
  */
-typedef agentrt_error_t (*rpc_method_handler_t)(const void *request, size_t request_len,
+typedef airy_err_t (*rpc_method_handler_t)(const void *request, size_t request_len,
                                                 void *response, size_t *response_max,
                                                 void *user_data);
 
@@ -811,22 +811,22 @@ void ipc_rpc_server_destroy(ipc_rpc_server_t *server);
  * @param server RPC 服务端句柄
  * @return 错误码
  */
-agentrt_error_t ipc_rpc_server_start(ipc_rpc_server_t *server);
+airy_err_t ipc_rpc_server_start(ipc_rpc_server_t *server);
 
 /**
  * @brief 停止 RPC 服务端
  * @param server RPC 服务端句柄
  * @return 错误码
  */
-agentrt_error_t ipc_rpc_server_stop(ipc_rpc_server_t *server);
+airy_err_t ipc_rpc_server_stop(ipc_rpc_server_t *server);
 
 /**
  * @brief 处理单个 RPC 请求（由事件循环调用）
  * @param server RPC 服务端句柄
  * @param timeout_ms 超时时间
- * @return AGENTRT_SUCCESS 处理成功，AGENTRT_ETIMEDOUT 无请求，其他为错误
+ * @return AIRY_SUCCESS 处理成功，AIRY_ETIMEDOUT 无请求，其他为错误
  */
-agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms);
+airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms);
 
 /**
  * @brief RPC 客户端配置
@@ -860,7 +860,7 @@ void ipc_rpc_client_destroy(ipc_rpc_client_t *client);
  * @param response_len [out] 实际响应长度
  * @return 错误码
  */
-agentrt_error_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
+airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
                                   const void *request, size_t request_len, void *response,
                                   size_t response_max, size_t *response_len);
 
@@ -870,7 +870,7 @@ agentrt_error_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_n
  * @param method 方法注册信息
  * @return 错误码
  */
-agentrt_error_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
+airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
                                                const ipc_rpc_method_t *method);
 
 /**
@@ -904,7 +904,7 @@ bool ipc_is_valid(const ipc_channel_t *channel);
  * @param channel 通道句柄
  * @return 错误码
  */
-agentrt_error_t ipc_flush(ipc_channel_t *channel);
+airy_err_t ipc_flush(ipc_channel_t *channel);
 
 /* ============================================================================
  * 类型转换 API（IPC 内部类型 ↔ AgentRT 统一类型）
@@ -912,21 +912,21 @@ agentrt_error_t ipc_flush(ipc_channel_t *channel);
 
 /**
  * @brief 将 AgentRT 统一 IPC 类型转换为 IPC 模块内部类型
- * @param agentrt_type AgentRT 统一 IPC 类型
+ * @param airy_type AgentRT 统一 IPC 类型
  * @return IPC 模块内部类型
  */
-static inline ipc_type_t ipc_type_from_agentrt(agentrt_ipc_type_t agentrt_type)
+static inline ipc_type_t ipc_type_from_agentrt(airy_ipc_type_t airy_type)
 {
-    switch (agentrt_type) {
-    case AGENTRT_IPC_PIPE:
+    switch (airy_type) {
+    case AIRY_IPC_PIPE:
         return IPC_TYPE_PIPE;
-    case AGENTRT_IPC_SOCKET:
+    case AIRY_IPC_SOCKET:
         return IPC_TYPE_SOCKET;
-    case AGENTRT_IPC_SHM:
+    case AIRY_IPC_SHM:
         return IPC_TYPE_SHM;
-    case AGENTRT_IPC_MQ:
+    case AIRY_IPC_MQ:
         return IPC_TYPE_MQ;
-    case AGENTRT_IPC_RPC:
+    case AIRY_IPC_RPC:
         return IPC_TYPE_RPC;
     default:
         return IPC_TYPE_PIPE;
@@ -938,23 +938,23 @@ static inline ipc_type_t ipc_type_from_agentrt(agentrt_ipc_type_t agentrt_type)
  * @param ipc_type IPC 模块内部类型
  * @return AgentRT 统一 IPC 类型
  */
-static inline agentrt_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
+static inline airy_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
 {
     switch (ipc_type) {
     case IPC_TYPE_PIPE:
-        return AGENTRT_IPC_PIPE;
+        return AIRY_IPC_PIPE;
     case IPC_TYPE_NAMED_PIPE:
-        return AGENTRT_IPC_SOCKET; /* 命名管道映射到 Socket */
+        return AIRY_IPC_SOCKET; /* 命名管道映射到 Socket */
     case IPC_TYPE_SOCKET:
-        return AGENTRT_IPC_SOCKET;
+        return AIRY_IPC_SOCKET;
     case IPC_TYPE_SHM:
-        return AGENTRT_IPC_SHM;
+        return AIRY_IPC_SHM;
     case IPC_TYPE_MQ:
-        return AGENTRT_IPC_MQ;
+        return AIRY_IPC_MQ;
     case IPC_TYPE_RPC:
-        return AGENTRT_IPC_RPC;
+        return AIRY_IPC_RPC;
     default:
-        return AGENTRT_IPC_PIPE;
+        return AIRY_IPC_PIPE;
     }
 }
 
@@ -962,4 +962,4 @@ static inline agentrt_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
 }
 #endif
 
-#endif /* AGENTRT_IPC_COMMON_H */
+#endif /* AIRY_RT_IPC_COMMON_H */

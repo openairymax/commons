@@ -128,14 +128,14 @@ if (!result.is_valid) {
 
 // ===== 路径验证 =====
 agentrt_validate_file_path("/tmp/data/config.json", "/tmp", &result);
-AGENTRT_VALIDATE_OR_RETURN(result, AGENTRT_ESECURITY);
+AGENTRT_VALIDATE_OR_RETURN(result, AIRY_ESECURITY);
 
 // 规范化路径
 char *normalized = NULL;
 size_t normalized_len = 0;
 if (agentrt_normalize_path("../../etc/passwd", &normalized, &normalized_len) == AGENTRT_SUCCESS) {
     printf("Normalized: %s\n", normalized);
-    AGENTRT_FREE(normalized);
+    AIRY_FREE(normalized);
 }
 
 // ===== 命令验证 =====
@@ -149,7 +149,7 @@ if (result.is_valid) {
 char *safe_param = NULL;
 agentrt_sanitize_shell_param("user's input; rm -rf /", &safe_param);
 printf("Sanitized: %s\n", safe_param);  // 输出: 'user\'s input; rm -rf /'
-AGENTRT_FREE(safe_param);
+AIRY_FREE(safe_param);
 
 // ===== SQL 验证 =====
 agentrt_validate_sql_query("SELECT * FROM users WHERE id = 1", &result);
@@ -161,7 +161,7 @@ if (result.is_valid) {
 char *safe_identifier = NULL;
 agentrt_sanitize_sql_identifier("user_name", &safe_identifier);
 printf("Safe identifier: %s\n", safe_identifier);  // 输出: "user_name"
-AGENTRT_FREE(safe_identifier);
+AIRY_FREE(safe_identifier);
 
 // ===== URL 验证 =====
 const char *schemes[] = {"http", "https", NULL};
@@ -175,9 +175,9 @@ char *scheme = NULL, *host = NULL, *path = NULL;
 uint16_t port = 0;
 agentrt_parse_url("https://api.example.com:443/v1/data", &scheme, &host, &port, &path);
 printf("Scheme: %s, Host: %s, Port: %d, Path: %s\n", scheme, host, port, path);
-AGENTRT_FREE(scheme);
-AGENTRT_FREE(host);
-AGENTRT_FREE(path);
+AIRY_FREE(scheme);
+AIRY_FREE(host);
+AIRY_FREE(path);
 
 // ===== 数值验证 =====
 agentrt_validate_int_range(100, 0, 255, &result);
@@ -232,7 +232,7 @@ if (agentrt_safe_strcpy(dest, sizeof(dest), user_input) == AGENTRT_SUCCESS) {
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 统一错误码定义（`AGENTRT_SUCCESS`、`AGENTRT_EINVAL`、`AGENTRT_ESECURITY` 等） |
+| `error.h` | 统一错误码定义（`AGENTRT_SUCCESS`、`AIRY_EINVAL`、`AIRY_ESECURITY` 等） |
 | `logger.h` | 日志记录（安全事件告警） |
 | `memory_compat.h` | 统一内存管理宏 |
 | `string_compat.h` | 字符串操作兼容层 |

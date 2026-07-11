@@ -10,8 +10,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_MEMORY_POOL_H
-#define AGENTRT_MEMORY_POOL_H
+#ifndef AIRY_RT_MEMORY_POOL_H
+#define AIRY_RT_MEMORY_POOL_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -303,4 +303,4 @@ size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count);
 }
 #endif
 
-#endif /* AGENTRT_MEMORY_POOL_H */
+#endif /* AIRY_RT_MEMORY_POOL_H */

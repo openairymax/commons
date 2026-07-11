@@ -29,8 +29,8 @@
  * 服务层功能可通过条件编译禁用，以减少资源消耗。
  */
 
-#ifndef AGENTRT_COMMON_SERVICE_LOGGING_H
-#define AGENTRT_COMMON_SERVICE_LOGGING_H
+#ifndef AIRY_RT_COMMON_SERVICE_LOGGING_H
+#define AIRY_RT_COMMON_SERVICE_LOGGING_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -688,4 +688,4 @@ typedef struct log_query {
 }
 #endif
 
-#endif /* AGENTRT_COMMON_SERVICE_LOGGING_H */
+#endif /* AIRY_RT_COMMON_SERVICE_LOGGING_H */

@@ -87,7 +87,7 @@ network/
 | `header_count` | `size_t` | 响应头数量 |
 | `body` | `void *` | 响应体 |
 | `body_len` | `size_t` | 响应体长度 |
-| `error` | `agentrt_error_t` | 错误码 |
+| `error` | `airy_err_t` | 错误码 |
 | `error_message` | `char *` | 错误消息 |
 | `latency_us` | `uint64_t` | 响应延迟（微秒） |
 
@@ -184,7 +184,7 @@ if (!conn) {
     return;
 }
 
-agentrt_error_t err = network_connect(conn);
+airy_err_t err = network_connect(conn);
 if (err == AGENTRT_SUCCESS) {
     // 发送 HTTP GET 请求
     network_http_response_t response;
@@ -260,7 +260,7 @@ network_pool_destroy(pool);
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AGENTRT_MALLOC`、`AGENTRT_FREE` 等） |
+| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
 | `error.h` | 统一错误码定义 |
 | `types.h` | 基础类型定义 |
 | `atomic_compat.h` | 跨平台原子操作 |

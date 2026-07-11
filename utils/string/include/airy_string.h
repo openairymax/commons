@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
- * @file agentrt_string.h
+ * @file airy_string.h
  * @brief 统一字符串处理模块 - 核心层API
  *
  * 提供安全、高效、统一的字符串处理接口，避免缓冲区溢出等常见安全问题。
@@ -17,8 +17,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-1 安全内生原则
  */
 
-#ifndef AGENTRT_STRING_H
-#define AGENTRT_STRING_H
+#ifndef AIRY_RT_STRING_H
+#define AIRY_RT_STRING_H
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -653,4 +653,4 @@ bool string_utf8_validate(const char *str, size_t len);
 }
 #endif
 
-#endif /* AGENTRT_STRING_H */
+#endif /* AIRY_RT_STRING_H */

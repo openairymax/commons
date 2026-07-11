@@ -32,8 +32,8 @@
  * @see P1.7 C-L08 连接线
  */
 
-#ifndef AGENTRT_SERVICE_DISCOVERY_HELPER_H
-#define AGENTRT_SERVICE_DISCOVERY_HELPER_H
+#ifndef AIRY_RT_SERVICE_DISCOVERY_HELPER_H
+#define AIRY_RT_SERVICE_DISCOVERY_HELPER_H
 
 #include "service_discovery.h"
 
@@ -222,4 +222,4 @@ void sd_helper_dump_stats(sd_helper_t *sdh);
 }
 #endif
 
-#endif /* AGENTRT_SERVICE_DISCOVERY_HELPER_H */
+#endif /* AIRY_RT_SERVICE_DISCOVERY_HELPER_H */

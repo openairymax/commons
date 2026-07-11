@@ -10,8 +10,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_MEMORY_DEBUG_H
-#define AGENTRT_MEMORY_DEBUG_H
+#ifndef AIRY_RT_MEMORY_DEBUG_H
+#define AIRY_RT_MEMORY_DEBUG_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -304,4 +304,4 @@ size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int c
 }
 #endif
 
-#endif /* AGENTRT_MEMORY_DEBUG_H */
+#endif /* AIRY_RT_MEMORY_DEBUG_H */

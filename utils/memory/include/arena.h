@@ -21,8 +21,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_ARENA_H
-#define AGENTRT_ARENA_H
+#ifndef AIRY_RT_ARENA_H
+#define AIRY_RT_ARENA_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,7 +40,7 @@ extern "C" {
 
 /* ==================== Arena 句柄 ==================== */
 
-typedef struct agentrt_arena agentrt_arena_t;
+typedef struct airy_arena airy_arena_t;
 
 /* ==================== Arena 统计 ==================== */
 
@@ -57,9 +57,9 @@ typedef struct {
 /* ==================== Arena 标记（回退点） ==================== */
 
 typedef struct {
-    agentrt_arena_t *arena;  /**< 所属 Arena */
+    airy_arena_t *arena;  /**< 所属 Arena */
     void            *bump;   /**< bump 指针快照 */
-    agentrt_arena_t *chunk;  /**< 当前 chunk 快照 */
+    airy_arena_t *chunk;  /**< 当前 chunk 快照 */
 } arena_mark_t;
 
 /* ==================== 生命周期 API ==================== */
@@ -73,7 +73,7 @@ typedef struct {
  * @param max_chunks  最大 chunk 数量（0 无限制）
  * @return Arena 句柄，失败返回 NULL
  */
-agentrt_arena_t *arena_create(size_t chunk_size, size_t max_chunks);
+airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks);
 
 /**
  * @brief P1.19.2: 销毁 Arena 并释放所有内存
@@ -82,7 +82,7 @@ agentrt_arena_t *arena_create(size_t chunk_size, size_t max_chunks);
  *
  * @param arena Arena 句柄
  */
-void arena_destroy(agentrt_arena_t *arena);
+void arena_destroy(airy_arena_t *arena);
 
 /* ==================== 分配 API ==================== */
 
@@ -98,7 +98,7 @@ void arena_destroy(agentrt_arena_t *arena);
  * @param size  分配大小（字节）
  * @return 分配的内存指针（16 字节对齐），失败返回 NULL
  */
-void *arena_alloc(agentrt_arena_t *arena, size_t size);
+void *arena_alloc(airy_arena_t *arena, size_t size);
 
 /**
  * @brief P1.19.2: 从 Arena 分配并清零内存
@@ -109,7 +109,7 @@ void *arena_alloc(agentrt_arena_t *arena, size_t size);
  * @param size  分配大小（字节）
  * @return 清零的内存指针，失败返回 NULL
  */
-void *arena_calloc(agentrt_arena_t *arena, size_t size);
+void *arena_calloc(airy_arena_t *arena, size_t size);
 
 /* ==================== 释放 / 重置 API ==================== */
 
@@ -121,7 +121,7 @@ void *arena_calloc(agentrt_arena_t *arena, size_t size);
  *
  * @param arena Arena 句柄
  */
-void arena_reset(agentrt_arena_t *arena);
+void arena_reset(airy_arena_t *arena);
 
 /* ==================== 标记 / 回退 API ==================== */
 
@@ -133,7 +133,7 @@ void arena_reset(agentrt_arena_t *arena);
  * @param arena Arena 句柄
  * @param mark  输出标记（调用者分配）
  */
-void arena_mark(agentrt_arena_t *arena, arena_mark_t *mark);
+void arena_mark(airy_arena_t *arena, arena_mark_t *mark);
 
 /**
  * @brief P1.19.2: 回退到标记位置
@@ -152,7 +152,7 @@ void arena_release(arena_mark_t *mark);
  * @param stats 输出统计信息
  * @return true 成功
  */
-bool arena_get_stats(agentrt_arena_t *arena, arena_stats_t *stats);
+bool arena_get_stats(airy_arena_t *arena, arena_stats_t *stats);
 
 /**
  * @brief 检查指针是否在当前 Arena 的某个 chunk 范围内
@@ -160,24 +160,24 @@ bool arena_get_stats(agentrt_arena_t *arena, arena_stats_t *stats);
  * @param ptr   待检查指针
  * @return true 属于此 Arena
  */
-bool arena_contains(agentrt_arena_t *arena, const void *ptr);
+bool arena_contains(airy_arena_t *arena, const void *ptr);
 
 /**
  * @brief 获取 Arena 当前总容量
  * @param arena Arena 句柄
  * @return 总容量（字节）
  */
-size_t arena_capacity(agentrt_arena_t *arena);
+size_t arena_capacity(airy_arena_t *arena);
 
 /**
  * @brief 获取 Arena 当前已使用量
  * @param arena Arena 句柄
  * @return 已使用字节数
  */
-size_t arena_used(agentrt_arena_t *arena);
+size_t arena_used(airy_arena_t *arena);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_ARENA_H */
+#endif /* AIRY_RT_ARENA_H */

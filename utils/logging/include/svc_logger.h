@@ -6,14 +6,14 @@
  *
  * P0.17 阶段 2：从 daemons/common/include/svc_logger.h 迁移至
  * commons/utils/logging/include/svc_logger.h，消除 atoms→daemons
- * 编译期反向依赖（IRON-6）。提供 SVC_LOG_* 宏、agentrt_trace_context_t
+ * 编译期反向依赖（IRON-6）。提供 SVC_LOG_* 宏、airy_trace_context_t
  * 类型及日志记录器接口，供 atoms 与 daemons 共享使用。
  *
  * @see logging.h
  */
 
-#ifndef AGENTRT_SVC_LOGGER_H
-#define AGENTRT_SVC_LOGGER_H
+#ifndef AIRY_RT_SVC_LOGGER_H
+#define AIRY_RT_SVC_LOGGER_H
 
 /* 包含 commons 的统一日志系统 */
 #include "error.h"
@@ -23,13 +23,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-/* P0.17 阶段 2: AGENTRT_STRNCPY_TERM 安全字符串复制宏
+/* P0.17 阶段 2: AIRY_STRNCPY_TERM 安全字符串复制宏
  * 原定义位于 commons/utils/memory/include/memory_compat.h:607，
- * 但完整包含 memory_compat.h 会引入 error.h/agentrt_memory.h 等过重依赖
- * （AGENTRT_EINVAL/AGENTRT_ERR_BUSY/agentrt_time_ms 等循环依赖冲突）。
+ * 但完整包含 memory_compat.h 会引入 error.h/airy_memory.h 等过重依赖
+ * （AIRY_EINVAL/AIRY_ERR_BUSY/airy_time_ms 等循环依赖冲突）。
  * 此处直接内联定义，带 ifndef 保护以避免重复定义。 */
-#ifndef AGENTRT_STRNCPY_TERM
-#define AGENTRT_STRNCPY_TERM(dst, src, size) \
+#ifndef AIRY_STRNCPY_TERM
+#define AIRY_STRNCPY_TERM(dst, src, size) \
     do {                                     \
         size_t _len = __builtin_strlen(src); \
         size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
@@ -48,24 +48,24 @@ extern "C" {
  * @brief 日志级别枚举（兼容层）
  * @note 映射到 commons 的 log_level_t
  */
-#ifndef AGENTRT_LOG_LEVEL_T_DEFINED
-#define AGENTRT_LOG_LEVEL_T_DEFINED
-typedef log_level_t agentrt_log_level_t;
+#ifndef AIRY_LOG_LEVEL_T_DEFINED
+#define AIRY_LOG_LEVEL_T_DEFINED
+typedef log_level_t airy_log_level_t;
 #endif
 
 /* 兼容旧日志级别名称
  *
- * 注意：AGENTRT_LOG_DEBUG / INFO / WARN / ERROR / FATAL 已移除值宏定义，
+ * 注意：AIRY_LOG_DEBUG / INFO / WARN / ERROR / FATAL 已移除值宏定义，
  * 因为它们与 logging_compat.h 和 observability/logger.h 的函数式宏同名冲突。
  * 文件中需要日志级别常量时，请直接使用 LOG_LEVEL_* 枚举值。
- * 文件中需要日志打印时，请使用 AGENTRT_LOG_*("fmt", ...) 函数式宏
+ * 文件中需要日志打印时，请使用 AIRY_LOG_*("fmt", ...) 函数式宏
  * （来自 logging_compat.h 或 observability/logger.h）或 SVC_LOG_* 宏。
  */
-#ifndef AGENTRT_LOG_TRACE
-#define AGENTRT_LOG_TRACE LOG_LEVEL_DEBUG
+#ifndef AIRY_LOG_TRACE
+#define AIRY_LOG_TRACE LOG_LEVEL_DEBUG
 #endif
-#ifndef AGENTRT_LOG_OFF
-#define AGENTRT_LOG_OFF LOG_LEVEL_COUNT
+#ifndef AIRY_LOG_OFF
+#define AIRY_LOG_OFF LOG_LEVEL_COUNT
 #endif
 
 /* ==================== 追踪上下文 ==================== */
@@ -79,7 +79,7 @@ typedef struct {
     char span_id[16];        /**< 跨度ID */
     char session_id[36];     /**< 会话ID */
     char parent_span_id[16]; /**< 父跨度ID */
-} agentrt_trace_context_t;
+} airy_trace_context_t;
 
 /* ==================== 日志记录器类型 ==================== */
 
@@ -87,27 +87,27 @@ typedef struct {
  * @brief 日志记录器句柄类型
  * @note 兼容层使用单例模式
  */
-typedef struct agentrt_logger_s *agentrt_logger_t;
+typedef struct airy_logger_s *airy_logger_t;
 
 /* ==================== 日志输出目标 ==================== */
 
 /**
  * @brief 日志输出目标类型
  */
-typedef log_output_t agentrt_log_target_type_t;
+typedef log_output_t airy_log_target_type_t;
 
-#define AGENTRT_LOG_TARGET_FILE LOG_OUTPUT_FILE
-#define AGENTRT_LOG_TARGET_STDOUT LOG_OUTPUT_CONSOLE
-#define AGENTRT_LOG_TARGET_STDERR LOG_OUTPUT_CONSOLE
-#define AGENTRT_LOG_TARGET_SYSLOG LOG_OUTPUT_SYSLOG
-#define AGENTRT_LOG_TARGET_CALLBACK LOG_OUTPUT_NETWORK
+#define AIRY_LOG_TARGET_FILE LOG_OUTPUT_FILE
+#define AIRY_LOG_TARGET_STDOUT LOG_OUTPUT_CONSOLE
+#define AIRY_LOG_TARGET_STDERR LOG_OUTPUT_CONSOLE
+#define AIRY_LOG_TARGET_SYSLOG LOG_OUTPUT_SYSLOG
+#define AIRY_LOG_TARGET_CALLBACK LOG_OUTPUT_NETWORK
 
 /**
  * @brief 日志回调函数类型
  */
-typedef void (*agentrt_log_callback_t)(agentrt_log_level_t level, const char *timestamp,
+typedef void (*airy_log_callback_t)(airy_log_level_t level, const char *timestamp,
                                        const char *logger_name,
-                                       const agentrt_trace_context_t *trace_ctx,
+                                       const airy_trace_context_t *trace_ctx,
                                        const char *message, const char *file, int line,
                                        void *user_data);
 
@@ -115,7 +115,7 @@ typedef void (*agentrt_log_callback_t)(agentrt_log_level_t level, const char *ti
  * @brief 日志输出目标配置
  */
 typedef struct {
-    agentrt_log_target_type_t type;
+    airy_log_target_type_t type;
     union {
         struct {
             char path[260];
@@ -123,11 +123,11 @@ typedef struct {
             int max_files;
         } file;
         struct {
-            agentrt_log_callback_t callback;
+            airy_log_callback_t callback;
             void *user_data;
         } callback;
     } config;
-} agentrt_log_target_t;
+} airy_log_target_t;
 
 /* ==================== 日志记录器配置 ==================== */
 
@@ -136,13 +136,13 @@ typedef struct {
  */
 typedef struct {
     char name[64];
-    agentrt_log_level_t level;
-    agentrt_log_target_t *targets;
+    airy_log_level_t level;
+    airy_log_target_t *targets;
     int target_count;
     bool include_source;
     bool include_trace;
     bool json_format;
-} agentrt_logger_config_t;
+} airy_logger_config_t;
 
 /* ==================== 全局日志接口 ==================== */
 
@@ -151,7 +151,7 @@ typedef struct {
  * @param config [in] 全局配置（可为NULL使用默认值）
  * @return 0成功，非0失败
  */
-static inline int agentrt_log_init(const agentrt_logger_config_t *config)
+static inline int airy_log_init(const airy_logger_config_t *config)
 {
     log_config_t log_cfg = {0};
 
@@ -162,7 +162,7 @@ static inline int agentrt_log_init(const agentrt_logger_config_t *config)
 
         /* 查找文件输出目标 */
         for (int i = 0; i < config->target_count; i++) {
-            if (config->targets[i].type == AGENTRT_LOG_TARGET_FILE) {
+            if (config->targets[i].type == AIRY_LOG_TARGET_FILE) {
                 log_cfg.outputs |= (1 << LOG_OUTPUT_FILE);
                 log_cfg.file_path = config->targets[i].config.file.path;
                 log_cfg.max_file_size = config->targets[i].config.file.max_size;
@@ -177,7 +177,7 @@ static inline int agentrt_log_init(const agentrt_logger_config_t *config)
 /**
  * @brief 关闭日志系统
  */
-static inline void agentrt_log_shutdown(void)
+static inline void airy_log_shutdown(void)
 {
     log_cleanup();
 }
@@ -186,7 +186,7 @@ static inline void agentrt_log_shutdown(void)
  * @brief 设置全局日志级别
  * @param level [in] 日志级别
  */
-static inline void agentrt_log_set_level(agentrt_log_level_t level)
+static inline void airy_log_set_level(airy_log_level_t level)
 {
     (void)level;
 }
@@ -195,9 +195,9 @@ static inline void agentrt_log_set_level(agentrt_log_level_t level)
  * @brief 获取全局日志级别
  * @return 当前日志级别
  */
-static inline agentrt_log_level_t agentrt_log_get_level(void)
+static inline airy_log_level_t airy_log_get_level(void)
 {
-    return (agentrt_log_level_t)LOG_LEVEL_INFO;
+    return (airy_log_level_t)LOG_LEVEL_INFO;
 }
 
 /* ==================== 追踪上下文接口 ==================== */
@@ -206,16 +206,16 @@ static inline agentrt_log_level_t agentrt_log_get_level(void)
  * @brief 生成新的追踪上下文
  * @param ctx [out] 追踪上下文输出
  */
-static inline void agentrt_trace_new(agentrt_trace_context_t *ctx)
+static inline void airy_trace_new(airy_trace_context_t *ctx)
 {
     if (!ctx)
         return;
 
     /* 生成 UUID 格式的 trace_id */
     snprintf(ctx->trace_id, sizeof(ctx->trace_id), "%08x-%04x-%04x-%04x-%012llx",
-             (uint32_t)agentrt_time_ns(), (uint16_t)(agentrt_time_ns() >> 16),
-             (uint16_t)(agentrt_time_ns() >> 32), (uint16_t)(agentrt_time_ns() >> 48),
-             (unsigned long long)agentrt_thread_id());
+             (uint32_t)airy_time_ns(), (uint16_t)(airy_time_ns() >> 16),
+             (uint16_t)(airy_time_ns() >> 32), (uint16_t)(airy_time_ns() >> 48),
+             (unsigned long long)airy_thread_id());
 
     ctx->span_id[0] = '\0';
     ctx->session_id[0] = '\0';
@@ -226,20 +226,20 @@ static inline void agentrt_trace_new(agentrt_trace_context_t *ctx)
  * @brief 生成新的 SpanID
  * @param ctx [in,out] 追踪上下文
  */
-static inline void agentrt_trace_new_span(agentrt_trace_context_t *ctx)
+static inline void airy_trace_new_span(airy_trace_context_t *ctx)
 {
     if (!ctx)
         return;
-    snprintf(ctx->span_id, sizeof(ctx->span_id), "%llx", (unsigned long long)agentrt_time_ns());
+    snprintf(ctx->span_id, sizeof(ctx->span_id), "%llx", (unsigned long long)airy_time_ns());
 }
 
 /**
  * @brief 获取当前线程的追踪上下文
  * @return 追踪上下文指针（线程本地存储）
  */
-static inline agentrt_trace_context_t *agentrt_trace_current(void)
+static inline airy_trace_context_t *airy_trace_current(void)
 {
-    static AGENTRT_THREAD_LOCAL agentrt_trace_context_t tls_trace = {0};
+    static AIRY_THREAD_LOCAL airy_trace_context_t tls_trace = {0};
     return &tls_trace;
 }
 
@@ -247,10 +247,10 @@ static inline agentrt_trace_context_t *agentrt_trace_current(void)
  * @brief 设置当前线程的追踪上下文
  * @param ctx [in] 追踪上下文
  */
-static inline void agentrt_trace_set_current(const agentrt_trace_context_t *ctx)
+static inline void airy_trace_set_current(const airy_trace_context_t *ctx)
 {
     if (ctx) {
-        agentrt_trace_context_t *current = agentrt_trace_current();
+        airy_trace_context_t *current = airy_trace_current();
         if (current) {
             *current = *ctx;
         }
@@ -261,12 +261,12 @@ static inline void agentrt_trace_set_current(const agentrt_trace_context_t *ctx)
  * @brief 设置当前会话ID
  * @param session_id [in] 会话ID
  */
-static inline void agentrt_trace_set_session_id(const char *session_id)
+static inline void airy_trace_set_session_id(const char *session_id)
 {
     if (session_id) {
-        agentrt_trace_context_t *ctx = agentrt_trace_current();
+        airy_trace_context_t *ctx = airy_trace_current();
         if (ctx) {
-            AGENTRT_STRNCPY_TERM(ctx->session_id, session_id, sizeof(ctx->session_id));
+            AIRY_STRNCPY_TERM(ctx->session_id, session_id, sizeof(ctx->session_id));
         }
     }
 }
@@ -275,9 +275,9 @@ static inline void agentrt_trace_set_session_id(const char *session_id)
  * @brief 获取当前会话ID
  * @return 会话ID字符串
  */
-static inline const char *agentrt_trace_get_session_id(void)
+static inline const char *airy_trace_get_session_id(void)
 {
-    agentrt_trace_context_t *ctx = agentrt_trace_current();
+    airy_trace_context_t *ctx = airy_trace_current();
     return ctx ? ctx->session_id : "";
 }
 
@@ -287,9 +287,9 @@ static inline const char *agentrt_trace_get_session_id(void)
  * @brief 获取默认日志记录器
  * @return 默认日志记录器句柄
  */
-static inline agentrt_logger_t agentrt_logger_default(void)
+static inline airy_logger_t airy_logger_default(void)
 {
-    return (agentrt_logger_t)1; /* 非NULL表示使用默认日志器 */
+    return (airy_logger_t)1; /* 非NULL表示使用默认日志器 */
 }
 
 /**
@@ -297,17 +297,17 @@ static inline agentrt_logger_t agentrt_logger_default(void)
  * @param config [in] 配置
  * @return 日志记录器句柄
  */
-static inline agentrt_logger_t agentrt_logger_create(const agentrt_logger_config_t *config)
+static inline airy_logger_t airy_logger_create(const airy_logger_config_t *config)
 {
     (void)config;
-    return agentrt_logger_default();
+    return airy_logger_default();
 }
 
 /**
  * @brief 销毁日志记录器
  * @param logger [in] 日志记录器句柄
  */
-static inline void agentrt_logger_destroy(agentrt_logger_t logger)
+static inline void airy_logger_destroy(airy_logger_t logger)
 {
     (void)logger;
 }
@@ -317,7 +317,7 @@ static inline void agentrt_logger_destroy(agentrt_logger_t logger)
  * @param logger [in] 日志记录器句柄
  * @param level [in] 日志级别
  */
-static inline void agentrt_logger_set_level(agentrt_logger_t logger, agentrt_log_level_t level)
+static inline void airy_logger_set_level(airy_logger_t logger, airy_log_level_t level)
 {
     (void)logger;
     (void)level;
@@ -333,7 +333,7 @@ static inline void agentrt_logger_set_level(agentrt_logger_t logger, agentrt_log
  * @param fmt [in] 格式化消息
  * @param ... [in] 可变参数
  */
-static inline void agentrt_logger_log(agentrt_logger_t logger, agentrt_log_level_t level,
+static inline void airy_logger_log(airy_logger_t logger, airy_log_level_t level,
                                       const char *file, int line, const char *func, const char *fmt,
                                       ...)
 {
@@ -348,8 +348,8 @@ static inline void agentrt_logger_log(agentrt_logger_t logger, agentrt_log_level
 /**
  * @brief 写入带追踪上下文的日志
  */
-static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentrt_log_level_t level,
-                                                 const agentrt_trace_context_t *trace_ctx,
+static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_level_t level,
+                                                 const airy_trace_context_t *trace_ctx,
                                                  const char *file, int line, const char *func,
                                                  const char *fmt, ...)
 {
@@ -371,7 +371,7 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
 /**
  * @brief 日志宏（内部使用）
  */
-#define AGENTRT_LOG_IMPL(logger, level, ...)                 \
+#define AIRY_LOG_IMPL(logger, level, ...)                 \
     do {                                                     \
         (void)(logger);                                      \
         log_write((level), __FILE__, __LINE__, __VA_ARGS__); \
@@ -380,7 +380,7 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
 /**
  * @brief 带追踪上下文的日志宏（内部使用）
  */
-#define AGENTRT_LOG_TRACE_IMPL(logger, level, trace_ctx, ...)  \
+#define AIRY_LOG_TRACE_IMPL(logger, level, trace_ctx, ...)  \
     do {                                                       \
         (void)(logger);                                        \
         if ((trace_ctx) != NULL && (trace_ctx)->trace_id[0]) { \
@@ -395,27 +395,27 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
  * @brief 跟踪级别日志
  */
 #ifndef LOG_TRACE
-#define LOG_TRACE(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_TRACE(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
 #endif
 
 #ifndef LOG_DEBUG
-#define LOG_DEBUG(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_DEBUG(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
 #endif
 
 #ifndef LOG_INFO
-#define LOG_INFO(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_INFO(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_INFO, __VA_ARGS__)
 #endif
 
 #ifndef LOG_WARN
-#define LOG_WARN(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_WARN, __VA_ARGS__)
+#define LOG_WARN(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_WARN, __VA_ARGS__)
 #endif
 
 #ifndef LOG_ERROR
-#define LOG_ERROR(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_ERROR(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_ERROR, __VA_ARGS__)
 #endif
 
 #ifndef LOG_FATAL
-#define LOG_FATAL(...) AGENTRT_LOG_IMPL(agentrt_logger_default(), LOG_LEVEL_FATAL, __VA_ARGS__)
+#define LOG_FATAL(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_FATAL, __VA_ARGS__)
 #endif
 
 /* ==================== 带追踪上下文的日志宏 ==================== */
@@ -424,37 +424,37 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
  * @brief 带追踪的跟踪级别日志
  */
 #define LOG_TRACE_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
  * @brief 带追踪的调试级别日志
  */
 #define LOG_DEBUG_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
  * @brief 带追踪的信息级别日志
  */
 #define LOG_INFO_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_INFO, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_INFO, (ctx), __VA_ARGS__)
 
 /**
  * @brief 带追踪的警告级别日志
  */
 #define LOG_WARN_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_WARN, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_WARN, (ctx), __VA_ARGS__)
 
 /**
  * @brief 带追踪的错误级别日志
  */
 #define LOG_ERROR_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_ERROR, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_ERROR, (ctx), __VA_ARGS__)
 
 /**
  * @brief 带追踪的致命级别日志
  */
 #define LOG_FATAL_T(ctx, ...) \
-    AGENTRT_LOG_TRACE_IMPL(agentrt_logger_default(), LOG_LEVEL_FATAL, (ctx), __VA_ARGS__)
+    AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_FATAL, (ctx), __VA_ARGS__)
 
 /* ==================== 错误日志辅助宏 ==================== */
 
@@ -473,7 +473,7 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
 #define LOG_CHECK(cond, level, ...)                                           \
     do {                                                                      \
         if (!(cond)) {                                                        \
-            AGENTRT_LOG_IMPL(agentrt_logger_default(), (level), __VA_ARGS__); \
+            AIRY_LOG_IMPL(airy_logger_default(), (level), __VA_ARGS__); \
         }                                                                     \
     } while (0)
 
@@ -508,7 +508,7 @@ static inline void agentrt_logger_log_with_trace(agentrt_logger_t logger, agentr
 /**
  * @brief 日志级别转字符串
  */
-static inline const char *agentrt_log_level_to_string(agentrt_log_level_t level)
+static inline const char *airy_log_level_to_string(airy_log_level_t level)
 {
     return log_level_to_string((log_level_t)level);
 }
@@ -516,13 +516,13 @@ static inline const char *agentrt_log_level_to_string(agentrt_log_level_t level)
 /**
  * @brief 字符串转日志级别
  */
-static inline agentrt_log_level_t agentrt_log_level_from_string(const char *str)
+static inline airy_log_level_t airy_log_level_from_string(const char *str)
 {
-    return (agentrt_log_level_t)log_level_from_string(str);
+    return (airy_log_level_t)log_level_from_string(str);
 }
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_SVC_LOGGER_H */
+#endif /* AIRY_RT_SVC_LOGGER_H */

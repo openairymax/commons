@@ -91,9 +91,9 @@ include/
 | 宏 | 说明 |
 |------|------|
 | `CHECK_NULL_RET(ptr, err_code)` | 指针为 NULL 时返回指定错误码 |
-| `CHECK_NULL(ptr)` | 指针为 NULL 时返回 `AGENTRT_EINVAL` |
+| `CHECK_NULL(ptr)` | 指针为 NULL 时返回 `AIRY_EINVAL` |
 | `CHECK_COND_RET(expr, err_code)` | 表达式为假时返回指定错误码 |
-| `CHECK_COND(expr)` | 表达式为假时返回 `AGENTRT_EINVAL` |
+| `CHECK_COND(expr)` | 表达式为假时返回 `AIRY_EINVAL` |
 | `CHECK_ERR_RET(func_call, err_var)` | 函数调用失败时返回错误码 |
 | `CHECK_RANGE_RET(value, min, max, err_code)` | 值超出范围时返回错误码 |
 | `CHECK_NONZERO_RET(value, err_code)` | 值为零时返回错误码 |
@@ -137,9 +137,9 @@ atomic_thread_fence(memory_order_seq_cst);
 // === check.h 使用示例 ===
 #include "check.h"
 
-agentrt_error_t process_data(void *data, size_t size) {
-    CHECK_NULL_RET(data, AGENTRT_ERR_NULL_POINTER);
-    CHECK_RANGE_RET(size, 1, MAX_SIZE, AGENTRT_ERR_INVALID_PARAM);
+airy_err_t process_data(void *data, size_t size) {
+    CHECK_NULL_RET(data, AIRY_ERR_NULL_POINTER);
+    CHECK_RANGE_RET(size, 1, MAX_SIZE, AIRY_ERR_INVALID_PARAM);
 
     void *buffer = NULL;
     ALLOC_CHECK(buffer, size, cleanup);
@@ -151,7 +151,7 @@ agentrt_error_t process_data(void *data, size_t size) {
 
 cleanup:
     SAFE_FREE(buffer);
-    return AGENTRT_ERR_OUT_OF_MEMORY;
+    return AIRY_ERR_OUT_OF_MEMORY;
 }
 ```
 
@@ -159,7 +159,7 @@ cleanup:
 
 | 依赖 | 说明 |
 |------|------|
-| `error/include/error.h` | check.h 依赖错误码定义（`AGENTRT_EINVAL` 等） |
+| `error/include/error.h` | check.h 依赖错误码定义（`AIRY_EINVAL` 等） |
 | `stdbool.h` | 布尔类型支持 |
 | `stddef.h` | 标准类型定义 |
 | `stdint.h` | 固定宽度整数类型 |

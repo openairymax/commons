@@ -27,8 +27,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-4 跨平台一致性原则
  */
 
-#ifndef AGENTRT_NETWORK_COMMON_H
-#define AGENTRT_NETWORK_COMMON_H
+#ifndef AIRY_RT_NETWORK_COMMON_H
+#define AIRY_RT_NETWORK_COMMON_H
 
 #include <error.h>
 #include <types.h>
@@ -174,7 +174,7 @@ typedef struct {
     size_t header_count;   /**< 响应头数量 */
     void *body;            /**< 响应体 */
     size_t body_len;       /**< 响应体长度 */
-    agentrt_error_t error; /**< 错误码 */
+    airy_err_t error; /**< 错误码 */
     char *error_message;   /**< 错误消息 */
     uint64_t latency_us;   /**< 响应延迟（微秒） */
 } network_http_response_t;
@@ -231,14 +231,14 @@ void network_connection_destroy(network_connection_t *connection);
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_connect(network_connection_t *connection);
+airy_err_t network_connect(network_connection_t *connection);
 
 /**
  * @brief 断开网络连接
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_disconnect(network_connection_t *connection);
+airy_err_t network_disconnect(network_connection_t *connection);
 
 /**
  * @brief 发送数据
@@ -248,7 +248,7 @@ agentrt_error_t network_disconnect(network_connection_t *connection);
  * @param sent [out] 实际发送的字节数（可选）
  * @return 错误码
  */
-agentrt_error_t network_send(network_connection_t *connection, const void *data, size_t length,
+airy_err_t network_send(network_connection_t *connection, const void *data, size_t length,
                              size_t *sent);
 
 /**
@@ -259,7 +259,7 @@ agentrt_error_t network_send(network_connection_t *connection, const void *data,
  * @param received [out] 实际接收的字节数（可选）
  * @return 错误码
  */
-agentrt_error_t network_receive(network_connection_t *connection, void *buffer, size_t length,
+airy_err_t network_receive(network_connection_t *connection, void *buffer, size_t length,
                                 size_t *received);
 
 /**
@@ -269,7 +269,7 @@ agentrt_error_t network_receive(network_connection_t *connection, void *buffer, 
  * @param length 数据长度
  * @return 错误码
  */
-agentrt_error_t network_send_all(network_connection_t *connection, const void *data, size_t length);
+airy_err_t network_send_all(network_connection_t *connection, const void *data, size_t length);
 
 /**
  * @brief 接收指定长度的数据
@@ -278,7 +278,7 @@ agentrt_error_t network_send_all(network_connection_t *connection, const void *d
  * @param length 期望接收的长度
  * @return 错误码
  */
-agentrt_error_t network_receive_exact(network_connection_t *connection, void *buffer,
+airy_err_t network_receive_exact(network_connection_t *connection, void *buffer,
                                       size_t length);
 
 /**
@@ -294,7 +294,7 @@ network_status_t network_get_status(const network_connection_t *connection);
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t network_set_timeout(network_connection_t *connection, int timeout_ms);
+airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms);
 
 /**
  * @brief 设置读写超时
@@ -303,7 +303,7 @@ agentrt_error_t network_set_timeout(network_connection_t *connection, int timeou
  * @param write_timeout_ms 写入超时（毫秒）
  * @return 错误码
  */
-agentrt_error_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
+airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
                                        int write_timeout_ms);
 
 /**
@@ -312,14 +312,14 @@ agentrt_error_t network_set_rw_timeout(network_connection_t *connection, int rea
  * @param stats [out] 统计信息
  * @return 错误码
  */
-agentrt_error_t network_get_stats(const network_connection_t *connection, network_stats_t *stats);
+airy_err_t network_get_stats(const network_connection_t *connection, network_stats_t *stats);
 
 /**
  * @brief 重置统计信息
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_reset_stats(network_connection_t *connection);
+airy_err_t network_reset_stats(network_connection_t *connection);
 
 /**
  * @brief 设置事件回调
@@ -328,7 +328,7 @@ agentrt_error_t network_reset_stats(network_connection_t *connection);
  * @param user_data 用户数据
  * @return 错误码
  */
-agentrt_error_t network_set_event_callback(network_connection_t *connection,
+airy_err_t network_set_event_callback(network_connection_t *connection,
                                            network_event_callback_t callback, void *user_data);
 
 /**
@@ -349,7 +349,7 @@ const char *network_get_error_message(const network_connection_t *connection);
  * @param response [out] HTTP 响应（调用者需调用 network_http_response_free 释放）
  * @return 错误码
  */
-agentrt_error_t network_http_request(network_connection_t *connection,
+airy_err_t network_http_request(network_connection_t *connection,
                                      const network_http_request_t *request,
                                      network_http_response_t *response);
 
@@ -360,7 +360,7 @@ agentrt_error_t network_http_request(network_connection_t *connection,
  * @param response [out] HTTP 响应
  * @return 错误码
  */
-agentrt_error_t network_http_get(network_connection_t *connection, const char *path,
+airy_err_t network_http_get(network_connection_t *connection, const char *path,
                                  network_http_response_t *response);
 
 /**
@@ -373,7 +373,7 @@ agentrt_error_t network_http_get(network_connection_t *connection, const char *p
  * @param response [out] HTTP 响应
  * @return 错误码
  */
-agentrt_error_t network_http_post(network_connection_t *connection, const char *path,
+airy_err_t network_http_post(network_connection_t *connection, const char *path,
                                   const char *content_type, const void *body, size_t body_len,
                                   network_http_response_t *response);
 
@@ -458,7 +458,7 @@ typedef struct {
  * @param result [out] 解析结果
  * @return 错误码
  */
-agentrt_error_t network_dns_resolve(const char *hostname, network_af_t af,
+airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
                                     network_dns_result_t *result);
 
 /**
@@ -486,7 +486,7 @@ bool network_is_reachable(const char *host, int timeout_ms);
  * @param buffer_len 缓冲区长度
  * @return 错误码
  */
-agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len);
+airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len);
 
 /**
  * @brief 将 IP 地址转换为字符串
@@ -496,7 +496,7 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
  * @param buffer_len 缓冲区长度
  * @return 错误码
  */
-agentrt_error_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
+airy_err_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
                                        size_t buffer_len);
 
 /**
@@ -504,7 +504,7 @@ agentrt_error_t network_addr_to_string(network_af_t af, const void *addr, char *
  * @return 错误码
  * @note Windows 平台需要调用此函数初始化 Winsock
  */
-agentrt_error_t network_init(void);
+airy_err_t network_init(void);
 
 /**
  * @brief 清理网络子系统
@@ -516,4 +516,4 @@ void network_cleanup(void);
 }
 #endif
 
-#endif /* AGENTRT_NETWORK_COMMON_H */
+#endif /* AIRY_RT_NETWORK_COMMON_H */

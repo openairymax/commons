@@ -13,8 +13,8 @@
  * 4. 线程安全的基础操作
  */
 
-#ifndef AGENTRT_CORE_CONFIG_H
-#define AGENTRT_CORE_CONFIG_H
+#ifndef AIRY_RT_CORE_CONFIG_H
+#define AIRY_RT_CORE_CONFIG_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -309,4 +309,4 @@ void config_value_print(const config_value_t *value, int indent);
 }
 #endif
 
-#endif /* AGENTRT_CORE_CONFIG_H */
+#endif /* AIRY_RT_CORE_CONFIG_H */

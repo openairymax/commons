@@ -13,60 +13,60 @@ extern "C" {
 #endif
 
 /* 类型别名 */
-typedef agentrt_metrics_t agentrt_observability_t;
+typedef airy_metrics_t airy_observability_t;
 
 /* 指标类型常量（兼容旧API）- 供需要整数值的API使用 */
-#ifndef AGENTRT_OBSERVABILITY_METRIC_MACROS_DEFINED
-#define AGENTRT_OBSERVABILITY_METRIC_MACROS_DEFINED
-#define AGENTRT_METRIC_COUNTER 0
-#define AGENTRT_METRIC_GAUGE 1
-#define AGENTRT_METRIC_HISTOGRAM 2
-#endif /* AGENTRT_OBSERVABILITY_METRIC_MACROS_DEFINED */
+#ifndef AIRY_OBSERVABILITY_METRIC_MACROS_DEFINED
+#define AIRY_OBSERVABILITY_METRIC_MACROS_DEFINED
+#define AIRY_METRIC_COUNTER 0
+#define AIRY_METRIC_GAUGE 1
+#define AIRY_METRIC_HISTOGRAM 2
+#endif /* AIRY_OBSERVABILITY_METRIC_MACROS_DEFINED */
 
 /* 函数映射：创建 */
-static inline agentrt_observability_t *agentrt_observability_create(void)
+static inline airy_observability_t *airy_observability_create(void)
 {
-    return agentrt_metrics_create();
+    return airy_metrics_create();
 }
 
 /* 函数映射：销毁 */
-static inline void agentrt_observability_destroy(agentrt_observability_t *obs)
+static inline void airy_observability_destroy(airy_observability_t *obs)
 {
-    agentrt_metrics_destroy(obs);
+    airy_metrics_destroy(obs);
 }
 
 /* 函数映射：注册指标（新API不需要注册，直接忽略） */
-static inline int agentrt_observability_register_metric(agentrt_observability_t *obs,
+static inline int airy_observability_register_metric(airy_observability_t *obs,
                                                         const char *name, int type,
                                                         const char *desc)
 {
     if (!obs || !name)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     (void)desc;
-    if (type == AGENTRT_METRIC_COUNTER) {
-        agentrt_metrics_increment(obs, name, 0);
-    } else if (type == AGENTRT_METRIC_GAUGE) {
-        agentrt_metrics_gauge(obs, name, 0.0);
+    if (type == AIRY_METRIC_COUNTER) {
+        airy_metrics_increment(obs, name, 0);
+    } else if (type == AIRY_METRIC_GAUGE) {
+        airy_metrics_gauge(obs, name, 0.0);
     }
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* 函数映射：计数器增加 */
-static inline void agentrt_observability_increment_counter(agentrt_observability_t *obs,
+static inline void airy_observability_increment_counter(airy_observability_t *obs,
                                                            const char *label, int64_t value)
 {
-    agentrt_metrics_increment(obs, label, (uint64_t)value);
+    airy_metrics_increment(obs, label, (uint64_t)value);
 }
 
 /* 函数映射：直方图记录（用timing替代） */
-static inline void agentrt_observability_record_histogram(agentrt_observability_t *obs,
+static inline void airy_observability_record_histogram(airy_observability_t *obs,
                                                           const char *name, double value)
 {
-    agentrt_metrics_timing(obs, name, value);
+    airy_metrics_timing(obs, name, value);
 }
 
 /* 函数映射：获取单调时间（纳秒） */
-static inline uint64_t agentrt_get_monotonic_time_ns(void)
+static inline uint64_t airy_get_monotonic_time_ns(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);

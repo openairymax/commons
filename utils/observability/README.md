@@ -114,7 +114,7 @@ Span 是不透明句柄，内部包含：
 | `agentrt_observability_register_metric(obs, name, type, desc)` | 注册指标（新 API 自动注册，直接忽略） |
 | `agentrt_observability_increment_counter(obs, label, value)` | 映射到 `agentrt_metrics_increment()` |
 | `agentrt_observability_record_histogram(obs, name, value)` | 映射到 `agentrt_metrics_timing()` |
-| `agentrt_get_monotonic_time_ns()` | 获取单调时钟纳秒时间戳 |
+| `airy_time_mono_ns()` | 获取单调时钟纳秒时间戳 |
 
 ## 使用示例
 

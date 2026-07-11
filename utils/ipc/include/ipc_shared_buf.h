@@ -33,8 +33,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_IPC_SHARED_BUF_H
-#define AGENTRT_IPC_SHARED_BUF_H
+#ifndef AIRY_RT_IPC_SHARED_BUF_H
+#define AIRY_RT_IPC_SHARED_BUF_H
 
 #include "refcounted.h"
 
@@ -60,7 +60,7 @@ extern "C" {
  * @ownership release — ipc_buf_release() 减少引用计数，归零时释放
  */
 typedef struct {
-    AGENTRT_REFCOUNTED_HEADER;   /**< 引用计数首部（refcounted_t _rc） */
+    AIRY_REFCOUNTED_HEADER;   /**< 引用计数首部（refcounted_t _rc） */
     size_t   size;               /**< 数据大小（字节） */
     uint64_t timestamp;          /**< 创建时间戳（纳秒） */
     char     data[];             /**< 柔性数组：实际数据 */
@@ -166,4 +166,4 @@ static inline size_t ipc_buf_total_size(const ipc_shared_buf_t *buf)
 }
 #endif
 
-#endif /* AGENTRT_IPC_SHARED_BUF_H */
+#endif /* AIRY_RT_IPC_SHARED_BUF_H */

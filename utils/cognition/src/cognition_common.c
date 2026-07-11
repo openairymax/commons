@@ -12,7 +12,7 @@
 
 #include "cognition_common.h"
 
-#include <agentrt_time.h>
+#include <airy_time.h>
 #include <math.h>
 #include <memory_common.h>
 #include <platform.h>
@@ -29,12 +29,12 @@
 int agent_info_init(agent_info_t *agent, const char *agent_id)
 {
     if (!agent || !agent_id) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     agent->agent_id = memory_safe_strdup(agent_id);
     if (!agent->agent_id) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     agent->weight = 1.0;
@@ -42,7 +42,7 @@ int agent_info_init(agent_info_t *agent, const char *agent_id)
     agent->total_tasks = 0;
     agent->successful_tasks = 0;
     agent->avg_latency = 0.0;
-    agent->last_used = agentrt_time_monotonic_ms();
+    agent->last_used = airy_time_monotonic_ms();
 
     return 0;
 }
@@ -95,7 +95,7 @@ void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency
         (agent->avg_latency * (agent->total_tasks - 1) + latency) / agent->total_tasks;
 
     // 更新最后使用时间
-    agent->last_used = agentrt_time_monotonic_ms();
+    agent->last_used = airy_time_monotonic_ms();
 
     // 更新权重
     agent->weight = agent_info_calculate_weight(agent);
@@ -134,7 +134,7 @@ int task_info_init(task_info_t *task, const char *task_id, const char *task_type
                    const char *task_content)
 {
     if (!task || !task_id || !task_type || !task_content) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     task->task_id = memory_safe_strdup(task_id);
@@ -143,7 +143,7 @@ int task_info_init(task_info_t *task, const char *task_id, const char *task_type
 
     if (!task->task_id || !task->task_type || !task->task_content) {
         task_info_cleanup(task);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     task->priority = 0;
@@ -189,7 +189,7 @@ void task_info_cleanup(task_info_t *task)
 int plan_result_init(plan_result_t *result)
 {
     if (!result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     result->success = false;
@@ -234,7 +234,7 @@ void plan_result_cleanup(plan_result_t *result)
 int dispatch_result_init(dispatch_result_t *result)
 {
     if (!result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     result->success = false;
@@ -279,7 +279,7 @@ void dispatch_result_cleanup(dispatch_result_t *result)
 int coordination_result_init(coordination_result_t *result)
 {
     if (!result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     result->success = false;
@@ -328,7 +328,7 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
                                 dispatch_result_t *result)
 {
     if (!agents || agent_count == 0 || !task || !result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 找到权重最高的Agent
@@ -351,7 +351,7 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
         result->success = false;
         result->error = memory_safe_strdup("Failed to allocate memory for selected agent");
         result->error_size = result->error ? strlen(result->error) : 0;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     return 0;
@@ -366,7 +366,7 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
 int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
 {
     if (!task || !result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 简单的计划生成逻辑
@@ -378,7 +378,7 @@ int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
         result->success = false;
         result->error = memory_safe_strdup("Failed to allocate memory for plan");
         result->error_size = strlen(result->error);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     snprintf(plan, plan_size, "Execute task: %s", task->task_content);
@@ -401,7 +401,7 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
                                  coordination_result_t *result)
 {
     if (!agent_results || result_count == 0 || !result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 简单的协调逻辑：选择第一个结果
@@ -413,7 +413,7 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
         result->success = false;
         result->error = memory_safe_strdup("Failed to allocate memory for decision");
         result->error_size = strlen(result->error);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(decision, agent_results[0], decision_size);
@@ -453,7 +453,7 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
 
     // 基于截止时间调整优先级
     if (task->deadline > 0) {
-        uint64_t now = agentrt_time_monotonic_ms();
+        uint64_t now = airy_time_monotonic_ms();
         uint64_t time_left = task->deadline - now;
 
         if (time_left < 3600000) {  // 少于1小时

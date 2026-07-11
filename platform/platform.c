@@ -63,9 +63,9 @@
 
 /* ==================== 网络初始化 ==================== */
 
-int agentrt_network_init(void)
+int airy_network_init(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     WSADATA wsaData;
     return WSAStartup(MAKEWORD(2, 2), &wsaData);
 #else
@@ -73,34 +73,34 @@ int agentrt_network_init(void)
 #endif
 }
 
-void agentrt_network_cleanup(void)
+void airy_network_cleanup(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     WSACleanup();
 #endif
 }
 
-void agentrt_ignore_sigpipe(void)
+void airy_ignore_sigpipe(void)
 {
-#ifndef AGENTRT_PLATFORM_WINDOWS
+#ifndef AIRY_PLATFORM_WINDOWS
     signal(SIGPIPE, SIG_IGN);
 #endif
 }
 
 /* ==================== 线程实现 ==================== */
 
-uint64_t agentrt_thread_id(void)
+uint64_t airy_thread_id(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     return (uint64_t)GetCurrentThreadId();
 #else
     return (uint64_t)pthread_self();
 #endif
 }
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 
-int agentrt_platform_thread_create(agentrt_thread_t *thread, agentrt_thread_func_t func, void *arg)
+int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg)
 {
     HANDLE h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, NULL);
     if (h == NULL) {
@@ -110,12 +110,12 @@ int agentrt_platform_thread_create(agentrt_thread_t *thread, agentrt_thread_func
     return 0;
 }
 
-int agentrt_platform_thread_join(agentrt_thread_t thread, void **retval)
+int airy_platform_thread_join(airy_thread_t thread, void **retval)
 {
     (void)retval;
     DWORD result = WaitForSingleObject(thread, INFINITE);
     if (result != WAIT_OBJECT_0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     CloseHandle(thread);
     return 0;
@@ -123,17 +123,17 @@ int agentrt_platform_thread_join(agentrt_thread_t thread, void **retval)
 
 #else
 
-int agentrt_platform_thread_create(agentrt_thread_t *thread, agentrt_thread_func_t func, void *arg)
+int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg)
 {
     return pthread_create(thread, NULL, func, arg);
 }
 
-int agentrt_platform_thread_join(agentrt_thread_t thread, void **retval)
+int airy_platform_thread_join(airy_thread_t thread, void **retval)
 {
     return pthread_join(thread, retval);
 }
 
-int agentrt_platform_thread_detach(agentrt_thread_t thread)
+int airy_platform_thread_detach(airy_thread_t thread)
 {
     return pthread_detach(thread);
 }
@@ -142,56 +142,56 @@ int agentrt_platform_thread_detach(agentrt_thread_t thread)
 
 /* ==================== 互斥锁实现 ==================== */
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 
-int agentrt_mutex_init(agentrt_mutex_t *mutex)
+int airy_mtx_init(airy_mtx_t *mutex)
 {
     InitializeCriticalSection(mutex);
     return 0;
 }
 
-int agentrt_mutex_lock(agentrt_mutex_t *mutex)
+int airy_mtx_lock(airy_mtx_t *mutex)
 {
     EnterCriticalSection(mutex);
     return 0;
 }
 
-int agentrt_mutex_trylock(agentrt_mutex_t *mutex)
+int airy_mtx_trylock(airy_mtx_t *mutex)
 {
     return TryEnterCriticalSection(mutex) ? 0 : -1;
 }
 
-int agentrt_mutex_unlock(agentrt_mutex_t *mutex)
+int airy_mtx_unlock(airy_mtx_t *mutex)
 {
     LeaveCriticalSection(mutex);
     return 0;
 }
 
-void agentrt_mutex_destroy(agentrt_mutex_t *mutex)
+void airy_mtx_destroy(airy_mtx_t *mutex)
 {
     DeleteCriticalSection(mutex);
 }
 
-agentrt_mutex_t *agentrt_mutex_create(void)
+airy_mtx_t *airy_mtx_create(void)
 {
-    agentrt_mutex_t *mutex = (agentrt_mutex_t *)AGENTRT_MALLOC(sizeof(agentrt_mutex_t));
+    airy_mtx_t *mutex = (airy_mtx_t *)AIRY_MALLOC(sizeof(airy_mtx_t));
     if (mutex) {
         InitializeCriticalSection(mutex);
     }
     return mutex;
 }
 
-void agentrt_mutex_free(agentrt_mutex_t *mutex)
+void airy_mtx_free(airy_mtx_t *mutex)
 {
     if (mutex) {
         DeleteCriticalSection(mutex);
-        AGENTRT_FREE(mutex);
+        AIRY_FREE(mutex);
     }
 }
 
 #else
 
-int agentrt_mutex_init(agentrt_mutex_t *mutex)
+int airy_mtx_init(airy_mtx_t *mutex)
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
@@ -201,40 +201,40 @@ int agentrt_mutex_init(agentrt_mutex_t *mutex)
     return ret;
 }
 
-int agentrt_mutex_lock(agentrt_mutex_t *mutex)
+int airy_mtx_lock(airy_mtx_t *mutex)
 {
     return pthread_mutex_lock(mutex);
 }
 
-int agentrt_mutex_trylock(agentrt_mutex_t *mutex)
+int airy_mtx_trylock(airy_mtx_t *mutex)
 {
     return pthread_mutex_trylock(mutex);
 }
 
-int agentrt_mutex_unlock(agentrt_mutex_t *mutex)
+int airy_mtx_unlock(airy_mtx_t *mutex)
 {
     return pthread_mutex_unlock(mutex);
 }
 
-void agentrt_mutex_destroy(agentrt_mutex_t *mutex)
+void airy_mtx_destroy(airy_mtx_t *mutex)
 {
     pthread_mutex_destroy(mutex);
 }
 
-agentrt_mutex_t *agentrt_mutex_create(void)
+airy_mtx_t *airy_mtx_create(void)
 {
-    agentrt_mutex_t *mutex = (agentrt_mutex_t *)AGENTRT_MALLOC(sizeof(agentrt_mutex_t));
+    airy_mtx_t *mutex = (airy_mtx_t *)AIRY_MALLOC(sizeof(airy_mtx_t));
     if (mutex) {
         pthread_mutex_init(mutex, NULL);
     }
     return mutex;
 }
 
-void agentrt_mutex_free(agentrt_mutex_t *mutex)
+void airy_mtx_free(airy_mtx_t *mutex)
 {
     if (mutex) {
         pthread_mutex_destroy(mutex);
-        AGENTRT_FREE(mutex);
+        AIRY_FREE(mutex);
     }
 }
 
@@ -242,78 +242,78 @@ void agentrt_mutex_free(agentrt_mutex_t *mutex)
 
 /* ==================== 条件变量实现 ==================== */
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 
-int agentrt_cond_init(agentrt_cond_t *cond)
+int airy_cond_init(airy_cond_t *cond)
 {
     InitializeConditionVariable(cond);
     return 0;
 }
 
-int agentrt_cond_wait(agentrt_cond_t *cond, agentrt_mutex_t *mutex)
+int airy_cond_wait(airy_cond_t *cond, airy_mtx_t *mutex)
 {
     return SleepConditionVariableCS(cond, mutex, INFINITE) ? 0 : -1;
 }
 
-int agentrt_cond_timedwait(agentrt_cond_t *cond, agentrt_mutex_t *mutex, uint32_t timeout_ms)
+int airy_cond_timedwait(airy_cond_t *cond, airy_mtx_t *mutex, uint32_t timeout_ms)
 {
     BOOL result = SleepConditionVariableCS(cond, mutex, timeout_ms);
     if (!result) {
         DWORD err = GetLastError();
         if (err == ERROR_TIMEOUT) {
-            return AGENTRT_ERR_TIMEOUT;
+            return AIRY_ERR_TIMEOUT;
         }
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     return 0;
 }
 
-int agentrt_cond_signal(agentrt_cond_t *cond)
+int airy_cond_signal(airy_cond_t *cond)
 {
     WakeConditionVariable(cond);
     return 0;
 }
 
-int agentrt_cond_broadcast(agentrt_cond_t *cond)
+int airy_cond_broadcast(airy_cond_t *cond)
 {
     WakeAllConditionVariable(cond);
     return 0;
 }
 
-void agentrt_cond_destroy(agentrt_cond_t *cond)
+void airy_cond_destroy(airy_cond_t *cond)
 {
     (void)cond;
 }
 
-agentrt_cond_t *agentrt_cond_create(void)
+airy_cond_t *airy_cond_create(void)
 {
-    agentrt_cond_t *cond = (agentrt_cond_t *)AGENTRT_MALLOC(sizeof(agentrt_cond_t));
+    airy_cond_t *cond = (airy_cond_t *)AIRY_MALLOC(sizeof(airy_cond_t));
     if (cond) {
         InitializeConditionVariable(cond);
     }
     return cond;
 }
 
-void agentrt_cond_free(agentrt_cond_t *cond)
+void airy_cond_free(airy_cond_t *cond)
 {
     if (cond) {
-        AGENTRT_FREE(cond);
+        AIRY_FREE(cond);
     }
 }
 
 #else
 
-int agentrt_cond_init(agentrt_cond_t *cond)
+int airy_cond_init(airy_cond_t *cond)
 {
     return pthread_cond_init(cond, NULL);
 }
 
-int agentrt_cond_wait(agentrt_cond_t *cond, agentrt_mutex_t *mutex)
+int airy_cond_wait(airy_cond_t *cond, airy_mtx_t *mutex)
 {
     return pthread_cond_wait(cond, mutex);
 }
 
-int agentrt_cond_timedwait(agentrt_cond_t *cond, agentrt_mutex_t *mutex, uint32_t timeout_ms)
+int airy_cond_timedwait(airy_cond_t *cond, airy_mtx_t *mutex, uint32_t timeout_ms)
 {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -325,40 +325,40 @@ int agentrt_cond_timedwait(agentrt_cond_t *cond, agentrt_mutex_t *mutex, uint32_
     }
     int ret = pthread_cond_timedwait(cond, mutex, &ts);
     if (ret == ETIMEDOUT) {
-        return AGENTRT_ERR_TIMEOUT;
+        return AIRY_ERR_TIMEOUT;
     }
     return ret;
 }
 
-int agentrt_cond_signal(agentrt_cond_t *cond)
+int airy_cond_signal(airy_cond_t *cond)
 {
     return pthread_cond_signal(cond);
 }
 
-int agentrt_cond_broadcast(agentrt_cond_t *cond)
+int airy_cond_broadcast(airy_cond_t *cond)
 {
     return pthread_cond_broadcast(cond);
 }
 
-void agentrt_cond_destroy(agentrt_cond_t *cond)
+void airy_cond_destroy(airy_cond_t *cond)
 {
     pthread_cond_destroy(cond);
 }
 
-agentrt_cond_t *agentrt_cond_create(void)
+airy_cond_t *airy_cond_create(void)
 {
-    agentrt_cond_t *cond = (agentrt_cond_t *)AGENTRT_MALLOC(sizeof(agentrt_cond_t));
+    airy_cond_t *cond = (airy_cond_t *)AIRY_MALLOC(sizeof(airy_cond_t));
     if (cond) {
         pthread_cond_init(cond, NULL);
     }
     return cond;
 }
 
-void agentrt_cond_free(agentrt_cond_t *cond)
+void airy_cond_free(airy_cond_t *cond)
 {
     if (cond) {
         pthread_cond_destroy(cond);
-        AGENTRT_FREE(cond);
+        AIRY_FREE(cond);
     }
 }
 
@@ -366,33 +366,33 @@ void agentrt_cond_free(agentrt_cond_t *cond)
 
 /* ==================== Socket 实现 ==================== */
 
-agentrt_socket_t agentrt_socket_tcp(void)
+airy_sock_t airy_sock_tcp(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #else
     return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #endif
 }
 
-agentrt_socket_t agentrt_socket_unix(void)
+airy_sock_t airy_sock_unix(void)
 {
-#ifndef AGENTRT_PLATFORM_WINDOWS
+#ifndef AIRY_PLATFORM_WINDOWS
     return socket(AF_UNIX, SOCK_STREAM, 0);
 #else
-    return AGENTRT_INVALID_SOCKET;
+    return AIRY_INVALID_SOCKET;
 #endif
 }
 
-int agentrt_socket_set_nonblock(agentrt_socket_t sock, int nonblock)
+int airy_sock_set_nonblock(airy_sock_t sock, int nonblock)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     u_long mode = nonblock ? 1 : 0;
     return ioctlsocket(sock, FIONBIO, &mode);
 #else
     int flags = fcntl(sock, F_GETFL, 0);
     if (flags < 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (nonblock) {
         return fcntl(sock, F_SETFL, flags | O_NONBLOCK);
     } else {
@@ -401,15 +401,15 @@ int agentrt_socket_set_nonblock(agentrt_socket_t sock, int nonblock)
 #endif
 }
 
-int agentrt_socket_set_reuseaddr(agentrt_socket_t sock, int reuse)
+int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse)
 {
     int opt = reuse ? 1 : 0;
     return setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
 }
 
-void agentrt_socket_close(agentrt_socket_t sock)
+void airy_sock_close(airy_sock_t sock)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     closesocket(sock);
 #else
     close(sock);
@@ -418,27 +418,27 @@ void agentrt_socket_close(agentrt_socket_t sock)
 
 /* ==================== 进程实现 ==================== */
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 
-int agentrt_process_start(const char *executable, char *const argv[], char *const envp[],
-                          agentrt_process_info_t *proc)
+int airy_process_start(const char *executable, char *const argv[], char *const envp[],
+                          airy_process_info_t *proc)
 {
     (void)envp;
 
     if (!proc)
-        return AGENTRT_EINVAL;
-    AGENTRT_MEMSET(proc, 0, sizeof(agentrt_process_info_t));
+        return AIRY_EINVAL;
+    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
 
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
-    AGENTRT_MEMSET(&si, 0, sizeof(si));
+    AIRY_MEMSET(&si, 0, sizeof(si));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 
-    AGENTRT_MEMSET(&pi, 0, sizeof(pi));
+    AIRY_MEMSET(&pi, 0, sizeof(pi));
 
     char cmdline[4096] = {0};
     snprintf(cmdline, sizeof(cmdline), "\"%s\"", executable);
@@ -454,7 +454,7 @@ int agentrt_process_start(const char *executable, char *const argv[], char *cons
                        NULL, NULL, &si, &pi);
 
     if (!success) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 将句柄存入 proc 而非全局变量，支持同时跟踪多个子进程且线程安全 */
@@ -465,23 +465,23 @@ int agentrt_process_start(const char *executable, char *const argv[], char *cons
     return 0;
 }
 
-int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int *exit_code)
+int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_code)
 {
     if (!proc || !proc->process_handle)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     HANDLE h_process = (HANDLE)proc->process_handle;
     DWORD result = WaitForSingleObject(h_process, timeout_ms == 0 ? INFINITE : timeout_ms);
     if (result == WAIT_TIMEOUT) {
-        return AGENTRT_ERR_TIMEOUT;
+        return AIRY_ERR_TIMEOUT;
     }
     if (result != WAIT_OBJECT_0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     DWORD code;
     if (!GetExitCodeProcess(h_process, &code)) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (exit_code) {
@@ -498,14 +498,14 @@ int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int 
     return 0;
 }
 
-int agentrt_process_kill(agentrt_process_info_t *proc)
+int airy_process_kill(airy_process_info_t *proc)
 {
     if (!proc || !proc->process_handle)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return TerminateProcess((HANDLE)proc->process_handle, 1) ? 0 : -1;
 }
 
-void agentrt_process_close_pipes(agentrt_process_info_t *proc)
+void airy_process_close_pipes(airy_process_info_t *proc)
 {
     if (!proc)
         return;
@@ -519,7 +519,7 @@ void agentrt_process_close_pipes(agentrt_process_info_t *proc)
     }
 }
 
-int agentrt_process_run_capture(const char *executable, char *const argv[],
+int airy_process_run_capture(const char *executable, char *const argv[],
                                 char *const envp[], uint32_t timeout_ms,
                                 char *output, size_t output_size)
 {
@@ -543,7 +543,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
     sa.bInheritHandle = TRUE;
     HANDLE pipe_read = NULL, pipe_write = NULL;
     if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0)) {
-        return AGENTRT_ERR_IO;
+        return AIRY_ERR_IO;
     }
     /* 确保管道读端不被子进程继承 */
     SetHandleInformation(pipe_read, HANDLE_FLAG_INHERIT, 0);
@@ -562,7 +562,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
     CloseHandle(pipe_write); /* 父进程关闭写端，以便读端收到 EOF */
     if (!ok) {
         CloseHandle(pipe_read);
-        return AGENTRT_ERR_EXEC_FAIL;
+        return AIRY_ERR_EXEC_FAIL;
     }
 
     /* 读取子进程输出 */
@@ -594,25 +594,25 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
 
 #else
 
-int agentrt_process_start(const char *executable, char *const argv[], char *const envp[],
-                          agentrt_process_info_t *proc)
+int airy_process_start(const char *executable, char *const argv[], char *const envp[],
+                          airy_process_info_t *proc)
 {
     if (!proc)
-        return AGENTRT_EINVAL;
-    AGENTRT_MEMSET(proc, 0, sizeof(agentrt_process_info_t));
+        return AIRY_EINVAL;
+    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
     proc->stdin_fd = -1;
     proc->stdout_fd = -1;
     proc->stderr_fd = -1;
 
-    /* 创建 stdout/stderr 管道以捕获子进程输出（补全 agentrt_process_info_t 设计意图） */
+    /* 创建 stdout/stderr 管道以捕获子进程输出（补全 airy_process_info_t 设计意图） */
     int stdout_pipe[2];
     int stderr_pipe[2];
     if (pipe(stdout_pipe) < 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (pipe(stderr_pipe) < 0) {
         close(stdout_pipe[0]);
         close(stdout_pipe[1]);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     pid_t pid = fork();
@@ -621,7 +621,7 @@ int agentrt_process_start(const char *executable, char *const argv[], char *cons
         close(stdout_pipe[1]);
         close(stderr_pipe[0]);
         close(stderr_pipe[1]);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (pid == 0) {
@@ -653,7 +653,7 @@ int agentrt_process_start(const char *executable, char *const argv[], char *cons
     return 0;
 }
 
-int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int *exit_code)
+int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_code)
 {
     int status;
     pid_t result;
@@ -680,12 +680,12 @@ int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int 
         sigprocmask(SIG_SETMASK, &old_mask, NULL);
 
         if (result == 0) {
-            return AGENTRT_ERR_TIMEOUT;
+            return AIRY_ERR_TIMEOUT;
         }
     }
 
     if (result < 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (WIFEXITED(status)) {
@@ -701,12 +701,12 @@ int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int 
     return 0;
 }
 
-int agentrt_process_kill(agentrt_process_info_t *proc)
+int airy_process_kill(airy_process_info_t *proc)
 {
     return kill(proc->pid, SIGKILL);
 }
 
-void agentrt_process_close_pipes(agentrt_process_info_t *proc)
+void airy_process_close_pipes(airy_process_info_t *proc)
 {
     if (!proc)
         return;
@@ -724,13 +724,13 @@ void agentrt_process_close_pipes(agentrt_process_info_t *proc)
     }
 }
 
-int agentrt_process_run_capture(const char *executable, char *const argv[],
+int airy_process_run_capture(const char *executable, char *const argv[],
                                 char *const envp[], uint32_t timeout_ms,
                                 char *output, size_t output_size)
 {
-    agentrt_process_info_t proc;
-    if (agentrt_process_start(executable, argv, envp, &proc) != 0)
-        return AGENTRT_ERR_EXEC_FAIL;
+    airy_process_info_t proc;
+    if (airy_process_start(executable, argv, envp, &proc) != 0)
+        return AIRY_ERR_EXEC_FAIL;
 
     /* 读取 stdout + stderr 合并输出（select 多路复用，防止管道写满阻塞子进程） */
     size_t offset = 0;
@@ -790,7 +790,7 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
             if (timeout_ms > 0 &&
                 (uint32_t)((time(NULL) - start) * 1000) >= timeout_ms) {
                 timed_out = 1;
-                agentrt_process_kill(&proc);
+                airy_process_kill(&proc);
                 /* SIGKILL 后子进程 fd 关闭，select 将返回 EOF，循环自然退出 */
             }
         } else if (errno != EINTR) {
@@ -798,11 +798,11 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
         }
     }
 
-    agentrt_process_close_pipes(&proc);
+    airy_process_close_pipes(&proc);
 
     int exit_code = -1;
     /* 阻塞等待回收子进程（此时子进程已退出或被 SIGKILL） */
-    agentrt_process_wait(&proc, 0, &exit_code);
+    airy_process_wait(&proc, 0, &exit_code);
 
     if (output && output_size > 0)
         output[offset] = '\0';
@@ -813,9 +813,9 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
 
 /* ==================== 时间接口 ==================== */
 
-uint64_t agentrt_time_ns(void)
+uint64_t airy_time_ns(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     LARGE_INTEGER frequency, counter;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&counter);
@@ -827,12 +827,12 @@ uint64_t agentrt_time_ns(void)
 #endif
 }
 
-uint64_t agentrt_time_ms(void)
+uint64_t airy_time_ms(void)
 {
-    return agentrt_time_ns() / 1000000ULL;
+    return airy_time_ns() / 1000000ULL;
 }
 
-void agentrt_sleep_ms(uint32_t ms)
+void airy_sleep_ms(uint32_t ms)
 {
 #ifdef _WIN32
     Sleep(ms);
@@ -846,24 +846,24 @@ void agentrt_sleep_ms(uint32_t ms)
 
 /* ==================== 随机数接口 ==================== */
 
-static AGENTRT_THREAD_LOCAL unsigned int g_random_seed = 0;
-static AGENTRT_THREAD_LOCAL int g_random_initialized = 0;
+static AIRY_THREAD_LOCAL unsigned int g_random_seed = 0;
+static AIRY_THREAD_LOCAL int g_random_initialized = 0;
 
-void agentrt_random_init(void)
+void airy_random_init(void)
 {
     if (!g_random_initialized) {
-        g_random_seed = (unsigned int)agentrt_time_ns();
+        g_random_seed = (unsigned int)airy_time_ns();
         g_random_initialized = 1;
     }
 }
 
-uint32_t agentrt_random_uint32(uint32_t min, uint32_t max)
+uint32_t airy_random_uint32(uint32_t min, uint32_t max)
 {
     if (!g_random_initialized) {
-        agentrt_random_init();
+        airy_random_init();
     }
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     uint32_t rnd;
     BCryptGenRandom(NULL, (PUCHAR)&rnd, sizeof(rnd), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     return min + (uint32_t)((rnd / 4294967296.0) * (max - min + 1));
@@ -872,13 +872,13 @@ uint32_t agentrt_random_uint32(uint32_t min, uint32_t max)
 #endif
 }
 
-float agentrt_random_float(void)
+float airy_random_float(void)
 {
     if (!g_random_initialized) {
-        agentrt_random_init();
+        airy_random_init();
     }
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     uint32_t rnd;
     BCryptGenRandom(NULL, (PUCHAR)&rnd, sizeof(rnd), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     return rnd / 4294967296.0f;
@@ -887,16 +887,16 @@ float agentrt_random_float(void)
 #endif
 }
 
-int agentrt_random_bytes(void *buf, size_t len)
+int airy_random_bytes(void *buf, size_t len)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     NTSTATUS status =
         BCryptGenRandom(NULL, (PUCHAR)buf, (ULONG)len, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
     return status == 0 ? 0 : -1;
 #else
     int fd = open("/dev/urandom", O_RDONLY);
     if (fd < 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t total = 0;
@@ -904,7 +904,7 @@ int agentrt_random_bytes(void *buf, size_t len)
         ssize_t n = read(fd, (char *)buf + total, len - total);
         if (n <= 0) {
             close(fd);
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         }
         total += (size_t)n;
     }
@@ -916,11 +916,11 @@ int agentrt_random_bytes(void *buf, size_t len)
 
 /* ==================== 文件系统接口 ==================== */
 
-int agentrt_file_exists(const char *path)
+int airy_file_exists(const char *path)
 {
     if (!path)
         return 0;
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     struct _stat st;
     return _stat(path, &st) == 0 ? 1 : 0;
 #else
@@ -929,14 +929,14 @@ int agentrt_file_exists(const char *path)
 #endif
 }
 
-int agentrt_mkdir_p(const char *path)
+int airy_mkdir_p(const char *path)
 {
     if (!path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    char *tmp = AGENTRT_STRDUP(path);
+    char *tmp = AIRY_STRDUP(path);
     if (!tmp)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t len = strlen(tmp);
     if (len > 0 && (tmp[len - 1] == '/' || tmp[len - 1] == '\\')) {
@@ -948,7 +948,7 @@ int agentrt_mkdir_p(const char *path)
             char saved = *p;
             *p = '\0';
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
             _mkdir(tmp);
 #else
             mkdir(tmp, 0755);
@@ -958,30 +958,30 @@ int agentrt_mkdir_p(const char *path)
         }
     }
 
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     int ret = _mkdir(tmp);
 #else
     int ret = mkdir(tmp, 0755);
 #endif
 
-    AGENTRT_FREE(tmp);
+    AIRY_FREE(tmp);
     return (ret == 0 || errno == EEXIST) ? 0 : -1;
 }
 
-int64_t agentrt_file_size(const char *path)
+int64_t airy_file_size(const char *path)
 {
     if (!path)
-        return AGENTRT_EINVAL;
-#if AGENTRT_PLATFORM_WINDOWS
+        return AIRY_EINVAL;
+#if AIRY_PLATFORM_WINDOWS
     struct _stat st;
     if (_stat(path, &st) != 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     return st.st_size;
 #else
     struct stat st;
     if (stat(path, &st) != 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     return st.st_size;
 #endif
@@ -989,10 +989,10 @@ int64_t agentrt_file_size(const char *path)
 
 /* ==================== 字符串工具 ==================== */
 
-int agentrt_strlcpy(char *dest, const char *src, size_t dest_size)
+int airy_strlcpy(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || dest_size == 0 || !src) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t src_len = strlen(src);
@@ -1004,15 +1004,15 @@ __builtin_memcpy(dest, src, copy_len);
     return (int)copy_len;
 }
 
-int agentrt_strlcat(char *dest, const char *src, size_t dest_size)
+int airy_strlcat(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || dest_size == 0 || !src) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t dest_len = strlen(dest);
     if (dest_len >= dest_size - 1) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t src_len = strlen(src);
@@ -1027,20 +1027,20 @@ __builtin_memcpy(dest + dest_len, src, copy_len);
 
 /* ==================== 错误处理 ==================== */
 
-int agentrt_get_last_error(void)
+int airy_get_last_error(void)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     return (int)GetLastError();
 #else
     return errno;
 #endif
 }
 
-const char *agentrt_strerror(int error)
+const char *airy_strerror(int error)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     static char msg[256];
-    AGENTRT_MEMSET(msg, 0, sizeof(msg));
+    AIRY_MEMSET(msg, 0, sizeof(msg));
     FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD)error,
                    0, msg, sizeof(msg), NULL);
     return msg;

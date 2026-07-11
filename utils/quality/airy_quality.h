@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
- * @file agentrt_quality.h
+ * @file airy_quality.h
  * @brief AgentRT 代码质量保证框架
  *
  * 提供标准化的代码质量保证工具，包括：
@@ -15,8 +15,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_QUALITY_H
-#define AGENTRT_QUALITY_H
+#ifndef AIRY_RT_QUALITY_H
+#define AIRY_RT_QUALITY_H
 
 #include <limits.h>
 #include <stddef.h>
@@ -24,9 +24,9 @@
 #include "error.h"
 
 /* 前向声明安全内存函数（避免裸 malloc/calloc/free 触发 BAN 合规违规） */
-void *agentrt_malloc(size_t size);
-void *agentrt_calloc(size_t num, size_t size);
-void agentrt_free(const void *ptr);
+void *airy_malloc(size_t size);
+void *airy_calloc(size_t num, size_t size);
+void airy_free(const void *ptr);
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,8 +42,8 @@ extern "C" {
 /**
  * @brief 检查指针是否为NULL，如果为NULL则返回错误码
  */
-#ifndef AGENTRT_CHECK_NULL
-#define AGENTRT_CHECK_NULL(ptr, error_code) \
+#ifndef AIRY_CHECK_NULL
+#define AIRY_CHECK_NULL(ptr, error_code) \
     do {                                    \
         if ((ptr) == NULL) {                \
             return (error_code);            \
@@ -54,7 +54,7 @@ extern "C" {
 /**
  * @brief 检查指针是否为NULL，如果为NULL则跳转到错误标签
  */
-#define AGENTRT_CHECK_NULL_GOTO(ptr, label, error_code) \
+#define AIRY_CHECK_NULL_GOTO(ptr, label, error_code) \
     do {                                                \
         if ((ptr) == NULL) {                            \
             err = (error_code);                         \
@@ -65,7 +65,7 @@ extern "C" {
 /**
  * @brief 检查条件是否成立，如果不成立则返回错误码
  */
-#define AGENTRT_CHECK_CONDITION(cond, error_code) \
+#define AIRY_CHECK_CONDITION(cond, error_code) \
     do {                                          \
         if (!(cond)) {                            \
             return (error_code);                  \
@@ -75,7 +75,7 @@ extern "C" {
 /**
  * @brief 检查条件是否成立，如果不成立则跳转到错误标签
  */
-#define AGENTRT_CHECK_CONDITION_GOTO(cond, label, error_code) \
+#define AIRY_CHECK_CONDITION_GOTO(cond, label, error_code) \
     do {                                                      \
         if (!(cond)) {                                        \
             err = (error_code);                               \
@@ -86,7 +86,7 @@ extern "C" {
 /**
  * @brief 检查值是否在范围内 [min, max]
  */
-#define AGENTRT_CHECK_RANGE(value, min_val, max_val, error_code) \
+#define AIRY_CHECK_RANGE(value, min_val, max_val, error_code) \
     do {                                                         \
         if ((value) < (min_val) || (value) > (max_val)) {        \
             return (error_code);                                 \
@@ -96,7 +96,7 @@ extern "C" {
 /**
  * @brief 检查值是否大于等于最小值
  */
-#define AGENTRT_CHECK_MIN(value, min_val, error_code) \
+#define AIRY_CHECK_MIN(value, min_val, error_code) \
     do {                                              \
         if ((value) < (min_val)) {                    \
             return (error_code);                      \
@@ -106,7 +106,7 @@ extern "C" {
 /**
  * @brief 检查值是否小于等于最大值
  */
-#define AGENTRT_CHECK_MAX(value, max_val, error_code) \
+#define AIRY_CHECK_MAX(value, max_val, error_code) \
     do {                                              \
         if ((value) > (max_val)) {                    \
             return (error_code);                      \
@@ -116,7 +116,7 @@ extern "C" {
 /**
  * @brief 检查字符串长度是否在允许范围内
  */
-#define AGENTRT_CHECK_STR_LEN(str, max_len, error_code) \
+#define AIRY_CHECK_STR_LEN(str, max_len, error_code) \
     do {                                                \
         if (!(str) || strlen((str)) > (max_len)) {      \
             return (error_code);                        \
@@ -126,7 +126,7 @@ extern "C" {
 /**
  * @brief 检查数组索引是否有效
  */
-#define AGENTRT_CHECK_ARRAY_INDEX(index, array_size, error_code) \
+#define AIRY_CHECK_ARRAY_INDEX(index, array_size, error_code) \
     do {                                                         \
         if ((index) >= (array_size)) {                           \
             return (error_code);                                 \
@@ -136,7 +136,7 @@ extern "C" {
 /**
  * @brief 检查字符串是否为空或NULL
  */
-#define AGENTRT_CHECK_EMPTY(str, error_code)     \
+#define AIRY_CHECK_EMPTY(str, error_code)     \
     do {                                         \
         if ((str) == NULL || (str)[0] == '\0') { \
             return (error_code);                 \
@@ -146,15 +146,15 @@ extern "C" {
 /**
  * @brief 检查数组索引是否越界（兼容宏）
  */
-#define AGENTRT_CHECK_BOUNDS(idx, size, error_code) \
-    AGENTRT_CHECK_ARRAY_INDEX((idx), (size), (error_code))
+#define AIRY_CHECK_BOUNDS(idx, size, error_code) \
+    AIRY_CHECK_ARRAY_INDEX((idx), (size), (error_code))
 
 /* ==================== 错误处理宏 ==================== */
 
 /**
  * @brief 安全执行操作，失败时跳转到清理标签
  */
-#define AGENTRT_SAFE_EXEC(expr, cleanup_label, error_var) \
+#define AIRY_SAFE_EXEC(expr, cleanup_label, error_var) \
     do {                                                  \
         int _ret = (expr);                                \
         if (_ret != 0) {                                  \
@@ -166,9 +166,9 @@ extern "C" {
 /**
  * @brief 安全分配内存，失败时跳转到清理标签
  */
-#define AGENTRT_SAFE_ALLOC(var, size, cleanup_label, error_var) \
+#define AIRY_SAFE_ALLOC(var, size, cleanup_label, error_var) \
     do {                                                        \
-        (var) = agentrt_malloc((size));                          \
+        (var) = airy_malloc((size));                          \
         if (!(var)) {                                           \
             (error_var) = -1;                                   \
             goto cleanup_label;                                 \
@@ -178,9 +178,9 @@ extern "C" {
 /**
  * @brief 安全分配内存并清零，失败时跳转到清理标签
  */
-#define AGENTRT_SAFE_CALLOC(var, size, cleanup_label, error_var) \
+#define AIRY_SAFE_CALLOC(var, size, cleanup_label, error_var) \
     do {                                                         \
-        (var) = agentrt_calloc(1, (size));                      \
+        (var) = airy_calloc(1, (size));                      \
         if (!(var)) {                                            \
             (error_var) = -1;                                    \
             goto cleanup_label;                                  \
@@ -190,7 +190,7 @@ extern "C" {
 /**
  * @brief 记录错误并返回
  */
-#define AGENTRT_LOG_ERROR_AND_RETURN(error_code, fmt, ...) \
+#define AIRY_LOG_ERROR_AND_RETURN(error_code, fmt, ...) \
     do {                                                   \
         /* 日志记录 */                                 \
         return (error_code);                               \
@@ -201,33 +201,33 @@ extern "C" {
 /**
  * @brief 定义RAII风格的资源守卫作用域开始
  */
-#define AGENTRT_RESOURCE_GUARD_SCOPE_BEGIN() {
+#define AIRY_RESOURCE_GUARD_SCOPE_BEGIN() {
 
 /**
  * @brief 定义RAII风格的资源守卫作用域结束
  */
-#define AGENTRT_RESOURCE_GUARD_SCOPE_END() }
+#define AIRY_RESOURCE_GUARD_SCOPE_END() }
 
 /**
  * @brief 自动释放资源的宏（用于局部变量）
  */
-#ifndef AGENTRT_AUTO_FREE
-#define AGENTRT_AUTO_FREE(ptr) \
-    __attribute__((cleanup(agentrt_auto_free))) char **_auto_##ptr = &(char *)(ptr)
+#ifndef AIRY_AUTO_FREE
+#define AIRY_AUTO_FREE(ptr) \
+    __attribute__((cleanup(airy_auto_free))) char **_auto_##ptr = &(char *)(ptr)
 #endif
 
 /**
  * @brief 自动关闭文件描述符的宏
  */
-#define AGENTRT_AUTO_CLOSE(fd) __attribute__((cleanup(agentrt_auto_close))) int *_auto_##fd = &(fd)
+#define AIRY_AUTO_CLOSE(fd) __attribute__((cleanup(airy_auto_close))) int *_auto_##fd = &(fd)
 
 /**
  * @brief 安全释放内存并置为NULL
  */
-#define AGENTRT_SAFE_FREE(ptr) \
+#define AIRY_SAFE_FREE(ptr) \
     do {                       \
         if ((ptr) != NULL) {   \
-            agentrt_free((ptr)); \
+            airy_free((ptr)); \
             (ptr) = NULL;      \
         }                      \
     } while (0)
@@ -238,17 +238,17 @@ extern "C" {
  * 用于释放包含敏感数据的内存（API Key、Token、密码等），
  * 防止数据残留在堆上被泄露。
  *
- * @note 仅对通过 agentrt_mem_alloc/malloc 分配的内存有效
+ * @note 仅对通过 airy_mem_alloc/malloc 分配的内存有效
  * @note 释放后指针置 NULL，防止 use-after-free
  *
  * BAN-247: 敏感数据释放前必须清零
  */
-#ifndef AGENTRT_SECURE_FREE
-#define AGENTRT_SECURE_FREE(ptr, size)                    \
+#ifndef AIRY_SECURE_FREE
+#define AIRY_SECURE_FREE(ptr, size)                    \
     do {                                                  \
         if ((ptr) != NULL) {                              \
             if ((size) > 0) {                             \
-                agentrt_explicit_bzero((ptr), (size));    \
+                airy_explicit_bzero((ptr), (size));    \
             }                                             \
             free((ptr));                                  \
             (ptr) = NULL;                                 \
@@ -259,10 +259,10 @@ extern "C" {
 /**
  * @brief 安全释放内存（自动计算大小版本，用于已知类型的指针）
  *
- * 用法: AGENTRT_SECURE_FREE_T(my_struct_ptr, my_struct_t)
+ * 用法: AIRY_SECURE_FREE_T(my_struct_ptr, my_struct_t)
  */
-#define AGENTRT_SECURE_FREE_T(ptr, type) \
-    AGENTRT_SECURE_FREE((ptr), sizeof(type))
+#define AIRY_SECURE_FREE_T(ptr, type) \
+    AIRY_SECURE_FREE((ptr), sizeof(type))
 
 /**
  * @brief 显式内存清零（防止编译器优化掉 memset）
@@ -270,7 +270,7 @@ extern "C" {
  * 使用 volatile 函数指针确保编译器不会将清零操作优化掉。
  * 这对于安全敏感数据的擦除至关重要。
  */
-static inline void agentrt_explicit_bzero(void *s, size_t n) {
+static inline void airy_explicit_bzero(void *s, size_t n) {
     if (s == NULL || n == 0) return;
     volatile unsigned char *p = (volatile unsigned char *)s;
     while (n--) {
@@ -283,7 +283,7 @@ static inline void agentrt_explicit_bzero(void *s, size_t n) {
 /**
  * @brief 验证数值是否非负
  */
-static inline bool agentrt_validate_non_negative(int value)
+static inline bool airy_validate_non_negative(int value)
 {
     return value >= 0;
 }
@@ -291,7 +291,7 @@ static inline bool agentrt_validate_non_negative(int value)
 /**
  * @brief 验证数值是否为正数
  */
-static inline bool agentrt_validate_positive(int value)
+static inline bool airy_validate_positive(int value)
 {
     return value > 0;
 }
@@ -299,7 +299,7 @@ static inline bool agentrt_validate_positive(int value)
 /**
  * @brief 验证数值是否为有效百分比 [0, 100]
  */
-static inline bool agentrt_validate_percentage(float value)
+static inline bool airy_validate_percentage(float value)
 {
     return value >= 0.0f && value <= 100.0f;
 }
@@ -307,7 +307,7 @@ static inline bool agentrt_validate_percentage(float value)
 /**
  * @brief 验证数值是否为有效概率 [0, 1]
  */
-static inline bool agentrt_validate_probability(float value)
+static inline bool airy_validate_probability(float value)
 {
     return value >= 0.0f && value <= 1.0f;
 }
@@ -315,7 +315,7 @@ static inline bool agentrt_validate_probability(float value)
 /**
  * @brief 验证优先级是否在有效范围内
  */
-static inline bool agentrt_validate_priority(int priority, int min_val, int max_val)
+static inline bool airy_validate_priority(int priority, int min_val, int max_val)
 {
     return priority >= min_val && priority <= max_val;
 }
@@ -332,14 +332,14 @@ static inline bool agentrt_validate_priority(int priority, int min_val, int max_
 static inline int safe_add_int(int a, int b, int *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     if ((b > 0 && a > INT_MAX - b) || (b < 0 && a < INT_MIN - b)) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *result = a + b;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -352,22 +352,22 @@ static inline int safe_add_int(int a, int b, int *result)
 static inline int safe_mul_int(int a, int b, int *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     if (a > 0) {
         if (b > 0 && a > INT_MAX / b)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (b < 0 && b < INT_MIN / a)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
     } else if (a < 0) {
         if (b > 0 && a < INT_MIN / b)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (b < 0 && a > INT_MAX / b)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
     }
 
     *result = a * b;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -380,14 +380,14 @@ static inline int safe_mul_int(int a, int b, int *result)
 static inline int safe_add_size(size_t a, size_t b, size_t *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     if (a > SIZE_MAX - b) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *result = a + b;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -400,14 +400,14 @@ static inline int safe_add_size(size_t a, size_t b, size_t *result)
 static inline int safe_mul_size(size_t a, size_t b, size_t *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     if (b != 0 && a > SIZE_MAX / b) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *result = a * b;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -469,12 +469,12 @@ static inline bool is_safe_str_copy(const char *src, char *dest, size_t dest_siz
 static inline int safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size)
 {
     if (!dest || !src)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (src_size > dest_size)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    AGENTRT_MEMCPY(dest, src, src_size);
-    return AGENTRT_SUCCESS;
+    AIRY_MEMCPY(dest, src, src_size);
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -488,12 +488,12 @@ static inline int safe_memcpy(void *dest, size_t dest_size, const void *src, siz
 static inline int safe_memset(void *dest, size_t dest_size, int value, size_t count)
 {
     if (!dest)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (count > dest_size)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    AGENTRT_MEMSET(dest, value, count);
-    return AGENTRT_SUCCESS;
+    AIRY_MEMSET(dest, value, count);
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -506,7 +506,7 @@ static inline int safe_memset(void *dest, size_t dest_size, int value, size_t co
 static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
 {
     if (!dest || !src || dest_size == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
@@ -515,13 +515,13 @@ static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
 #endif
     size_t src_len = strlen(src);
     if (src_len >= dest_size)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    AGENTRT_MEMCPY(dest, src, src_len + 1);
+    AIRY_MEMCPY(dest, src, src_len + 1);
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -534,16 +534,16 @@ static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
 static inline int safe_strcat(char *dest, size_t dest_size, const char *src)
 {
     if (!dest || !src || dest_size == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t current_len = strlen(dest);
     size_t src_len = strlen(src);
 
     if (current_len + src_len >= dest_size)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    AGENTRT_MEMCPY(dest + current_len, src, src_len + 1);
-    return AGENTRT_SUCCESS;
+    AIRY_MEMCPY(dest + current_len, src, src_len + 1);
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -554,7 +554,7 @@ static inline int safe_strcat(char *dest, size_t dest_size, const char *src)
 static inline size_t safe_strlen(const char *str)
 {
     if (!str)
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     return strlen(str);
 }
 
@@ -565,7 +565,7 @@ static inline size_t safe_strlen(const char *str)
  * @return 比较结果，NULL视为空字符串
  */
 /* BAN-073 exempt: 本函数返回 strcmp 三态语义（负/0/正），非错误码。
- * NULL 视为空字符串参与比较，-1 表示 str1 < str2，非 AGENTRT_ERR_* 错误码。 */
+ * NULL 视为空字符串参与比较，-1 表示 str1 < str2，非 AIRY_ERR_* 错误码。 */
 static inline int safe_strcmp(const char *str1, const char *str2)
 {
     if (!str1 && !str2)
@@ -588,11 +588,11 @@ static inline int safe_strcmp(const char *str1, const char *str2)
 static inline int safe_int_to_size(int value, size_t *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (value < 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     *result = (size_t)value;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -604,11 +604,11 @@ static inline int safe_int_to_size(int value, size_t *result)
 static inline int safe_size_to_int(size_t value, int *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (value > (size_t)INT_MAX)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     *result = (int)value;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -620,26 +620,26 @@ static inline int safe_size_to_int(size_t value, int *result)
 static inline int safe_double_to_int(double value, int *result)
 {
     if (!result)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (value > (double)INT_MAX || value < (double)INT_MIN)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     *result = (int)value;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ==================== 兼容别名 ==================== */
 
 /**
- * @brief agentrt_safe_strcpy 兼容别名
+ * @brief airy_safe_strcpy 兼容别名
  * @note 保留此别名以兼容atoms/tests/test_common_utils.c
  */
-#define agentrt_safe_strcpy(dest, dest_size, src) safe_strcpy((dest), (dest_size), (src))
+#define airy_safe_strcpy(dest, dest_size, src) safe_strcpy((dest), (dest_size), (src))
 
 /**
- * @brief agentrt_safe_strcat 兼容别名
+ * @brief airy_safe_strcat 兼容别名
  * @note 保留此别名以兼容atoms/tests/test_common_utils.c
  */
-#define agentrt_safe_strcat(dest, dest_size, src) safe_strcat((dest), (dest_size), (src))
+#define airy_safe_strcat(dest, dest_size, src) safe_strcat((dest), (dest_size), (src))
 
 /** @} */
 
@@ -647,4 +647,4 @@ static inline int safe_double_to_int(double value, int *result)
 }
 #endif
 
-#endif /* AGENTRT_QUALITY_H */
+#endif /* AIRY_RT_QUALITY_H */

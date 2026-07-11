@@ -12,44 +12,41 @@
 
 #include "resource_quota.h"
 
-#include "../../../../atoms/corekern/include/agentrt.h"
+#include "../../../../atoms/corekern/include/airy_rt.h"
 #include "../../utils/observability/include/logger.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#define RQ_RET_ERR(c) \
-    do { agentrt_error_push_ex((c), __FILE__, __LINE__, __func__, "%s", \
-         agentrt_error_str(c)); return (c); } while(0)
 
 #define RESOURCE_FLAG_MEMORY_EXCEEDED 0x01
 #define RESOURCE_FLAG_CPU_EXCEEDED 0x02
 #define RESOURCE_FLAG_IO_EXCEEDED 0x04
 #define RESOURCE_FLAG_NETWORK_EXCEEDED 0x08
 
-agentrt_error_t agentrt_resource_manager_create(const agentrt_resource_quota_t *quota,
+airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota,
                                                 const char *resource_id,
-                                                agentrt_resource_manager_t **out_manager)
+                                                airy_resource_manager_t **out_manager)
 {
 
     if (!quota || !resource_id || !out_manager) {
-        RQ_RET_ERR(AGENTRT_EINVAL);
+        AIRY_RET_ERR(AIRY_EINVAL);
     }
 
-    agentrt_resource_manager_t *manager =
-        (agentrt_resource_manager_t *)AGENTRT_CALLOC(1, sizeof(agentrt_resource_manager_t));
+    airy_resource_manager_t *manager =
+        (airy_resource_manager_t *)AIRY_CALLOC(1, sizeof(airy_resource_manager_t));
     if (!manager) {
-        RQ_RET_ERR(AGENTRT_ENOMEM);
+        AIRY_RET_ERR(AIRY_ENOMEM);
     }
 
-    __builtin_memcpy(&manager->quota, quota, sizeof(agentrt_resource_quota_t));
-    AGENTRT_MEMSET(&manager->usage, 0, sizeof(agentrt_resource_usage_t));
+    __builtin_memcpy(&manager->quota, quota, sizeof(airy_resource_quota_t));
+    AIRY_MEMSET(&manager->usage, 0, sizeof(airy_resource_usage_t));
 
-    manager->resource_id = AGENTRT_STRDUP(resource_id);
+    manager->resource_id = AIRY_STRDUP(resource_id);
     if (!manager->resource_id) {
-        AGENTRT_FREE(manager);
-        RQ_RET_ERR(AGENTRT_ENOMEM);
+        AIRY_FREE(manager);
+        AIRY_RET_ERR(AIRY_ENOMEM);
     }
 
     manager->lock = NULL;
@@ -59,58 +56,58 @@ agentrt_error_t agentrt_resource_manager_create(const agentrt_resource_quota_t *
     manager->usage.last_update = manager->usage.start_time;
 
     *out_manager = manager;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-void agentrt_resource_manager_destroy(agentrt_resource_manager_t *manager)
+void airy_resource_manager_destroy(airy_resource_manager_t *manager)
 {
     if (!manager)
         return;
 
     if (manager->resource_id) {
-        AGENTRT_FREE(manager->resource_id);
+        AIRY_FREE(manager->resource_id);
     }
 
-    AGENTRT_FREE(manager);
+    AIRY_FREE(manager);
 }
 
-agentrt_error_t agentrt_resource_check_memory(agentrt_resource_manager_t *manager,
+airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
                                               size_t requested_bytes)
 {
 
     if (!manager || !manager->enabled) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     if (requested_bytes == 0) {
-        RQ_RET_ERR(AGENTRT_EINVAL);
+        AIRY_RET_ERR(AIRY_EINVAL);
     }
 
     if (manager->quota.max_memory_bytes > 0) {
         size_t projected = manager->usage.current_memory_bytes + requested_bytes;
         if (projected > manager->quota.max_memory_bytes) {
             manager->exceeded_flags |= RESOURCE_FLAG_MEMORY_EXCEEDED;
-            AGENTRT_LOG_WARN("Resource %s: Memory quota exceeded (current: %zu, "
+            AIRY_LOG_WARN("Resource %s: Memory quota exceeded (current: %zu, "
                              "requested: %zu, limit: %zu)",
                              manager->resource_id, manager->usage.current_memory_bytes,
                              requested_bytes, manager->quota.max_memory_bytes);
-            RQ_RET_ERR(AGENTRT_ENOMEM);
+            AIRY_RET_ERR(AIRY_ENOMEM);
         }
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t agentrt_resource_record_allocation(agentrt_resource_manager_t *manager,
+airy_err_t airy_resource_record_allocation(airy_resource_manager_t *manager,
                                                    size_t bytes)
 {
 
     if (!manager || !manager->enabled) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     if (bytes == 0) {
-        RQ_RET_ERR(AGENTRT_EINVAL);
+        AIRY_RET_ERR(AIRY_EINVAL);
     }
 
     manager->usage.current_memory_bytes += bytes;
@@ -121,37 +118,37 @@ agentrt_error_t agentrt_resource_record_allocation(agentrt_resource_manager_t *m
         manager->usage.peak_usage = manager->usage.current_memory_bytes;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t agentrt_resource_record_free(agentrt_resource_manager_t *manager, size_t bytes)
+airy_err_t airy_resource_record_free(airy_resource_manager_t *manager, size_t bytes)
 {
 
     if (!manager || !manager->enabled) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     if (bytes == 0) {
-        RQ_RET_ERR(AGENTRT_EINVAL);
+        AIRY_RET_ERR(AIRY_EINVAL);
     }
 
     if (bytes <= manager->usage.current_memory_bytes) {
         manager->usage.current_memory_bytes -= bytes;
     } else {
-        AGENTRT_LOG_WARN("Resource %s: Free amount (%zu) exceeds allocated (%zu)",
+        AIRY_LOG_WARN("Resource %s: Free amount (%zu) exceeds allocated (%zu)",
                          manager->resource_id, bytes, manager->usage.current_memory_bytes);
         manager->usage.current_memory_bytes = 0;
     }
 
     manager->usage.last_update = time(NULL);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t agentrt_resource_record_io(agentrt_resource_manager_t *manager)
+airy_err_t airy_resource_record_io(airy_resource_manager_t *manager)
 {
 
     if (!manager || !manager->enabled) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     manager->usage.total_io_ops++;
@@ -160,16 +157,16 @@ agentrt_error_t agentrt_resource_record_io(agentrt_resource_manager_t *manager)
 
     if (manager->quota.max_io_ops > 0 && manager->usage.total_io_ops >= manager->quota.max_io_ops) {
         manager->exceeded_flags |= RESOURCE_FLAG_IO_EXCEEDED;
-        AGENTRT_LOG_WARN("Resource %s: I/O quota exceeded (total: %zu, limit: %zu)",
+        AIRY_LOG_WARN("Resource %s: I/O quota exceeded (total: %zu, limit: %zu)",
                          manager->resource_id, manager->usage.total_io_ops,
                          manager->quota.max_io_ops);
-        RQ_RET_ERR(AGENTRT_EBUSY);
+        AIRY_RET_ERR(AIRY_EBUSY);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-int agentrt_resource_is_exceeded(agentrt_resource_manager_t *manager)
+int airy_resource_is_exceeded(airy_resource_manager_t *manager)
 {
     if (!manager || !manager->enabled) {
         return 0;
@@ -177,18 +174,18 @@ int agentrt_resource_is_exceeded(agentrt_resource_manager_t *manager)
     return (manager->exceeded_flags != 0) ? 1 : 0;
 }
 
-void agentrt_resource_get_usage(agentrt_resource_manager_t *manager,
-                                agentrt_resource_usage_t *out_usage)
+void airy_resource_get_usage(airy_resource_manager_t *manager,
+                                airy_resource_usage_t *out_usage)
 {
 
     if (!manager || !out_usage) {
         return;
     }
 
-    __builtin_memcpy(out_usage, &manager->usage, sizeof(agentrt_resource_usage_t));
+    __builtin_memcpy(out_usage, &manager->usage, sizeof(airy_resource_usage_t));
 }
 
-const char *agentrt_resource_get_exceeded_info(agentrt_resource_manager_t *manager)
+const char *airy_resource_get_exceeded_info(airy_resource_manager_t *manager)
 {
 
     static char info_buffer[512];

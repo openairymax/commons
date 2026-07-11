@@ -38,10 +38,10 @@
 /* ==================== 全局状态 ==================== */
 
 /* 当前语言环境 */
-static agentrt_language_t g_current_language = AGENTRT_LANG_EN_US;
+static airy_language_t g_current_language = AIRY_LANG_EN_US;
 
 /* 自定义多语言错误描述条目 */
-static agentrt_error_i18n_entry_t *g_i18n_entries = NULL;
+static airy_err_i18n_entry_t *g_i18n_entries = NULL;
 static size_t g_i18n_entry_count = 0;
 
 /* 错误统计信息 */
@@ -49,11 +49,11 @@ static struct {
     uint64_t total_errors;
     uint64_t errors_by_severity[4]; /* 按严重程度统计 */
     uint64_t last_error_time;
-    agentrt_error_t last_error;
+    airy_err_t last_error;
 } g_error_stats;
 
 #ifdef _WIN32
-static agentrt_mutex_t g_error_stats_mutex;
+static airy_mtx_t g_error_stats_mutex;
 static atomic_int g_error_stats_initialized = 0;
 
 static void ensure_stats_init(void)
@@ -61,39 +61,39 @@ static void ensure_stats_init(void)
     int expected = 0;
     if (atomic_compare_exchange_strong_explicit(&g_error_stats_initialized, &expected, 1,
                                                 memory_order_acq_rel, memory_order_acquire) == 0) {
-        agentrt_mutex_init(&g_error_stats_mutex);
+        airy_mtx_init(&g_error_stats_mutex);
     }
 }
 
 #define STATS_LOCK()                              \
     do {                                          \
         ensure_stats_init();                      \
-        agentrt_mutex_lock(&g_error_stats_mutex); \
+        airy_mtx_lock(&g_error_stats_mutex); \
     } while (0)
 
 #define STATS_UNLOCK()                              \
     do {                                            \
-        agentrt_mutex_unlock(&g_error_stats_mutex); \
+        airy_mtx_unlock(&g_error_stats_mutex); \
     } while (0)
 
 #else
-static agentrt_mutex_t g_error_stats_mutex = {0};
+static airy_mtx_t g_error_stats_mutex = {0};
 
 #define STATS_LOCK()                              \
     do {                                          \
-        agentrt_mutex_lock(&g_error_stats_mutex); \
+        airy_mtx_lock(&g_error_stats_mutex); \
     } while (0)
 
 #define STATS_UNLOCK()                              \
     do {                                            \
-        agentrt_mutex_unlock(&g_error_stats_mutex); \
+        airy_mtx_unlock(&g_error_stats_mutex); \
     } while (0)
 #endif
 
 /* ==================== 线程本地错误状态 ==================== */
 
 typedef struct {
-    agentrt_error_chain_t chain;
+    airy_err_chain_t chain;
     int initialized;
 } thread_error_state_t;
 
@@ -105,13 +105,13 @@ static thread_error_state_t *get_thread_error_state(void)
     if (g_tls_index == TLS_OUT_OF_INDEXES) {
         g_tls_index = TlsAlloc();
         if (g_tls_index == TLS_OUT_OF_INDEXES) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+            AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
         }
     }
 
     thread_error_state_t *state = (thread_error_state_t *)TlsGetValue(g_tls_index);
     if (state == NULL) {
-        state = (thread_error_state_t *)AGENTRT_CALLOC(1, sizeof(thread_error_state_t));
+        state = (thread_error_state_t *)AIRY_CALLOC(1, sizeof(thread_error_state_t));
         if (state != NULL) {
             state->initialized = 1;
             TlsSetValue(g_tls_index, state);
@@ -120,12 +120,12 @@ static thread_error_state_t *get_thread_error_state(void)
     return state;
 }
 #else
-static AGENTRT_THREAD_LOCAL thread_error_state_t *g_tls_error_state = NULL;
+static AIRY_THREAD_LOCAL thread_error_state_t *g_tls_error_state = NULL;
 
 static thread_error_state_t *get_thread_error_state(void)
 {
     if (g_tls_error_state == NULL) {
-        g_tls_error_state = (thread_error_state_t *)AGENTRT_CALLOC(1, sizeof(thread_error_state_t));
+        g_tls_error_state = (thread_error_state_t *)AIRY_CALLOC(1, sizeof(thread_error_state_t));
         if (g_tls_error_state != NULL) {
             g_tls_error_state->initialized = 1;
         }
@@ -137,200 +137,200 @@ static thread_error_state_t *get_thread_error_state(void)
 /* ==================== 错误码描述表 ==================== */
 
 typedef struct {
-    agentrt_error_t code;
+    airy_err_t code;
     const char *name;
     const char *description_en;
     const char *description_zh_cn;
-    agentrt_error_severity_t severity;
+    airy_err_severity_t severity;
 } error_info_t;
 
 static const error_info_t g_error_info[] = {
     /* 成功 */
-    {AGENTRT_OK, "OK", "Success", "成功", AGENTRT_ERR_SEVERITY_INFO},
+    {AIRY_OK, "OK", "Success", "成功", AIRY_ERR_SEVERITY_INFO},
 
     /* 通用基础错误 */
-    {AGENTRT_ERR_UNKNOWN, "ERR_UNKNOWN", "Unknown error", "未知错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_INVALID_PARAM, "ERR_INVALID_PARAM", "Invalid parameter", "无效参数",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_NULL_POINTER, "ERR_NULL_POINTER", "Null pointer", "空指针",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_OUT_OF_MEMORY, "ERR_OUT_OF_MEMORY", "Out of memory", "内存不足",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_BUFFER_TOO_SMALL, "ERR_BUFFER_TOO_SMALL", "Buffer too small", "缓冲区太小",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_NOT_FOUND, "ERR_NOT_FOUND", "Not found", "未找到", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_ALREADY_EXISTS, "ERR_ALREADY_EXISTS", "Already exists", "已存在",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_TIMEOUT, "ERR_TIMEOUT", "Timeout", "超时", AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_NOT_SUPPORTED, "ERR_NOT_SUPPORTED", "Not supported", "不支持",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_PERMISSION_DENIED, "ERR_PERMISSION_DENIED", "Permission denied", "权限不足",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_IO, "ERR_IO", "I/O error", "I/O 错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_PARSE_ERROR, "ERR_PARSE_ERROR", "Parse error", "解析错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_STATE_ERROR, "ERR_STATE_ERROR", "State error", "状态错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_OVERFLOW, "ERR_OVERFLOW", "Overflow", "溢出", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_UNDERFLOW, "ERR_UNDERFLOW", "Underflow", "下溢", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_CANCELED, "ERR_CANCELED", "Canceled", "已取消", AGENTRT_ERR_SEVERITY_INFO},
-    {AGENTRT_ERR_BUSY, "ERR_BUSY", "Busy", "忙碌", AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_WOULD_BLOCK, "ERR_WOULD_BLOCK", "Would block", "将阻塞",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_INTERRUPTED, "ERR_INTERRUPTED", "Interrupted", "被中断",
-     AGENTRT_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_UNKNOWN, "ERR_UNKNOWN", "Unknown error", "未知错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_INVALID_PARAM, "ERR_INVALID_PARAM", "Invalid parameter", "无效参数",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_NULL_POINTER, "ERR_NULL_POINTER", "Null pointer", "空指针",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_OUT_OF_MEMORY, "ERR_OUT_OF_MEMORY", "Out of memory", "内存不足",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_BUFFER_TOO_SMALL, "ERR_BUFFER_TOO_SMALL", "Buffer too small", "缓冲区太小",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_NOT_FOUND, "ERR_NOT_FOUND", "Not found", "未找到", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_ALREADY_EXISTS, "ERR_ALREADY_EXISTS", "Already exists", "已存在",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_TIMEOUT, "ERR_TIMEOUT", "Timeout", "超时", AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_NOT_SUPPORTED, "ERR_NOT_SUPPORTED", "Not supported", "不支持",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_PERMISSION_DENIED, "ERR_PERMISSION_DENIED", "Permission denied", "权限不足",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_IO, "ERR_IO", "I/O error", "I/O 错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_PARSE_ERROR, "ERR_PARSE_ERROR", "Parse error", "解析错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_STATE_ERROR, "ERR_STATE_ERROR", "State error", "状态错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_OVERFLOW, "ERR_OVERFLOW", "Overflow", "溢出", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_UNDERFLOW, "ERR_UNDERFLOW", "Underflow", "下溢", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_CANCELED, "ERR_CANCELED", "Canceled", "已取消", AIRY_ERR_SEVERITY_INFO},
+    {AIRY_ERR_BUSY, "ERR_BUSY", "Busy", "忙碌", AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_WOULD_BLOCK, "ERR_WOULD_BLOCK", "Would block", "将阻塞",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_INTERRUPTED, "ERR_INTERRUPTED", "Interrupted", "被中断",
+     AIRY_ERR_SEVERITY_WARNING},
 
     /* 系统与平台错误 */
-    {AGENTRT_ERR_SYS_NOT_INIT, "ERR_SYS_NOT_INIT", "System not initialized", "系统未初始化",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_RESOURCE, "ERR_SYS_RESOURCE", "System resource error", "系统资源错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_DEADLOCK, "ERR_SYS_DEADLOCK", "Deadlock", "死锁",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_SYS_THREAD, "ERR_SYS_THREAD", "Thread error", "线程错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_MUTEX, "ERR_SYS_MUTEX", "Mutex error", "互斥锁错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_SEMAPHORE, "ERR_SYS_SEMAPHORE", "Semaphore error", "信号量错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_CONDITION, "ERR_SYS_CONDITION", "Condition variable error", "条件变量错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_ATOMIC, "ERR_SYS_ATOMIC", "Atomic operation error", "原子操作错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_SOCKET, "ERR_SYS_SOCKET", "Socket error", "套接字错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_PIPE, "ERR_SYS_PIPE", "Pipe error", "管道错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_PROCESS, "ERR_SYS_PROCESS", "Process error", "进程错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_FILE, "ERR_SYS_FILE", "File error", "文件错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SYS_TIME, "ERR_SYS_TIME", "Time error", "时间错误", AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_NOT_INIT, "ERR_SYS_NOT_INIT", "System not initialized", "系统未初始化",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_RESOURCE, "ERR_SYS_RESOURCE", "System resource error", "系统资源错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_DEADLOCK, "ERR_SYS_DEADLOCK", "Deadlock", "死锁",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_SYS_THREAD, "ERR_SYS_THREAD", "Thread error", "线程错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_MUTEX, "ERR_SYS_MUTEX", "Mutex error", "互斥锁错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_SEMAPHORE, "ERR_SYS_SEMAPHORE", "Semaphore error", "信号量错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_CONDITION, "ERR_SYS_CONDITION", "Condition variable error", "条件变量错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_ATOMIC, "ERR_SYS_ATOMIC", "Atomic operation error", "原子操作错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_SOCKET, "ERR_SYS_SOCKET", "Socket error", "套接字错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_PIPE, "ERR_SYS_PIPE", "Pipe error", "管道错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_PROCESS, "ERR_SYS_PROCESS", "Process error", "进程错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_FILE, "ERR_SYS_FILE", "File error", "文件错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_TIME, "ERR_SYS_TIME", "Time error", "时间错误", AIRY_ERR_SEVERITY_ERROR},
 
     /* 内核层错误 */
-    {AGENTRT_ERR_KERN_IPC, "ERR_KERN_IPC", "IPC error", "IPC 错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_TASK, "ERR_KERN_TASK", "Task error", "任务错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_SYNC, "ERR_KERN_SYNC", "Synchronization error", "同步错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_LOCK, "ERR_KERN_LOCK", "Lock error", "锁错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_MEM, "ERR_KERN_MEM", "Memory error", "内存错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_SCHED, "ERR_KERN_SCHED", "Scheduler error", "调度器错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_TIMER, "ERR_KERN_TIMER", "Timer error", "定时器错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_KERN_INTERRUPT, "ERR_KERN_INTERRUPT", "Interrupt error", "中断错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_IPC, "ERR_KERN_IPC", "IPC error", "IPC 错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_TASK, "ERR_KERN_TASK", "Task error", "任务错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_SYNC, "ERR_KERN_SYNC", "Synchronization error", "同步错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_LOCK, "ERR_KERN_LOCK", "Lock error", "锁错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_MEM, "ERR_KERN_MEM", "Memory error", "内存错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_SCHED, "ERR_KERN_SCHED", "Scheduler error", "调度器错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_TIMER, "ERR_KERN_TIMER", "Timer error", "定时器错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_INTERRUPT, "ERR_KERN_INTERRUPT", "Interrupt error", "中断错误",
+     AIRY_ERR_SEVERITY_ERROR},
 
     /* 服务层错误 */
-    {AGENTRT_ERR_SVC_NOT_READY, "ERR_SVC_NOT_READY", "Service not ready", "服务未就绪",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_SVC_BUSY, "ERR_SVC_BUSY", "Service busy", "服务忙碌",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_SVC_STOPPED, "ERR_SVC_STOPPED", "Service stopped", "服务已停止",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SVC_CONFIG, "ERR_SVC_CONFIG", "Service configuration error", "服务配置错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SVC_DEPENDENCY, "ERR_SVC_DEPENDENCY", "Service dependency error", "服务依赖错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SVC_HEALTH, "ERR_SVC_HEALTH", "Service health error", "服务健康错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SVC_LOADBALANCE, "ERR_SVC_LOADBALANCE", "Load balance error", "负载均衡错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_NOT_READY, "ERR_SVC_NOT_READY", "Service not ready", "服务未就绪",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_SVC_BUSY, "ERR_SVC_BUSY", "Service busy", "服务忙碌",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_SVC_STOPPED, "ERR_SVC_STOPPED", "Service stopped", "服务已停止",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_CONFIG, "ERR_SVC_CONFIG", "Service configuration error", "服务配置错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_DEPENDENCY, "ERR_SVC_DEPENDENCY", "Service dependency error", "服务依赖错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_HEALTH, "ERR_SVC_HEALTH", "Service health error", "服务健康错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_LOADBALANCE, "ERR_SVC_LOADBALANCE", "Load balance error", "负载均衡错误",
+     AIRY_ERR_SEVERITY_ERROR},
 
     /* LLM/AI 服务错误 */
-    {AGENTRT_ERR_LLM_NO_PROVIDER, "ERR_LLM_NO_PROVIDER", "No LLM provider", "无 LLM 提供商",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_PROVIDER_FAIL, "ERR_LLM_PROVIDER_FAIL", "LLM provider failure",
-     "LLM 提供商失败", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_RATE_LIMIT, "ERR_LLM_RATE_LIMIT", "Rate limit exceeded", "超出速率限制",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_LLM_CONTEXT_LEN, "ERR_LLM_CONTEXT_LEN", "Context length exceeded",
-     "超出上下文长度", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_INVALID_MODEL, "ERR_LLM_INVALID_MODEL", "Invalid model", "无效模型",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_AUTH_FAIL, "ERR_LLM_AUTH_FAIL", "Authentication failed", "认证失败",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_TOKEN_LIMIT, "ERR_LLM_TOKEN_LIMIT", "Token limit exceeded", "超出 Token 限制",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_PARSE_RESP, "ERR_LLM_PARSE_RESP", "Failed to parse response", "解析响应失败",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_EMPTY_RESP, "ERR_LLM_EMPTY_RESP", "Empty response", "空响应",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_LLM_COST_EXCEED, "ERR_LLM_COST_EXCEED", "Cost exceeded", "超出成本限制",
-     AGENTRT_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_LLM_NO_PROVIDER, "ERR_LLM_NO_PROVIDER", "No LLM provider", "无 LLM 提供商",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_PROVIDER_FAIL, "ERR_LLM_PROVIDER_FAIL", "LLM provider failure",
+     "LLM 提供商失败", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_RATE_LIMIT, "ERR_LLM_RATE_LIMIT", "Rate limit exceeded", "超出速率限制",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_LLM_CONTEXT_LEN, "ERR_LLM_CONTEXT_LEN", "Context length exceeded",
+     "超出上下文长度", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_INVALID_MODEL, "ERR_LLM_INVALID_MODEL", "Invalid model", "无效模型",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_AUTH_FAIL, "ERR_LLM_AUTH_FAIL", "Authentication failed", "认证失败",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_TOKEN_LIMIT, "ERR_LLM_TOKEN_LIMIT", "Token limit exceeded", "超出 Token 限制",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_PARSE_RESP, "ERR_LLM_PARSE_RESP", "Failed to parse response", "解析响应失败",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_EMPTY_RESP, "ERR_LLM_EMPTY_RESP", "Empty response", "空响应",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_COST_EXCEED, "ERR_LLM_COST_EXCEED", "Cost exceeded", "超出成本限制",
+     AIRY_ERR_SEVERITY_WARNING},
 
     /* 执行/工具错误 */
-    {AGENTRT_ERR_EXEC_NOT_FOUND, "ERR_EXEC_NOT_FOUND", "Executor not found", "执行器未找到",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_FAIL, "ERR_EXEC_FAIL", "Execution failed", "执行失败",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_TIMEOUT, "ERR_EXEC_TIMEOUT", "Execution timeout", "执行超时",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_EXEC_VALIDATION, "ERR_EXEC_VALIDATION", "Execution validation failed",
-     "执行验证失败", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_SANDBOX, "ERR_EXEC_SANDBOX", "Sandbox error", "沙箱错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_PERMISSION, "ERR_EXEC_PERMISSION", "Execution permission denied",
-     "执行权限不足", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_ARGS, "ERR_EXEC_ARGS", "Invalid execution arguments", "无效执行参数",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_EXEC_ENV, "ERR_EXEC_ENV", "Execution environment error", "执行环境错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_NOT_FOUND, "ERR_EXEC_NOT_FOUND", "Executor not found", "执行器未找到",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_FAIL, "ERR_EXEC_FAIL", "Execution failed", "执行失败",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_TIMEOUT, "ERR_EXEC_TIMEOUT", "Execution timeout", "执行超时",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_EXEC_VALIDATION, "ERR_EXEC_VALIDATION", "Execution validation failed",
+     "执行验证失败", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_SANDBOX, "ERR_EXEC_SANDBOX", "Sandbox error", "沙箱错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_PERMISSION, "ERR_EXEC_PERMISSION", "Execution permission denied",
+     "执行权限不足", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_ARGS, "ERR_EXEC_ARGS", "Invalid execution arguments", "无效执行参数",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_ENV, "ERR_EXEC_ENV", "Execution environment error", "执行环境错误",
+     AIRY_ERR_SEVERITY_ERROR},
 
     /* 记忆/存储错误 */
-    {AGENTRT_ERR_MEM_WRITE, "ERR_MEM_WRITE", "Memory write error", "内存写入错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_MEM_READ, "ERR_MEM_READ", "Memory read error", "内存读取错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_MEM_QUERY, "ERR_MEM_QUERY", "Memory query error", "内存查询错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_MEM_EVOLVE, "ERR_MEM_EVOLVE", "Memory evolution error", "内存演进错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_MEM_FULL, "ERR_MEM_FULL", "Memory full", "内存已满", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_MEM_CORRUPT, "ERR_MEM_CORRUPT", "Memory corruption", "内存损坏",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_MEM_NOT_INIT, "ERR_MEM_NOT_INIT", "Memory not initialized", "内存未初始化",
-     AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_WRITE, "ERR_MEM_WRITE", "Memory write error", "内存写入错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_READ, "ERR_MEM_READ", "Memory read error", "内存读取错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_QUERY, "ERR_MEM_QUERY", "Memory query error", "内存查询错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_EVOLVE, "ERR_MEM_EVOLVE", "Memory evolution error", "内存演进错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_FULL, "ERR_MEM_FULL", "Memory full", "内存已满", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_MEM_CORRUPT, "ERR_MEM_CORRUPT", "Memory corruption", "内存损坏",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_MEM_NOT_INIT, "ERR_MEM_NOT_INIT", "Memory not initialized", "内存未初始化",
+     AIRY_ERR_SEVERITY_ERROR},
 
     /* 安全/沙箱错误 */
-    {AGENTRT_ERR_SEC_VIOLATION, "ERR_SEC_VIOLATION", "Security violation", "安全违规",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_SEC_SANITIZE, "ERR_SEC_SANITIZE", "Sanitization error", "清理错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_AUDIT, "ERR_SEC_AUDIT", "Audit error", "审计错误", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_PERMISSION, "ERR_SEC_PERMISSION", "Security permission error", "安全权限错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_VALIDATION, "ERR_SEC_VALIDATION", "Security validation error", "安全验证错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_QUOTA, "ERR_SEC_QUOTA", "Quota exceeded", "超出配额",
-     AGENTRT_ERR_SEVERITY_WARNING},
-    {AGENTRT_ERR_SEC_TEMP_DIR, "ERR_SEC_TEMP_DIR", "Temporary directory error", "临时目录错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_SYMLINK, "ERR_SEC_SYMLINK", "Symbolic link error", "符号链接错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_SEC_PATH_TRAV, "ERR_SEC_PATH_TRAV", "Path traversal detected", "检测到路径遍历",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_ESECURITY, "ERR_ESECURITY", "Security error", "安全错误",
-     AGENTRT_ERR_SEVERITY_CRITICAL},
-    {AGENTRT_ERR_ESANITIZE, "ERR_ESANITIZE", "Sanitization error", "清理错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_VIOLATION, "ERR_SEC_VIOLATION", "Security violation", "安全违规",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_SEC_SANITIZE, "ERR_SEC_SANITIZE", "Sanitization error", "清理错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_AUDIT, "ERR_SEC_AUDIT", "Audit error", "审计错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_PERMISSION, "ERR_SEC_PERMISSION", "Security permission error", "安全权限错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_VALIDATION, "ERR_SEC_VALIDATION", "Security validation error", "安全验证错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_QUOTA, "ERR_SEC_QUOTA", "Quota exceeded", "超出配额",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_SEC_TEMP_DIR, "ERR_SEC_TEMP_DIR", "Temporary directory error", "临时目录错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_SYMLINK, "ERR_SEC_SYMLINK", "Symbolic link error", "符号链接错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SEC_PATH_TRAV, "ERR_SEC_PATH_TRAV", "Path traversal detected", "检测到路径遍历",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_ESECURITY, "ERR_ESECURITY", "Security error", "安全错误",
+     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_ESANITIZE, "ERR_ESANITIZE", "Sanitization error", "清理错误",
+     AIRY_ERR_SEVERITY_ERROR},
 
     /* 协调/规划错误 */
-    {AGENTRT_ERR_COORD_PLAN_FAIL, "ERR_COORD_PLAN_FAIL", "Planning failed", "规划失败",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_COORD_SYNC_FAIL, "ERR_COORD_SYNC_FAIL", "Synchronization failed", "同步失败",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_COORD_DISPATCH, "ERR_COORD_DISPATCH", "Dispatch error", "调度错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_COORD_INTENT, "ERR_COORD_INTENT", "Intent error", "意图错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_COORD_COMPENSATE, "ERR_COORD_COMPENSATE", "Compensation error", "补偿错误",
-     AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_COORD_RETRY_EXCEED, "ERR_COORD_RETRY_EXCEED", "Retry limit exceeded",
-     "超出重试限制", AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_PLAN_FAIL, "ERR_COORD_PLAN_FAIL", "Planning failed", "规划失败",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_SYNC_FAIL, "ERR_COORD_SYNC_FAIL", "Synchronization failed", "同步失败",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_DISPATCH, "ERR_COORD_DISPATCH", "Dispatch error", "调度错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_INTENT, "ERR_COORD_INTENT", "Intent error", "意图错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_COMPENSATE, "ERR_COORD_COMPENSATE", "Compensation error", "补偿错误",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_COORD_RETRY_EXCEED, "ERR_COORD_RETRY_EXCEED", "Retry limit exceeded",
+     "超出重试限制", AIRY_ERR_SEVERITY_ERROR},
     /* P0.22.1 (ARE L2): 协议/校验错误段 */
-    {AGENTRT_ERR_PROTOCOL, "ERR_PROTOCOL", "Protocol violation (magic/version/reserved)",
-     "协议违规（magic/version/reserved 字段不匹配）", AGENTRT_ERR_SEVERITY_ERROR},
-    {AGENTRT_ERR_CHECKSUM, "ERR_CHECKSUM", "Checksum mismatch (CRC32)",
-     "校验和不匹配（CRC32）", AGENTRT_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_PROTOCOL, "ERR_PROTOCOL", "Protocol violation (magic/version/reserved)",
+     "协议违规（magic/version/reserved 字段不匹配）", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_CHECKSUM, "ERR_CHECKSUM", "Checksum mismatch (CRC32)",
+     "校验和不匹配（CRC32）", AIRY_ERR_SEVERITY_ERROR},
 };
 
 static const size_t g_error_info_count = sizeof(g_error_info) / sizeof(g_error_info[0]);
@@ -342,7 +342,7 @@ static const size_t g_error_info_count = sizeof(g_error_info) / sizeof(g_error_i
  * @param code 错误码
  * @return 错误描述字符串（英文）
  */
-const char *agentrt_error_str(agentrt_error_t code)
+const char *airy_err_str(airy_err_t code)
 {
     for (size_t i = 0; i < g_error_info_count; i++) {
         if (g_error_info[i].code == code) {
@@ -357,25 +357,25 @@ const char *agentrt_error_str(agentrt_error_t code)
  * @param code 错误码
  * @return 错误严重程度级别
  */
-agentrt_error_severity_t agentrt_error_get_severity(agentrt_error_t code)
+airy_err_severity_t airy_err_get_severity(airy_err_t code)
 {
     for (size_t i = 0; i < g_error_info_count; i++) {
         if (g_error_info[i].code == code) {
             return g_error_info[i].severity;
         }
     }
-    return AGENTRT_ERR_SEVERITY_ERROR;
+    return AIRY_ERR_SEVERITY_ERROR;
 }
 
 /**
  * @brief 获取当前线程的错误链
  * @return 错误链指针，失败返回 NULL
  */
-agentrt_error_chain_t *agentrt_error_get_chain(void)
+airy_err_chain_t *airy_err_get_chain(void)
 {
     thread_error_state_t *state = get_thread_error_state();
     if (state == NULL || !state->initialized) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
     return &state->chain;
 }
@@ -383,7 +383,7 @@ agentrt_error_chain_t *agentrt_error_get_chain(void)
 /**
  * @brief 清除当前线程的错误链
  */
-void agentrt_error_clear(void)
+void airy_err_clear(void)
 {
     thread_error_state_t *state = get_thread_error_state();
     if (state == NULL || !state->initialized) {
@@ -391,14 +391,14 @@ void agentrt_error_clear(void)
     }
     /* 释放错误链中每个条目的 message 字符串 */
     for (int i = 0; i < state->chain.depth; i++) {
-        AGENTRT_FREE((void *)state->chain.contexts[i].message);
+        AIRY_FREE((void *)state->chain.contexts[i].message);
         state->chain.contexts[i].message = NULL;
     }
-    state->chain.code = AGENTRT_OK;
+    state->chain.code = AIRY_OK;
     state->chain.depth = 0;
 }
 
-void agentrt_error_thread_cleanup(void)
+void airy_err_thread_cleanup(void)
 {
 #ifdef _WIN32
     if (g_tls_index != TLS_OUT_OF_INDEXES) {
@@ -406,10 +406,10 @@ void agentrt_error_thread_cleanup(void)
         if (state != NULL) {
             /* 先释放错误链中的所有 message */
             for (int i = 0; i < state->chain.depth; i++) {
-                AGENTRT_FREE((void *)state->chain.contexts[i].message);
+                AIRY_FREE((void *)state->chain.contexts[i].message);
                 state->chain.contexts[i].message = NULL;
             }
-            AGENTRT_FREE(state);
+            AIRY_FREE(state);
             TlsSetValue(g_tls_index, NULL);
         }
     }
@@ -417,10 +417,10 @@ void agentrt_error_thread_cleanup(void)
     if (g_tls_error_state != NULL) {
         /* 先释放错误链中的所有 message */
         for (int i = 0; i < g_tls_error_state->chain.depth; i++) {
-            AGENTRT_FREE((void *)g_tls_error_state->chain.contexts[i].message);
+            AIRY_FREE((void *)g_tls_error_state->chain.contexts[i].message);
             g_tls_error_state->chain.contexts[i].message = NULL;
         }
-        AGENTRT_FREE(g_tls_error_state);
+        AIRY_FREE(g_tls_error_state);
         g_tls_error_state = NULL;
     }
 #endif
@@ -442,7 +442,7 @@ static uint64_t get_current_time_ns(void)
     uli.HighPart = ft.dwHighDateTime;
     return uli.QuadPart * 100;
 #else
-    return agentrt_time_ns();
+    return airy_time_ns();
 #endif
 }
 
@@ -457,7 +457,7 @@ static uint64_t get_current_time_ns(void)
  * @param fmt 错误消息格式字符串
  * @param ... 可变参数
  */
-void agentrt_error_push_ex(agentrt_error_t code, const char *file, int line, const char *func,
+void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *func,
                            const char *fmt, ...)
 {
     thread_error_state_t *state = get_thread_error_state();
@@ -465,12 +465,12 @@ void agentrt_error_push_ex(agentrt_error_t code, const char *file, int line, con
         return;
     }
 
-    agentrt_error_chain_t *chain = &state->chain;
+    airy_err_chain_t *chain = &state->chain;
 
     /* 更新错误统计 */
     STATS_LOCK();
     g_error_stats.total_errors++;
-    agentrt_error_severity_t severity = agentrt_error_get_severity(code);
+    airy_err_severity_t severity = airy_err_get_severity(code);
     if (severity >= 0 && severity < 4) {
         g_error_stats.errors_by_severity[severity]++;
     }
@@ -487,27 +487,27 @@ void agentrt_error_push_ex(agentrt_error_t code, const char *file, int line, con
     va_end(args);
 
     /* 添加到错误链 */
-    if (chain->depth < AGENTRT_ERROR_CONTEXT_MAX_DEPTH) {
-        agentrt_error_context_entry_t *entry = &chain->contexts[chain->depth];
+    if (chain->depth < AIRY_ERROR_CONTEXT_MAX_DEPTH) {
+        airy_err_context_entry_t *entry = &chain->contexts[chain->depth];
         entry->file = file;
         entry->line = line;
         entry->function = func;
-        entry->message = AGENTRT_STRDUP(message_buffer); /* 需要释放，但错误链生命周期内保持 */
+        entry->message = AIRY_STRDUP(message_buffer); /* 需要释放，但错误链生命周期内保持 */
         entry->error_code = code;
         entry->timestamp_ns = get_current_time_ns();
         chain->depth++;
     } else {
         /* 链已满，移除最旧的条目 */
-        AGENTRT_FREE((void *)chain->contexts[0].message);
-        for (int i = 0; i < AGENTRT_ERROR_CONTEXT_MAX_DEPTH - 1; i++) {
+        AIRY_FREE((void *)chain->contexts[0].message);
+        for (int i = 0; i < AIRY_ERROR_CONTEXT_MAX_DEPTH - 1; i++) {
             chain->contexts[i] = chain->contexts[i + 1];
         }
-        agentrt_error_context_entry_t *entry =
-            &chain->contexts[AGENTRT_ERROR_CONTEXT_MAX_DEPTH - 1];
+        airy_err_context_entry_t *entry =
+            &chain->contexts[AIRY_ERROR_CONTEXT_MAX_DEPTH - 1];
         entry->file = file;
         entry->line = line;
         entry->function = func;
-        entry->message = AGENTRT_STRDUP(message_buffer);
+        entry->message = AIRY_STRDUP(message_buffer);
         entry->error_code = code;
         entry->timestamp_ns = get_current_time_ns();
     }
@@ -520,18 +520,18 @@ void agentrt_error_push_ex(agentrt_error_t code, const char *file, int line, con
  * @brief 打印错误链信息到控制台
  * @param chain 错误链指针
  */
-void agentrt_error_print_chain(const agentrt_error_chain_t *chain)
+void airy_err_print_chain(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
-        AGENTRT_LOG_DEBUG("Error chain is NULL");
+        AIRY_LOG_DEBUG("Error chain is NULL");
         return;
     }
 
-    AGENTRT_LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
+    AIRY_LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
     for (int i = 0; i < chain->depth; i++) {
-        const agentrt_error_context_entry_t *ctx = &chain->contexts[i];
+        const airy_err_context_entry_t *ctx = &chain->contexts[i];
         (void)ctx;
-        AGENTRT_LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
+        AIRY_LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
                            ctx->line, ctx->function ? ctx->function : "(unknown)", ctx->error_code,
                            ctx->message ? ctx->message : "");
     }
@@ -540,23 +540,23 @@ void agentrt_error_print_chain(const agentrt_error_chain_t *chain)
 /**
  * @brief 将错误链转换为 JSON 格式
  * @param chain 错误链指针
- * @return JSON 字符串（需要调用 AGENTRT_FREE 释放）
+ * @return JSON 字符串（需要调用 AIRY_FREE 释放）
  */
-char *agentrt_error_chain_to_json(const agentrt_error_chain_t *chain)
+char *airy_err_chain_to_json(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
-        return AGENTRT_STRDUP("{\"error\": \"null chain\"}");
+        return AIRY_STRDUP("{\"error\": \"null chain\"}");
     }
 
     /* 调用多语言版本，使用当前语言 */
-    return agentrt_error_chain_to_json_i18n(chain, -1);
+    return airy_err_chain_to_json_i18n(chain, -1);
 }
 
 /**
  * @brief 获取错误统计信息
  * @param stats 输出统计信息结构
  */
-void agentrt_error_get_stats(agentrt_error_stats_t *stats)
+void airy_err_get_stats(airy_err_stats_t *stats)
 {
     if (stats == NULL) {
         return;
@@ -575,7 +575,7 @@ void agentrt_error_get_stats(agentrt_error_stats_t *stats)
 /**
  * @brief 重置错误统计信息
  */
-void agentrt_error_reset_stats(void)
+void airy_err_reset_stats(void)
 {
     STATS_LOCK();
     g_error_stats.total_errors = 0;
@@ -583,7 +583,7 @@ void agentrt_error_reset_stats(void)
         g_error_stats.errors_by_severity[i] = 0;
     }
     g_error_stats.last_error_time = 0;
-    g_error_stats.last_error = AGENTRT_OK;
+    g_error_stats.last_error = AIRY_OK;
     STATS_UNLOCK();
 }
 
@@ -592,23 +592,23 @@ void agentrt_error_reset_stats(void)
 /**
  * @brief 设置错误描述的语言
  * @param lang 语言类型
- * @return 成功返回 AGENTRT_OK，失败返回错误码
+ * @return 成功返回 AIRY_OK，失败返回错误码
  */
-agentrt_error_t agentrt_error_set_language(agentrt_language_t lang)
+airy_err_t airy_err_set_language(airy_language_t lang)
 {
     if ((int)lang < 0 || (int)lang > 7) {
-        return AGENTRT_ERR_INVALID_PARAM;
+        return AIRY_ERR_INVALID_PARAM;
     }
 
     g_current_language = lang;
-    return AGENTRT_OK;
+    return AIRY_OK;
 }
 
 /**
  * @brief 获取当前设置的语言
  * @return 当前语言类型
  */
-agentrt_language_t agentrt_error_get_language(void)
+airy_language_t airy_err_get_language(void)
 {
     return g_current_language;
 }
@@ -619,15 +619,15 @@ agentrt_language_t agentrt_error_get_language(void)
  * @param lang 语言类型（-1 表示使用当前语言）
  * @return 错误描述字符串
  */
-const char *agentrt_error_str_i18n(agentrt_error_t code, agentrt_language_t lang)
+const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
 {
-    agentrt_language_t use_lang = lang;
+    airy_language_t use_lang = lang;
     if ((int)lang < 0) {
         use_lang = g_current_language;
     }
 
     if ((int)use_lang < 0 || (int)use_lang > 7) {
-        use_lang = AGENTRT_LANG_EN_US;
+        use_lang = AIRY_LANG_EN_US;
     }
 
     /* 首先检查自定义 i18n 条目 */
@@ -644,7 +644,7 @@ const char *agentrt_error_str_i18n(agentrt_error_t code, agentrt_language_t lang
     for (size_t i = 0; i < g_error_info_count; i++) {
         if (g_error_info[i].code == code) {
             switch (use_lang) {
-            case AGENTRT_LANG_ZH_CN:
+            case AIRY_LANG_ZH_CN:
                 return g_error_info[i].description_zh_cn ? g_error_info[i].description_zh_cn
                                                          : g_error_info[i].description_en;
             default:
@@ -654,20 +654,20 @@ const char *agentrt_error_str_i18n(agentrt_error_t code, agentrt_language_t lang
     }
 
     /* 最后回退到默认错误描述 */
-    return agentrt_error_str(code);
+    return airy_err_str(code);
 }
 
 /**
  * @brief 注册自定义多语言错误描述
  * @param entries 多语言错误描述条目数组
  * @param count 条目数量
- * @return 成功返回 AGENTRT_OK，失败返回错误码
+ * @return 成功返回 AIRY_OK，失败返回错误码
  */
-agentrt_error_t agentrt_error_register_i18n(const agentrt_error_i18n_entry_t *entries, size_t count)
+airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t count)
 {
 
     if (entries == NULL || count == 0) {
-        return AGENTRT_ERR_INVALID_PARAM;
+        return AIRY_ERR_INVALID_PARAM;
     }
 
     /* 释放现有条目 */
@@ -675,54 +675,54 @@ agentrt_error_t agentrt_error_register_i18n(const agentrt_error_i18n_entry_t *en
         for (size_t i = 0; i < g_i18n_entry_count; i++) {
             /* 注意：这里假设 descriptions 是静态字符串，不需要释放 */
         }
-        AGENTRT_FREE(g_i18n_entries);
+        AIRY_FREE(g_i18n_entries);
         g_i18n_entries = NULL;
         g_i18n_entry_count = 0;
     }
 
     /* 分配新内存 */
-    g_i18n_entries = agentrt_malloc_array(count, sizeof(agentrt_error_i18n_entry_t));
+    g_i18n_entries = airy_malloc_array(count, sizeof(airy_err_i18n_entry_t));
     if (g_i18n_entries == NULL) {
-        return AGENTRT_ERR_OUT_OF_MEMORY;
+        return AIRY_ERR_OUT_OF_MEMORY;
     }
 
     /* 复制条目 */
-    __builtin_memcpy(g_i18n_entries, entries, count * sizeof(agentrt_error_i18n_entry_t));
+    __builtin_memcpy(g_i18n_entries, entries, count * sizeof(airy_err_i18n_entry_t));
     g_i18n_entry_count = count;
 
-    return AGENTRT_OK;
+    return AIRY_OK;
 }
 
 /**
  * @brief 将错误链转换为多语言 JSON 格式
  * @param chain 错误链指针
  * @param lang 语言类型（-1 表示使用当前语言）
- * @return JSON 字符串（需要调用 AGENTRT_FREE 释放）
+ * @return JSON 字符串（需要调用 AIRY_FREE 释放）
  */
-char *agentrt_error_chain_to_json_i18n(const agentrt_error_chain_t *chain, agentrt_language_t lang)
+char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t lang)
 {
 
     if (!chain) {
-        return AGENTRT_STRDUP("{\"error\": \"null\"}");
+        return AIRY_STRDUP("{\"error\": \"null\"}");
     }
 
-    agentrt_language_t use_lang = lang;
+    airy_language_t use_lang = lang;
     if ((int)lang < 0) {
         use_lang = g_current_language;
     }
 
     size_t buf_size = 4096;
-    char *buf = (char *)AGENTRT_MALLOC(buf_size);
+    char *buf = (char *)AIRY_MALLOC(buf_size);
     if (!buf) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t offset = snprintf(
         buf, buf_size, "{\"code\": %d, \"message\": \"%s\", \"depth\": %d, \"contexts\": [",
-        chain->code, agentrt_error_str_i18n(chain->code, use_lang), chain->depth);
+        chain->code, airy_err_str_i18n(chain->code, use_lang), chain->depth);
 
     for (int i = 0; i < chain->depth; i++) {
-        const agentrt_error_context_entry_t *ctx = &chain->contexts[i];
+        const airy_err_context_entry_t *ctx = &chain->contexts[i];
 
         /* 转义消息字符串 */
         char escaped_msg[2048] = {0};
@@ -753,8 +753,8 @@ char *agentrt_error_chain_to_json_i18n(const agentrt_error_chain_t *chain, agent
  * @param chain 错误链指针
  * @param iter 迭代器结构
  */
-void agentrt_error_chain_iter_init(const agentrt_error_chain_t *chain,
-                                   agentrt_error_chain_iterator_t *iter)
+void airy_err_chain_iter_init(const airy_err_chain_t *chain,
+                                   airy_err_chain_iterator_t *iter)
 {
 
     if (!iter)
@@ -769,19 +769,19 @@ void agentrt_error_chain_iter_init(const agentrt_error_chain_t *chain,
  * @param iter 迭代器指针
  * @return 错误上下文条目，到达末尾返回 NULL
  */
-const agentrt_error_context_entry_t *
-agentrt_error_chain_iter_next(agentrt_error_chain_iterator_t *iter)
+const airy_err_context_entry_t *
+airy_err_chain_iter_next(airy_err_chain_iterator_t *iter)
 {
 
     if (!iter || !iter->chain) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if ((size_t)iter->current_index >= (size_t)iter->chain->depth) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    const agentrt_error_context_entry_t *ctx = &iter->chain->contexts[iter->current_index];
+    const airy_err_context_entry_t *ctx = &iter->chain->contexts[iter->current_index];
     iter->current_index++;
 
     return ctx;
@@ -791,7 +791,7 @@ agentrt_error_chain_iter_next(agentrt_error_chain_iterator_t *iter)
  * @brief 重置迭代器到起始位置
  * @param iter 迭代器指针
  */
-void agentrt_error_chain_iter_reset(agentrt_error_chain_iterator_t *iter)
+void airy_err_chain_iter_reset(airy_err_chain_iterator_t *iter)
 {
     if (!iter)
         return;
@@ -804,7 +804,7 @@ void agentrt_error_chain_iter_reset(agentrt_error_chain_iterator_t *iter)
  * @param chain 错误链指针
  * @return 错误链深度，失败返回 0
  */
-int agentrt_error_chain_get_depth(const agentrt_error_chain_t *chain)
+int airy_err_chain_get_depth(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
         return 0;
@@ -815,12 +815,12 @@ int agentrt_error_chain_get_depth(const agentrt_error_chain_t *chain)
 /**
  * @brief 获取错误链的根错误（最早的错误）
  * @param chain 错误链指针
- * @return 根错误码，失败返回 AGENTRT_OK
+ * @return 根错误码，失败返回 AIRY_OK
  */
-agentrt_error_t agentrt_error_chain_get_root_error(const agentrt_error_chain_t *chain)
+airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL || chain->depth <= 0) {
-        return AGENTRT_OK;
+        return AIRY_OK;
     }
     return chain->contexts[0].error_code;
 }
@@ -828,12 +828,12 @@ agentrt_error_t agentrt_error_chain_get_root_error(const agentrt_error_chain_t *
 /**
  * @brief 获取错误链的最新错误
  * @param chain 错误链指针
- * @return 最新错误码，失败返回 AGENTRT_OK
+ * @return 最新错误码，失败返回 AIRY_OK
  */
-agentrt_error_t agentrt_error_chain_get_latest_error(const agentrt_error_chain_t *chain)
+airy_err_t airy_err_chain_get_latest_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
-        return AGENTRT_OK;
+        return AIRY_OK;
     }
     return chain->code;
 }
@@ -842,19 +842,19 @@ agentrt_error_t agentrt_error_chain_get_latest_error(const agentrt_error_chain_t
  * @brief 格式化错误链为字符串
  * @param chain 错误链指针
  * @param lang 语言类型
- * @return 格式化后的字符串（需要调用 AGENTRT_FREE 释放）
+ * @return 格式化后的字符串（需要调用 AIRY_FREE 释放）
  */
-char *agentrt_error_chain_format(const agentrt_error_chain_t *chain, agentrt_language_t lang)
+char *airy_err_chain_format(const airy_err_chain_t *chain, airy_language_t lang)
 {
 
     if (chain == NULL) {
-        return AGENTRT_STRDUP("(null chain)");
+        return AIRY_STRDUP("(null chain)");
     }
 
     size_t buf_size = 4096;
-    char *buf = (char *)AGENTRT_MALLOC(buf_size);
+    char *buf = (char *)AIRY_MALLOC(buf_size);
     if (buf == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t offset = 0;
@@ -862,7 +862,7 @@ char *agentrt_error_chain_format(const agentrt_error_chain_t *chain, agentrt_lan
                        chain->depth, chain->code);
 
     for (int i = 0; i < chain->depth && offset < buf_size - 1; i++) {
-        const agentrt_error_context_entry_t *ctx = &chain->contexts[i];
+        const airy_err_context_entry_t *ctx = &chain->contexts[i];
         offset += snprintf(buf + offset, buf_size - offset, "  [%d] %s:%d in %s(): %s\n", i + 1,
                            ctx->file ? ctx->file : "?", ctx->line,
                            ctx->function ? ctx->function : "?", ctx->message ? ctx->message : "");
@@ -876,18 +876,18 @@ char *agentrt_error_chain_format(const agentrt_error_chain_t *chain, agentrt_lan
  * @brief 设置错误处理回调（兼容旧代码）
  * @param handler 错误处理回调函数
  */
-void agentrt_error_set_handler(agentrt_error_handler_t handler)
+void airy_err_set_handler(airy_err_handler_t handler)
 {
     (void)handler;
 }
 
-void agentrt_error_stats_shutdown(void)
+void airy_err_stats_shutdown(void)
 {
 #ifdef _WIN32
     if (g_error_stats_initialized) {
-        agentrt_mutex_destroy(&g_error_stats_mutex);
+        airy_mtx_destroy(&g_error_stats_mutex);
         g_error_stats_initialized = 0;
-        AGENTRT_LOG_INFO("Error stats: mutex destroyed");
+        AIRY_LOG_INFO("Error stats: mutex destroyed");
     }
 #endif
 }
@@ -896,15 +896,15 @@ void agentrt_error_stats_shutdown(void)
 /* 原 error_compat.h 中的 static 全局变量导致 per-TU 独立副本，跨翻译单元不可见。
  * 现集中定义于本文件（handler.c 为 error 模块唯一编译单元），通过 extern
  * 声明供所有包含 error_compat.h 的翻译单元共享，确保全局回调机制生效。 */
-agentrt_compat_error_handler_t g_compat_error_handler = NULL;
-agentrt_compat_error_info_handler_t g_compat_error_info_handler = NULL;
+airy_compat_error_handler_t g_compat_error_handler = NULL;
+airy_compat_error_info_handler_t g_compat_error_info_handler = NULL;
 
-void agentrt_compat_error_set_handler(agentrt_compat_error_handler_t handler)
+void airy_compat_error_set_handler(airy_compat_error_handler_t handler)
 {
     g_compat_error_handler = handler;
 }
 
-void agentrt_compat_error_set_info_handler(agentrt_compat_error_info_handler_t handler)
+void airy_compat_error_set_info_handler(airy_compat_error_info_handler_t handler)
 {
     g_compat_error_info_handler = handler;
 }

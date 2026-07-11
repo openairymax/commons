@@ -19,7 +19,7 @@
 
 **commons** 是 Airymax 智能体运行时的**基础层**。它提供跨平台、跨语言、跨模块的基础设施，所有上层——原子原语（`atoms`）、守护进程、安全穹顶（`cupolas`）、网关、协议、存储——都构建其上。commons 自身**不依赖**任何其他 Airymax 模块：它是依赖图的最底层，也是 SDK 层最终回绑、闭合 Airymax 循环架构的规范基底。
 
-作为项目类型定义（`agentrt_types.h`）和统一错误码契约（`agentrt_error_t`）的权威来源，commons 保证跨模块类型一致性，消除跨模块类型冲突。其设计目标是：零依赖抽象（平台无关的类型系统和接口定义使内核与外围代码解耦）、统一错误契约、高性能基础设施（内存池、无锁队列、零拷贝流水线）、内置可观测性（标准化的日志/指标/追踪捕获接口）、默认安全的 I/O 路径（参数校验、边界检查、资源限制）。
+作为项目类型定义（`airy_types.h`）和统一错误码契约（`airy_err_t`）的权威来源，commons 保证跨模块类型一致性，消除跨模块类型冲突。其设计目标是：零依赖抽象（平台无关的类型系统和接口定义使内核与外围代码解耦）、统一错误契约、高性能基础设施（内存池、无锁队列、零拷贝流水线）、内置可观测性（标准化的日志/指标/追踪捕获接口）、默认安全的 I/O 路径（参数校验、边界检查、资源限制）。
 
 commons 构建单一静态库 `agentrt_common`，聚合 24+ 工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
 
@@ -45,7 +45,7 @@ commons/
 │   ├── compat/                  # 平台兼容头文件（stdbool.h、stdint.h）
 │   └── platform.c               # 平台抽象实现
 ├── include/                     # 全局公共头文件
-│   └── agentrt_types.h          # 统一类型与错误码定义（权威来源）
+│   └── airy_types.h          # 统一类型与错误码定义（权威来源）
 ├── utils/                       # 工具模块集合（24+ 模块）
 │   ├── include/                 # 跨模块共享头文件
 │   │   ├── atomic_compat.h      # 跨平台原子操作兼容层
@@ -84,19 +84,19 @@ commons/
 
 ## 核心组件
 
-### 类型系统（`agentrt_types.h`）
+### 类型系统（`airy_types.h`）
 
 整个项目唯一的权威类型定义来源：
 
 | 类型 | 说明 |
 |------|------|
-| `agentrt_error_t` | 统一错误码类型（`int32_t`；负数 = 错误，0 = 成功） |
-| `agentrt_ipc_header_t` | 应用层 IPC 消息头（magic/version/type/flags/msg_id） |
-| `agentrt_ipc_message_t` | 应用层 IPC 消息结构（header + payload） |
+| `airy_err_t` | 统一错误码类型（`int32_t`；负数 = 错误，0 = 成功） |
+| `airy_ipc_hdr_t` | 应用层 IPC 消息头（magic/version/type/flags/msg_id） |
+| `airy_ipc_msg_t` | 应用层 IPC 消息结构（header + payload） |
 | `agentrt_task_id_t` | 任务 ID 类型（`uint64_t`） |
 | `agentrt_message_id_t` | 消息 ID 类型（`uint64_t`） |
 
-统一错误码系统（`AGENTRT_E*`）覆盖 29 个标准错误，包括无效参数、内存不足、权限拒绝、超时、I/O 错误、协议错误、配额超限等。
+统一错误码系统（`AIRY_E*`）覆盖 29 个标准错误，包括无效参数、内存不足、权限拒绝、超时、I/O 错误、协议错误、配额超限等。
 
 ### 工具模块（24+）
 
@@ -133,7 +133,7 @@ commons/
 
 - **平台检测** —— 自动检测 Linux / Windows / macOS。
 - **文件系统** —— 路径规范化与文件操作抽象。
-- **线程与同步** —— `agentrt_thread_t`、`agentrt_mutex_t`、`agentrt_cond_t`。
+- **线程与同步** —— `airy_thread_t`、`airy_mtx_t`、`airy_cond_t`。
 - **动态库加载** —— 跨平台 FFI 支持。
 - **系统信息** —— CPU 核数、内存大小、进程 ID。
 
@@ -151,9 +151,9 @@ commons/
 
 | 宏 | 替换 | 说明 |
 |------|------|------|
-| `AGENTRT_MALLOC(size)` | `malloc(size)` | 统一分配 |
-| `AGENTRT_CALLOC(num, size)` | `calloc(num, size)` | 统一零初始化分配 |
-| `AGENTRT_FREE(ptr)` | `free(ptr)` | 统一释放 |
+| `AIRY_MALLOC(size)` | `malloc(size)` | 统一分配 |
+| `AIRY_CALLOC(num, size)` | `calloc(num, size)` | 统一零初始化分配 |
+| `AIRY_FREE(ptr)` | `free(ptr)` | 统一释放 |
 
 ## 架构
 
@@ -176,7 +176,7 @@ commons/
 
   agentrt_common（单一静态库）
   ┌────────────────────────────────────────────┐
-  │  agentrt_types.h  （权威类型）              │
+  │  airy_types.h  （权威类型）              │
   │  platform/        （OS 抽象）               │
   │  utils/           （24+ 工具模块）           │
   │   logging sync memory string ipc token     │
@@ -212,9 +212,9 @@ commons/
 | 消费者 | 用途 |
 |--------|------|
 | **atoms** | 平台抽象、内存管理、错误框架、类型系统——每个 atoms 子模块拉取约 18 个 commons 工具模块（logging、sync、platform、error、types、config_unified、observability、ipc、io、cache、cost、memory、string、token、network、security、resource、uuid） |
-| **cupolas** | 类型系统（`agentrt_types.h`）、同步原语、内存宏、security/resource 工具用于安全穹顶 |
+| **cupolas** | 类型系统（`airy_types.h`）、同步原语、内存宏、security/resource 工具用于安全穹顶 |
 | **heapstore** | logging、config_unified、内存池、同步原语用于堆式持久化 |
-| **protocols** | 类型系统（`agentrt_ipc_header_t` / `agentrt_ipc_message_t`）、sync、observability、ipc 用于 AgentsIPC 线协议 |
+| **protocols** | 类型系统（`airy_ipc_hdr_t` / `airy_ipc_msg_t`）、sync、observability、ipc 用于 AgentsIPC 线协议 |
 | **gateway** | network 工具、token 管理、logging、config_unified 用于网关守护进程 |
 | **daemons** | logging、config_unified、network、token、cost、observability、cognition、strategy——全部 12 个守护进程消费完整接口面 |
 | SDK 层 | Python/Go/Rust/TypeScript SDK 最终回绑 commons 类型与错误契约，闭合 Airymax 循环架构 |
@@ -253,18 +253,18 @@ cmake --install /tmp/commons-build --prefix /opt/airymax
 
 commons 通过统一类型头和各模块公共头暴露接口。权威入口：
 
-- `include/agentrt_types.h` —— 统一类型与错误码定义（`agentrt_error_t`、`agentrt_ipc_header_t`、`agentrt_ipc_message_t`、`AGENTRT_E*` 错误码）
+- `include/airy_types.h` —— 统一类型与错误码定义（`airy_err_t`、`airy_ipc_hdr_t`、`airy_ipc_msg_t`、`AIRY_E*` 错误码）
 - `platform/include/platform.h` —— 平台检测与基础定义
 - `utils/include/atomic_compat.h` —— 跨平台原子操作（11 种类型，3 种后端）
 - `utils/include/check.h` —— 通用检查宏
 - 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/memory.h`、`utils/string/include/string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network.h`、`utils/security/include/security.h`、`utils/resource/include/resource.h`、`utils/uuid/include/uuid.h`、`utils/cache/include/cache.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc.h`、`utils/execution/include/execution.h`、`utils/cognition/include/cognition.h`、`utils/strategy/include/strategy.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/print.h`、`utils/compliance/include/compliance.h`、`utils/quality/include/quality.h`、`utils/sd/include/sd.h`
 
-内存宏（`AGENTRT_MALLOC` / `AGENTRT_CALLOC` / `AGENTRT_FREE`）和严格合规的不安全函数投毒（如通过 `utils/string` 替换 `strcpy`）是项目级的。
+内存宏（`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`）和严格合规的不安全函数投毒（如通过 `utils/string` 替换 `strcpy`）是项目级的。
 
 ### 使用示例
 
 ```c
-#include "agentrt_types.h"
+#include "airy_types.h"
 #include "logging.h"
 #include "config_unified.h"
 

@@ -20,19 +20,19 @@ typedef void (*assert_handler_fn_t)(const char *cond, const char *file, int line
 
 static assert_handler_fn_t g_assert_handler = NULL;
 
-void agentrt_set_assert_handler(void (*handler)(const char *, const char *, int, const char *,
+void airy_set_assert_handler(void (*handler)(const char *, const char *, int, const char *,
                                                 const char *))
 {
     g_assert_handler = (assert_handler_fn_t)handler;
 }
 
-void (*agentrt_get_assert_handler(void))(const char *, const char *, int, const char *,
+void (*airy_get_assert_handler(void))(const char *, const char *, int, const char *,
                                          const char *)
 {
     return (void (*)(const char *, const char *, int, const char *, const char *))g_assert_handler;
 }
 
-#ifdef AGENTRT_PLATFORM_WINDOWS
+#ifdef AIRY_PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <intrin.h>
 #include <windows.h>
@@ -43,7 +43,7 @@ void (*agentrt_get_assert_handler(void))(const char *, const char *, int, const 
 
 /* ==================== 安全字符串函数实现 ==================== */
 
-char *agentrt_strncpy_safe(char *dest, const char *src, size_t dest_size)
+char *airy_strncpy_safe(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || !src || dest_size == 0) {
         return dest;
@@ -60,28 +60,28 @@ char *agentrt_strncpy_safe(char *dest, const char *src, size_t dest_size)
 
 /* ==================== 安全内存函数实现 ==================== */
 
-int agentrt_memset_s(void *dest, int c, size_t dest_size, size_t count)
+int airy_memset_s(void *dest, int c, size_t dest_size, size_t count)
 {
     if (!dest) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (count > dest_size) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memset(dest, (int)c, count);
     return 0;
 }
 
-int agentrt_memcpy_s(void *dest, size_t dest_size, const void *src, size_t count)
+int airy_memcpy_s(void *dest, size_t dest_size, const void *src, size_t count)
 {
     if (!dest || !src) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (count > dest_size) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if ((char *)dest < (const char *)src + count && (const char *)src < (char *)dest + count) {
@@ -94,14 +94,14 @@ int agentrt_memcpy_s(void *dest, size_t dest_size, const void *src, size_t count
     return 0;
 }
 
-int agentrt_memmove_s(void *dest, size_t dest_size, const void *src, size_t count)
+int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count)
 {
     if (!dest || !src) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (count > dest_size) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memmove(dest, src, count);
@@ -110,7 +110,7 @@ int agentrt_memmove_s(void *dest, size_t dest_size, const void *src, size_t coun
 
 /* ==================== 断言函数实现 ==================== */
 
-void agentrt_assert_fail(const char *cond, const char *file, int line, const char *func)
+void airy_assert_fail(const char *cond, const char *file, int line, const char *func)
 {
     char buf[256];
     snprintf(buf, sizeof(buf), "Assertion failed: %s\n", cond);
@@ -123,7 +123,7 @@ void agentrt_assert_fail(const char *cond, const char *file, int line, const cha
         return;
     }
 
-#ifdef AGENTRT_PLATFORM_WINDOWS
+#ifdef AIRY_PLATFORM_WINDOWS
     if (IsDebuggerPresent()) {
         DebugBreak();
     }
@@ -134,7 +134,7 @@ void agentrt_assert_fail(const char *cond, const char *file, int line, const cha
     abort();
 }
 
-void agentrt_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
+void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
                              const char *msg)
 {
     char buf[256];
@@ -150,7 +150,7 @@ void agentrt_assert_fail_msg(const char *cond, const char *file, int line, const
         return;
     }
 
-#ifdef AGENTRT_PLATFORM_WINDOWS
+#ifdef AIRY_PLATFORM_WINDOWS
     if (IsDebuggerPresent()) {
         DebugBreak();
     }
@@ -163,9 +163,9 @@ void agentrt_assert_fail_msg(const char *cond, const char *file, int line, const
 
 /* ==================== 调试函数实现 ==================== */
 
-void agentrt_debug_break(void)
+void airy_debug_break(void)
 {
-#ifdef AGENTRT_PLATFORM_WINDOWS
+#ifdef AIRY_PLATFORM_WINDOWS
     if (IsDebuggerPresent()) {
         DebugBreak();
     }
@@ -182,12 +182,12 @@ void agentrt_debug_break(void)
 
 static const char *g_version_string = "0.1.0";
 
-const char *agentrt_version_string(void)
+const char *airy_version_string(void)
 {
     return g_version_string;
 }
 
-const char *agentrt_build_info(void)
+const char *airy_build_info(void)
 {
     static char build_info[256] = {0};
 
@@ -208,7 +208,7 @@ int gethostname(char *name, size_t len)
 {
     DWORD size = (DWORD)len;
     if (!GetComputerNameA(name, &size)) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     return 0;
 }
@@ -231,7 +231,7 @@ long sysconf(int name)
     case _SC_CLK_TCK:
         return 1000;
     default:
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 }
 
@@ -243,7 +243,7 @@ int nanosleep(const struct timespec *ts, struct timespec *rem)
     return 0;
 }
 
-char *AGENTRT_STRDUP(const char *s, size_t n)
+char *AIRY_STRDUP(const char *s, size_t n)
 {
     size_t len = 0;
     const char *p = s;
@@ -251,7 +251,7 @@ char *AGENTRT_STRDUP(const char *s, size_t n)
         len++;
         p++;
     }
-    char *dup = (char *)AGENTRT_MALLOC(len + 1);
+    char *dup = (char *)AIRY_MALLOC(len + 1);
     if (dup) {
         __builtin_memcpy(dup, s, len);
         dup[len] = '\0';
@@ -263,6 +263,6 @@ struct tm *localtime_r(const time_t *timer, struct tm *buf)
 {
     if (localtime_s(buf, timer) == 0)
         return buf;
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 #endif

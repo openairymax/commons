@@ -24,8 +24,8 @@
  * @see ipc_service_bus.h IPC服务总线
  */
 
-#ifndef AGENTRT_SERVICE_DISCOVERY_H
-#define AGENTRT_SERVICE_DISCOVERY_H
+#ifndef AIRY_RT_SERVICE_DISCOVERY_H
+#define AIRY_RT_SERVICE_DISCOVERY_H
 
 #include "svc_common.h"
 
@@ -47,14 +47,14 @@ extern "C" {
 #define SD_MAX_INSTANCES 8
 #define SD_DEFAULT_HEARTBEAT_MS 10000
 #define SD_DEFAULT_EXPIRE_MS 30000
-#define SD_SHM_NAME "/agentrt_service_registry"
+#define SD_SHM_NAME "/airy_svc_registry"
 
 /* ==================== 服务实例信息 ==================== */
 
 typedef struct {
     char instance_id[SD_MAX_NAME_LEN];
     char endpoint[SD_MAX_ENDPOINT_LEN];
-    agentrt_svc_state_t state;
+    airy_svc_state_t state;
     bool healthy;
     uint32_t weight;
     uint32_t active_connections;
@@ -139,27 +139,27 @@ typedef void (*sd_event_callback_t)(sd_event_type_t event, const char *service_n
  * @param config 配置参数（NULL使用默认）
  * @return 服务发现句柄，失败返回NULL
  */
-AGENTRT_API service_discovery_t sd_create(const sd_config_t *config);
+AIRY_API service_discovery_t sd_create(const sd_config_t *config);
 
 /**
  * @brief 销毁服务发现实例
  * @param sd 服务发现句柄
  */
-AGENTRT_API void sd_destroy(service_discovery_t sd);
+AIRY_API void sd_destroy(service_discovery_t sd);
 
 /**
  * @brief 启动服务发现
  * @param sd 服务发现句柄
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_start(service_discovery_t sd);
+AIRY_API airy_err_t sd_start(service_discovery_t sd);
 
 /**
  * @brief 停止服务发现
  * @param sd 服务发现句柄
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_stop(service_discovery_t sd);
+AIRY_API airy_err_t sd_stop(service_discovery_t sd);
 
 /* ==================== 服务注册 ==================== */
 
@@ -173,7 +173,7 @@ AGENTRT_API agentrt_error_t sd_stop(service_discovery_t sd);
  * @param dependencies 依赖服务（逗号分隔）
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_register(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_register(service_discovery_t sd, const char *service_name,
                                         const char *service_type, const sd_instance_t *instance,
                                         const char *tags, const char *dependencies);
 
@@ -184,7 +184,7 @@ AGENTRT_API agentrt_error_t sd_register(service_discovery_t sd, const char *serv
  * @param instance_id 实例ID
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_deregister(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_deregister(service_discovery_t sd, const char *service_name,
                                           const char *instance_id);
 
 /**
@@ -193,7 +193,7 @@ AGENTRT_API agentrt_error_t sd_deregister(service_discovery_t sd, const char *se
  * @param service_name 服务名称
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_deregister_all(service_discovery_t sd, const char *service_name);
+AIRY_API airy_err_t sd_deregister_all(service_discovery_t sd, const char *service_name);
 
 /* ==================== 服务发现 ==================== */
 
@@ -206,7 +206,7 @@ AGENTRT_API agentrt_error_t sd_deregister_all(service_discovery_t sd, const char
  * @param found_count [out] 实际找到数量
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_discover(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_discover(service_discovery_t sd, const char *service_name,
                                         sd_instance_t *instances, uint32_t max_count,
                                         uint32_t *found_count);
 
@@ -219,7 +219,7 @@ AGENTRT_API agentrt_error_t sd_discover(service_discovery_t sd, const char *serv
  * @param found_count [out] 实际找到数量
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_discover_by_type(service_discovery_t sd, const char *service_type,
+AIRY_API airy_err_t sd_discover_by_type(service_discovery_t sd, const char *service_type,
                                                 sd_service_entry_t *entries, uint32_t max_count,
                                                 uint32_t *found_count);
 
@@ -232,7 +232,7 @@ AGENTRT_API agentrt_error_t sd_discover_by_type(service_discovery_t sd, const ch
  * @param found_count [out] 实际找到数量
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_discover_by_tags(service_discovery_t sd, const char *tags,
+AIRY_API airy_err_t sd_discover_by_tags(service_discovery_t sd, const char *tags,
                                                 sd_service_entry_t *entries, uint32_t max_count,
                                                 uint32_t *found_count);
 
@@ -244,7 +244,7 @@ AGENTRT_API agentrt_error_t sd_discover_by_tags(service_discovery_t sd, const ch
  * @param instance [out] 选中的实例
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_select_instance(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_select_instance(service_discovery_t sd, const char *service_name,
                                                sd_lb_strategy_t strategy, sd_instance_t *instance);
 
 /* ==================== 心跳与健康 ==================== */
@@ -256,7 +256,7 @@ AGENTRT_API agentrt_error_t sd_select_instance(service_discovery_t sd, const cha
  * @param instance_id 实例ID
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_heartbeat(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd, const char *service_name,
                                          const char *instance_id);
 
 /**
@@ -267,7 +267,7 @@ AGENTRT_API agentrt_error_t sd_heartbeat(service_discovery_t sd, const char *ser
  * @param healthy 是否健康
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_update_health(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_update_health(service_discovery_t sd, const char *service_name,
                                              const char *instance_id, bool healthy);
 
 /**
@@ -278,7 +278,7 @@ AGENTRT_API agentrt_error_t sd_update_health(service_discovery_t sd, const char 
  * @param active_connections 当前活跃连接数
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_update_connections(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_update_connections(service_discovery_t sd, const char *service_name,
                                                   const char *instance_id,
                                                   uint32_t active_connections);
 
@@ -292,7 +292,7 @@ AGENTRT_API agentrt_error_t sd_update_connections(service_discovery_t sd, const 
  * @param max_len 缓冲区最大长度
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_get_dependencies(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_get_dependencies(service_discovery_t sd, const char *service_name,
                                                 char *dependencies, size_t max_len);
 
 /**
@@ -303,7 +303,7 @@ AGENTRT_API agentrt_error_t sd_get_dependencies(service_discovery_t sd, const ch
  * @param max_len 缓冲区最大长度
  * @return 0所有依赖满足，非0有缺失依赖
  */
-AGENTRT_API agentrt_error_t sd_check_dependencies(service_discovery_t sd, const char *service_name,
+AIRY_API airy_err_t sd_check_dependencies(service_discovery_t sd, const char *service_name,
                                                   char *missing_deps, size_t max_len);
 
 /* ==================== 事件与统计 ==================== */
@@ -315,7 +315,7 @@ AGENTRT_API agentrt_error_t sd_check_dependencies(service_discovery_t sd, const 
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_register_event_callback(service_discovery_t sd,
+AIRY_API airy_err_t sd_register_event_callback(service_discovery_t sd,
                                                        sd_event_callback_t callback,
                                                        void *user_data);
 
@@ -325,21 +325,21 @@ AGENTRT_API agentrt_error_t sd_register_event_callback(service_discovery_t sd,
  * @param stats [out] 统计信息
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t sd_get_stats(service_discovery_t sd, sd_stats_t *stats);
+AIRY_API airy_err_t sd_get_stats(service_discovery_t sd, sd_stats_t *stats);
 
 /**
  * @brief 获取所有已注册服务数量
  * @param sd 服务发现句柄
  * @return 服务数量
  */
-AGENTRT_API uint32_t sd_service_count(service_discovery_t sd);
+AIRY_API uint32_t sd_service_count(service_discovery_t sd);
 
 /**
  * @brief 获取服务发现运行状态
  * @param sd 服务发现句柄
  * @return true运行中，false未运行
  */
-AGENTRT_API bool sd_is_running(service_discovery_t sd);
+AIRY_API bool sd_is_running(service_discovery_t sd);
 
 /* ==================== 工具函数 ==================== */
 
@@ -348,13 +348,13 @@ AGENTRT_API bool sd_is_running(service_discovery_t sd);
  * @param strategy 策略类型
  * @return 策略名称
  */
-AGENTRT_API const char *sd_lb_strategy_to_string(sd_lb_strategy_t strategy);
+AIRY_API const char *sd_lb_strategy_to_string(sd_lb_strategy_t strategy);
 
 /**
  * @brief 创建默认配置
  * @return 默认配置
  */
-AGENTRT_API sd_config_t sd_create_default_config(void);
+AIRY_API sd_config_t sd_create_default_config(void);
 
 /**
  * @brief C-L08: 输出服务发现统计摘要（单行格式，适合周期性日志）
@@ -365,10 +365,10 @@ AGENTRT_API sd_config_t sd_create_default_config(void);
  *
  * @param sd 服务发现句柄
  */
-AGENTRT_API void sd_dump_stats(service_discovery_t sd);
+AIRY_API void sd_dump_stats(service_discovery_t sd);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_SERVICE_DISCOVERY_H */
+#endif /* AIRY_RT_SERVICE_DISCOVERY_H */

@@ -6,8 +6,8 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_UTILS_TOKEN_H
-#define AGENTRT_UTILS_TOKEN_H
+#ifndef AIRY_RT_UTILS_TOKEN_H
+#define AIRY_RT_UTILS_TOKEN_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,20 +16,20 @@
 extern "C" {
 #endif
 
-typedef struct agentrt_token_counter agentrt_token_counter_t;
+typedef struct airy_token_counter airy_token_counter_t;
 
 /**
  * @brief 创建Token计数器
  * @param model_name 模型名称（如 "gpt-4"）
  * @return 计数器句柄，失败返回 NULL
  */
-agentrt_token_counter_t *agentrt_token_counter_create(const char *model_name);
+airy_token_counter_t *airy_token_counter_create(const char *model_name);
 
 // From data intelligence emerges. by spharx
 /**
  * @brief 销毁计数器
  */
-void agentrt_token_counter_destroy(agentrt_token_counter_t *counter);
+void airy_token_counter_destroy(airy_token_counter_t *counter);
 
 /**
  * @brief 计算文本的Token数量
@@ -37,7 +37,7 @@ void agentrt_token_counter_destroy(agentrt_token_counter_t *counter);
  * @param text 文本
  * @return Token数量，失败返回 (size_t)-1
  */
-size_t agentrt_token_counter_count(agentrt_token_counter_t *counter, const char *text);
+size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text);
 
 /**
  * @brief 批量计算多个文本的Token数量
@@ -47,7 +47,7 @@ size_t agentrt_token_counter_count(agentrt_token_counter_t *counter, const char 
  * @param out_counts 输出Token数量数组
  * @return 0 成功，-1 失败
  */
-size_t agentrt_token_counter_count_batch(agentrt_token_counter_t *counter, const char **texts,
+size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char **texts,
                                          size_t count, size_t *out_counts);
 
 /**
@@ -58,25 +58,25 @@ size_t agentrt_token_counter_count_batch(agentrt_token_counter_t *counter, const
  * @param side 截断侧："left","right","middle"
  * @return 新分配的截断文本，失败返回 NULL
  */
-char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const char *text,
+char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *text,
                                      size_t max_tokens, const char *side);
 
 /**
  * @brief Token预算句柄
  */
-typedef struct agentrt_token_budget agentrt_token_budget_t;
+typedef struct airy_token_budget airy_token_budget_t;
 
 /**
  * @brief 创建Token预算
  * @param max_tokens 最大Token数
  * @return 预算句柄，失败返回 NULL
  */
-agentrt_token_budget_t *agentrt_token_budget_create(size_t max_tokens);
+airy_token_budget_t *airy_token_budget_create(size_t max_tokens);
 
 /**
  * @brief 销毁预算
  */
-void agentrt_token_budget_destroy(agentrt_token_budget_t *budget);
+void airy_token_budget_destroy(airy_token_budget_t *budget);
 
 /**
  * @brief 添加Token消耗
@@ -85,54 +85,54 @@ void agentrt_token_budget_destroy(agentrt_token_budget_t *budget);
  * @param output_tokens 输出Token数
  * @return 0 成功，-1 超出预算
  */
-int agentrt_token_budget_add(agentrt_token_budget_t *budget, size_t input_tokens,
+int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens,
                              size_t output_tokens);
 
 /**
  * @brief 获取剩余Token数
  * @return 剩余Token数
  */
-size_t agentrt_token_budget_remaining(agentrt_token_budget_t *budget);
+size_t airy_token_budget_remaining(airy_token_budget_t *budget);
 
 /**
  * @brief 重置预算
  */
-void agentrt_token_budget_reset(agentrt_token_budget_t *budget);
+void airy_token_budget_reset(airy_token_budget_t *budget);
 
 /**
  * @brief 获取已使用Token数
  * @param budget 预算
  * @return 已使用Token数
  */
-size_t agentrt_token_budget_used(agentrt_token_budget_t *budget);
+size_t airy_token_budget_used(airy_token_budget_t *budget);
 
 /**
  * @brief 获取输入Token数
  * @param budget 预算
  * @return 输入Token数
  */
-size_t agentrt_token_budget_input(agentrt_token_budget_t *budget);
+size_t airy_token_budget_input(airy_token_budget_t *budget);
 
 /**
  * @brief 获取输出Token数
  * @param budget 预算
  * @return 输出Token数
  */
-size_t agentrt_token_budget_output(agentrt_token_budget_t *budget);
+size_t airy_token_budget_output(airy_token_budget_t *budget);
 
 /**
  * @brief 获取请求计数
  * @param budget 预算
  * @return 请求计数
  */
-uint32_t agentrt_token_budget_requests(agentrt_token_budget_t *budget);
+uint32_t airy_token_budget_requests(airy_token_budget_t *budget);
 
 /**
  * @brief 获取拒绝计数
  * @param budget 预算
  * @return 拒绝计数
  */
-uint32_t agentrt_token_budget_denied(agentrt_token_budget_t *budget);
+uint32_t airy_token_budget_denied(airy_token_budget_t *budget);
 
 /**
  * @brief 设置时间窗口
@@ -140,17 +140,17 @@ uint32_t agentrt_token_budget_denied(agentrt_token_budget_t *budget);
  * @param window_seconds 时间窗口（秒）
  * @return 0 成功，-1 失败
  */
-int agentrt_token_budget_set_window(agentrt_token_budget_t *budget, size_t window_seconds);
+int airy_token_budget_set_window(airy_token_budget_t *budget, size_t window_seconds);
 
 /**
  * @brief 检查并重置时间窗口
  * @param budget 预算
  * @return 0 成功，-1 失败
  */
-int agentrt_token_budget_check_window(agentrt_token_budget_t *budget);
+int airy_token_budget_check_window(airy_token_budget_t *budget);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_UTILS_TOKEN_H */
+#endif /* AIRY_RT_UTILS_TOKEN_H */

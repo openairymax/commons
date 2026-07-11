@@ -26,8 +26,8 @@
  * 只有需要极致性能或特殊线程安全需求的组件才应直接使用原子层。
  */
 
-#ifndef AGENTRT_COMMON_ATOMIC_LOGGING_H
-#define AGENTRT_COMMON_ATOMIC_LOGGING_H
+#ifndef AIRY_RT_COMMON_ATOMIC_LOGGING_H
+#define AIRY_RT_COMMON_ATOMIC_LOGGING_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -316,7 +316,7 @@ static inline void atomic_read_barrier(void)
  * @param desired 新值
  * @return true 操作成功，false 操作失败
  */
-static inline bool agentrt_atomic_cas_weak(volatile uint64_t *ptr, uint64_t *expected,
+static inline bool airy_atomic_cas_weak(volatile uint64_t *ptr, uint64_t *expected,
                                            uint64_t desired)
 {
     return atomic_compare_exchange_strong_64((volatile _Atomic int64_t *)ptr, (int64_t *)expected,
@@ -328,4 +328,4 @@ static inline bool agentrt_atomic_cas_weak(volatile uint64_t *ptr, uint64_t *exp
 }
 #endif
 
-#endif /* AGENTRT_COMMON_ATOMIC_LOGGING_H */
+#endif /* AIRY_RT_COMMON_ATOMIC_LOGGING_H */

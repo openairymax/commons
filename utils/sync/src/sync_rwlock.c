@@ -22,7 +22,7 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_rwlock *r = (struct sync_rwlock *)AGENTRT_CALLOC(1, sizeof(struct sync_rwlock));
+    struct sync_rwlock *r = (struct sync_rwlock *)AIRY_CALLOC(1, sizeof(struct sync_rwlock));
     if (r == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -33,7 +33,7 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
     if (attr != NULL && attr->name != NULL) {
         r->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&r->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&r->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     InitializeSRWLock(&r->rwlock);
@@ -46,8 +46,8 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
     int result = pthread_rwlock_init(&r->rwlock, &attr_rwlock);
     pthread_rwlockattr_destroy(&attr_rwlock);
     if (result != 0) {
-        AGENTRT_FREE(r->name);
-        AGENTRT_FREE(r);
+        AIRY_FREE(r->name);
+        AIRY_FREE(r);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -64,8 +64,8 @@ sync_result_t sync_rwlock_free(sync_rwlock_t rwlock)
     }
 
     if (!rwlock->initialized) {
-        AGENTRT_FREE(rwlock->name);
-        AGENTRT_FREE(rwlock);
+        AIRY_FREE(rwlock->name);
+        AIRY_FREE(rwlock);
         return SYNC_SUCCESS;
     }
 
@@ -75,8 +75,8 @@ sync_result_t sync_rwlock_free(sync_rwlock_t rwlock)
     pthread_rwlock_destroy(&rwlock->rwlock);
 #endif
 
-    AGENTRT_FREE(rwlock->name);
-    AGENTRT_FREE(rwlock);
+    AIRY_FREE(rwlock->name);
+    AIRY_FREE(rwlock);
     return SYNC_SUCCESS;
 }
 

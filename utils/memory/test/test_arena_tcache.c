@@ -11,7 +11,7 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 #include "arena.h"
 #include "logging_compat.h"
 #include "memory_compat.h"
@@ -31,7 +31,7 @@ static void test_arena_basic(void)
     printf("\n=== Arena 基础分配场景 ===\n");
 
     /* 创建 Arena（1KB chunk，最多 4 个 chunk） */
-    agentrt_arena_t *arena = arena_create(1024, 4);
+    airy_arena_t *arena = arena_create(1024, 4);
     assert(arena != NULL);
 
     /* 场景1：多次小分配，触发新 chunk 创建 */
@@ -54,7 +54,7 @@ static void test_arena_basic(void)
     void *huge = arena_alloc(arena, 2048); /* > chunk_size/2 */
     if (huge) {
         printf("  Fallback allocation succeeded (expected)\n");
-        AGENTRT_FREE(huge);
+        AIRY_FREE(huge);
     }
 
     arena_get_stats(arena, &stats);
@@ -114,7 +114,7 @@ static void test_tcache_basic(void)
     assert(pool != NULL);
 
     /* 创建 tcache（batch_size=8, max_cached=64） */
-    agentrt_tcache_t *tc = tcache_create(pool, 8, 64);
+    airy_tcache_t *tc = tcache_create(pool, 8, 64);
     assert(tc != NULL);
 
     /* 场景1：首次分配（触发预填充 + HIT） */
@@ -186,7 +186,7 @@ static void test_combined_scenario(void)
     printf("\n=== 综合场景：Arena + Tcache 协同 ===\n");
 
     /* 创建 Arena 用于请求级短生命周期分配 */
-    agentrt_arena_t *req_arena = arena_create(4096, 0); /* 无限制 */
+    airy_arena_t *req_arena = arena_create(4096, 0); /* 无限制 */
     assert(req_arena != NULL);
 
     /* 创建内存池 + tcache 用于固定大小对象缓存 */
@@ -201,7 +201,7 @@ static void test_combined_scenario(void)
     memory_pool_t *pool = memory_pool_create(&pool_opts);
     assert(pool != NULL);
 
-    agentrt_tcache_t *tc = tcache_create(pool, 4, 32);
+    airy_tcache_t *tc = tcache_create(pool, 4, 32);
     assert(tc != NULL);
 
     printf("  --- 模拟请求处理循环 ---\n");
@@ -257,7 +257,7 @@ static void test_arena_oom(void)
     printf("\n=== Arena OOM 场景 ===\n");
 
     /* 创建受限 Arena（1KB chunk，最多 1 个 chunk） */
-    agentrt_arena_t *arena = arena_create(1024, 1);
+    airy_arena_t *arena = arena_create(1024, 1);
     assert(arena != NULL);
 
     /* 填满 chunk */

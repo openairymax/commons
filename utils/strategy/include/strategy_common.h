@@ -13,8 +13,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_STRATEGY_COMMON_H
-#define AGENTRT_STRATEGY_COMMON_H
+#ifndef AIRY_RT_STRATEGY_COMMON_H
+#define AIRY_RT_STRATEGY_COMMON_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -105,8 +105,8 @@ void strategy_cleanup_data(void *data, void (*free_func)(void *));
  * @brief 策略名称生成器
  * @param base_name 基础名称
  * @param suffix 后缀
- * @return 生成的策略名称（需要调用AGENTRT_FREE释放）
+ * @return 生成的策略名称（需要调用AIRY_FREE释放）
  */
 char *strategy_generate_name(const char *base_name, const char *suffix);
 
-#endif /* AGENTRT_STRATEGY_COMMON_H */
+#endif /* AIRY_RT_STRATEGY_COMMON_H */

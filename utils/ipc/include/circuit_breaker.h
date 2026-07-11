@@ -25,8 +25,8 @@
  * @see service_discovery.h 服务发现
  */
 
-#ifndef AGENTRT_CIRCUIT_BREAKER_H
-#define AGENTRT_CIRCUIT_BREAKER_H
+#ifndef AIRY_RT_CIRCUIT_BREAKER_H
+#define AIRY_RT_CIRCUIT_BREAKER_H
 
 #include "svc_common.h"
 
@@ -139,13 +139,13 @@ typedef struct cb_manager_s *cb_manager_t;
  * @brief 创建熔断器管理器
  * @return 管理器句柄，失败返回NULL
  */
-AGENTRT_API cb_manager_t cb_manager_create(void);
+AIRY_API cb_manager_t cb_manager_create(void);
 
 /**
  * @brief 销毁熔断器管理器
  * @param manager 管理器句柄
  */
-AGENTRT_API void cb_manager_destroy(cb_manager_t manager);
+AIRY_API void cb_manager_destroy(cb_manager_t manager);
 
 /* ==================== 熔断器操作 ==================== */
 
@@ -156,41 +156,41 @@ AGENTRT_API void cb_manager_destroy(cb_manager_t manager);
  * @param config 配置参数（NULL使用默认）
  * @return 熔断器句柄，失败返回NULL
  */
-AGENTRT_API circuit_breaker_t cb_create(cb_manager_t manager, const char *name,
+AIRY_API circuit_breaker_t cb_create(cb_manager_t manager, const char *name,
                                         const cb_config_t *config);
 
 /**
  * @brief 销毁熔断器
  * @param breaker 熔断器句柄
  */
-AGENTRT_API void cb_destroy(circuit_breaker_t breaker);
+AIRY_API void cb_destroy(circuit_breaker_t breaker);
 
 /**
  * @brief 检查是否允许请求通过
  * @param breaker 熔断器句柄
  * @return true允许，false拒绝
  */
-AGENTRT_API bool cb_allow_request(circuit_breaker_t breaker);
+AIRY_API bool cb_allow_request(circuit_breaker_t breaker);
 
 /**
  * @brief 记录成功调用
  * @param breaker 熔断器句柄
  * @param duration_ms 调用耗时
  */
-AGENTRT_API void cb_record_success(circuit_breaker_t breaker, uint32_t duration_ms);
+AIRY_API void cb_record_success(circuit_breaker_t breaker, uint32_t duration_ms);
 
 /**
  * @brief 记录失败调用
  * @param breaker 熔断器句柄
  * @param error_code 错误码
  */
-AGENTRT_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code);
+AIRY_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code);
 
 /**
  * @brief 记录超时调用
  * @param breaker 熔断器句柄
  */
-AGENTRT_API void cb_record_timeout(circuit_breaker_t breaker);
+AIRY_API void cb_record_timeout(circuit_breaker_t breaker);
 
 /* ==================== 熔断器状态查询 ==================== */
 
@@ -199,14 +199,14 @@ AGENTRT_API void cb_record_timeout(circuit_breaker_t breaker);
  * @param breaker 熔断器句柄
  * @return 熔断器状态
  */
-AGENTRT_API cb_state_t cb_get_state(circuit_breaker_t breaker);
+AIRY_API cb_state_t cb_get_state(circuit_breaker_t breaker);
 
 /**
  * @brief 获取熔断器名称
  * @param breaker 熔断器句柄
  * @return 名称
  */
-AGENTRT_API const char *cb_get_name(circuit_breaker_t breaker);
+AIRY_API const char *cb_get_name(circuit_breaker_t breaker);
 
 /**
  * @brief 获取熔断器统计
@@ -214,25 +214,25 @@ AGENTRT_API const char *cb_get_name(circuit_breaker_t breaker);
  * @param stats [out] 统计信息
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t cb_get_stats(circuit_breaker_t breaker, cb_stats_t *stats);
+AIRY_API airy_err_t cb_get_stats(circuit_breaker_t breaker, cb_stats_t *stats);
 
 /**
  * @brief 重置熔断器到关闭状态
  * @param breaker 熔断器句柄
  */
-AGENTRT_API void cb_reset(circuit_breaker_t breaker);
+AIRY_API void cb_reset(circuit_breaker_t breaker);
 
 /**
  * @brief 强制打开熔断器
  * @param breaker 熔断器句柄
  */
-AGENTRT_API void cb_force_open(circuit_breaker_t breaker);
+AIRY_API void cb_force_open(circuit_breaker_t breaker);
 
 /**
  * @brief 强制关闭熔断器
  * @param breaker 熔断器句柄
  */
-AGENTRT_API void cb_force_close(circuit_breaker_t breaker);
+AIRY_API void cb_force_close(circuit_breaker_t breaker);
 
 /* ==================== 故障转移 ==================== */
 
@@ -242,7 +242,7 @@ AGENTRT_API void cb_force_close(circuit_breaker_t breaker);
  * @param config 故障转移配置
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t cb_set_failover_config(circuit_breaker_t breaker,
+AIRY_API airy_err_t cb_set_failover_config(circuit_breaker_t breaker,
                                                    const cb_failover_config_t *config);
 
 /**
@@ -253,7 +253,7 @@ AGENTRT_API agentrt_error_t cb_set_failover_config(circuit_breaker_t breaker,
  * @param result_size 结果缓冲区大小
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t cb_execute_failover(circuit_breaker_t breaker, int32_t original_error,
+AIRY_API airy_err_t cb_execute_failover(circuit_breaker_t breaker, int32_t original_error,
                                                 char *fallback_result, size_t result_size);
 
 /* ==================== 事件与回调 ==================== */
@@ -265,7 +265,7 @@ AGENTRT_API agentrt_error_t cb_execute_failover(circuit_breaker_t breaker, int32
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t cb_register_event_callback(cb_manager_t manager,
+AIRY_API airy_err_t cb_register_event_callback(cb_manager_t manager,
                                                        cb_event_callback_t callback,
                                                        void *user_data);
 
@@ -275,14 +275,14 @@ AGENTRT_API agentrt_error_t cb_register_event_callback(cb_manager_t manager,
  * @param name 熔断器名称
  * @return 熔断器句柄，未找到返回NULL
  */
-AGENTRT_API circuit_breaker_t cb_find(cb_manager_t manager, const char *name);
+AIRY_API circuit_breaker_t cb_find(cb_manager_t manager, const char *name);
 
 /**
  * @brief 获取所有熔断器数量
  * @param manager 管理器句柄
  * @return 熔断器数量
  */
-AGENTRT_API uint32_t cb_count(cb_manager_t manager);
+AIRY_API uint32_t cb_count(cb_manager_t manager);
 
 /* ==================== 工具函数 ==================== */
 
@@ -291,22 +291,22 @@ AGENTRT_API uint32_t cb_count(cb_manager_t manager);
  * @param state 状态
  * @return 状态名称
  */
-AGENTRT_API const char *cb_state_to_string(cb_state_t state);
+AIRY_API const char *cb_state_to_string(cb_state_t state);
 
 /**
  * @brief 创建默认配置
  * @return 默认配置
  */
-AGENTRT_API cb_config_t cb_create_default_config(void);
+AIRY_API cb_config_t cb_create_default_config(void);
 
 /**
  * @brief 创建默认故障转移配置
  * @return 默认故障转移配置
  */
-AGENTRT_API cb_failover_config_t cb_create_default_failover_config(void);
+AIRY_API cb_failover_config_t cb_create_default_failover_config(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_CIRCUIT_BREAKER_H */
+#endif /* AIRY_RT_CIRCUIT_BREAKER_H */

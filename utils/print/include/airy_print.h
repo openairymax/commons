@@ -1,9 +1,9 @@
 /**
- * @file agentrt_print.h
- * @brief P3.25: 运行时统一打印 API — 与 CMake 层 agentrt_print.cmake 命名对齐
+ * @file airy_print.h
+ * @brief P3.25: 运行时统一打印 API — 与 CMake 层 airy_print.cmake 命名对齐
  *
  * @details
- * 提供 8 个函数式宏，命名与构建期 `agentrt_print.cmake` 完全对齐，
+ * 提供 8 个函数式宏，命名与构建期 `airy_print.cmake` 完全对齐，
  * 底层委托核心日志系统 `log_write()`，复用其全部能力（多输出目标、
  * 多格式、trace_id 贯穿、线程安全、运行时配置热重载）。
  *
@@ -13,40 +13,39 @@
  * - OK 状态映射到 LOG_LEVEL_INFO（信息性成功），NO 状态映射到 LOG_LEVEL_ERROR
  * - 禁止在生产代码中直接调用 fprintf/printf，必须使用本文件宏或 LOG_* 宏
  *
- * **与 CMake agentrt_print.cmake 的对应关系**:
- * | 运行时宏 (本文件)         | CMake 函数 (agentrt_print.cmake) | 级别           |
+ * **与 CMake airy_print.cmake 的对应关系**:
+ * | 运行时宏 (本文件)         | CMake 函数 (airy_print.cmake) | 级别           |
  * |--------------------------|----------------------------------|----------------|
- * | agentrt_print_ok()       | agentrt_print_ok()               | LOG_LEVEL_INFO |
- * | agentrt_print_no()       | (无对应，运行时独有)              | LOG_LEVEL_ERROR|
- * | agentrt_print_info()     | agentrt_print_info()             | LOG_LEVEL_INFO |
- * | agentrt_print_warn()     | agentrt_print_warn()             | LOG_LEVEL_WARN |
- * | agentrt_print_error()    | agentrt_print_error()            | LOG_LEVEL_ERROR|
- * | agentrt_print_fatal()    | agentrt_print_fatal()            | LOG_LEVEL_FATAL|
- * | agentrt_print_debug()    | agentrt_print_debug()            | LOG_LEVEL_DEBUG|
- * | agentrt_print_section()  | agentrt_print_section()          | LOG_LEVEL_INFO |
+ * | airy_print_ok()       | airy_print_ok()               | LOG_LEVEL_INFO |
+ * | airy_print_no()       | (无对应，运行时独有)              | LOG_LEVEL_ERROR|
+ * | airy_print_info()     | airy_print_info()             | LOG_LEVEL_INFO |
+ * | airy_print_warn()     | airy_print_warn()             | LOG_LEVEL_WARN |
+ * | airy_print_error()    | airy_print_error()            | LOG_LEVEL_ERROR|
+ * | airy_print_fatal()    | airy_print_fatal()            | LOG_LEVEL_FATAL|
+ * | airy_print_debug()    | airy_print_debug()            | LOG_LEVEL_DEBUG|
+ * | airy_print_section()  | airy_print_section()          | LOG_LEVEL_INFO |
  *
  * @section 使用示例
  * @code
- * #include "agentrt_print.h"
+ * #include "airy_print.h"
  *
- * agentrt_print_section("Daemon Bootstrap");
- * agentrt_print_info("agentrt v0.1.1 starting (pid=%d)", getpid());
- * agentrt_print_ok("config loaded: %s", config_path);
- * agentrt_print_warn("deprecated option: %s", opt_name);
- * agentrt_print_error("init failed: %s (errno=%d)", what, errno);
- * agentrt_print_no("health check failed: %s", check_name);
- * agentrt_print_debug("trace: %s entered", __func__);
+ * airy_print_section("Daemon Bootstrap");
+ * airy_print_info("agentrt v0.1.1 starting (pid=%d)", getpid());
+ * airy_print_ok("config loaded: %s", config_path);
+ * airy_print_warn("deprecated option: %s", opt_name);
+ * airy_print_error("init failed: %s (errno=%d)", what, errno);
+ * airy_print_no("health check failed: %s", check_name);
+ * airy_print_debug("trace: %s entered", __func__);
  * @endcode
  *
  * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
  * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
- * "From data intelligence emerges."
  */
 
-#ifndef AGENTRT_PRINT_H
-#define AGENTRT_PRINT_H
+#ifndef AIRY_RT_PRINT_H
+#define AIRY_RT_PRINT_H
 
 #include <logging.h>
 
@@ -68,7 +67,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_ok(fmt, ...) \
+#define airy_print_ok(fmt, ...) \
     log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, "[OK] " fmt, ##__VA_ARGS__)
 
 /**
@@ -80,11 +79,11 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_no(fmt, ...) \
+#define airy_print_no(fmt, ...) \
     log_write(LOG_LEVEL_ERROR, __FILE__, __LINE__, "[NO] " fmt, ##__VA_ARGS__)
 
 /* ================================================================
- * 级别打印：与 CMake agentrt_print.cmake 命名对齐
+ * 级别打印：与 CMake airy_print.cmake 命名对齐
  * ================================================================ */
 
 /**
@@ -92,7 +91,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_info(fmt, ...) \
+#define airy_print_info(fmt, ...) \
     log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
@@ -100,7 +99,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_warn(fmt, ...) \
+#define airy_print_warn(fmt, ...) \
     log_write(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
@@ -108,7 +107,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_error(fmt, ...) \
+#define airy_print_error(fmt, ...) \
     log_write(LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
@@ -121,7 +120,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_fatal(fmt, ...) \
+#define airy_print_fatal(fmt, ...) \
     log_write(LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
@@ -129,7 +128,7 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define agentrt_print_debug(fmt, ...) \
+#define airy_print_debug(fmt, ...) \
     log_write(LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /* ================================================================
@@ -145,11 +144,11 @@ extern "C" {
  * @param fmt  printf 风格格式字符串（通常为纯字符串）
  * @param ...  格式参数
  */
-#define agentrt_print_section(fmt, ...) \
+#define airy_print_section(fmt, ...) \
     log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, "=== " fmt " ===", ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_PRINT_H */
+#endif /* AIRY_RT_PRINT_H */

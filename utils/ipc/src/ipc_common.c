@@ -58,7 +58,7 @@
 #define MAP_FAILED ((void *)-1)
 #endif
 #else
-#include "agentrt_mman.h"
+#include "airy_mman.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -175,8 +175,8 @@ struct ipc_mq {
     HANDLE hMutex;    /**< Windows 互斥锁 */
     HANDLE hNotEmpty; /**< 非空条件变量 */
 #else
-    agentrt_mutex_t mutex;    /**< POSIX 互斥锁 */
-    agentrt_cond_t not_empty; /**< 非空条件变量 */
+    airy_mtx_t mutex;    /**< POSIX 互斥锁 */
+    airy_cond_t not_empty; /**< 非空条件变量 */
 #endif
     char error_msg[256]; /**< 错误消息缓冲区 */
 };
@@ -247,7 +247,7 @@ static uint64_t ipc_get_timestamp_ns(void)
     QueryPerformanceCounter(&counter);
     return (uint64_t)((double)counter.QuadPart / freq.QuadPart * 1000000000.0);
 #else
-    return agentrt_time_ns();
+    return airy_time_ns();
 #endif
 }
 
@@ -309,23 +309,23 @@ static uint32_t ipc_calc_crc32(const void *data, size_t len)
 
 static bool g_ipc_initialized = false;
 
-agentrt_error_t ipc_init(void)
+airy_err_t ipc_init(void)
 {
     if (g_ipc_initialized)
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
 
 #ifdef _WIN32
     WSADATA wsa_data;
     int wsa_err = WSAStartup(MAKEWORD(2, 2), &wsa_data);
     if (wsa_err != 0) {
-        return AGENTRT_ERR_SVC_NOT_READY;
+        return AIRY_ERR_SVC_NOT_READY;
     }
 #endif
 
-    agentrt_random_init();
+    airy_random_init();
     g_ipc_initialized = true;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 void ipc_cleanup(void)
@@ -365,23 +365,23 @@ ipc_config_t ipc_create_default_config(ipc_type_t type)
 ipc_channel_t *ipc_channel_create(const ipc_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_channel_t *channel = (ipc_channel_t *)AGENTRT_CALLOC(1, sizeof(ipc_channel_t));
+    ipc_channel_t *channel = (ipc_channel_t *)AIRY_CALLOC(1, sizeof(ipc_channel_t));
     if (!channel) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     channel->config = *config;
     channel->state = IPC_STATE_CLOSED;
     channel->msg_id_counter = 0;
-    AGENTRT_MEMSET(&channel->stats, 0, sizeof(ipc_stats_t));
+    AIRY_MEMSET(&channel->stats, 0, sizeof(ipc_stats_t));
     channel->event_cb = NULL;
     channel->event_user_data = NULL;
     channel->msg_cb = NULL;
     channel->msg_user_data = NULL;
-    AGENTRT_MEMSET(channel->error_msg, 0, sizeof(channel->error_msg));
+    AIRY_MEMSET(channel->error_msg, 0, sizeof(channel->error_msg));
 
     /* 初始化平台特定句柄为无效值 */
 #ifdef _WIN32
@@ -409,19 +409,19 @@ void ipc_channel_destroy(ipc_channel_t *channel)
         ipc_channel_close(channel);
     }
 
-    AGENTRT_FREE(channel);
+    AIRY_FREE(channel);
 }
 
-agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
+airy_err_t ipc_channel_open(ipc_channel_t *channel)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (channel->state != IPC_STATE_CLOSED && channel->state != IPC_STATE_ERROR) {
         snprintf(channel->error_msg, sizeof(channel->error_msg),
                  "Channel already open or in transition");
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     channel->state = IPC_STATE_OPENING;
@@ -440,7 +440,7 @@ agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
             snprintf(channel->error_msg, sizeof(channel->error_msg), "CreatePipe failed: %lu",
                      GetLastError());
             channel->state = IPC_STATE_ERROR;
-            return AGENTRT_EUNKNOWN;
+            return AIRY_EUNKNOWN;
         }
 
         /* 设置非阻塞模式（如果需要） */
@@ -461,7 +461,7 @@ agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
             snprintf(channel->error_msg, sizeof(channel->error_msg), "pipe() failed: %s",
                      strerror(errno));
             channel->state = IPC_STATE_ERROR;
-            return AGENTRT_EUNKNOWN;
+            return AIRY_EUNKNOWN;
         }
 
         channel->fd_read = pipefd[0];
@@ -488,7 +488,7 @@ agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
             snprintf(channel->error_msg, sizeof(channel->error_msg), "Socket creation failed: %s",
                      strerror(errno));
             channel->state = IPC_STATE_ERROR;
-            return AGENTRT_EIO;
+            return AIRY_EIO;
         }
         if (channel->config.nonblocking) {
             int flags = fcntl(channel->socket_fd, F_GETFL, 0);
@@ -512,18 +512,18 @@ agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Unknown IPC type: %d",
                  channel->config.type);
         channel->state = IPC_STATE_ERROR;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 分配内部缓冲区 */
     if (channel->config.buffer_size > 0) {
-        channel->internal_buffer = AGENTRT_MALLOC(channel->config.buffer_size);
+        channel->internal_buffer = AIRY_MALLOC(channel->config.buffer_size);
         if (!channel->internal_buffer) {
             snprintf(channel->error_msg, sizeof(channel->error_msg),
                      "Failed to allocate internal buffer");
             /* 清理已创建的资源 */
             ipc_channel_close(channel);
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         }
     }
 
@@ -533,17 +533,17 @@ agentrt_error_t ipc_channel_open(ipc_channel_t *channel)
         channel->event_cb(channel, IPC_EVENT_CONNECTED, NULL, 0, channel->event_user_data);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_channel_close(ipc_channel_t *channel)
+airy_err_t ipc_channel_close(ipc_channel_t *channel)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (channel->state != IPC_STATE_OPEN) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     channel->state = IPC_STATE_CLOSING;
@@ -584,14 +584,14 @@ agentrt_error_t ipc_channel_close(ipc_channel_t *channel)
 
     /* 释放内部缓冲区 */
     if (channel->internal_buffer) {
-        AGENTRT_FREE(channel->internal_buffer);
+        AIRY_FREE(channel->internal_buffer);
         channel->internal_buffer = NULL;
     }
     channel->buffer_used = 0;
 
     channel->state = IPC_STATE_CLOSED;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 ipc_state_t ipc_channel_get_state(const ipc_channel_t *channel)
@@ -605,7 +605,7 @@ ipc_state_t ipc_channel_get_state(const ipc_channel_t *channel)
 const char *ipc_channel_get_name(const ipc_channel_t *channel)
 {
     if (!channel) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     return channel->config.name;
 }
@@ -618,77 +618,77 @@ ipc_type_t ipc_channel_get_type(const ipc_channel_t *channel)
     return channel->config.type;
 }
 
-agentrt_error_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms)
+airy_err_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     channel->config.timeout_ms = timeout_ms;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_channel_set_event_callback(ipc_channel_t *channel,
+airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel,
                                                ipc_event_callback_t callback, void *user_data)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     channel->event_cb = callback;
     channel->event_user_data = user_data;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_channel_get_stats(const ipc_channel_t *channel, ipc_stats_t *stats)
+airy_err_t ipc_channel_get_stats(const ipc_channel_t *channel, ipc_stats_t *stats)
 {
     if (!channel || !stats) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *stats = channel->stats;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_channel_reset_stats(ipc_channel_t *channel)
+airy_err_t ipc_channel_reset_stats(ipc_channel_t *channel)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    AGENTRT_MEMSET(&channel->stats, 0, sizeof(ipc_stats_t));
-    return AGENTRT_SUCCESS;
+    AIRY_MEMSET(&channel->stats, 0, sizeof(ipc_stats_t));
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
  * 消息发送 API 实现
  * ============================================================================ */
 
-agentrt_error_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
+airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
 {
     if (!channel || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (channel->state != IPC_STATE_OPEN) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Channel not open, state=%d",
                  channel->state);
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
     }
 
     if (message->header.payload_len > channel->config.max_message_size) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Message too large: %u > %u",
                  (unsigned int)message->header.payload_len,
                  (unsigned int)channel->config.max_message_size);
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
     }
 
     /* 序列化消息并写入管道/Socket */
     size_t total_size = sizeof(ipc_message_header_t) + message->payload_size;
-    void *send_buffer = AGENTRT_MALLOC(total_size);
+    void *send_buffer = AIRY_MALLOC(total_size);
     if (!send_buffer) {
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
     /* 复制消息头 */
@@ -730,7 +730,7 @@ agentrt_error_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
     }
 #endif
 
-    AGENTRT_FREE(send_buffer);
+    AIRY_FREE(send_buffer);
 
     /* 检查写入结果 */
 #ifdef _WIN32
@@ -738,31 +738,31 @@ agentrt_error_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Write failed: %lu",
                  GetLastError());
         channel->stats.errors++;
-        return AGENTRT_EUNKNOWN;
+        return AIRY_EUNKNOWN;
     }
 #else
     if (bytes_written < 0 || (size_t)bytes_written < total_size) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "write() failed: %s",
                  strerror(errno));
         channel->stats.errors++;
-        return AGENTRT_EUNKNOWN;
+        return AIRY_EUNKNOWN;
     }
 #endif
 
     channel->stats.messages_sent++;
     channel->stats.bytes_sent += bytes_written;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, size_t *sent)
+airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, size_t *sent)
 {
     if (!channel || !data) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (len > channel->config.max_message_size) {
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
     }
 
     ipc_message_t msg = {0};
@@ -776,25 +776,25 @@ agentrt_error_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t l
     msg.payload = (void *)data;
     msg.payload_size = len;
 
-    agentrt_error_t err = ipc_send(channel, &msg);
+    airy_err_t err = ipc_send(channel, &msg);
 
-    if (err == AGENTRT_SUCCESS && sent) {
+    if (err == AIRY_SUCCESS && sent) {
         *sent = len;
     }
 
     return err;
 }
 
-agentrt_error_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
+airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
                                  ipc_message_t *response, uint32_t timeout_ms)
 {
     if (!channel || !request || !response) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     request->header.type = IPC_MSG_REQUEST;
-    agentrt_error_t err = ipc_send(channel, request);
-    if (err != AGENTRT_SUCCESS) {
+    airy_err_t err = ipc_send(channel, request);
+    if (err != AIRY_SUCCESS) {
         return err;
     }
 
@@ -807,18 +807,18 @@ agentrt_error_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
         FD_SET(channel->socket_fd, &readfds);
         int sel = select(channel->socket_fd + 1, &readfds, NULL, NULL, &tv);
         if (sel <= 0) {
-            return AGENTRT_ETIMEDOUT;
+            return AIRY_ETIMEDOUT;
         }
 
         uint32_t net_len = 0;
         ssize_t n = recv(channel->socket_fd, &net_len, sizeof(net_len), MSG_WAITALL);
         if (n != (ssize_t)sizeof(net_len)) {
-            return AGENTRT_EIO;
+            return AIRY_EIO;
         }
         uint32_t payload_len = ntohl(net_len);
         if (payload_len > 0 && payload_len <= channel->config.buffer_size) {
             if (!channel->internal_buffer) {
-                channel->internal_buffer = AGENTRT_MALLOC(channel->config.buffer_size);
+                channel->internal_buffer = AIRY_MALLOC(channel->config.buffer_size);
             }
             if (channel->internal_buffer) {
                 n = recv(channel->socket_fd, channel->internal_buffer,
@@ -826,33 +826,33 @@ agentrt_error_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
                                                                    : payload_len,
                          MSG_WAITALL);
                 if (n > 0) {
-                    AGENTRT_MEMSET(response, 0, sizeof(ipc_message_t));
+                    AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
                     response->header.type = IPC_MSG_RESPONSE;
                     response->header.correlation_id = request->header.msg_id;
                     response->header.payload_len = (uint64_t)n;
                     response->payload = channel->internal_buffer;
                     response->payload_size = (uint64_t)n;
                     channel->stats.messages_received++;
-                    return AGENTRT_SUCCESS;
+                    return AIRY_SUCCESS;
                 }
             }
         }
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 
-    AGENTRT_MEMSET(response, 0, sizeof(ipc_message_t));
+    AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
     response->header.type = IPC_MSG_RESPONSE;
     response->header.correlation_id = request->header.msg_id;
 
     channel->stats.messages_received++;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message)
+airy_err_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message)
 {
     if (!channel || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ipc_message_t broadcast_msg = *message;
@@ -861,10 +861,10 @@ agentrt_error_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *messa
     return ipc_send(channel, &broadcast_msg);
 }
 
-agentrt_error_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t len)
+airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t len)
 {
     if (!channel || !notification) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ipc_message_t msg = {0};
@@ -884,17 +884,17 @@ agentrt_error_t ipc_notify(ipc_channel_t *channel, const void *notification, siz
  * 消息接收 API 实现
  * ============================================================================ */
 
-agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms)
+airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms)
 {
     if (!channel || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (channel->state != IPC_STATE_OPEN) {
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
     }
 
-    AGENTRT_MEMSET(message, 0, sizeof(ipc_message_t));
+    AIRY_MEMSET(message, 0, sizeof(ipc_message_t));
 
     /* 首先读取消息头 */
 #ifdef _WIN32
@@ -914,7 +914,7 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
                          GetLastError());
             }
             channel->stats.errors++;
-            return AGENTRT_EUNKNOWN;
+            return AIRY_EUNKNOWN;
         }
     }
 #else
@@ -933,14 +933,14 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
                          strerror(errno));
             }
             channel->stats.errors++;
-            return AGENTRT_EUNKNOWN;
+            return AIRY_EUNKNOWN;
         }
 
         if ((size_t)bytes_read < sizeof(ipc_message_header_t)) {
             /* 不完整的消息头 */
             snprintf(channel->error_msg, sizeof(channel->error_msg),
                      "Incomplete header: got %zd bytes", bytes_read);
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         }
     }
 #endif
@@ -950,16 +950,16 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Invalid magic: 0x%08X",
                  message->header.magic);
         channel->stats.errors++;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 如果有负载，继续读取负载 */
     if (message->header.payload_len > 0 &&
         message->header.payload_len <= channel->config.max_message_size) {
 
-        message->payload = AGENTRT_MALLOC(message->header.payload_len);
+        message->payload = AIRY_MALLOC(message->header.payload_len);
         if (!message->payload) {
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         }
 
 #ifdef _WIN32
@@ -969,10 +969,10 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
                                &payload_read, NULL);
 
             if (!success || payload_read < message->header.payload_len) {
-                AGENTRT_FREE(message->payload);
+                AIRY_FREE(message->payload);
                 message->payload = NULL;
                 channel->stats.errors++;
-                return AGENTRT_EUNKNOWN;
+                return AIRY_EUNKNOWN;
             }
         }
 #else
@@ -981,10 +981,10 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
             payload_read = read(fd, message->payload, message->header.payload_len);
 
             if (payload_read <= 0 || (size_t)payload_read < message->header.payload_len) {
-                AGENTRT_FREE(message->payload);
+                AIRY_FREE(message->payload);
                 message->payload = NULL;
                 channel->stats.errors++;
-                return AGENTRT_EUNKNOWN;
+                return AIRY_EUNKNOWN;
             }
         }
 #endif
@@ -997,25 +997,25 @@ agentrt_error_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint
         int result = channel->msg_cb(channel, message, channel->msg_user_data);
         if (result != 0) {
             /* 回调拒绝了消息，但数据已接收 */
-            return AGENTRT_ECANCELLED;
+            return AIRY_ECANCELLED;
         }
     }
 
     channel->stats.messages_received++;
     channel->stats.bytes_received += sizeof(ipc_message_header_t) + message->payload_size;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len, size_t *received)
+airy_err_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len, size_t *received)
 {
     if (!channel || !buffer) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ipc_message_t msg;
-    agentrt_error_t err = ipc_receive(channel, &msg, channel->config.timeout_ms);
-    if (err != AGENTRT_SUCCESS) {
+    airy_err_t err = ipc_receive(channel, &msg, channel->config.timeout_ms);
+    if (err != AIRY_SUCCESS) {
         return err;
     }
 
@@ -1028,34 +1028,34 @@ agentrt_error_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t le
         *received = copy_len;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message)
+airy_err_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message)
 {
     if (!channel || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_error_t err = ipc_receive(channel, message, 0);
-    if (err == AGENTRT_ETIMEDOUT) {
-        return AGENTRT_EBUSY;
+    airy_err_t err = ipc_receive(channel, message, 0);
+    if (err == AIRY_ETIMEDOUT) {
+        return AIRY_EBUSY;
     }
 
     return err;
 }
 
-agentrt_error_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
+airy_err_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
                                          void *user_data)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     channel->msg_cb = callback;
     channel->msg_user_data = user_data;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -1065,12 +1065,12 @@ agentrt_error_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_cal
 ipc_server_t *ipc_server_create(const ipc_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_server_t *server = (ipc_server_t *)AGENTRT_CALLOC(1, sizeof(ipc_server_t));
+    ipc_server_t *server = (ipc_server_t *)AIRY_CALLOC(1, sizeof(ipc_server_t));
     if (!server) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     server->config = *config;
@@ -1079,7 +1079,7 @@ ipc_server_t *ipc_server_create(const ipc_config_t *config)
     server->connections = NULL;
     server->max_connections =
         config->max_connections > 0 ? config->max_connections : IPC_MAX_CONNECTIONS;
-    AGENTRT_MEMSET(server->error_msg, 0, sizeof(server->error_msg));
+    AIRY_MEMSET(server->error_msg, 0, sizeof(server->error_msg));
 
     return server;
 }
@@ -1100,38 +1100,38 @@ void ipc_server_destroy(ipc_server_t *server)
         }
     }
 
-    AGENTRT_FREE(server->connections);
-    AGENTRT_FREE(server);
+    AIRY_FREE(server->connections);
+    AIRY_FREE(server);
 }
 
-agentrt_error_t ipc_server_start(ipc_server_t *server)
+airy_err_t ipc_server_start(ipc_server_t *server)
 {
     if (!server) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (server->state != IPC_STATE_CLOSED && server->state != IPC_STATE_ERROR) {
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     server->state = IPC_STATE_OPENING;
 
     server->connections =
-        (ipc_channel_t **)AGENTRT_CALLOC(server->max_connections, sizeof(ipc_channel_t *));
+        (ipc_channel_t **)AIRY_CALLOC(server->max_connections, sizeof(ipc_channel_t *));
     if (!server->connections && server->max_connections > 0) {
         server->state = IPC_STATE_ERROR;
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
     server->state = IPC_STATE_OPEN;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_server_stop(ipc_server_t *server)
+airy_err_t ipc_server_stop(ipc_server_t *server)
 {
     if (!server) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     server->state = IPC_STATE_CLOSING;
@@ -1142,27 +1142,27 @@ agentrt_error_t ipc_server_stop(ipc_server_t *server)
         }
     }
 
-    AGENTRT_FREE(server->connections);
+    AIRY_FREE(server->connections);
     server->connections = NULL;
     server->connection_count = 0;
 
     server->state = IPC_STATE_CLOSED;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)
 {
     if (!server) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (server->state != IPC_STATE_OPEN) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (server->connection_count >= server->max_connections) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     if (server->config.type == IPC_TYPE_SOCKET) {
@@ -1170,7 +1170,7 @@ ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)
             server->connections && server->connection_count > 0 ? server->connections[0] : NULL;
         int listen_fd = listen_channel ? listen_channel->socket_fd : -1;
         if (listen_fd < 0) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+            AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
         }
 
         struct timeval tv;
@@ -1181,20 +1181,20 @@ ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)
         FD_SET(listen_fd, &readfds);
         int sel = select(listen_fd + 1, &readfds, NULL, NULL, &tv);
         if (sel <= 0) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+            AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
         }
 
         struct sockaddr_un addr;
         socklen_t addr_len = sizeof(addr);
         int client_fd = accept(listen_fd, (struct sockaddr *)&addr, &addr_len);
         if (client_fd < 0) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+            AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
         }
 
         ipc_channel_t *client_channel = ipc_channel_create(&server->config);
         if (!client_channel) {
             close(client_fd);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         client_channel->socket_fd = client_fd;
         client_channel->state = IPC_STATE_OPEN;
@@ -1209,7 +1209,7 @@ ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)
 
     ipc_channel_t *client_channel = ipc_channel_create(&server->config);
     if (!client_channel) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     ipc_channel_open(client_channel);
@@ -1228,18 +1228,18 @@ size_t ipc_server_connection_count(const ipc_server_t *server)
     return server->connection_count;
 }
 
-agentrt_error_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *message)
+airy_err_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *message)
 {
     if (!server || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_error_t overall_err = AGENTRT_SUCCESS;
+    airy_err_t overall_err = AIRY_SUCCESS;
 
     for (size_t i = 0; i < server->connection_count; i++) {
         if (server->connections[i]) {
-            agentrt_error_t err = ipc_broadcast(server->connections[i], message);
-            if (err != AGENTRT_SUCCESS) {
+            airy_err_t err = ipc_broadcast(server->connections[i], message);
+            if (err != AIRY_SUCCESS) {
                 overall_err = err;
             }
         }
@@ -1255,18 +1255,18 @@ agentrt_error_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *
 ipc_client_t *ipc_client_create(const ipc_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_client_t *client = (ipc_client_t *)AGENTRT_CALLOC(1, sizeof(ipc_client_t));
+    ipc_client_t *client = (ipc_client_t *)AIRY_CALLOC(1, sizeof(ipc_client_t));
     if (!client) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     client->config = *config;
     client->channel = NULL;
     client->state = IPC_STATE_CLOSED;
-    AGENTRT_MEMSET(client->error_msg, 0, sizeof(client->error_msg));
+    AIRY_MEMSET(client->error_msg, 0, sizeof(client->error_msg));
 
     return client;
 }
@@ -1281,17 +1281,17 @@ void ipc_client_destroy(ipc_client_t *client)
         ipc_client_disconnect(client);
     }
 
-    AGENTRT_FREE(client);
+    AIRY_FREE(client);
 }
 
-agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
+airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
 {
     if (!client) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (client->state != IPC_STATE_CLOSED && client->state != IPC_STATE_ERROR) {
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     client->state = IPC_STATE_OPENING;
@@ -1300,14 +1300,14 @@ agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
         int sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
         if (sock_fd < 0) {
             client->state = IPC_STATE_ERROR;
-            return AGENTRT_EIO;
+            return AIRY_EIO;
         }
 
         struct sockaddr_un addr;
-        AGENTRT_MEMSET(&addr, 0, sizeof(addr));
+        AIRY_MEMSET(&addr, 0, sizeof(addr));
         addr.sun_family = AF_UNIX;
-        const char *path = client->config.name ? client->config.name : AGENTRT_TMP_DIR "/ipc";
-        AGENTRT_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
+        const char *path = client->config.name ? client->config.name : AIRY_TMP_DIR "/ipc";
+        AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
         if (timeout_ms > 0 && client->config.nonblocking) {
             int flags = fcntl(sock_fd, F_GETFL, 0);
@@ -1327,7 +1327,7 @@ agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
                 if (sel <= 0) {
                     close(sock_fd);
                     client->state = IPC_STATE_ERROR;
-                    return AGENTRT_ETIMEDOUT;
+                    return AIRY_ETIMEDOUT;
                 }
                 int err = 0;
                 socklen_t err_len = sizeof(err);
@@ -1335,12 +1335,12 @@ agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
                 if (err != 0) {
                     close(sock_fd);
                     client->state = IPC_STATE_ERROR;
-                    return AGENTRT_EIO;
+                    return AIRY_EIO;
                 }
             } else {
                 close(sock_fd);
                 client->state = IPC_STATE_ERROR;
-                return AGENTRT_EIO;
+                return AIRY_EIO;
             }
         }
 
@@ -1348,22 +1348,22 @@ agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
         if (!client->channel) {
             close(sock_fd);
             client->state = IPC_STATE_ERROR;
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         }
         client->channel->socket_fd = sock_fd;
         client->channel->state = IPC_STATE_OPEN;
         client->state = IPC_STATE_OPEN;
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     client->channel = ipc_channel_create(&client->config);
     if (!client->channel) {
         client->state = IPC_STATE_ERROR;
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
-    agentrt_error_t err = ipc_channel_open(client->channel);
-    if (err != AGENTRT_SUCCESS) {
+    airy_err_t err = ipc_channel_open(client->channel);
+    if (err != AIRY_SUCCESS) {
         ipc_channel_destroy(client->channel);
         client->channel = NULL;
         client->state = IPC_STATE_ERROR;
@@ -1372,13 +1372,13 @@ agentrt_error_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
 
     client->state = IPC_STATE_OPEN;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_client_disconnect(ipc_client_t *client)
+airy_err_t ipc_client_disconnect(ipc_client_t *client)
 {
     if (!client) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (client->channel) {
@@ -1389,13 +1389,13 @@ agentrt_error_t ipc_client_disconnect(ipc_client_t *client)
 
     client->state = IPC_STATE_CLOSED;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 ipc_channel_t *ipc_client_get_channel(ipc_client_t *client)
 {
     if (!client) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     return client->channel;
 }
@@ -1407,12 +1407,12 @@ ipc_channel_t *ipc_client_get_channel(ipc_client_t *client)
 ipc_shm_t *ipc_shm_create(const ipc_shm_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_shm_t *shm = (ipc_shm_t *)AGENTRT_CALLOC(1, sizeof(ipc_shm_t));
+    ipc_shm_t *shm = (ipc_shm_t *)AIRY_CALLOC(1, sizeof(ipc_shm_t));
     if (!shm) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     shm->config = *config;
@@ -1426,7 +1426,7 @@ ipc_shm_t *ipc_shm_create(const ipc_shm_config_t *config)
     shm->shm_fd = -1;
 #endif
 
-    AGENTRT_MEMSET(shm->error_msg, 0, sizeof(shm->error_msg));
+    AIRY_MEMSET(shm->error_msg, 0, sizeof(shm->error_msg));
 
     return shm;
 }
@@ -1454,13 +1454,13 @@ void ipc_shm_destroy(ipc_shm_t *shm)
     }
 #endif
 
-    AGENTRT_FREE(shm);
+    AIRY_FREE(shm);
 }
 
 void *ipc_shm_map(ipc_shm_t *shm)
 {
     if (!shm) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (shm->is_mapped) {
@@ -1474,7 +1474,7 @@ void *ipc_shm_map(ipc_shm_t *shm)
 
     if (shm->hMapFile == NULL) {
         snprintf(shm->error_msg, sizeof(shm->error_msg), "CreateFileMapping failed");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     shm->mapped_addr =
@@ -1487,14 +1487,14 @@ void *ipc_shm_map(ipc_shm_t *shm)
     shm->shm_fd = shm_open(shm->config.name, flags, mode);
     if (shm->shm_fd < 0) {
         snprintf(shm->error_msg, sizeof(shm->error_msg), "shm_open failed");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     if (shm->config.create) {
         if (ftruncate(shm->shm_fd, (off_t)shm->config.size) != 0) {
             snprintf(shm->error_msg, sizeof(shm->error_msg), "ftruncate failed for size %zu",
                      shm->config.size);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+            AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
         }
     }
 
@@ -1506,7 +1506,7 @@ void *ipc_shm_map(ipc_shm_t *shm)
     if (shm->mapped_addr == MAP_FAILED || shm->mapped_addr == NULL) {
         snprintf(shm->error_msg, sizeof(shm->error_msg), "Memory mapping failed");
         shm->mapped_addr = NULL;
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     shm->is_mapped = true;
@@ -1515,14 +1515,14 @@ void *ipc_shm_map(ipc_shm_t *shm)
     return shm->mapped_addr;
 }
 
-agentrt_error_t ipc_shm_unmap(ipc_shm_t *shm)
+airy_err_t ipc_shm_unmap(ipc_shm_t *shm)
 {
     if (!shm) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (!shm->is_mapped) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
 #ifdef _WIN32
@@ -1534,7 +1534,7 @@ agentrt_error_t ipc_shm_unmap(ipc_shm_t *shm)
     shm->mapped_addr = NULL;
     shm->is_mapped = false;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 size_t ipc_shm_get_size(const ipc_shm_t *shm)
@@ -1545,10 +1545,10 @@ size_t ipc_shm_get_size(const ipc_shm_t *shm)
     return shm->actual_size;
 }
 
-agentrt_error_t ipc_shm_sync(ipc_shm_t *shm)
+airy_err_t ipc_shm_sync(ipc_shm_t *shm)
 {
     if (!shm) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
 #ifdef _WIN32
@@ -1557,7 +1557,7 @@ agentrt_error_t ipc_shm_sync(ipc_shm_t *shm)
     msync(shm->mapped_addr, shm->actual_size, MS_SYNC);
 #endif
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -1577,11 +1577,11 @@ static int ipc_mq_lock(ipc_mq_t *mq, uint32_t timeout_ms)
     return (wait_result == WAIT_TIMEOUT) ? ETIMEDOUT : 0;
 #else
     if (timeout_ms == 0) {
-        return agentrt_mutex_lock(&mq->mutex);
+        return airy_mtx_lock(&mq->mutex);
     } else {
-        uint64_t deadline = agentrt_time_ms() + timeout_ms;
-        while (agentrt_mutex_trylock(&mq->mutex) != 0) {
-            if (agentrt_time_ms() >= deadline) {
+        uint64_t deadline = airy_time_ms() + timeout_ms;
+        while (airy_mtx_trylock(&mq->mutex) != 0) {
+            if (airy_time_ms() >= deadline) {
                 return ETIMEDOUT;
             }
             struct timespec ts = {0, 1000000};
@@ -1601,7 +1601,7 @@ static void ipc_mq_unlock(ipc_mq_t *mq)
 #ifdef _WIN32
     ReleaseMutex(mq->hMutex);
 #else
-    agentrt_mutex_unlock(&mq->mutex);
+    airy_mtx_unlock(&mq->mutex);
 #endif
 }
 
@@ -1632,11 +1632,11 @@ static bool ipc_mq_wait_for_message(ipc_mq_t *mq, uint32_t timeout_ms)
     // 重新获取锁
     WaitForSingleObject(mq->hMutex, INFINITE);
 #else
-    agentrt_mutex_lock(&mq->mutex);
+    airy_mtx_lock(&mq->mutex);
     while (mq->current_count == 0) {
-        int wait_result = agentrt_cond_timedwait(&mq->not_empty, &mq->mutex, timeout_ms);
+        int wait_result = airy_cond_timedwait(&mq->not_empty, &mq->mutex, timeout_ms);
         if (wait_result != 0) {
-            agentrt_mutex_unlock(&mq->mutex);
+            airy_mtx_unlock(&mq->mutex);
             return false;
         }
     }
@@ -1652,14 +1652,14 @@ static bool ipc_mq_wait_for_message(ipc_mq_t *mq, uint32_t timeout_ms)
  * @param len 缓冲区大小
  * @param received [out] 实际接收的字节数
  * @param priority [out] 消息优先级
- * @return AGENTRT_SUCCESS 成功，AGENTRT_EINVAL 参数无效
+ * @return AIRY_SUCCESS 成功，AIRY_EINVAL 参数无效
  */
-static agentrt_error_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len,
+static airy_err_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len,
                                               size_t *received, unsigned int *priority)
 {
     ipc_mq_message_t *msg = mq->head;
     if (!msg) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 复制数据到缓冲区（截断保护）
@@ -1684,10 +1684,10 @@ static agentrt_error_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t
     mq->total_dequeued++;
 
     // 释放消息内存
-    AGENTRT_FREE(msg->data);
-    AGENTRT_FREE(msg);
+    AIRY_FREE(msg->data);
+    AIRY_FREE(msg);
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -1697,12 +1697,12 @@ static agentrt_error_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t
 ipc_mq_t *ipc_mq_create(const ipc_mq_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_mq_t *mq = (ipc_mq_t *)AGENTRT_CALLOC(1, sizeof(ipc_mq_t));
+    ipc_mq_t *mq = (ipc_mq_t *)AIRY_CALLOC(1, sizeof(ipc_mq_t));
     if (!mq) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     mq->config = *config;
@@ -1711,7 +1711,7 @@ ipc_mq_t *ipc_mq_create(const ipc_mq_config_t *config)
     mq->total_dequeued = 0;
     mq->head = NULL;
     mq->tail = NULL;
-    AGENTRT_MEMSET(mq->error_msg, 0, sizeof(mq->error_msg));
+    AIRY_MEMSET(mq->error_msg, 0, sizeof(mq->error_msg));
 
     // 初始化同步原语
 #ifdef _WIN32
@@ -1723,20 +1723,20 @@ ipc_mq_t *ipc_mq_create(const ipc_mq_config_t *config)
             CloseHandle(mq->hMutex);
         if (mq->hNotEmpty)
             CloseHandle(mq->hNotEmpty);
-        AGENTRT_FREE(mq);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(mq);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 #else
-    if (agentrt_mutex_init(&mq->mutex) != 0) {
+    if (airy_mtx_init(&mq->mutex) != 0) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to initialize mutex");
-        AGENTRT_FREE(mq);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_FREE(mq);
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
-    if (agentrt_cond_init(&mq->not_empty) != 0) {
+    if (airy_cond_init(&mq->not_empty) != 0) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to initialize condition variable");
-        agentrt_mutex_destroy(&mq->mutex);
-        AGENTRT_FREE(mq);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        airy_mtx_destroy(&mq->mutex);
+        AIRY_FREE(mq);
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 #endif
 
@@ -1759,23 +1759,23 @@ void ipc_mq_destroy(ipc_mq_t *mq)
     if (mq->hNotEmpty)
         CloseHandle(mq->hNotEmpty);
 #else
-    agentrt_mutex_destroy(&mq->mutex);
-    agentrt_cond_destroy(&mq->not_empty);
+    airy_mtx_destroy(&mq->mutex);
+    airy_cond_destroy(&mq->not_empty);
 #endif
 
-    AGENTRT_FREE(mq);
+    AIRY_FREE(mq);
 }
 
-agentrt_error_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int priority)
+airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int priority)
 {
     if (!mq || !data || len == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
 #ifdef _WIN32
     WaitForSingleObject(mq->hMutex, INFINITE);
 #else
-    agentrt_mutex_lock(&mq->mutex);
+    airy_mtx_lock(&mq->mutex);
 #endif
 
     // 检查队列是否已满
@@ -1785,34 +1785,34 @@ agentrt_error_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned
 #ifdef _WIN32
         ReleaseMutex(mq->hMutex);
 #else
-        agentrt_mutex_unlock(&mq->mutex);
+        airy_mtx_unlock(&mq->mutex);
 #endif
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     // 创建新消息
-    ipc_mq_message_t *msg = (ipc_mq_message_t *)AGENTRT_MALLOC(sizeof(ipc_mq_message_t));
+    ipc_mq_message_t *msg = (ipc_mq_message_t *)AIRY_MALLOC(sizeof(ipc_mq_message_t));
     if (!msg) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to allocate memory for message");
 #ifdef _WIN32
         ReleaseMutex(mq->hMutex);
 #else
-        agentrt_mutex_unlock(&mq->mutex);
+        airy_mtx_unlock(&mq->mutex);
 #endif
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
-    msg->data = AGENTRT_MALLOC(len);
+    msg->data = AIRY_MALLOC(len);
     if (!msg->data) {
         snprintf(mq->error_msg, sizeof(mq->error_msg),
                  "Failed to allocate memory for message data");
-        AGENTRT_FREE(msg);
+        AIRY_FREE(msg);
 #ifdef _WIN32
         ReleaseMutex(mq->hMutex);
 #else
-        agentrt_mutex_unlock(&mq->mutex);
+        airy_mtx_unlock(&mq->mutex);
 #endif
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
     __builtin_memcpy(msg->data, data, len);
@@ -1891,39 +1891,39 @@ agentrt_error_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned
     SetEvent(mq->hNotEmpty);
     ReleaseMutex(mq->hMutex);
 #else
-    agentrt_cond_signal(&mq->not_empty);
-    agentrt_mutex_unlock(&mq->mutex);
+    airy_cond_signal(&mq->not_empty);
+    airy_mtx_unlock(&mq->mutex);
 #endif
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
+airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
                                unsigned int *priority, uint32_t timeout_ms)
 {
     if (!mq || !buffer) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 步骤1: 获取互斥锁（带超时）
     int lock_result = ipc_mq_lock(mq, timeout_ms);
     if (lock_result == ETIMEDOUT) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Receive timeout after %u ms", timeout_ms);
-        return AGENTRT_ETIMEDOUT;
+        return AIRY_ETIMEDOUT;
     }
     if (lock_result != 0) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to acquire mutex");
-        return AGENTRT_EUNKNOWN;
+        return AIRY_EUNKNOWN;
     }
 
     // 步骤2: 等待消息可用（处理空队列情况）
     if (!ipc_mq_wait_for_message(mq, timeout_ms)) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "No message available after timeout");
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     // 步骤3: 从队头取出消息（最高优先级）
-    agentrt_error_t err = ipc_mq_dequeue_message(mq, buffer, len, received, priority);
+    airy_err_t err = ipc_mq_dequeue_message(mq, buffer, len, received, priority);
 
     // 步骤4: 释放锁并返回结果
     ipc_mq_unlock(mq);
@@ -1939,16 +1939,16 @@ size_t ipc_mq_count(const ipc_mq_t *mq)
     return mq->current_count;
 }
 
-agentrt_error_t ipc_mq_clear(ipc_mq_t *mq)
+airy_err_t ipc_mq_clear(ipc_mq_t *mq)
 {
     if (!mq) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
 #ifdef _WIN32
     WaitForSingleObject(mq->hMutex, INFINITE);
 #else
-    agentrt_mutex_lock(&mq->mutex);
+    airy_mtx_lock(&mq->mutex);
 #endif
 
     // 释放所有消息
@@ -1956,9 +1956,9 @@ agentrt_error_t ipc_mq_clear(ipc_mq_t *mq)
     while (current != NULL) {
         ipc_mq_message_t *next = current->next;
         if (current->data) {
-            AGENTRT_FREE(current->data);
+            AIRY_FREE(current->data);
         }
-        AGENTRT_FREE(current);
+        AIRY_FREE(current);
         current = next;
     }
 
@@ -1969,10 +1969,10 @@ agentrt_error_t ipc_mq_clear(ipc_mq_t *mq)
 #ifdef _WIN32
     ReleaseMutex(mq->hMutex);
 #else
-    agentrt_mutex_unlock(&mq->mutex);
+    airy_mtx_unlock(&mq->mutex);
 #endif
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -1981,9 +1981,9 @@ agentrt_error_t ipc_mq_clear(ipc_mq_t *mq)
 
 ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size_t payload_len)
 {
-    ipc_message_t *msg = (ipc_message_t *)AGENTRT_CALLOC(1, sizeof(ipc_message_t));
+    ipc_message_t *msg = (ipc_message_t *)AIRY_CALLOC(1, sizeof(ipc_message_t));
     if (!msg) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     msg->header.magic = IPC_MAGIC;
@@ -1992,21 +1992,21 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
     msg->header.flags = 0;
     msg->header.msg_id = 0;
     msg->header.correlation_id = 0;
-    AGENTRT_MEMSET(msg->header.source, 0, sizeof(msg->header.source));
-    AGENTRT_MEMSET(msg->header.target, 0, sizeof(msg->header.target));
+    AIRY_MEMSET(msg->header.source, 0, sizeof(msg->header.source));
+    AIRY_MEMSET(msg->header.target, 0, sizeof(msg->header.target));
     msg->header.payload_len = payload_len;
     msg->header.checksum = 0;
     msg->header.timestamp = ipc_get_timestamp_ns();
-    AGENTRT_MEMSET(msg->header.reserved, 0, sizeof(msg->header.reserved));
+    AIRY_MEMSET(msg->header.reserved, 0, sizeof(msg->header.reserved));
 
     if (payload && payload_len > 0) {
-        msg->payload = AGENTRT_MALLOC(payload_len);
+        msg->payload = AIRY_MALLOC(payload_len);
         if (msg->payload) {
             __builtin_memcpy(msg->payload, payload, payload_len);
             msg->payload_size = payload_len;
         } else {
-            AGENTRT_FREE(msg);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+            AIRY_FREE(msg);
+            AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
         }
     } else {
         msg->payload = NULL;
@@ -2025,17 +2025,17 @@ void ipc_message_free(ipc_message_t *message)
     }
 
     if (message->payload) {
-        AGENTRT_FREE(message->payload);
+        AIRY_FREE(message->payload);
         message->payload = NULL;
     }
 
-    AGENTRT_FREE(message);
+    AIRY_FREE(message);
 }
 
 ipc_message_t *ipc_message_clone(const ipc_message_t *message)
 {
     if (!message) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     ipc_message_t *clone = ipc_message_create((ipc_msg_type_t)message->header.type,
@@ -2080,17 +2080,17 @@ bool ipc_message_verify(const ipc_message_t *message)
     return calculated == message->header.checksum;
 }
 
-agentrt_error_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
+airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
                                       size_t *written)
 {
     if (!message || !buffer) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t total_size = sizeof(ipc_message_header_t) + message->payload_size;
 
     if (total_size > buffer_len) {
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
     }
 
     __builtin_memcpy(buffer, &message->header, sizeof(ipc_message_header_t));
@@ -2104,29 +2104,29 @@ agentrt_error_t ipc_message_serialize(const ipc_message_t *message, void *buffer
         *written = total_size;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t *message)
+airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t *message)
 {
     if (!buffer || !message) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (len < sizeof(ipc_message_header_t)) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(&message->header, buffer, sizeof(ipc_message_header_t));
 
     if (message->header.payload_len > 0) {
         if (len < sizeof(ipc_message_header_t) + message->header.payload_len) {
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         }
 
-        message->payload = AGENTRT_MALLOC(message->header.payload_len);
+        message->payload = AIRY_MALLOC(message->header.payload_len);
         if (!message->payload) {
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         }
 
         __builtin_memcpy(message->payload, (const char *)buffer + sizeof(ipc_message_header_t),
@@ -2137,7 +2137,7 @@ agentrt_error_t ipc_message_deserialize(const void *buffer, size_t len, ipc_mess
         message->payload_size = 0;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -2161,10 +2161,10 @@ bool ipc_is_valid(const ipc_channel_t *channel)
     return channel->state == IPC_STATE_OPEN;
 }
 
-agentrt_error_t ipc_flush(ipc_channel_t *channel)
+airy_err_t ipc_flush(ipc_channel_t *channel)
 {
     if (!channel) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
 #ifdef _WIN32
@@ -2178,7 +2178,7 @@ agentrt_error_t ipc_flush(ipc_channel_t *channel)
     }
 #endif
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ============================================================================
@@ -2193,18 +2193,18 @@ static rpc_method_node_t *rpc_find_method_node(ipc_rpc_server_t *server, const c
             return node;
         node = node->next;
     }
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
 ipc_rpc_server_t *ipc_rpc_server_create(const ipc_rpc_server_config_t *config)
 {
     if (!config || !config->transport) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
-    ipc_rpc_server_t *server = (ipc_rpc_server_t *)AGENTRT_CALLOC(1, sizeof(ipc_rpc_server_t));
+    ipc_rpc_server_t *server = (ipc_rpc_server_t *)AIRY_CALLOC(1, sizeof(ipc_rpc_server_t));
     if (!server) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     server->transport = config->transport;
@@ -2214,14 +2214,14 @@ ipc_rpc_server_t *ipc_rpc_server_create(const ipc_rpc_server_config_t *config)
         config->max_response_size > 0 ? config->max_response_size : (64 * 1024);
 
     if (config->service_name) {
-        server->service_name = AGENTRT_STRDUP(config->service_name);
+        server->service_name = AIRY_STRDUP(config->service_name);
     }
 
     for (size_t i = 0; i < config->method_count; i++) {
-        rpc_method_node_t *node = (rpc_method_node_t *)AGENTRT_CALLOC(1, sizeof(rpc_method_node_t));
+        rpc_method_node_t *node = (rpc_method_node_t *)AIRY_CALLOC(1, sizeof(rpc_method_node_t));
         if (!node)
             continue;
-        node->method_name = AGENTRT_STRDUP(config->methods[i].method_name);
+        node->method_name = AIRY_STRDUP(config->methods[i].method_name);
         node->handler = config->methods[i].handler;
         node->user_data = config->methods[i].user_data;
         node->next = server->methods;
@@ -2240,91 +2240,91 @@ void ipc_rpc_server_destroy(ipc_rpc_server_t *server)
     rpc_method_node_t *node = server->methods;
     while (node) {
         rpc_method_node_t *next = node->next;
-        AGENTRT_FREE(node->method_name);
-        AGENTRT_FREE(node);
+        AIRY_FREE(node->method_name);
+        AIRY_FREE(node);
         node = next;
     }
 
-    AGENTRT_FREE(server->service_name);
-    AGENTRT_FREE(server);
+    AIRY_FREE(server->service_name);
+    AIRY_FREE(server);
 }
 
-agentrt_error_t ipc_rpc_server_start(ipc_rpc_server_t *server)
+airy_err_t ipc_rpc_server_start(ipc_rpc_server_t *server)
 {
     if (!server)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (server->running)
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     server->running = true;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_rpc_server_stop(ipc_rpc_server_t *server)
+airy_err_t ipc_rpc_server_stop(ipc_rpc_server_t *server)
 {
     if (!server)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     server->running = false;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
-agentrt_error_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
+airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
                                                const ipc_rpc_method_t *method)
 {
     if (!server || !method || !method->method_name || !method->handler)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     rpc_method_node_t *existing = rpc_find_method_node(server, method->method_name);
     if (existing) {
         existing->handler = method->handler;
         existing->user_data = method->user_data;
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
-    rpc_method_node_t *node = (rpc_method_node_t *)AGENTRT_CALLOC(1, sizeof(rpc_method_node_t));
+    rpc_method_node_t *node = (rpc_method_node_t *)AIRY_CALLOC(1, sizeof(rpc_method_node_t));
     if (!node)
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
 
-    node->method_name = AGENTRT_STRDUP(method->method_name);
+    node->method_name = AIRY_STRDUP(method->method_name);
     node->handler = method->handler;
     node->user_data = method->user_data;
     node->next = server->methods;
     server->methods = node;
     server->method_count++;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 rpc_method_handler_t ipc_rpc_server_find_method(ipc_rpc_server_t *server, const char *method_name)
 {
     if (!server || !method_name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     rpc_method_node_t *node = rpc_find_method_node(server, method_name);
     return node ? node->handler : NULL;
 }
 
-agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
+airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
 {
     if (!server || !server->running || !server->transport)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (ipc_channel_get_state(server->transport) != IPC_STATE_OPEN)
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
 
     ipc_message_t msg = {0};
-    agentrt_error_t err = ipc_receive(server->transport, &msg, timeout_ms);
-    if (err != AGENTRT_SUCCESS)
+    airy_err_t err = ipc_receive(server->transport, &msg, timeout_ms);
+    if (err != AIRY_SUCCESS)
         return err;
 
     /* 验证 RPC 消息 */
     if (msg.header.magic != IPC_MAGIC) {
         ipc_message_free(&msg);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 解析方法名称（从负载中提取） */
     if (msg.payload == NULL || msg.payload_size == 0) {
         ipc_message_free(&msg);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 负载格式：[method_name\0][request_payload] */
@@ -2332,7 +2332,7 @@ agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeou
     size_t name_len = strnlen(method_name, msg.payload_size);
     if (name_len >= msg.payload_size) {
         ipc_message_free(&msg);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     void *request_payload = (char *)msg.payload + name_len + 1;
@@ -2358,19 +2358,19 @@ agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeou
 
         ipc_send(server->transport, &rsp_msg);
         ipc_message_free(&msg);
-        return AGENTRT_ENOENT;
+        return AIRY_ENOENT;
     }
 
     /* 调用处理函数 */
     size_t response_max = server->max_response_size;
-    void *response_buf = AGENTRT_CALLOC(1, response_max);
+    void *response_buf = AIRY_CALLOC(1, response_max);
     if (!response_buf) {
         ipc_message_free(&msg);
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
     size_t response_len = 0;
-    agentrt_error_t handler_err =
+    airy_err_t handler_err =
         node->handler(request_payload, request_len, response_buf, &response_len, node->user_data);
 
     /* 构建响应消息 */
@@ -2378,7 +2378,7 @@ agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeou
     rsp_hdr.magic = IPC_RPC_MAGIC;
     rsp_hdr.version = 1;
     rsp_hdr.request_id = msg.header.msg_id;
-    rsp_hdr.status = (handler_err == AGENTRT_SUCCESS) ? 0 : (uint32_t)handler_err;
+    rsp_hdr.status = (handler_err == AIRY_SUCCESS) ? 0 : (uint32_t)handler_err;
     rsp_hdr.method_name_len = (uint32_t)strlen(method_name);
     rsp_hdr.payload_len = response_len;
     __builtin_memcpy(rsp_hdr.method_name, method_name, strlen(method_name));
@@ -2391,7 +2391,7 @@ agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeou
 
     /* 将 header 和 response_buf 合并 */
     size_t total_payload = sizeof(rsp_hdr) + response_len;
-    void *combined_payload = AGENTRT_MALLOC(total_payload);
+    void *combined_payload = AIRY_MALLOC(total_payload);
     if (combined_payload) {
         __builtin_memcpy(combined_payload, &rsp_hdr, sizeof(rsp_hdr));
         if (response_len > 0) {
@@ -2400,23 +2400,23 @@ agentrt_error_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeou
         rsp_msg.payload = combined_payload;
         rsp_msg.payload_size = total_payload;
         ipc_send(server->transport, &rsp_msg);
-        AGENTRT_FREE(combined_payload);
+        AIRY_FREE(combined_payload);
     }
 
-    AGENTRT_FREE(response_buf);
+    AIRY_FREE(response_buf);
     ipc_message_free(&msg);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 ipc_rpc_client_t *ipc_rpc_client_create(const ipc_rpc_client_config_t *config)
 {
     if (!config || !config->transport) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
-    ipc_rpc_client_t *client = (ipc_rpc_client_t *)AGENTRT_CALLOC(1, sizeof(ipc_rpc_client_t));
+    ipc_rpc_client_t *client = (ipc_rpc_client_t *)AIRY_CALLOC(1, sizeof(ipc_rpc_client_t));
     if (!client) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     client->transport = config->transport;
@@ -2429,28 +2429,28 @@ void ipc_rpc_client_destroy(ipc_rpc_client_t *client)
 {
     if (!client)
         return;
-    AGENTRT_FREE(client);
+    AIRY_FREE(client);
 }
 
-agentrt_error_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
+airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
                                   const void *request, size_t request_len, void *response,
                                   size_t response_max, size_t *response_len)
 {
     if (!client || !method_name || !request)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (ipc_channel_get_state(client->transport) != IPC_STATE_OPEN)
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
 
     size_t name_len = strlen(method_name);
     size_t total_payload = name_len + 1 + request_len;
 
     if (total_payload > UINT32_MAX)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     /* 构建请求负载: [method_name\0][request_data] */
-    void *request_buf = AGENTRT_MALLOC(total_payload);
+    void *request_buf = AIRY_MALLOC(total_payload);
     if (!request_buf)
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
 
     __builtin_memcpy(request_buf, method_name, name_len);
     ((char *)request_buf)[name_len] = '\0';
@@ -2469,33 +2469,33 @@ agentrt_error_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_n
     req_msg.payload = request_buf;
     req_msg.payload_size = total_payload;
 
-    agentrt_error_t err = ipc_send(client->transport, &req_msg);
-    AGENTRT_FREE(request_buf);
-    if (err != AGENTRT_SUCCESS)
+    airy_err_t err = ipc_send(client->transport, &req_msg);
+    AIRY_FREE(request_buf);
+    if (err != AIRY_SUCCESS)
         return err;
 
     /* 等待响应 */
     ipc_message_t rsp_msg = {0};
     err = ipc_receive(client->transport, &rsp_msg, client->timeout_ms);
-    if (err != AGENTRT_SUCCESS)
+    if (err != AIRY_SUCCESS)
         return err;
 
     /* 验证响应 */
     if (rsp_msg.payload == NULL || rsp_msg.payload_size < sizeof(ipc_rpc_header_t)) {
         ipc_message_free(&rsp_msg);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ipc_rpc_header_t *rsp_hdr = (ipc_rpc_header_t *)rsp_msg.payload;
     if (rsp_hdr->magic != IPC_RPC_MAGIC) {
         ipc_message_free(&rsp_msg);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (rsp_hdr->status != 0) {
         /* RPC 调用失败 */
         ipc_message_free(&rsp_msg);
-        return (agentrt_error_t)rsp_hdr->status;
+        return (airy_err_t)rsp_hdr->status;
     }
 
     /* 提取响应负载 */
@@ -2514,5 +2514,5 @@ agentrt_error_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_n
     }
 
     ipc_message_free(&rsp_msg);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }

@@ -87,8 +87,8 @@ const char *platform_get_name(void)
 
 /* platform_exec() / platform_free_exec_result() 已移除（BAN-211/235 安全合规）。
  * 这两个函数通过 /bin/sh -c 执行命令字符串，存在命令注入风险，且全仓库零调用者。
- * 统一使用 agentrt_process_run_capture()（fork+execvp，不经 shell）作为规范子进程 API。
- * 见 platform.h 的 agentrt_process_run_capture 声明。 */
+ * 统一使用 airy_process_run_capture()（fork+execvp，不经 shell）作为规范子进程 API。
+ * 见 platform.h 的 airy_process_run_capture 声明。 */
 
 /**
  * @brief 获取文件信息
@@ -154,7 +154,7 @@ bool platform_mkdir_recursive(const char *path)
         return false;
     }
 
-    char *copy = (char *)AGENTRT_MALLOC(strlen(path) + 1);
+    char *copy = (char *)AIRY_MALLOC(strlen(path) + 1);
     if (!copy) {
         return false;
     }
@@ -167,7 +167,7 @@ bool platform_mkdir_recursive(const char *path)
             *p = '\0';
             if (*copy && !platform_path_exists(copy)) {
                 if (!platform_mkdir(copy)) {
-                    AGENTRT_FREE(copy);
+                    AIRY_FREE(copy);
                     return false;
                 }
             }
@@ -178,12 +178,12 @@ bool platform_mkdir_recursive(const char *path)
 
     if (*copy && !platform_path_exists(copy)) {
         if (!platform_mkdir(copy)) {
-            AGENTRT_FREE(copy);
+            AIRY_FREE(copy);
             return false;
         }
     }
 
-    AGENTRT_FREE(copy);
+    AIRY_FREE(copy);
     return true;
 }
 
@@ -281,7 +281,7 @@ bool platform_move_file(const char *src, const char *dest)
 char *platform_get_env(const char *name, const char *default_value)
 {
     if (!name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
 #if defined(_WIN32)
@@ -289,12 +289,12 @@ char *platform_get_env(const char *name, const char *default_value)
     DWORD size = GetEnvironmentVariableA(name, buffer, sizeof(buffer));
     if (size == 0) {
         if (default_value) {
-            return AGENTRT_STRDUP(default_value);
+            return AIRY_STRDUP(default_value);
         }
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
-    char *value = (char *)AGENTRT_MALLOC(size + 1);
+    char *value = (char *)AIRY_MALLOC(size + 1);
     if (value) {
         GetEnvironmentVariableA(name, value, size + 1);
     }
@@ -302,12 +302,12 @@ char *platform_get_env(const char *name, const char *default_value)
 #else
     const char *value = getenv(name);
     if (value) {
-        return AGENTRT_STRDUP(value);
+        return AIRY_STRDUP(value);
     }
     if (default_value) {
-        return AGENTRT_STRDUP(default_value);
+        return AIRY_STRDUP(default_value);
     }
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 #endif
 }
 
@@ -335,17 +335,17 @@ char *platform_get_cwd(void)
 #if defined(_WIN32)
     char buffer[4096];
     if (_getcwd(buffer, sizeof(buffer)) != NULL) {
-        return AGENTRT_STRDUP(buffer);
+        return AIRY_STRDUP(buffer);
     }
 #else
     char *buffer = getcwd(NULL, 0);
     if (buffer) {
-        char *copy = AGENTRT_STRDUP(buffer);
-        AGENTRT_FREE(buffer);
+        char *copy = AIRY_STRDUP(buffer);
+        AIRY_FREE(buffer);
         return copy;
     }
 #endif
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
 /**
@@ -372,16 +372,16 @@ char *platform_get_temp_dir(void)
 #if defined(_WIN32)
     char buffer[4096];
     if (GetTempPathA(sizeof(buffer), buffer) > 0) {
-        return AGENTRT_STRDUP(buffer);
+        return AIRY_STRDUP(buffer);
     }
 #else
     const char *temp = getenv("TMPDIR");
     if (temp) {
-        return AGENTRT_STRDUP(temp);
+        return AIRY_STRDUP(temp);
     }
-    return AGENTRT_STRDUP("/tmp");
+    return AIRY_STRDUP("/tmp");
 #endif
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
 /**
@@ -391,7 +391,7 @@ char *platform_get_temp_file(const char *prefix)
 {
     char *temp_dir = platform_get_temp_dir();
     if (!temp_dir) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     char *path = NULL;
@@ -401,7 +401,7 @@ char *platform_get_temp_file(const char *prefix)
     char buffer[4096];
     snprintf(buffer, sizeof(buffer), "%s\\%s_XXXXXX", temp_dir, base);
     if (GetTempFileNameA(temp_dir, base, 0, buffer) != 0) {
-        path = AGENTRT_STRDUP(buffer);
+        path = AIRY_STRDUP(buffer);
     }
 #else
     char buffer[4096];
@@ -409,11 +409,11 @@ char *platform_get_temp_file(const char *prefix)
     int fd = mkstemp(buffer);
     if (fd != -1) {
         close(fd);
-        path = AGENTRT_STRDUP(buffer);
+        path = AIRY_STRDUP(buffer);
     }
 #endif
 
-    AGENTRT_FREE(temp_dir);
+    AIRY_FREE(temp_dir);
     return path;
 }
 
@@ -423,7 +423,7 @@ char *platform_get_temp_file(const char *prefix)
 char *platform_path_join(const char *path1, const char *path2)
 {
     if (!path1 || !path2) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t len1 = strlen(path1);
@@ -431,9 +431,9 @@ char *platform_path_join(const char *path1, const char *path2)
     bool needs_slash = (len1 > 0 && path1[len1 - 1] != PLATFORM_SLASH);
     size_t total_len = len1 + len2 + (needs_slash ? 1 : 0) + 1;
 
-    char *result = (char *)AGENTRT_MALLOC(total_len);
+    char *result = (char *)AIRY_MALLOC(total_len);
     if (!result) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (needs_slash) {
@@ -450,11 +450,11 @@ char *platform_path_join(const char *path1, const char *path2)
 char *platform_path_normalize(const char *path)
 {
     if (!path) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // Simple implementation - real implementation would handle .. and .
-    return AGENTRT_STRDUP(path);
+    return AIRY_STRDUP(path);
 }
 
 /**
@@ -463,14 +463,14 @@ char *platform_path_normalize(const char *path)
 char *platform_path_basename(const char *path)
 {
     if (!path) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     const char *last_slash = strrchr(path, PLATFORM_SLASH);
     if (last_slash) {
-        return AGENTRT_STRDUP(last_slash + 1);
+        return AIRY_STRDUP(last_slash + 1);
     }
-    return AGENTRT_STRDUP(path);
+    return AIRY_STRDUP(path);
 }
 
 /**
@@ -479,18 +479,18 @@ char *platform_path_basename(const char *path)
 char *platform_path_dirname(const char *path)
 {
     if (!path) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     const char *last_slash = strrchr(path, PLATFORM_SLASH);
     if (!last_slash) {
-        return AGENTRT_STRDUP(".");
+        return AIRY_STRDUP(".");
     }
 
     size_t len = last_slash - path;
-    char *result = (char *)AGENTRT_MALLOC(len + 1);
+    char *result = (char *)AIRY_MALLOC(len + 1);
     if (result) {
-        AGENTRT_STRNCPY_TERM(result, path, len);
+        AIRY_STRNCPY_TERM(result, path, len);
         result[len] = '\0';
     }
     return result;
@@ -546,7 +546,7 @@ uint64_t platform_get_timestamp_ms(void)
     uint64_t timestamp = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
     return timestamp / 10000; /* Convert 100-nanosecond intervals to milliseconds */
 #else
-    return agentrt_time_ms();
+    return airy_time_ms();
 #endif
 }
 
@@ -561,7 +561,7 @@ uint64_t platform_get_timestamp_us(void)
     uint64_t timestamp = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
     return timestamp / 10; /* Convert 100-nanosecond intervals to microseconds */
 #else
-    return agentrt_time_ns() / 1000;
+    return airy_time_ns() / 1000;
 #endif
 }
 

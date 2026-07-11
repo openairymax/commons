@@ -6,7 +6,7 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "../memory/include/agentrt_memory.h"
+#include "../memory/include/airy_memory.h"
 #include "io.h"
 #include "memory_compat.h"
 
@@ -23,7 +23,7 @@
 #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #else
-#include "agentrt_dirent.h"
+#include "airy_dirent.h"
 
 #include <unistd.h>
 #endif
@@ -33,32 +33,32 @@
 /**
  * @brief 读取文件内容
  */
-char *agentrt_io_read_file(const char *path, size_t *out_len)
+char *airy_io_read_file(const char *path, size_t *out_len)
 {
     if (!path) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     FILE *f = fopen(path, "rb");
     if (!f) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     if (size < 0) {
         fclose(f);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     char *buf = (char *)memory_alloc(size + 1, "file_read_buffer");
     if (!buf) {
         fclose(f);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     size_t read = fread(buf, 1, size, f);
     fclose(f);
     if (read != (size_t)size) {
         memory_free(buf);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_IO, "io operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_IO, "io operation failed");
     }
     buf[size] = '\0';
     if (out_len)
@@ -69,13 +69,13 @@ char *agentrt_io_read_file(const char *path, size_t *out_len)
 /**
  * @brief 写入文件内容
  */
-int agentrt_io_write_file(const char *path, const void *data, size_t len)
+int airy_io_write_file(const char *path, const void *data, size_t len)
 {
     if (!path || !data)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     FILE *f = fopen(path, "wb");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (len == (size_t)-1)
         len = strlen((const char *)data);
     size_t written = fwrite(data, 1, len, f);
@@ -86,18 +86,18 @@ int agentrt_io_write_file(const char *path, const void *data, size_t len)
 /**
  * @brief 确保目录存在
  */
-int agentrt_io_ensure_dir(const char *path)
+int airy_io_ensure_dir(const char *path)
 {
     if (!path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     struct stat st = {0};
     if (stat(path, &st) == -1) {
 #ifdef _WIN32
         if (_mkdir(path) != 0)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
 #else
         if (mkdir(path, 0755) != 0)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
 #endif
     }
     return 0;
@@ -106,10 +106,10 @@ int agentrt_io_ensure_dir(const char *path)
 /**
  * @brief 列出目录中的文件
  */
-int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count)
+int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
 {
     if (!path || !out_files || !out_count)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
 #ifdef _WIN32
     char search_path[MAX_PATH];
@@ -118,7 +118,7 @@ int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count
     WIN32_FIND_DATAA find_data;
     HANDLE hFind = FindFirstFileA(search_path, &find_data);
     if (hFind == INVALID_HANDLE_VALUE)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t capacity = 64;
     size_t count = 0;
@@ -129,23 +129,23 @@ int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count
         if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
             if (count >= capacity) {
                 capacity *= 2;
-                char **new_files = (char **)AGENTRT_REALLOC(files, capacity * sizeof(char *));
+                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
                 if (!new_files) {
                     for (size_t i = 0; i < count; i++)
-                        AGENTRT_FREE(files[i]);
-                    AGENTRT_FREE(files);
+                        AIRY_FREE(files[i]);
+                    AIRY_FREE(files);
                     FindClose(hFind);
-                    return AGENTRT_EINVAL;
+                    return AIRY_EINVAL;
                 }
                 files = new_files;
             }
-            files[count] = AGENTRT_STRDUP(find_data.cFileName);
+            files[count] = AIRY_STRDUP(find_data.cFileName);
             if (!files[count]) {
                 for (size_t i = 0; i < count; i++)
-                    AGENTRT_FREE(files[i]);
-                AGENTRT_FREE(files);
+                    AIRY_FREE(files[i]);
+                AIRY_FREE(files);
                 FindClose(hFind);
-                return AGENTRT_EINVAL;
+                return AIRY_EINVAL;
             }
             count++;
         }
@@ -158,7 +158,7 @@ int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count
 #else
     DIR *dir = opendir(path);
     if (!dir)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t capacity = 64;
     size_t count = 0;
@@ -170,23 +170,23 @@ int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count
         if (entry->d_type == DT_REG) {
             if (count >= capacity) {
                 capacity *= 2;
-                char **new_files = (char **)AGENTRT_REALLOC(files, capacity * sizeof(char *));
+                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
                 if (!new_files) {
                     for (size_t i = 0; i < count; i++)
-                        AGENTRT_FREE(files[i]);
-                    AGENTRT_FREE(files);
+                        AIRY_FREE(files[i]);
+                    AIRY_FREE(files);
                     closedir(dir);
-                    return AGENTRT_EINVAL;
+                    return AIRY_EINVAL;
                 }
                 files = new_files;
             }
-            files[count] = AGENTRT_STRDUP(entry->d_name);
+            files[count] = AIRY_STRDUP(entry->d_name);
             if (!files[count]) {
                 for (size_t i = 0; i < count; i++)
-                    AGENTRT_FREE(files[i]);
-                AGENTRT_FREE(files);
+                    AIRY_FREE(files[i]);
+                AIRY_FREE(files);
                 closedir(dir);
-                return AGENTRT_EINVAL;
+                return AIRY_EINVAL;
             }
             count++;
         }
@@ -201,13 +201,13 @@ int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count
 /**
  * @brief 释放文件列表
  */
-void agentrt_io_free_list(char **files, size_t count)
+void airy_io_free_list(char **files, size_t count)
 {
     if (!files)
         return;
     for (size_t i = 0; i < count; i++)
-        AGENTRT_FREE(files[i]);
-    AGENTRT_FREE(files);
+        AIRY_FREE(files[i]);
+    AIRY_FREE(files);
 }
 
 /**
@@ -216,10 +216,10 @@ void agentrt_io_free_list(char **files, size_t count)
  * @param mode 目录权限（Unix风格，Windows忽略）
  * @return 0成功，-1失败
  */
-int agentrt_io_mkdir_p(const char *path, int mode)
+int airy_io_mkdir_p(const char *path, int mode)
 {
     if (!path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     // 检查目录是否已存在
     struct stat st = {0};
@@ -229,7 +229,7 @@ int agentrt_io_mkdir_p(const char *path, int mode)
 
     // 复制路径以便修改
     char path_copy[1024];
-    AGENTRT_STRNCPY_TERM(path_copy, path, sizeof(path_copy));
+    AIRY_STRNCPY_TERM(path_copy, path, sizeof(path_copy));
     path_copy[sizeof(path_copy) - 1] = '\0';
 
     size_t len = strlen(path_copy);
@@ -270,16 +270,16 @@ int agentrt_io_mkdir_p(const char *path, int mode)
             if (stat(path_copy, &st) == -1) {
 #ifdef _WIN32
                 if (_mkdir(path_copy) != 0) {
-                    return AGENTRT_EINVAL;
+                    return AIRY_EINVAL;
                 }
 #else
                 if (mkdir(path_copy, mode) != 0) {
-                    return AGENTRT_EINVAL;
+                    return AIRY_EINVAL;
                 }
 #endif
             } else if (!S_ISDIR(st.st_mode)) {
                 // 存在但不是目录
-                return AGENTRT_EINVAL;
+                return AIRY_EINVAL;
             }
 
             path_copy[i] = save_char;

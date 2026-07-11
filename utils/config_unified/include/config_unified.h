@@ -33,8 +33,8 @@
  *   config_hot_reload_start(hot_reload, 5000);
  */
 
-#ifndef AGENTRT_CONFIG_UNIFIED_H
-#define AGENTRT_CONFIG_UNIFIED_H
+#ifndef AIRY_RT_CONFIG_UNIFIED_H
+#define AIRY_RT_CONFIG_UNIFIED_H
 
 #include "atomic_compat.h"
 
@@ -339,4 +339,4 @@
          ? config_value_get_double(value, default_value) \
          : default_value)
 
-#endif /* AGENTRT_CONFIG_UNIFIED_H */
+#endif /* AIRY_RT_CONFIG_UNIFIED_H */

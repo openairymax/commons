@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
-#ifndef AGENTRT_ATOMIC_COMPAT_H
-#define AGENTRT_ATOMIC_COMPAT_H
+#ifndef AIRY_RT_ATOMIC_COMPAT_H
+#define AIRY_RT_ATOMIC_COMPAT_H
 
 #pragma GCC system_header
 
@@ -34,17 +34,17 @@ extern "C" {
 /* ==================== 平台检测与内存顺序定义 ==================== */
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && !defined(_WIN32) && \
-    !defined(AGENTRT_NO_STDATOMIC) && !defined(_MSC_VER)
+    !defined(AIRY_NO_STDATOMIC) && !defined(_MSC_VER)
 
 /* C11 环境：使用系统 stdatomic.h（跳过本地shim） */
-#ifndef AGENTRT_COREKERN_STDATOMIC_SHIM
+#ifndef AIRY_COREKERN_STDATOMIC_SHIM
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include_next <stdatomic.h>
 #pragma GCC diagnostic pop
 #endif
 
-#define AGENTRT_USE_STDATOMIC 1
+#define AIRY_USE_STDATOMIC 1
 
 static inline int atomic_load_32(volatile _Atomic int *ptr, memory_order order)
 {
@@ -200,7 +200,7 @@ typedef enum {
     memory_order_seq_cst = 5
 } memory_order;
 
-#define AGENTRT_USE_STDATOMIC 0
+#define AIRY_USE_STDATOMIC 0
 
 #endif
 
@@ -496,9 +496,9 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 
 /* ====================================================================
  * POSIX fallback 实现: 使用 GCC/Clang __atomic builtins
- * 当 AGENTRT_USE_STDATOMIC=0 且非 Windows 时使用
+ * 当 AIRY_USE_STDATOMIC=0 且非 Windows 时使用
  * ==================================================================== */
-#elif !AGENTRT_USE_STDATOMIC
+#elif !AIRY_USE_STDATOMIC
 
 #define _Atomic volatile
 
@@ -659,7 +659,7 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 
 /* ==================== 跨平台通用原子类型别名 ==================== */
 
-#if AGENTRT_USE_STDATOMIC
+#if AIRY_USE_STDATOMIC
 
 typedef _Atomic double atomic_double;
 typedef _Atomic uint64_t atomic_uint64_t;
@@ -727,7 +727,7 @@ typedef volatile int atomic_bool;
 
 /* ==================== atomic_bool 专用操作 ==================== */
 
-#if AGENTRT_USE_STDATOMIC
+#if AIRY_USE_STDATOMIC
 
 static inline _Bool atomic_load_bool(_Atomic _Bool *ptr, memory_order order)
 {
@@ -788,7 +788,7 @@ static inline int atomic_exchange_bool(volatile int *ptr, int desired, memory_or
 
 /* ==================== 初始化与通用宏 ==================== */
 
-#if !AGENTRT_USE_STDATOMIC
+#if !AIRY_USE_STDATOMIC
 #define atomic_init(ptr, val) (*(ptr) = (val))
 
 #define atomic_load_explicit(ptr, order)                                           \
@@ -888,11 +888,11 @@ static inline int atomic_exchange_bool(volatile int *ptr, int desired, memory_or
      : sizeof(*(ptr)) == 8                                                                        \
          ? (int)atomic_fetch_sub_64((volatile int64_t *)(ptr), (int64_t)(val), order)             \
          : 0)
-#endif /* !AGENTRT_USE_STDATOMIC */
+#endif /* !AIRY_USE_STDATOMIC */
 
 /* ==================== 内存屏障 ==================== */
 
-#if AGENTRT_USE_STDATOMIC
+#if AIRY_USE_STDATOMIC
 
 /* When using system <stdatomic.h>, atomic_thread_fence is already provided
  * as a macro: #define atomic_thread_fence(MO) __atomic_thread_fence(MO)
@@ -924,4 +924,4 @@ static inline void atomic_thread_fence(memory_order order)
 }
 #endif
 
-#endif /* AGENTRT_ATOMIC_COMPAT_H */
+#endif /* AIRY_RT_ATOMIC_COMPAT_H */

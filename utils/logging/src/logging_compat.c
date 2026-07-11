@@ -54,12 +54,12 @@ static size_t log_get_registered_modules(migration_module_info_t *out_modules, i
     size_t count = (available < (size_t)max_modules) ? available : (size_t)max_modules;
 
     for (size_t i = 0; i < count; i++) {
-        AGENTRT_STRNCPY_TERM(out_modules[i].module_name, info[i].pattern,
+        AIRY_STRNCPY_TERM(out_modules[i].module_name, info[i].pattern,
                              sizeof(out_modules[i].module_name));
         out_modules[i].module_name[sizeof(out_modules[i].module_name) - 1] = '\0';
-        AGENTRT_STRNCPY_TERM(out_modules[i].current_api, "new",
+        AIRY_STRNCPY_TERM(out_modules[i].current_api, "new",
                              sizeof(out_modules[i].current_api));
-        AGENTRT_STRNCPY_TERM(out_modules[i].target_api, "new",
+        AIRY_STRNCPY_TERM(out_modules[i].target_api, "new",
                              sizeof(out_modules[i].target_api));
         out_modules[i].migration_status = 1;        /* 已使用新API配置级别 */
         out_modules[i].completion_percent = 100.0f;
@@ -153,15 +153,15 @@ static const char *generate_old_trace_id(void)
 static void record_api_call(const char *api_name)
 {
     /* 更新统计信息 */
-    atomic_fetch_add(&g_compat_stats.api_calls.agentrt_log_write_calls, 1);
+    atomic_fetch_add(&g_compat_stats.api_calls.airy_log_write_calls, 1);
 
     /* 记录具体API调用（按API名称分类统计） */
-    if (strstr(api_name, "agentrt_log_write")) {
-        atomic_fetch_add(&g_compat_stats.api_calls.agentrt_log_write_calls, 1);
+    if (strstr(api_name, "airy_log_write")) {
+        atomic_fetch_add(&g_compat_stats.api_calls.airy_log_write_calls, 1);
     } else if (strstr(api_name, "set_trace_id")) {
-        atomic_fetch_add(&g_compat_stats.api_calls.agentrt_log_set_trace_id_calls, 1);
+        atomic_fetch_add(&g_compat_stats.api_calls.airy_log_set_trace_id_calls, 1);
     } else if (strstr(api_name, "get_trace_id")) {
-        atomic_fetch_add(&g_compat_stats.api_calls.agentrt_log_get_trace_id_calls, 1);
+        atomic_fetch_add(&g_compat_stats.api_calls.airy_log_get_trace_id_calls, 1);
     }
 
     /* 如果启用API映射日志，输出调试信息 */
@@ -195,7 +195,7 @@ int logging_compat_init(const logging_compat_config_t *manager)
     }
 
     /* 初始化统计信?*/
-    AGENTRT_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
+    AIRY_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
 
     /* 标记为已初始?*/
     int _exp = 0;
@@ -210,25 +210,25 @@ int logging_compat_init(const logging_compat_config_t *manager)
     return 0;
 }
 
-const char *agentrt_log_set_trace_id(const char *trace_id)
+const char *airy_log_set_trace_id(const char *trace_id)
 {
     ensure_compat_initialized();
-    record_api_call("agentrt_log_set_trace_id");
+    record_api_call("airy_log_set_trace_id");
 
     if (trace_id) {
         /* 使用用户提供的追踪ID */
-        AGENTRT_STRNCPY_TERM(g_thread_trace_id, trace_id, sizeof(g_thread_trace_id));
+        AIRY_STRNCPY_TERM(g_thread_trace_id, trace_id, sizeof(g_thread_trace_id));
         g_thread_trace_id[sizeof(g_thread_trace_id) - 1] = '\0';
     } else {
         if (g_compat_config.behavior.emulate_old_trace_id) {
             const char *old_id = generate_old_trace_id();
             if (old_id) {
-                AGENTRT_STRNCPY_TERM(g_thread_trace_id, old_id, sizeof(g_thread_trace_id));
+                AIRY_STRNCPY_TERM(g_thread_trace_id, old_id, sizeof(g_thread_trace_id));
             }
         } else {
             const char *new_id = log_set_trace_id(NULL);
             if (new_id) {
-                AGENTRT_STRNCPY_TERM(g_thread_trace_id, new_id, sizeof(g_thread_trace_id));
+                AIRY_STRNCPY_TERM(g_thread_trace_id, new_id, sizeof(g_thread_trace_id));
             }
         }
         g_thread_trace_id[sizeof(g_thread_trace_id) - 1] = '\0';
@@ -240,10 +240,10 @@ const char *agentrt_log_set_trace_id(const char *trace_id)
     return g_thread_trace_id;
 }
 
-const char *agentrt_log_get_trace_id(void)
+const char *airy_log_get_trace_id(void)
 {
     ensure_compat_initialized();
-    record_api_call("agentrt_log_get_trace_id");
+    record_api_call("airy_log_get_trace_id");
 
     if (g_thread_trace_id[0] != '\0') {
         return g_thread_trace_id;
@@ -253,26 +253,26 @@ const char *agentrt_log_get_trace_id(void)
     return log_get_trace_id();
 }
 
-void agentrt_log_write(int level, const char *file, int line, const char *fmt, ...)
+void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
 {
     ensure_compat_initialized();
 
     /* 记录API调用（区分不同级别） */
     switch (level) {
     case 0:
-        record_api_call("AGENTRT_LOG_ERROR");
+        record_api_call("AIRY_LOG_ERROR");
         break;
     case 1:
-        record_api_call("AGENTRT_LOG_WARN");
+        record_api_call("AIRY_LOG_WARN");
         break;
     case 2:
-        record_api_call("AGENTRT_LOG_INFO");
+        record_api_call("AIRY_LOG_INFO");
         break;
     case 3:
-        record_api_call("AGENTRT_LOG_DEBUG");
+        record_api_call("AIRY_LOG_DEBUG");
         break;
     default:
-        record_api_call("agentrt_log_write");
+        record_api_call("airy_log_write");
         break;
     }
 
@@ -289,10 +289,10 @@ void agentrt_log_write(int level, const char *file, int line, const char *fmt, .
     va_end(args);
 }
 
-void agentrt_log_write_va(int level, const char *file, int line, const char *fmt, va_list args)
+void airy_log_write_va(int level, const char *file, int line, const char *fmt, va_list args)
 {
     ensure_compat_initialized();
-    record_api_call("agentrt_log_write_va");
+    record_api_call("airy_log_write_va");
 
     /* 转换日志级别 */
     log_level_t new_level = convert_old_level_to_new(level);
@@ -360,7 +360,7 @@ void svc_logger_log(int level, const char *module, const char *fmt, ...)
 int logging_compat_get_stats(logging_compat_stats_t *out_stats)
 {
     if (!out_stats) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 复制统计信息（使用原子操作确保一致性） */
@@ -410,9 +410,9 @@ int logging_compat_get_migration_list(migration_module_info_t *out_modules, int 
     }
 
     for (int i = 0; i < count; i++) {
-        AGENTRT_STRNCPY_TERM(out_modules[i].module_name, default_modules[i], sizeof(out_modules[i].module_name));
-        AGENTRT_STRNCPY_TERM(out_modules[i].current_api, "legacy", sizeof(out_modules[i].current_api));
-        AGENTRT_STRNCPY_TERM(out_modules[i].target_api, "new", sizeof(out_modules[i].target_api));
+        AIRY_STRNCPY_TERM(out_modules[i].module_name, default_modules[i], sizeof(out_modules[i].module_name));
+        AIRY_STRNCPY_TERM(out_modules[i].current_api, "legacy", sizeof(out_modules[i].current_api));
+        AIRY_STRNCPY_TERM(out_modules[i].target_api, "new", sizeof(out_modules[i].target_api));
         out_modules[i].migration_status = (i < 2) ? 1 : 0;
         out_modules[i].completion_percent = (i < 2) ? 100.0f : 0.0f;
     }
@@ -432,7 +432,7 @@ void logging_compat_cleanup(void)
     }
 
     /* 清理资源 */
-    AGENTRT_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
+    AIRY_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
     atomic_store_explicit(&g_compat_initialized, 0, memory_order_seq_cst);
 
     LOG_INFO("Logging compatibility layer cleaned up");
@@ -443,7 +443,7 @@ void logging_compat_cleanup(void)
 int logging_migrate_module(const char *module_name, const migration_options_t *options)
 {
     if (!module_name) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     LOG_INFO("Starting migration of module: %s", module_name);
@@ -470,7 +470,7 @@ int logging_generate_migration_report(const char *report_path)
     FILE *fp = fopen(path, "w");
     if (!fp) {
         LOG_ERROR("Failed to create migration report file: %s", path);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 生成JSON格式的迁移报告 */
@@ -484,10 +484,10 @@ int logging_generate_migration_report(const char *report_path)
     fprintf(fp, "  \"compatibility_layer_stats\": {\n");
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
     fprintf(fp, "    \"total_api_calls\": %llu,\n",
-            (unsigned long long)g_compat_stats.api_calls.agentrt_log_write_calls);
+            (unsigned long long)g_compat_stats.api_calls.airy_log_write_calls);
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
-    fprintf(fp, "    \"agentrt_log_write_calls\": %llu,\n",
-            (unsigned long long)g_compat_stats.api_calls.agentrt_log_write_calls);
+    fprintf(fp, "    \"airy_log_write_calls\": %llu,\n",
+            (unsigned long long)g_compat_stats.api_calls.airy_log_write_calls);
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
     fprintf(fp, "    \"migration_progress\": {\n");
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
@@ -534,7 +534,7 @@ const migration_validation_result_t *logging_validate_migration(const char *modu
         .details = "Migration validation completed successfully"};
 
     if (module_name) {
-        AGENTRT_STRNCPY_TERM(result.module_name, module_name, sizeof(result.module_name));
+        AIRY_STRNCPY_TERM(result.module_name, module_name, sizeof(result.module_name));
         result.module_name[sizeof(result.module_name) - 1] = '\0';
     }
 

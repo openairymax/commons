@@ -10,8 +10,8 @@
  * 值越大越严重，与 syslog/Linux 内核惯例一致。
  */
 
-#ifndef AGENTRT_UTILS_LOGGER_H
-#define AGENTRT_UTILS_LOGGER_H
+#ifndef AIRY_RT_UTILS_LOGGER_H
+#define AIRY_RT_UTILS_LOGGER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,56 +19,56 @@ extern "C" {
 
 /* 统一日志级别常量 — 值越大越严重
  * 每个宏独立 #ifndef 保护，避免与 logging_compat.h 交叉包含时重定义 */
-#ifndef AGENTRT_LOG_LEVEL_DEBUG
-#define AGENTRT_LOG_LEVEL_DEBUG 0
+#ifndef AIRY_LOG_LEVEL_DEBUG
+#define AIRY_LOG_LEVEL_DEBUG 0
 #endif
-#ifndef AGENTRT_LOG_LEVEL_INFO
-#define AGENTRT_LOG_LEVEL_INFO 1
+#ifndef AIRY_LOG_LEVEL_INFO
+#define AIRY_LOG_LEVEL_INFO 1
 #endif
-#ifndef AGENTRT_LOG_LEVEL_WARN
-#define AGENTRT_LOG_LEVEL_WARN 2
+#ifndef AIRY_LOG_LEVEL_WARN
+#define AIRY_LOG_LEVEL_WARN 2
 #endif
-#ifndef AGENTRT_LOG_LEVEL_ERROR
-#define AGENTRT_LOG_LEVEL_ERROR 3
+#ifndef AIRY_LOG_LEVEL_ERROR
+#define AIRY_LOG_LEVEL_ERROR 3
 #endif
-#ifndef AGENTRT_LOG_LEVEL_FATAL
-#define AGENTRT_LOG_LEVEL_FATAL 4
-#endif
-
-#ifndef AGENTRT_LOG_LEVEL
-#define AGENTRT_LOG_LEVEL AGENTRT_LOG_LEVEL_INFO
+#ifndef AIRY_LOG_LEVEL_FATAL
+#define AIRY_LOG_LEVEL_FATAL 4
 #endif
 
-const char *agentrt_log_set_trace_id(const char *trace_id);
-const char *agentrt_log_get_trace_id(void);
-void agentrt_log_write(int level, const char *file, int line, const char *fmt, ...);
-
-#ifndef AGENTRT_LOG_ERROR
-#define AGENTRT_LOG_ERROR(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-#ifndef AGENTRT_LOG_WARN
-#define AGENTRT_LOG_WARN(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-#ifndef AGENTRT_LOG_INFO
-#define AGENTRT_LOG_INFO(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#ifndef AIRY_LOG_LEVEL
+#define AIRY_LOG_LEVEL AIRY_LOG_LEVEL_INFO
 #endif
 
-#ifndef AGENTRT_LOG_DEBUG
-#ifdef AGENTRT_DEBUG
-#define AGENTRT_LOG_DEBUG(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+const char *airy_log_set_trace_id(const char *trace_id);
+const char *airy_log_get_trace_id(void);
+void airy_log_write(int level, const char *file, int line, const char *fmt, ...);
+
+#ifndef AIRY_LOG_ERROR
+#define AIRY_LOG_ERROR(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
+#ifndef AIRY_LOG_WARN
+#define AIRY_LOG_WARN(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
+#ifndef AIRY_LOG_INFO
+#define AIRY_LOG_INFO(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
+
+#ifndef AIRY_LOG_DEBUG
+#ifdef AIRY_DEBUG
+#define AIRY_LOG_DEBUG(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #else
-#define AGENTRT_LOG_DEBUG(fmt, ...) ((void)0)
+#define AIRY_LOG_DEBUG(fmt, ...) ((void)0)
 #endif
 #endif
 
-#ifndef AGENTRT_LOG_FATAL
-#define AGENTRT_LOG_FATAL(fmt, ...)                                                         \
+#ifndef AIRY_LOG_FATAL
+#define AIRY_LOG_FATAL(fmt, ...)                                                         \
     do {                                                                                    \
-        agentrt_log_write(AGENTRT_LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
+        airy_log_write(AIRY_LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
         abort();                                                                            \
     } while (0)
 #endif
@@ -77,4 +77,4 @@ void agentrt_log_write(int level, const char *file, int line, const char *fmt, .
 }
 #endif
 
-#endif /* AGENTRT_UTILS_LOGGER_H */
+#endif /* AIRY_RT_UTILS_LOGGER_H */

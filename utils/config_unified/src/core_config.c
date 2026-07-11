@@ -83,7 +83,7 @@ struct config_context {
 
     bool locked;
 
-    agentrt_mutex_t mutex;
+    airy_mtx_t mutex;
 
     config_schema_t *schema;
     bool hot_reload_enabled;
@@ -100,7 +100,7 @@ struct config_context {
  */
 static config_value_t *config_value_alloc(config_value_type_t type)
 {
-    config_value_t *value = (config_value_t *)AGENTRT_CALLOC(1, sizeof(config_value_t));
+    config_value_t *value = (config_value_t *)AIRY_CALLOC(1, sizeof(config_value_t));
     if (value) {
         value->type = type;
     }
@@ -116,11 +116,11 @@ static config_value_t *config_value_alloc(config_value_type_t type)
 static char *duplicate_string(const char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t len = strlen(str) + 1;
-    char *copy = (char *)AGENTRT_MALLOC(len);
+    char *copy = (char *)AIRY_MALLOC(len);
     if (copy) {
         __builtin_memcpy(copy, str, len);
     }
@@ -158,7 +158,7 @@ static config_error_t expand_context_capacity(config_context_t *ctx)
     }
 
     size_t new_capacity = ctx->capacity == 0 ? 16 : ctx->capacity * 2;
-    void *new_items = AGENTRT_REALLOC(ctx->items, new_capacity * sizeof(ctx->items[0]));
+    void *new_items = AIRY_REALLOC(ctx->items, new_capacity * sizeof(ctx->items[0]));
 
     if (!new_items) {
         return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -223,8 +223,8 @@ config_value_t *config_value_create_string(const char *value)
     if (val) {
         val->data.string_value.str = duplicate_string(value);
         if (!val->data.string_value.str) {
-            AGENTRT_FREE(val);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_FREE(val);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         val->data.string_value.len = strlen(value);
     }
@@ -236,11 +236,11 @@ config_value_t *config_value_create_array(size_t capacity)
     config_value_t *val = config_value_alloc(CONFIG_TYPE_ARRAY);
     if (val) {
         val->data.array_value.capacity = capacity > 0 ? capacity : 16;
-        val->data.array_value.items = (config_value_t **)AGENTRT_CALLOC(
+        val->data.array_value.items = (config_value_t **)AIRY_CALLOC(
             val->data.array_value.capacity, sizeof(config_value_t *));
         if (!val->data.array_value.items) {
-            AGENTRT_FREE(val);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_FREE(val);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         val->data.array_value.count = 0;
     }
@@ -252,11 +252,11 @@ config_value_t *config_value_create_object(size_t capacity)
     config_value_t *val = config_value_alloc(CONFIG_TYPE_OBJECT);
     if (val) {
         val->data.object_value.capacity = capacity > 0 ? capacity : 16;
-        val->data.object_value.items = AGENTRT_CALLOC(val->data.object_value.capacity,
+        val->data.object_value.items = AIRY_CALLOC(val->data.object_value.capacity,
                                                       sizeof(val->data.object_value.items[0]));
         if (!val->data.object_value.items) {
-            AGENTRT_FREE(val);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_FREE(val);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         val->data.object_value.count = 0;
     }
@@ -266,7 +266,7 @@ config_value_t *config_value_create_object(size_t capacity)
 config_value_t *config_value_clone(const config_value_t *value)
 {
     if (!value) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     config_value_t *copy = NULL;
@@ -323,7 +323,7 @@ config_value_t *config_value_clone(const config_value_t *value)
                     copy->data.object_value.items[copy->data.object_value.count].value = val_copy;
                     copy->data.object_value.count++;
                 } else {
-                    AGENTRT_FREE(key_copy);
+                    AIRY_FREE(key_copy);
                     config_value_destroy(val_copy);
                 }
             }
@@ -334,13 +334,13 @@ config_value_t *config_value_clone(const config_value_t *value)
         if (value->data.binary_value.data && value->data.binary_value.size > 0) {
             copy = config_value_alloc(CONFIG_TYPE_BINARY);
             if (copy) {
-                copy->data.binary_value.data = AGENTRT_MALLOC(value->data.binary_value.size);
+                copy->data.binary_value.data = AIRY_MALLOC(value->data.binary_value.size);
                 if (copy->data.binary_value.data) {
                     __builtin_memcpy(copy->data.binary_value.data, value->data.binary_value.data,
                            value->data.binary_value.size);
                     copy->data.binary_value.size = value->data.binary_value.size;
                 } else {
-                    AGENTRT_FREE(copy);
+                    AIRY_FREE(copy);
                     copy = NULL;
                 }
             }
@@ -365,33 +365,33 @@ void config_value_destroy(config_value_t *value)
 
     switch (value->type) {
     case CONFIG_TYPE_STRING:
-        AGENTRT_FREE(value->data.string_value.str);
+        AIRY_FREE(value->data.string_value.str);
         break;
 
     case CONFIG_TYPE_ARRAY:
         for (size_t i = 0; i < value->data.array_value.count; i++) {
             config_value_destroy(value->data.array_value.items[i]);
         }
-        AGENTRT_FREE(value->data.array_value.items);
+        AIRY_FREE(value->data.array_value.items);
         break;
 
     case CONFIG_TYPE_OBJECT:
         for (size_t i = 0; i < value->data.object_value.count; i++) {
-            AGENTRT_FREE(value->data.object_value.items[i].key);
+            AIRY_FREE(value->data.object_value.items[i].key);
             config_value_destroy(value->data.object_value.items[i].value);
         }
-        AGENTRT_FREE(value->data.object_value.items);
+        AIRY_FREE(value->data.object_value.items);
         break;
 
     case CONFIG_TYPE_BINARY:
-        AGENTRT_FREE(value->data.binary_value.data);
+        AIRY_FREE(value->data.binary_value.data);
         break;
 
     default:
         break;
     }
 
-    AGENTRT_FREE(value);
+    AIRY_FREE(value);
 }
 
 config_error_t config_value_array_append(config_value_t *array, config_value_t *item)
@@ -403,7 +403,7 @@ config_error_t config_value_array_append(config_value_t *array, config_value_t *
 
     if (array->data.array_value.count >= array->data.array_value.capacity) {
         size_t new_cap = array->data.array_value.capacity * 2;
-        config_value_t **new_items = (config_value_t **)AGENTRT_REALLOC(
+        config_value_t **new_items = (config_value_t **)AIRY_REALLOC(
             array->data.array_value.items, new_cap * sizeof(config_value_t *));
         if (!new_items)
             return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -501,9 +501,9 @@ const char *config_value_get_string(const config_value_t *value, const char *def
 
 config_context_t *config_context_create(const char *name)
 {
-    config_context_t *ctx = (config_context_t *)AGENTRT_CALLOC(1, sizeof(config_context_t));
+    config_context_t *ctx = (config_context_t *)AIRY_CALLOC(1, sizeof(config_context_t));
     if (!ctx) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (name) {
@@ -513,22 +513,22 @@ config_context_t *config_context_create(const char *name)
     }
 
     if (!ctx->name) {
-        AGENTRT_FREE(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(ctx);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     ctx->capacity = 16;
-    ctx->items = AGENTRT_CALLOC(ctx->capacity, sizeof(ctx->items[0]));
+    ctx->items = AIRY_CALLOC(ctx->capacity, sizeof(ctx->items[0]));
 
     if (!ctx->items) {
-        AGENTRT_FREE(ctx->name);
-        AGENTRT_FREE(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(ctx->name);
+        AIRY_FREE(ctx);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     ctx->count = 0;
     ctx->locked = false;
-    agentrt_mutex_init(&ctx->mutex);
+    airy_mtx_init(&ctx->mutex);
 
     return ctx;
 }
@@ -539,16 +539,16 @@ void config_context_destroy(config_context_t *ctx)
         return;
     }
 
-    agentrt_mutex_destroy(&ctx->mutex);
+    airy_mtx_destroy(&ctx->mutex);
 
     for (size_t i = 0; i < ctx->count; i++) {
-        AGENTRT_FREE(ctx->items[i].key);
+        AIRY_FREE(ctx->items[i].key);
         config_value_destroy(ctx->items[i].value);
     }
 
-    AGENTRT_FREE(ctx->items);
-    AGENTRT_FREE(ctx->name);
-    AGENTRT_FREE(ctx);
+    AIRY_FREE(ctx->items);
+    AIRY_FREE(ctx->name);
+    AIRY_FREE(ctx);
 }
 
 config_error_t config_context_set(config_context_t *ctx, const char *key, config_value_t *value)
@@ -566,7 +566,7 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
      * find_item_index + config_value_destroy + 赋值之间存在 TOCTOU 竞争，
      * 产生 double-free（ASAN 检测到 config_value_destroy 对同一指针被两个线程
      * 同时调用）。修复：对 set 操作加 mutex，与 get/delete 保持一致。 */
-    agentrt_mutex_lock(&ctx->mutex);
+    airy_mtx_lock(&ctx->mutex);
 
     // 查找现有项
     int index = find_item_index(ctx, key);
@@ -575,7 +575,7 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
         // 替换现有项
         config_value_destroy(ctx->items[index].value);
         ctx->items[index].value = value;
-        agentrt_mutex_unlock(&ctx->mutex);
+        airy_mtx_unlock(&ctx->mutex);
         return CONFIG_SUCCESS;
     } else {
         // 添加新项
@@ -583,7 +583,7 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
             config_error_t err = expand_context_capacity(ctx);
             if (err != CONFIG_SUCCESS) {
                 config_value_destroy(value);
-                agentrt_mutex_unlock(&ctx->mutex);
+                airy_mtx_unlock(&ctx->mutex);
                 return err;
             }
         }
@@ -591,7 +591,7 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
         char *key_copy = duplicate_string(key);
         if (!key_copy) {
             config_value_destroy(value);
-            agentrt_mutex_unlock(&ctx->mutex);
+            airy_mtx_unlock(&ctx->mutex);
             return CONFIG_ERROR_OUT_OF_MEMORY;
         }
 
@@ -599,7 +599,7 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
         ctx->items[ctx->count].value = value;
         ctx->count++;
 
-        agentrt_mutex_unlock(&ctx->mutex);
+        airy_mtx_unlock(&ctx->mutex);
         return CONFIG_SUCCESS;
     }
 }
@@ -607,13 +607,13 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
 const config_value_t *config_context_get(const config_context_t *ctx, const char *key)
 {
     if (!ctx || !key) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    agentrt_mutex_lock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_lock((airy_mtx_t *)&ctx->mutex);
     int index = find_item_index(ctx, key);
     const config_value_t *result = index >= 0 ? ctx->items[index].value : NULL;
-    agentrt_mutex_unlock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_unlock((airy_mtx_t *)&ctx->mutex);
     return result;
 }
 
@@ -627,15 +627,15 @@ config_error_t config_context_delete(config_context_t *ctx, const char *key)
         return CONFIG_ERROR_LOCKED;
     }
 
-    agentrt_mutex_lock(&ctx->mutex);
+    airy_mtx_lock(&ctx->mutex);
 
     int index = find_item_index(ctx, key);
     if (index < 0) {
-        agentrt_mutex_unlock(&ctx->mutex);
+        airy_mtx_unlock(&ctx->mutex);
         return CONFIG_ERROR_NOT_FOUND;
     }
 
-    AGENTRT_FREE(ctx->items[index].key);
+    AIRY_FREE(ctx->items[index].key);
     config_value_destroy(ctx->items[index].value);
 
     for (size_t i = index + 1; i < ctx->count; i++) {
@@ -643,7 +643,7 @@ config_error_t config_context_delete(config_context_t *ctx, const char *key)
     }
 
     ctx->count--;
-    agentrt_mutex_unlock(&ctx->mutex);
+    airy_mtx_unlock(&ctx->mutex);
     return CONFIG_SUCCESS;
 }
 
@@ -651,9 +651,9 @@ bool config_context_has(const config_context_t *ctx, const char *key)
 {
     if (!ctx || !key)
         return false;
-    agentrt_mutex_lock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_lock((airy_mtx_t *)&ctx->mutex);
     bool result = find_item_index(ctx, key) >= 0;
-    agentrt_mutex_unlock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_unlock((airy_mtx_t *)&ctx->mutex);
     return result;
 }
 
@@ -665,24 +665,24 @@ void config_context_clear(config_context_t *ctx)
     if (ctx->locked)
         return;
 
-    agentrt_mutex_lock(&ctx->mutex);
+    airy_mtx_lock(&ctx->mutex);
 
     for (size_t i = 0; i < ctx->count; i++) {
-        AGENTRT_FREE(ctx->items[i].key);
+        AIRY_FREE(ctx->items[i].key);
         config_value_destroy(ctx->items[i].value);
     }
 
     ctx->count = 0;
-    agentrt_mutex_unlock(&ctx->mutex);
+    airy_mtx_unlock(&ctx->mutex);
 }
 
 size_t config_context_count(const config_context_t *ctx)
 {
     if (!ctx)
         return 0;
-    agentrt_mutex_lock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_lock((airy_mtx_t *)&ctx->mutex);
     size_t result = ctx->count;
-    agentrt_mutex_unlock((agentrt_mutex_t *)&ctx->mutex);
+    airy_mtx_unlock((airy_mtx_t *)&ctx->mutex);
     return result;
 }
 
@@ -717,21 +717,21 @@ config_context_t *config_context_clone(const config_context_t *ctx)
         char *key_copy = duplicate_string(ctx->items[i].key);
         if (!key_copy) {
             config_context_destroy(clone);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         config_value_t *val_copy = config_value_clone(ctx->items[i].value);
         if (!val_copy) {
-            AGENTRT_FREE(key_copy);
+            AIRY_FREE(key_copy);
             config_context_destroy(clone);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         if (clone->count >= clone->capacity) {
             config_error_t err = expand_context_capacity(clone);
             if (err != CONFIG_SUCCESS) {
-                AGENTRT_FREE(key_copy);
+                AIRY_FREE(key_copy);
                 config_value_destroy(val_copy);
                 config_context_destroy(clone);
-                AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+                AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
             }
         }
         clone->items[clone->count].key = key_copy;
@@ -758,13 +758,13 @@ config_error_t config_context_copy(config_context_t *dst, const config_context_t
             return CONFIG_ERROR_OUT_OF_MEMORY;
         config_value_t *val_copy = config_value_clone(src->items[i].value);
         if (!val_copy) {
-            AGENTRT_FREE(key_copy);
+            AIRY_FREE(key_copy);
             return CONFIG_ERROR_OUT_OF_MEMORY;
         }
         if (dst->count >= dst->capacity) {
             config_error_t err = expand_context_capacity(dst);
             if (err != CONFIG_SUCCESS) {
-                AGENTRT_FREE(key_copy);
+                AIRY_FREE(key_copy);
                 config_value_destroy(val_copy);
                 return err;
             }
@@ -797,7 +797,7 @@ struct config_iterator {
 const config_iterator_t *config_context_iterator(const config_context_t *ctx)
 {
     if (!ctx) return NULL;
-    config_iterator_t *it = (config_iterator_t *)AGENTRT_CALLOC(1, sizeof(config_iterator_t));
+    config_iterator_t *it = (config_iterator_t *)AIRY_CALLOC(1, sizeof(config_iterator_t));
     if (!it) return NULL;
     it->ctx = ctx;
     it->pos = 0;
@@ -880,54 +880,54 @@ const char *config_type_to_string(config_value_type_t type)
 void config_value_print(const config_value_t *value, int indent)
 {
     if (!value) {
-        AGENTRT_LOG_DEBUG("%*s(null)", indent, "");
+        AIRY_LOG_DEBUG("%*s(null)", indent, "");
         return;
     }
 
     switch (value->type) {
     case CONFIG_TYPE_NULL:
-        AGENTRT_LOG_DEBUG("%*snull", indent, "");
+        AIRY_LOG_DEBUG("%*snull", indent, "");
         break;
 
     case CONFIG_TYPE_BOOL:
-        AGENTRT_LOG_DEBUG("%*s%s", indent, "", value->data.bool_value ? "true" : "false");
+        AIRY_LOG_DEBUG("%*s%s", indent, "", value->data.bool_value ? "true" : "false");
         break;
 
     case CONFIG_TYPE_INT:
-        AGENTRT_LOG_DEBUG("%*s%d", indent, "", value->data.int_value);
+        AIRY_LOG_DEBUG("%*s%d", indent, "", value->data.int_value);
         break;
 
     case CONFIG_TYPE_INT64:
-        AGENTRT_LOG_DEBUG("%*s%lld", indent, "", (long long)value->data.int64_value);
+        AIRY_LOG_DEBUG("%*s%lld", indent, "", (long long)value->data.int64_value);
         break;
 
     case CONFIG_TYPE_DOUBLE:
-        AGENTRT_LOG_DEBUG("%*s%g", indent, "", value->data.double_value);
+        AIRY_LOG_DEBUG("%*s%g", indent, "", value->data.double_value);
         break;
 
     case CONFIG_TYPE_STRING:
-        AGENTRT_LOG_DEBUG("%*s\"%s\"", indent, "", value->data.string_value.str);
+        AIRY_LOG_DEBUG("%*s\"%s\"", indent, "", value->data.string_value.str);
         break;
 
     case CONFIG_TYPE_ARRAY:
-        AGENTRT_LOG_DEBUG("%*s[", indent, "");
+        AIRY_LOG_DEBUG("%*s[", indent, "");
         for (size_t i = 0; i < value->data.array_value.count; i++) {
             config_value_print(value->data.array_value.items[i], indent + 2);
         }
-        AGENTRT_LOG_DEBUG("%*s]", indent, "");
+        AIRY_LOG_DEBUG("%*s]", indent, "");
         break;
 
     case CONFIG_TYPE_OBJECT:
-        AGENTRT_LOG_DEBUG("%*s{", indent, "");
+        AIRY_LOG_DEBUG("%*s{", indent, "");
         for (size_t i = 0; i < value->data.object_value.count; i++) {
-            AGENTRT_LOG_DEBUG("%*s\"%s\": ", indent + 2, "", value->data.object_value.items[i].key);
+            AIRY_LOG_DEBUG("%*s\"%s\": ", indent + 2, "", value->data.object_value.items[i].key);
             config_value_print(value->data.object_value.items[i].value, 0);
         }
-        AGENTRT_LOG_DEBUG("%*s}", indent, "");
+        AIRY_LOG_DEBUG("%*s}", indent, "");
         break;
 
     case CONFIG_TYPE_BINARY:
-        AGENTRT_LOG_DEBUG("%*s<binary data, size=%zu>", indent, "", value->data.binary_value.size);
+        AIRY_LOG_DEBUG("%*s<binary data, size=%zu>", indent, "", value->data.binary_value.size);
         break;
     }
 }

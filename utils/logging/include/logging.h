@@ -52,8 +52,8 @@
  * @endcode
  */
 
-#ifndef AGENTRT_COMMON_LOGGING_H
-#define AGENTRT_COMMON_LOGGING_H
+#ifndef AIRY_RT_COMMON_LOGGING_H
+#define AIRY_RT_COMMON_LOGGING_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -510,4 +510,4 @@ bool log_should_sample(log_level_t level);
 }
 #endif
 
-#endif /* AGENTRT_COMMON_LOGGING_H */
+#endif /* AIRY_RT_COMMON_LOGGING_H */

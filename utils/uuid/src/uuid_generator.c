@@ -37,7 +37,7 @@
 static atomic_int g_uuid_initialized = 0;
 static atomic_uint64_t g_uuid_counter = 0;
 
-agentrt_uuid_error_t agentrt_uuid_init(void)
+airy_uuid_error_t airy_uuid_init(void)
 {
     int expected = 0;
     if (atomic_compare_exchange_strong_explicit(&g_uuid_initialized, &expected, 1,
@@ -46,37 +46,37 @@ agentrt_uuid_error_t agentrt_uuid_init(void)
         RPC_STATUS status = UuidCreateSequential(NULL);
         if (status != RPC_S_OK && status != RPC_S_UUID_LOCAL_ONLY) {
             atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
-            return AGENTRT_UUID_EUNAVAIL;
+            return AIRY_UUID_EUNAVAIL;
         }
 #elif defined(__linux__) || defined(__APPLE__)
         int fd = open("/dev/urandom", O_RDONLY);
         if (fd < 0) {
             atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
-            return AGENTRT_UUID_EUNAVAIL;
+            return AIRY_UUID_EUNAVAIL;
         }
         close(fd);
 #endif
 
         g_uuid_counter = (uint64_t)time(NULL) ^ 0x123456789ABCDEF0ULL;
     }
-    return AGENTRT_UUID_SUCCESS;
+    return AIRY_UUID_SUCCESS;
 }
 
-void agentrt_uuid_cleanup(void)
+void airy_uuid_cleanup(void)
 {
     atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
     g_uuid_counter = 0;
 }
 
-agentrt_uuid_error_t agentrt_uuid_v4(char *out_buf, size_t buf_len)
+airy_uuid_error_t airy_uuid_v4(char *out_buf, size_t buf_len)
 {
-    if (!out_buf || buf_len < AGENTRT_UUID_STR_LEN) {
-        return AGENTRT_UUID_EINVALID;
+    if (!out_buf || buf_len < AIRY_UUID_STR_LEN) {
+        return AIRY_UUID_EINVALID;
     }
 
     if (!atomic_load_explicit(&g_uuid_initialized, memory_order_acquire)) {
-        agentrt_uuid_error_t err = agentrt_uuid_init();
-        if (err != AGENTRT_UUID_SUCCESS) {
+        airy_uuid_error_t err = airy_uuid_init();
+        if (err != AIRY_UUID_SUCCESS) {
             return err;
         }
     }
@@ -86,19 +86,19 @@ agentrt_uuid_error_t agentrt_uuid_v4(char *out_buf, size_t buf_len)
 #if defined(_WIN32) || defined(_WIN64)
     UUID uuid_win;
     if (UuidCreate(&uuid_win) != RPC_S_OK) {
-        return AGENTRT_UUID_EUNAVAIL;
+        return AIRY_UUID_EUNAVAIL;
     }
     __builtin_memcpy(uuid, &uuid_win, 16);
 
 #elif defined(__linux__)
     int fd = open("/dev/urandom", O_RDONLY);
     if (fd < 0) {
-        return AGENTRT_UUID_EUNAVAIL;
+        return AIRY_UUID_EUNAVAIL;
     }
     ssize_t n = read(fd, uuid, 16);
     close(fd);
     if (n != 16) {
-        return AGENTRT_UUID_EUNAVAIL;
+        return AIRY_UUID_EUNAVAIL;
     }
 
 #elif defined(__APPLE__)
@@ -113,10 +113,10 @@ agentrt_uuid_error_t agentrt_uuid_v4(char *out_buf, size_t buf_len)
             size_t nread = fread(uuid, 1, 16, urandom);
             fclose(urandom);
             if (nread != 16) {
-                return AGENTRT_UUID_EUNAVAIL;
+                return AIRY_UUID_EUNAVAIL;
             }
         } else {
-            agentrt_random_bytes(uuid, 16);
+            airy_random_bytes(uuid, 16);
         }
     }
 #endif
@@ -130,31 +130,31 @@ agentrt_uuid_error_t agentrt_uuid_v4(char *out_buf, size_t buf_len)
              uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
 
     atomic_fetch_add(&g_uuid_counter, 1);
-    return AGENTRT_UUID_SUCCESS;
+    return AIRY_UUID_SUCCESS;
 }
 
-agentrt_uuid_error_t agentrt_uuid_with_prefix(const char *prefix, char *out_buf, size_t buf_len)
+airy_uuid_error_t airy_uuid_with_prefix(const char *prefix, char *out_buf, size_t buf_len)
 {
-    if (!prefix || !out_buf || buf_len < AGENTRT_UUID_PREFIXED_STR_LEN) {
-        return AGENTRT_UUID_EINVALID;
+    if (!prefix || !out_buf || buf_len < AIRY_UUID_PREFIXED_STR_LEN) {
+        return AIRY_UUID_EINVALID;
     }
 
     size_t prefix_len = strlen(prefix);
     if (prefix_len >= buf_len) {
-        return AGENTRT_UUID_EINVALID;
+        return AIRY_UUID_EINVALID;
     }
 
-    char uuid_str[AGENTRT_UUID_STR_LEN];
-    agentrt_uuid_error_t err = agentrt_uuid_v4(uuid_str, sizeof(uuid_str));
-    if (err != AGENTRT_UUID_SUCCESS) {
+    char uuid_str[AIRY_UUID_STR_LEN];
+    airy_uuid_error_t err = airy_uuid_v4(uuid_str, sizeof(uuid_str));
+    if (err != AIRY_UUID_SUCCESS) {
         return err;
     }
 
     snprintf(out_buf, buf_len, "%s%s", prefix, uuid_str);
-    return AGENTRT_UUID_SUCCESS;
+    return AIRY_UUID_SUCCESS;
 }
 
-int agentrt_uuid_is_valid(const char *uuid)
+int airy_uuid_is_valid(const char *uuid)
 {
     if (!uuid) {
         return 0;
@@ -190,10 +190,10 @@ int agentrt_uuid_is_valid(const char *uuid)
     return (len == 36);
 }
 
-agentrt_uuid_error_t agentrt_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_buf, size_t buf_len)
+airy_uuid_error_t airy_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_buf, size_t buf_len)
 {
-    if (!uuid_bin || !out_buf || buf_len < AGENTRT_UUID_STR_LEN) {
-        return AGENTRT_UUID_EINVALID;
+    if (!uuid_bin || !out_buf || buf_len < AIRY_UUID_STR_LEN) {
+        return AIRY_UUID_EINVALID;
     }
 
     snprintf(out_buf, buf_len,
@@ -202,17 +202,17 @@ agentrt_uuid_error_t agentrt_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_
              uuid_bin[7], uuid_bin[8], uuid_bin[9], uuid_bin[10], uuid_bin[11], uuid_bin[12],
              uuid_bin[13], uuid_bin[14], uuid_bin[15]);
 
-    return AGENTRT_UUID_SUCCESS;
+    return AIRY_UUID_SUCCESS;
 }
 
-agentrt_uuid_error_t agentrt_uuid_str_to_bin(const char *uuid_str, uint8_t *out_bin)
+airy_uuid_error_t airy_uuid_str_to_bin(const char *uuid_str, uint8_t *out_bin)
 {
     if (!uuid_str || !out_bin) {
-        return AGENTRT_UUID_EINVALID;
+        return AIRY_UUID_EINVALID;
     }
 
-    if (!agentrt_uuid_is_valid(uuid_str)) {
-        return AGENTRT_UUID_EINVALID;
+    if (!airy_uuid_is_valid(uuid_str)) {
+        return AIRY_UUID_EINVALID;
     }
 
     const char *p = uuid_str;
@@ -231,5 +231,5 @@ agentrt_uuid_error_t agentrt_uuid_str_to_bin(const char *uuid_str, uint8_t *out_
         i++;
     }
 
-    return AGENTRT_UUID_SUCCESS;
+    return AIRY_UUID_SUCCESS;
 }

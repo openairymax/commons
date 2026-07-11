@@ -23,15 +23,15 @@
 extern "C" {
 #endif
 
-typedef struct agentrt_resource_quota {
+typedef struct airy_resource_quota {
     size_t max_memory_bytes;
     uint64_t max_cpu_time_ms;
     size_t max_io_ops;
     size_t max_network_bytes;
     uint64_t timeout_ms;
-} agentrt_resource_quota_t;
+} airy_resource_quota_t;
 
-typedef struct agentrt_resource_usage {
+typedef struct airy_resource_usage {
     size_t current_memory_bytes;
     size_t peak_usage;
     uint64_t total_cpu_time_ms;
@@ -40,39 +40,39 @@ typedef struct agentrt_resource_usage {
     time_t start_time;
     time_t last_update;
     uint64_t operation_count;
-} agentrt_resource_usage_t;
+} airy_resource_usage_t;
 
-typedef struct agentrt_resource_manager {
-    agentrt_resource_quota_t quota;
-    agentrt_resource_usage_t usage;
+typedef struct airy_resource_manager {
+    airy_resource_quota_t quota;
+    airy_resource_usage_t usage;
     char *resource_id;
     void *lock;
     int enabled;
     uint8_t exceeded_flags;
-} agentrt_resource_manager_t;
+} airy_resource_manager_t;
 
-agentrt_error_t agentrt_resource_manager_create(const agentrt_resource_quota_t *quota,
+airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota,
                                                 const char *resource_id,
-                                                agentrt_resource_manager_t **out_manager);
+                                                airy_resource_manager_t **out_manager);
 
-void agentrt_resource_manager_destroy(agentrt_resource_manager_t *manager);
+void airy_resource_manager_destroy(airy_resource_manager_t *manager);
 
-agentrt_error_t agentrt_resource_check_memory(agentrt_resource_manager_t *manager,
+airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
                                               size_t requested_bytes);
 
-agentrt_error_t agentrt_resource_record_allocation(agentrt_resource_manager_t *manager,
+airy_err_t airy_resource_record_allocation(airy_resource_manager_t *manager,
                                                    size_t bytes);
 
-agentrt_error_t agentrt_resource_record_free(agentrt_resource_manager_t *manager, size_t bytes);
+airy_err_t airy_resource_record_free(airy_resource_manager_t *manager, size_t bytes);
 
-agentrt_error_t agentrt_resource_record_io(agentrt_resource_manager_t *manager);
+airy_err_t airy_resource_record_io(airy_resource_manager_t *manager);
 
-int agentrt_resource_is_exceeded(agentrt_resource_manager_t *manager);
+int airy_resource_is_exceeded(airy_resource_manager_t *manager);
 
-void agentrt_resource_get_usage(agentrt_resource_manager_t *manager,
-                                agentrt_resource_usage_t *out_usage);
+void airy_resource_get_usage(airy_resource_manager_t *manager,
+                                airy_resource_usage_t *out_usage);
 
-const char *agentrt_resource_get_exceeded_info(agentrt_resource_manager_t *manager);
+const char *airy_resource_get_exceeded_info(airy_resource_manager_t *manager);
 
 #ifdef __cplusplus
 }

@@ -21,8 +21,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_REFCOUNTED_H
-#define AGENTRT_REFCOUNTED_H
+#ifndef AIRY_RT_REFCOUNTED_H
+#define AIRY_RT_REFCOUNTED_H
 
 #include "memory_compat.h"
 
@@ -81,7 +81,7 @@ static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
         return NULL;  /* SEC-03: 大小不足 */
     }
 
-    refcounted_t *rc = (refcounted_t *)AGENTRT_CALLOC(1, obj_size);
+    refcounted_t *rc = (refcounted_t *)AIRY_CALLOC(1, obj_size);
     if (!rc) return NULL;
 
     atomic_init(&rc->refcount, 1);
@@ -142,7 +142,7 @@ static inline bool refcount_release(void *obj)
         if (rc->deleter) {
             rc->deleter(obj);
         } else {
-            AGENTRT_FREE(obj);
+            AIRY_FREE(obj);
         }
         return true;
     }
@@ -162,14 +162,14 @@ static inline bool refcount_release(void *obj)
  *
  * 使用方式：
  *   typedef struct {
- *       AGENTRT_REFCOUNTED_HEADER;
+ *       AIRY_REFCOUNTED_HEADER;
  *       char buffer[4096];
  *   } ipc_shared_buf_t;
  *
  *   ipc_shared_buf_t *buf = (ipc_shared_buf_t *)
  *       refcount_alloc(sizeof(ipc_shared_buf_t), NULL);
  */
-#define AGENTRT_REFCOUNTED_HEADER refcounted_t _rc
+#define AIRY_REFCOUNTED_HEADER refcounted_t _rc
 
 /**
  * @brief 获取包含 refcounted_t 的结构体指针
@@ -200,4 +200,4 @@ static inline bool refcount_release(void *obj)
 }
 #endif
 
-#endif /* AGENTRT_REFCOUNTED_H */
+#endif /* AIRY_RT_REFCOUNTED_H */

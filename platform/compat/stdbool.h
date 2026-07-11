@@ -9,8 +9,8 @@
  * 迁移至: agentrt/commons/platform/compat/ (2026-04-19 include/整合重构)
  */
 
-#ifndef AGENTRT_COMPAT_STDBOOL_H
-#define AGENTRT_COMPAT_STDBOOL_H
+#ifndef AIRY_RT_COMPAT_STDBOOL_H
+#define AIRY_RT_COMPAT_STDBOOL_H
 
 #ifndef __cplusplus
 
@@ -40,4 +40,4 @@ typedef unsigned char _Bool;
 
 #endif /* __cplusplus */
 
-#endif /* AGENTRT_COMPAT_STDBOOL_H */
+#endif /* AIRY_RT_COMPAT_STDBOOL_H */

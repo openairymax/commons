@@ -21,22 +21,22 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
     CHECK_NULL_RET(spinlock, SYNC_ERROR_INVALID);
 
     struct sync_spinlock *s =
-        (struct sync_spinlock *)AGENTRT_CALLOC(1, sizeof(struct sync_spinlock));
+        (struct sync_spinlock *)AIRY_CALLOC(1, sizeof(struct sync_spinlock));
     CHECK_NULL_RET(s, SYNC_ERROR_MEMORY);
 
     s->type = SYNC_TYPE_SPINLOCK;
     if (attr != NULL && attr->name != NULL) {
         s->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     s->lock = 0;
 #else
     int result = pthread_spin_init(&s->lock, PTHREAD_PROCESS_PRIVATE);
     if (result != 0) {
-        AGENTRT_FREE(s->name);
-        AGENTRT_FREE(s);
+        AIRY_FREE(s->name);
+        AIRY_FREE(s);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -51,8 +51,8 @@ sync_result_t sync_spinlock_free(sync_spinlock_t spinlock)
     CHECK_NULL_RET(spinlock, SYNC_ERROR_INVALID);
 
     if (!spinlock->initialized) {
-        AGENTRT_FREE(spinlock->name);
-        AGENTRT_FREE(spinlock);
+        AIRY_FREE(spinlock->name);
+        AIRY_FREE(spinlock);
         return SYNC_SUCCESS;
     }
 
@@ -60,8 +60,8 @@ sync_result_t sync_spinlock_free(sync_spinlock_t spinlock)
     pthread_spin_destroy(&spinlock->lock);
 #endif
 
-    AGENTRT_FREE(spinlock->name);
-    AGENTRT_FREE(spinlock);
+    AIRY_FREE(spinlock->name);
+    AIRY_FREE(spinlock);
     return SYNC_SUCCESS;
 }
 

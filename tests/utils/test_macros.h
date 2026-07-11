@@ -7,8 +7,8 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_TEST_MACROS_H
-#define AGENTRT_TEST_MACROS_H
+#ifndef AIRY_RT_TEST_MACROS_H
+#define AIRY_RT_TEST_MACROS_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,11 +105,11 @@
     do {                                                                        \
         printf("Testing " #engine_type " create/destroy...\n");                 \
         engine_type *engine = NULL;                                             \
-        agentrt_error_t err = create_func(__VA_ARGS__, &engine);                \
-        TEST_ASSERT_EQUAL(AGENTRT_SUCCESS, err);                                \
+        airy_err_t err = create_func(__VA_ARGS__, &engine);                \
+        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                \
         TEST_ASSERT_NOT_NULL(engine);                                           \
         err = destroy_func(engine);                                             \
-        TEST_ASSERT_EQUAL(AGENTRT_SUCCESS, err);                                \
+        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                \
         printf("✓ " #engine_type " create/destroy test passed\n");              \
     } while (0)
 
@@ -124,7 +124,7 @@
     do {                                                                          \
         printf("Testing " #engine_type " create failure...\n");                   \
         engine_type *engine = NULL;                                               \
-        agentrt_error_t err = create_func(__VA_ARGS__, &engine);                  \
+        airy_err_t err = create_func(__VA_ARGS__, &engine);                  \
         TEST_ASSERT_EQUAL(expected_error, err);                                   \
         TEST_ASSERT_NULL(engine);                                                 \
         printf("✓ " #engine_type " create failure test passed\n");                \
@@ -278,6 +278,6 @@
  */
 #define TEST_GENERATE_BUFFER(var, size, value) \
     unsigned char var[size];                   \
-    AGENTRT_MEMSET(var, value, size)
+    AIRY_MEMSET(var, value, size)
 
-#endif /* AGENTRT_TEST_MACROS_H */
+#endif /* AIRY_RT_TEST_MACROS_H */

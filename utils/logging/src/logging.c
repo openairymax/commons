@@ -16,7 +16,7 @@
 
 #include "logging.h"
 
-#include "agentrt.h"
+#include "airy_rt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +35,8 @@
 
 /* ==================== 内部常量定义 ==================== */
 
-static AGENTRT_THREAD_LOCAL char g_tls_trace_id[128] = {0};
-static AGENTRT_THREAD_LOCAL char g_tls_span_id[64] = {0};
+static AIRY_THREAD_LOCAL char g_tls_trace_id[128] = {0};
+static AIRY_THREAD_LOCAL char g_tls_span_id[64] = {0};
 
 /** 日志级别名称数组 */
 static const char *LEVEL_NAMES[] = {"DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
@@ -47,7 +47,7 @@ static const size_t LEVEL_NAMES_COUNT = sizeof(LEVEL_NAMES) / sizeof(LEVEL_NAMES
 /* ── 文件输出状态（合并自 logging_common.c）── */
 static FILE *g_log_file = NULL;
 static size_t g_log_file_current_size = 0;
-static agentrt_mutex_t g_log_file_mutex;
+static airy_mtx_t g_log_file_mutex;
 static bool g_log_file_mutex_init = false;
 
 /* ── ANSI 终端色彩转义码 (仅当输出到终端时使用) ── */
@@ -72,7 +72,7 @@ static const char *LEVEL_COLORS[] = {
     ANSI_MAGENTA,  /* FATAL  — 品红 */
 };
 
-/** 是否在日志中使用色彩 (通过环境变量 AGENTRT_LOG_COLOR=0 关闭) */
+/** 是否在日志中使用色彩 (通过环境变量 AIRY_LOG_COLOR=0 关闭) */
 static bool g_log_use_color = true;
 
 /** 检测 fd 是否为终端 (POSIX) */
@@ -119,7 +119,7 @@ typedef struct {
 static throttle_bucket_t g_throttle_buckets[THROTTLE_BUCKET_COUNT];
 static atomic_uint g_throttle_enabled = 0;
 static atomic_uint g_throttle_max_per_sec = 100;
-static agentrt_mutex_t g_throttle_mutex;
+static airy_mtx_t g_throttle_mutex;
 static bool g_throttle_mutex_init = false;
 
 /* ==================== 日志采样（Sampling）内部数据结构 ==================== */
@@ -176,19 +176,19 @@ static bool throttle_should_suppress(const char *module, int line, const char *m
     uint64_t h = throttle_hash(module, line, message);
     uint32_t bucket_idx = (uint32_t)(h % THROTTLE_BUCKET_COUNT);
 
-    agentrt_mutex_lock(&g_throttle_mutex);
+    airy_mtx_lock(&g_throttle_mutex);
 
     throttle_bucket_t *bucket = &g_throttle_buckets[bucket_idx];
 
     if (bucket->last_second != now_sec) {
         if (bucket->last_second > 0 && bucket->count > g_throttle_max_per_sec) {
-            agentrt_mutex_unlock(&g_throttle_mutex);
+            airy_mtx_unlock(&g_throttle_mutex);
             return false;
         }
         bucket->last_second = now_sec;
         bucket->hash_key = h;
         bucket->count = 1;
-        agentrt_mutex_unlock(&g_throttle_mutex);
+        airy_mtx_unlock(&g_throttle_mutex);
         return false;
     }
 
@@ -196,7 +196,7 @@ static bool throttle_should_suppress(const char *module, int line, const char *m
         if (bucket->count >= g_throttle_max_per_sec) {
             bucket->count++;
             uint32_t suppressed = bucket->count - g_throttle_max_per_sec;
-            agentrt_mutex_unlock(&g_throttle_mutex);
+            airy_mtx_unlock(&g_throttle_mutex);
 
             if (suppressed == 1) {
                 /* BAN-70 EXEMPT: logging module - diagnostic throttle notification */
@@ -206,23 +206,23 @@ static bool throttle_should_suppress(const char *module, int line, const char *m
             return true;
         }
         bucket->count++;
-        agentrt_mutex_unlock(&g_throttle_mutex);
+        airy_mtx_unlock(&g_throttle_mutex);
         return false;
     }
 
     if (bucket->count > g_throttle_max_per_sec) {
         uint32_t old_suppressed = bucket->count - g_throttle_max_per_sec;
         if (old_suppressed > 0) {
-            agentrt_mutex_unlock(&g_throttle_mutex);
+            airy_mtx_unlock(&g_throttle_mutex);
             /* BAN-70 EXEMPT: logging module - diagnostic throttle notification */
             __builtin_fprintf(stderr, "[THROTTLE] Previous bucket flushed: %u messages suppressed\n",
                     old_suppressed);
-            agentrt_mutex_lock(&g_throttle_mutex);
+            airy_mtx_lock(&g_throttle_mutex);
         }
     }
     bucket->hash_key = h;
     bucket->count = 1;
-    agentrt_mutex_unlock(&g_throttle_mutex);
+    airy_mtx_unlock(&g_throttle_mutex);
     return false;
 }
 
@@ -237,7 +237,7 @@ typedef struct {
     bool initialized;
 
     /** 互斥锁保护配置和状?*/
-    agentrt_mutex_t mutex;
+    airy_mtx_t mutex;
 
     log_config_t default_config;
 
@@ -281,7 +281,7 @@ static uint64_t get_current_timestamp(void)
  */
 static uint64_t get_current_thread_id(void)
 {
-    return agentrt_thread_id();
+    return airy_thread_id();
 }
 
 /**
@@ -417,9 +417,9 @@ static bool should_log(log_level_t level, const char *module)
 static int log_file_open(const char *path)
 {
     if (!path || !g_log_file_mutex_init)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    agentrt_mutex_lock(&g_log_file_mutex);
+    airy_mtx_lock(&g_log_file_mutex);
     if (g_log_file) {
         fclose(g_log_file);
         g_log_file = NULL;
@@ -427,13 +427,13 @@ static int log_file_open(const char *path)
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
     g_log_file = fopen(path, "a");
     if (!g_log_file) {
-        agentrt_mutex_unlock(&g_log_file_mutex);
-        return AGENTRT_EIO;
+        airy_mtx_unlock(&g_log_file_mutex);
+        return AIRY_EIO;
     }
     /* 获取当前文件大小用于轮转判断 */
     fseek(g_log_file, 0, SEEK_END);
     g_log_file_current_size = (size_t)ftell(g_log_file);
-    agentrt_mutex_unlock(&g_log_file_mutex);
+    airy_mtx_unlock(&g_log_file_mutex);
     return 0;
 }
 
@@ -487,9 +487,9 @@ static void log_file_write(const log_record_t *record, const char *formatted_mes
     if (!g_log_file || !g_log_file_mutex_init || !record)
         return;
 
-    agentrt_mutex_lock(&g_log_file_mutex);
+    airy_mtx_lock(&g_log_file_mutex);
     if (!g_log_file) {
-        agentrt_mutex_unlock(&g_log_file_mutex);
+        airy_mtx_unlock(&g_log_file_mutex);
         return;
     }
 
@@ -507,7 +507,7 @@ static void log_file_write(const log_record_t *record, const char *formatted_mes
                        tm_storage.tm_hour, tm_storage.tm_min, tm_storage.tm_sec, ms,
                        level_name, record->module ? record->module : "?", record->line);
     if (len < 0) {
-        agentrt_mutex_unlock(&g_log_file_mutex);
+        airy_mtx_unlock(&g_log_file_mutex);
         return;
     }
     if ((size_t)len >= sizeof(file_buffer))
@@ -534,7 +534,7 @@ static void log_file_write(const log_record_t *record, const char *formatted_mes
                                (record->message ? strlen(record->message) : 0) + 1;
 
     log_file_rotate_if_needed();
-    agentrt_mutex_unlock(&g_log_file_mutex);
+    airy_mtx_unlock(&g_log_file_mutex);
 }
 
 const char *log_level_to_string(log_level_t level)
@@ -573,19 +573,19 @@ int log_init(const log_config_t *manager)
         return 0;
     }
 
-    if (agentrt_mutex_init(&g_logging_state.mutex) != 0) {
-        return AGENTRT_EINVAL;
+    if (airy_mtx_init(&g_logging_state.mutex) != 0) {
+        return AIRY_EINVAL;
     }
 
     if (!g_throttle_mutex_init) {
-        if (agentrt_mutex_init(&g_throttle_mutex) == 0) {
+        if (airy_mtx_init(&g_throttle_mutex) == 0) {
             g_throttle_mutex_init = true;
         }
     }
 
     /* 初始化文件输出互斥锁（合并自 logging_common.c） */
     if (!g_log_file_mutex_init) {
-        if (agentrt_mutex_init(&g_log_file_mutex) == 0) {
+        if (airy_mtx_init(&g_log_file_mutex) == 0) {
             g_log_file_mutex_init = true;
         }
     }
@@ -595,7 +595,7 @@ int log_init(const log_config_t *manager)
 
     /* ── 色彩检测：仅在终端环境启用 ANSI 色彩，可通过环境变量覆盖 ── */
     {
-        const char *env_color = getenv("AGENTRT_LOG_COLOR");
+        const char *env_color = getenv("AIRY_LOG_COLOR");
         if (env_color) {
             /* 环境变量显式控制 */
             if (strcmp(env_color, "0") == 0 || strcmp(env_color, "no") == 0 ||
@@ -638,12 +638,12 @@ int log_init(const log_config_t *manager)
 int log_set_default_config(const log_config_t *manager)
 {
     if (!manager) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
     __builtin_memcpy(&g_logging_state.default_config, manager, sizeof(log_config_t));
-    agentrt_mutex_unlock(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
 
     return 0;
 }
@@ -758,7 +758,7 @@ const char *log_set_trace_id(const char *trace_id)
     if (!g_logging_state.initialized) return NULL;
 
     if (trace_id) {
-        AGENTRT_STRNCPY_TERM(g_tls_trace_id, trace_id, sizeof(g_tls_trace_id));
+        AIRY_STRNCPY_TERM(g_tls_trace_id, trace_id, sizeof(g_tls_trace_id));
         g_tls_trace_id[sizeof(g_tls_trace_id) - 1] = '\0';
     } else {
         g_tls_trace_id[0] = '\0';
@@ -778,7 +778,7 @@ const char *log_set_span_id(const char *span_id)
     if (!g_logging_state.initialized) return NULL;
 
     if (span_id) {
-        AGENTRT_STRNCPY_TERM(g_tls_span_id, span_id, sizeof(g_tls_span_id));
+        AIRY_STRNCPY_TERM(g_tls_span_id, span_id, sizeof(g_tls_span_id));
         g_tls_span_id[sizeof(g_tls_span_id) - 1] = '\0';
     } else {
         g_tls_span_id[0] = '\0';
@@ -796,16 +796,16 @@ const char *log_get_span_id(void)
 int log_set_module_level(const char *module_pattern, log_level_t level)
 {
     if (!g_logging_state.initialized || !module_pattern) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
 
     // 查找现有模式
     for (size_t i = 0; i < g_logging_state.module_level_count; i++) {
         if (strcmp(g_logging_state.module_levels[i].pattern, module_pattern) == 0) {
             g_logging_state.module_levels[i].level = level;
-            agentrt_mutex_unlock(&g_logging_state.mutex);
+            airy_mtx_unlock(&g_logging_state.mutex);
             return 0;
         }
     }
@@ -813,17 +813,17 @@ int log_set_module_level(const char *module_pattern, log_level_t level)
     // 添加新模?
     if (g_logging_state.module_level_count <
         sizeof(g_logging_state.module_levels) / sizeof(g_logging_state.module_levels[0])) {
-        AGENTRT_STRNCPY_TERM(g_logging_state.module_levels[g_logging_state.module_level_count].pattern, module_pattern, sizeof(g_logging_state.module_levels[0].pattern));
+        AIRY_STRNCPY_TERM(g_logging_state.module_levels[g_logging_state.module_level_count].pattern, module_pattern, sizeof(g_logging_state.module_levels[0].pattern));
         g_logging_state.module_levels[g_logging_state.module_level_count]
             .pattern[sizeof(g_logging_state.module_levels[0].pattern) - 1] = '\0';
         g_logging_state.module_levels[g_logging_state.module_level_count].level = level;
         g_logging_state.module_level_count++;
-        agentrt_mutex_unlock(&g_logging_state.mutex);
+        airy_mtx_unlock(&g_logging_state.mutex);
         return 0;
     }
 
-    agentrt_mutex_unlock(&g_logging_state.mutex);
-    return AGENTRT_ERR_NOT_FOUND;  // 表已?
+    airy_mtx_unlock(&g_logging_state.mutex);
+    return AIRY_ERR_NOT_FOUND;  // 表已?
 }
 
 size_t log_get_module_count(void)
@@ -832,9 +832,9 @@ size_t log_get_module_count(void)
         return 0;
     }
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
     size_t count = g_logging_state.module_level_count;
-    agentrt_mutex_unlock(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
     return count;
 }
 
@@ -844,36 +844,36 @@ size_t log_get_module_info(log_module_info_t *out_info, size_t max_count)
         return 0;
     }
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
     size_t copy_count = g_logging_state.module_level_count;
     if (copy_count > max_count) {
         copy_count = max_count;
     }
     for (size_t i = 0; i < copy_count; i++) {
-        AGENTRT_STRNCPY_TERM(out_info[i].pattern, g_logging_state.module_levels[i].pattern,
+        AIRY_STRNCPY_TERM(out_info[i].pattern, g_logging_state.module_levels[i].pattern,
                              sizeof(out_info[i].pattern));
         out_info[i].pattern[sizeof(out_info[i].pattern) - 1] = '\0';
         out_info[i].level = g_logging_state.module_levels[i].level;
     }
-    agentrt_mutex_unlock(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
     return copy_count;
 }
 
 int log_reload_config(const char *config_path)
 {
     if (!config_path) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     FILE *fp = fopen(config_path, "r");
     if (!fp) {
-        return AGENTRT_ENOENT;
+        return AIRY_ENOENT;
     }
 
     char line[512];
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
     log_config_t new_config = g_logging_state.manager;
-    agentrt_mutex_unlock(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
 
     int changes = 0;
 
@@ -921,9 +921,9 @@ int log_reload_config(const char *config_path)
 
     fclose(fp);
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
     g_logging_state.manager = new_config;
-    agentrt_mutex_unlock(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
 
     if (changes > 0) {
         /* BAN-70 EXEMPT: logging module - diagnostic config reload notification */
@@ -931,7 +931,7 @@ int log_reload_config(const char *config_path)
                 changes);
     }
 
-    return changes > 0 ? 0 : AGENTRT_ENOENT;
+    return changes > 0 ? 0 : AIRY_ENOENT;
 }
 
 void log_flush(void)
@@ -961,15 +961,15 @@ bool log_should_sample(log_level_t level)
 
     switch (level) {
     case LOG_LEVEL_DEBUG: {
-        counter = AGENTRT_ATOMIC_FETCH_ADD(&g_sample_counter_debug, 1);
+        counter = AIRY_ATOMIC_FETCH_ADD(&g_sample_counter_debug, 1);
         return (counter % 1000) == 0; /* 0.1% */
     }
     case LOG_LEVEL_INFO: {
-        counter = AGENTRT_ATOMIC_FETCH_ADD(&g_sample_counter_info, 1);
+        counter = AIRY_ATOMIC_FETCH_ADD(&g_sample_counter_info, 1);
         return (counter % 100) == 0; /* 1% */
     }
     case LOG_LEVEL_WARN: {
-        counter = AGENTRT_ATOMIC_FETCH_ADD(&g_sample_counter_warn, 1);
+        counter = AIRY_ATOMIC_FETCH_ADD(&g_sample_counter_warn, 1);
         return (counter % 10) == 0; /* 10% */
     }
     case LOG_LEVEL_ERROR:
@@ -986,39 +986,39 @@ void log_cleanup(void)
         return;
     }
 
-    agentrt_mutex_lock(&g_logging_state.mutex);
+    airy_mtx_lock(&g_logging_state.mutex);
 
     g_tls_trace_id[0] = '\0';
     g_tls_span_id[0] = '\0';
 
     for (size_t i = 0; i < g_logging_state.module_level_count; i++) {
-        AGENTRT_MEMSET(&g_logging_state.module_levels[i], 0, sizeof(g_logging_state.module_levels[i]));
+        AIRY_MEMSET(&g_logging_state.module_levels[i], 0, sizeof(g_logging_state.module_levels[i]));
     }
     g_logging_state.module_level_count = 0;
 
     g_logging_state.initialized = false;
 
-    agentrt_mutex_unlock(&g_logging_state.mutex);
-    agentrt_mutex_destroy(&g_logging_state.mutex);
+    airy_mtx_unlock(&g_logging_state.mutex);
+    airy_mtx_destroy(&g_logging_state.mutex);
 
     if (g_throttle_mutex_init) {
-        agentrt_mutex_destroy(&g_throttle_mutex);
+        airy_mtx_destroy(&g_throttle_mutex);
         g_throttle_mutex_init = false;
     }
 
     /* 关闭日志文件并销毁文件互斥锁（合并自 logging_common.c） */
     if (g_log_file_mutex_init) {
-        agentrt_mutex_lock(&g_log_file_mutex);
+        airy_mtx_lock(&g_log_file_mutex);
         if (g_log_file) {
             fflush(g_log_file);
             fclose(g_log_file);
             g_log_file = NULL;
         }
         g_log_file_current_size = 0;
-        agentrt_mutex_unlock(&g_log_file_mutex);
-        agentrt_mutex_destroy(&g_log_file_mutex);
+        airy_mtx_unlock(&g_log_file_mutex);
+        airy_mtx_destroy(&g_log_file_mutex);
         g_log_file_mutex_init = false;
     }
 
-    AGENTRT_MEMSET(&g_logging_state, 0, sizeof(g_logging_state));
+    AIRY_MEMSET(&g_logging_state, 0, sizeof(g_logging_state));
 }

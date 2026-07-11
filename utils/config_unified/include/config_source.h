@@ -9,8 +9,8 @@
  * 支持多种配置源：文件、环境变量、命令行参数、内存、网络等。
  */
 
-#ifndef AGENTRT_CONFIG_SOURCE_H
-#define AGENTRT_CONFIG_SOURCE_H
+#ifndef AIRY_RT_CONFIG_SOURCE_H
+#define AIRY_RT_CONFIG_SOURCE_H
 
 #include "core_config.h"
 
@@ -63,7 +63,7 @@ typedef struct {
 /* ==================== 环境变量配置源选项 ==================== */
 
 typedef struct {
-    const char *prefix;     // 环境变量前缀（如"AGENTRT_"）
+    const char *prefix;     // 环境变量前缀（如"AIRY_"）
     bool case_sensitive;    // 是否区分大小写
     const char *separator;  // 键分隔符（默认为"_"）
     bool expand_vars;       // 是否展开变量引用（如${VAR}）
@@ -306,4 +306,4 @@ char *config_source_create_name(config_source_type_t type, const char *identifie
 }
 #endif
 
-#endif /* AGENTRT_CONFIG_SOURCE_H */
+#endif /* AIRY_RT_CONFIG_SOURCE_H */

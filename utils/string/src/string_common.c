@@ -63,11 +63,11 @@ char *string_common_strlcat(char *dest, size_t dest_size, const char *src)
 char *string_common_strdup(const char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t len = strlen(str) + 1;
-    char *dup = (char *)AGENTRT_MALLOC(len);
+    char *dup = (char *)AIRY_MALLOC(len);
     if (dup) {
         __builtin_memcpy(dup, str, len);
     }
@@ -80,11 +80,11 @@ char *string_common_strdup(const char *str)
 char *string_common_strndup(const char *str, size_t n)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t len = strnlen(str, n);
-    char *dup = (char *)AGENTRT_MALLOC(len + 1);
+    char *dup = (char *)AIRY_MALLOC(len + 1);
     if (dup) {
         __builtin_memcpy(dup, str, len);
         dup[len] = '\0';
@@ -151,7 +151,7 @@ char *string_common_strstr(const char *haystack, const char *needle)
 char **string_common_strsplit(const char *str, const char *delim)
 {
     if (!str || !delim) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t count = 0;
@@ -166,9 +166,9 @@ char **string_common_strsplit(const char *str, const char *delim)
 
     // 分配字符串数组
     char **arr;
-    arr = agentrt_malloc_array((size_t)(count + 1), sizeof(char *));
+    arr = airy_malloc_array((size_t)(count + 1), sizeof(char *));
     if (!arr) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 分割字符串
@@ -200,9 +200,9 @@ void string_common_strsplit_free(char **arr)
     }
 
     for (size_t i = 0; arr[i]; i++) {
-        AGENTRT_FREE(arr[i]);
+        AIRY_FREE(arr[i]);
     }
-    AGENTRT_FREE(arr);
+    AIRY_FREE(arr);
 }
 
 /**
@@ -363,7 +363,7 @@ size_t string_common_ftoa(double value, int precision, char *buf, size_t buf_siz
 char *string_common_strtrim(char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 去除开头空白字符
@@ -388,7 +388,7 @@ char *string_common_strtrim(char *str)
 char *string_common_strtolower(char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     char *ptr = str;
@@ -406,7 +406,7 @@ char *string_common_strtolower(char *str)
 char *string_common_strtoupper(char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     char *ptr = str;

@@ -11,8 +11,8 @@
  * 遵循 AgentRT 安全编码规范 3.2.2 节要求。
  */
 
-#ifndef AGENTRT_SAFE_STRING_UTILS_H
-#define AGENTRT_SAFE_STRING_UTILS_H
+#ifndef AIRY_RT_SAFE_STRING_UTILS_H
+#define AIRY_RT_SAFE_STRING_UTILS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -74,4 +74,4 @@ void *safe_realloc(void *ptr, size_t new_size, const char *purpose);
 }
 #endif
 
-#endif /* AGENTRT_SAFE_STRING_UTILS_H */
+#endif /* AIRY_RT_SAFE_STRING_UTILS_H */

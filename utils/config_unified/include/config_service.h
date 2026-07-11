@@ -13,8 +13,8 @@
  * 5. 配置模板和变量展开
  */
 
-#ifndef AGENTRT_CONFIG_SERVICE_H
-#define AGENTRT_CONFIG_SERVICE_H
+#ifndef AIRY_RT_CONFIG_SERVICE_H
+#define AIRY_RT_CONFIG_SERVICE_H
 
 #include "config_source.h"
 #include "core_config.h"
@@ -445,4 +445,4 @@ config_error_t config_service_get_status(config_context_t *ctx, char *status_jso
 }
 #endif
 
-#endif /* AGENTRT_CONFIG_SERVICE_H */
+#endif /* AIRY_RT_CONFIG_SERVICE_H */

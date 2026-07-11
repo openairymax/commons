@@ -64,7 +64,7 @@ strategy/
 | `strategy_validate_weighted_config(config)` | 验证加权配置有效性 |
 | `strategy_normalize_weights(config)` | 归一化权重（确保总和为 1.0） |
 | `strategy_cleanup_data(data, free_func)` | 通用数据清理函数 |
-| `strategy_generate_name(base_name, suffix)` | 生成策略名称（需 `AGENTRT_FREE` 释放） |
+| `strategy_generate_name(base_name, suffix)` | 生成策略名称（需 `AIRY_FREE` 释放） |
 
 ## 评分算法
 
@@ -141,7 +141,7 @@ strategy_select_best_agent(nodes, 3, &lb_config, &lb_result);
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AGENTRT_MALLOC`/`AGENTRT_FREE`） |
+| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`/`AIRY_FREE`） |
 | `string_compat.h` | 字符串操作兼容层 |
 | `<string.h>` | 字符串操作 |
 

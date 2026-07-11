@@ -43,7 +43,7 @@ typedef struct tcache_slot {
 /**
  * @brief tcache 内部结构
  */
-struct agentrt_tcache {
+struct airy_tcache {
     memory_pool_t *pool;            /**< 关联的全局内存池 */
     tcache_slot_t *head;            /**< 缓存链表头（栈顶） */
     size_t         cached_count;    /**< 当前缓存块数 */
@@ -64,7 +64,7 @@ struct agentrt_tcache {
  * 生命周期 API 实现
  * ============================================================================ */
 
-agentrt_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached)
+airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached)
 {
     if (!pool) return NULL;
 
@@ -78,12 +78,12 @@ agentrt_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t m
         batch_size = max_cached;
     }
 
-    AGENTRT_LOG_INFO("tcache: tcache_create (batch_size=%zu, max_cached=%zu)",
+    AIRY_LOG_INFO("tcache: tcache_create (batch_size=%zu, max_cached=%zu)",
                      batch_size, max_cached);
 
-    agentrt_tcache_t *tc = (agentrt_tcache_t *)AGENTRT_CALLOC(1, sizeof(agentrt_tcache_t));
+    airy_tcache_t *tc = (airy_tcache_t *)AIRY_CALLOC(1, sizeof(airy_tcache_t));
     if (!tc) {
-        AGENTRT_LOG_ERROR("tcache: tcache_create failed to alloc tcache struct");
+        AIRY_LOG_ERROR("tcache: tcache_create failed to alloc tcache struct");
         return NULL;
     }
 
@@ -95,17 +95,17 @@ agentrt_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t m
 
     /* 预填充一部分块以提高首次分配性能 */
     size_t filled = tcache_batch_fill(tc);
-    AGENTRT_LOG_INFO("tcache: tcache_create ok (tc=%p, pre_filled=%zu, cached=%zu)",
+    AIRY_LOG_INFO("tcache: tcache_create ok (tc=%p, pre_filled=%zu, cached=%zu)",
                      (void *)tc, filled, tc->cached_count);
 
     return tc;
 }
 
-void tcache_destroy(agentrt_tcache_t *tc)
+void tcache_destroy(airy_tcache_t *tc)
 {
     if (!tc) return;
 
-    AGENTRT_LOG_INFO("tcache: tcache_destroy (tc=%p, cached=%zu, allocs=%" PRIu64 ", hits=%" PRIu64
+    AIRY_LOG_INFO("tcache: tcache_destroy (tc=%p, cached=%zu, allocs=%" PRIu64 ", hits=%" PRIu64
                      ", miss=%" PRIu64 ", fill=%" PRIu64 ", flush=%" PRIu64 ", bypass=%" PRIu64 ")",
                      (void *)tc, tc->cached_count,
                      tc->alloc_count, tc->hit_count, tc->miss_count,
@@ -114,16 +114,16 @@ void tcache_destroy(agentrt_tcache_t *tc)
     /* 将所有缓存块归还到全局池 */
     tcache_flush_all(tc);
 
-    AGENTRT_FREE(tc);
+    AIRY_FREE(tc);
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_destroy done");
+    AIRY_LOG_DEBUG("tcache: tcache_destroy done");
 }
 
 /* ============================================================================
  * 分配 / 释放 API 实现
  * ============================================================================ */
 
-void *tcache_alloc(agentrt_tcache_t *tc)
+void *tcache_alloc(airy_tcache_t *tc)
 {
     if (!tc) return NULL;
 
@@ -135,14 +135,14 @@ void *tcache_alloc(agentrt_tcache_t *tc)
         tc->head = slot->next;
         tc->cached_count--;
         tc->hit_count++;
-        AGENTRT_LOG_DEBUG("tcache: tcache_alloc HIT (tc=%p, ptr=%p, cached=%zu/%zu, alloc#=%" PRIu64 ")",
+        AIRY_LOG_DEBUG("tcache: tcache_alloc HIT (tc=%p, ptr=%p, cached=%zu/%zu, alloc#=%" PRIu64 ")",
                           (void *)tc, (void *)slot, tc->cached_count, tc->max_cached, tc->alloc_count);
         return (void *)slot;
     }
 
     /* 缓存为空，从全局池批量填充 */
     tc->miss_count++;
-    AGENTRT_LOG_DEBUG("tcache: tcache_alloc MISS (tc=%p, cached=0, miss#=%" PRIu64 ")",
+    AIRY_LOG_DEBUG("tcache: tcache_alloc MISS (tc=%p, cached=0, miss#=%" PRIu64 ")",
                       (void *)tc, tc->miss_count);
 
     size_t filled = tcache_batch_fill(tc);
@@ -150,7 +150,7 @@ void *tcache_alloc(agentrt_tcache_t *tc)
         /* 全局池也空了，直接尝试从池获取一块 */
         tc->bypass_count++;
         void *ptr = memory_pool_alloc(tc->pool);
-        AGENTRT_LOG_WARN("tcache: tcache_alloc BYPASS (tc=%p, ptr=%p, bypass#=%" PRIu64 ")",
+        AIRY_LOG_WARN("tcache: tcache_alloc BYPASS (tc=%p, ptr=%p, bypass#=%" PRIu64 ")",
                          (void *)tc, ptr, tc->bypass_count);
         return ptr;
     }
@@ -160,12 +160,12 @@ void *tcache_alloc(agentrt_tcache_t *tc)
     tc->head = slot->next;
     tc->cached_count--;
     tc->hit_count++;
-    AGENTRT_LOG_DEBUG("tcache: tcache_alloc FILLED (tc=%p, ptr=%p, filled=%zu, cached=%zu/%zu)",
+    AIRY_LOG_DEBUG("tcache: tcache_alloc FILLED (tc=%p, ptr=%p, filled=%zu, cached=%zu/%zu)",
                       (void *)tc, (void *)slot, filled, tc->cached_count, tc->max_cached);
     return (void *)slot;
 }
 
-void tcache_free(agentrt_tcache_t *tc, void *ptr)
+void tcache_free(airy_tcache_t *tc, void *ptr)
 {
     if (!tc || !ptr) return;
 
@@ -176,7 +176,7 @@ void tcache_free(agentrt_tcache_t *tc, void *ptr)
         /* 缓存满，批量归还到全局池 */
         size_t flushed = tcache_batch_flush(tc);
         (void)flushed; /* 用于日志，非 DEBUG 模式下避免 unused 警告 */
-        AGENTRT_LOG_DEBUG("tcache: tcache_free FLUSH (tc=%p, flushed=%zu, cached=%zu/%zu)",
+        AIRY_LOG_DEBUG("tcache: tcache_free FLUSH (tc=%p, flushed=%zu, cached=%zu/%zu)",
                           (void *)tc, flushed, tc->cached_count, tc->max_cached);
     }
 
@@ -186,7 +186,7 @@ void tcache_free(agentrt_tcache_t *tc, void *ptr)
     tc->head = slot;
     tc->cached_count++;
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_free ok (tc=%p, ptr=%p, cached=%zu/%zu, free#=%" PRIu64 ")",
+    AIRY_LOG_DEBUG("tcache: tcache_free ok (tc=%p, ptr=%p, cached=%zu/%zu, free#=%" PRIu64 ")",
                       (void *)tc, ptr, tc->cached_count, tc->max_cached, tc->free_count);
 }
 
@@ -194,7 +194,7 @@ void tcache_free(agentrt_tcache_t *tc, void *ptr)
  * 批量操作实现
  * ============================================================================ */
 
-size_t tcache_batch_fill(agentrt_tcache_t *tc)
+size_t tcache_batch_fill(airy_tcache_t *tc)
 {
     if (!tc) return 0;
 
@@ -204,7 +204,7 @@ size_t tcache_batch_fill(agentrt_tcache_t *tc)
 
     size_t batch = (tc->batch_size < remaining) ? tc->batch_size : remaining;
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_batch_fill START (tc=%p, batch=%zu, remaining=%zu)",
+    AIRY_LOG_DEBUG("tcache: tcache_batch_fill START (tc=%p, batch=%zu, remaining=%zu)",
                       (void *)tc, batch, remaining);
 
     /* P1.20.3: 使用 pool 批量分配 API，一次锁获取多个块 */
@@ -223,13 +223,13 @@ size_t tcache_batch_fill(agentrt_tcache_t *tc)
         tc->batch_fill_count++;
     }
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_batch_fill DONE (tc=%p, filled=%zu/%zu, cached=%zu/%zu, fill#=%" PRIu64 ")",
+    AIRY_LOG_DEBUG("tcache: tcache_batch_fill DONE (tc=%p, filled=%zu/%zu, cached=%zu/%zu, fill#=%" PRIu64 ")",
                       (void *)tc, filled, batch, tc->cached_count, tc->max_cached, tc->batch_fill_count);
 
     return filled;
 }
 
-size_t tcache_batch_flush(agentrt_tcache_t *tc)
+size_t tcache_batch_flush(airy_tcache_t *tc)
 {
     if (!tc) return 0;
 
@@ -248,7 +248,7 @@ size_t tcache_batch_flush(agentrt_tcache_t *tc)
         to_flush = tc->batch_size;
     }
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_batch_flush START (tc=%p, to_flush=%zu, cached=%zu/%zu)",
+    AIRY_LOG_DEBUG("tcache: tcache_batch_flush START (tc=%p, to_flush=%zu, cached=%zu/%zu)",
                       (void *)tc, to_flush, tc->cached_count, tc->max_cached);
 
     /* P1.20.3: 从 tcache 链表取出块，然后使用 pool 批量释放 API */
@@ -269,13 +269,13 @@ size_t tcache_batch_flush(agentrt_tcache_t *tc)
         tc->batch_flush_count++;
     }
 
-    AGENTRT_LOG_DEBUG("tcache: tcache_batch_flush DONE (tc=%p, flushed=%zu/%zu, cached=%zu, flush#=%" PRIu64 ")",
+    AIRY_LOG_DEBUG("tcache: tcache_batch_flush DONE (tc=%p, flushed=%zu/%zu, cached=%zu, flush#=%" PRIu64 ")",
                       (void *)tc, flushed, to_flush, tc->cached_count, tc->batch_flush_count);
 
     return flushed;
 }
 
-void tcache_flush_all(agentrt_tcache_t *tc)
+void tcache_flush_all(airy_tcache_t *tc)
 {
     if (!tc) return;
 
@@ -292,7 +292,7 @@ void tcache_flush_all(agentrt_tcache_t *tc)
  * 查询 API 实现
  * ============================================================================ */
 
-bool tcache_get_stats(agentrt_tcache_t *tc, tcache_stats_t *stats)
+bool tcache_get_stats(airy_tcache_t *tc, tcache_stats_t *stats)
 {
     if (!tc || !stats) return false;
 
@@ -315,13 +315,13 @@ bool tcache_get_stats(agentrt_tcache_t *tc, tcache_stats_t *stats)
     return true;
 }
 
-size_t tcache_cached_count(agentrt_tcache_t *tc)
+size_t tcache_cached_count(airy_tcache_t *tc)
 {
     if (!tc) return 0;
     return tc->cached_count;
 }
 
-bool tcache_is_full(agentrt_tcache_t *tc)
+bool tcache_is_full(airy_tcache_t *tc)
 {
     if (!tc) return false;
     return tc->cached_count >= tc->max_cached;

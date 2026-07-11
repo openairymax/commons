@@ -126,10 +126,10 @@ struct config_version_manager {
 static char *duplicate_string(const char *str)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     size_t len = strlen(str);
-    char *copy = (char *)AGENTRT_MALLOC(len + 1);
+    char *copy = (char *)AIRY_MALLOC(len + 1);
     if (copy) {
         __builtin_memcpy(copy, str, len);
         copy[len] = '\0';
@@ -153,7 +153,7 @@ static bool add_schema_error(config_schema_t *schema, const char *format, ...)
     // 确保错误数组有足够容
     if (schema->error_count >= schema->error_capacity) {
         size_t new_capacity = schema->error_capacity == 0 ? 8 : schema->error_capacity * 2;
-        char **new_errors = (char **)AGENTRT_REALLOC(schema->errors, new_capacity * sizeof(char *));
+        char **new_errors = (char **)AIRY_REALLOC(schema->errors, new_capacity * sizeof(char *));
         if (!new_errors)
             return false;
 
@@ -195,7 +195,7 @@ static void clear_schema_errors(config_schema_t *schema)
 
     for (size_t i = 0; i < schema->error_count; i++) {
         if (schema->errors[i]) {
-            AGENTRT_FREE(schema->errors[i]);
+            AIRY_FREE(schema->errors[i]);
             schema->errors[i] = NULL;
         }
     }
@@ -302,13 +302,13 @@ static int find_schema_item(const config_schema_t *schema, const char *key)
 config_validator_t *config_validator_create(const validator_options_t *options)
 {
     if (!options) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     config_validator_t *validator =
-        (config_validator_t *)AGENTRT_CALLOC(1, sizeof(config_validator_t));
+        (config_validator_t *)AIRY_CALLOC(1, sizeof(config_validator_t));
     if (!validator) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     validator->type = options->type;
@@ -319,19 +319,19 @@ config_validator_t *config_validator_create(const validator_options_t *options)
     if (options->pattern) {
         validator->pattern = duplicate_string(options->pattern);
         if (!validator->pattern) {
-            AGENTRT_FREE(validator);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_FREE(validator);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     }
 
     // 复制枚举
     if (options->enum_values && options->enum_count > 0) {
-        validator->enum_values = (char **)AGENTRT_CALLOC(options->enum_count, sizeof(char *));
+        validator->enum_values = (char **)AIRY_CALLOC(options->enum_count, sizeof(char *));
         if (!validator->enum_values) {
             if (validator->pattern)
-                AGENTRT_FREE(validator->pattern);
-            AGENTRT_FREE(validator);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+                AIRY_FREE(validator->pattern);
+            AIRY_FREE(validator);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
         for (size_t i = 0; i < options->enum_count; i++) {
@@ -341,13 +341,13 @@ config_validator_t *config_validator_create(const validator_options_t *options)
                     // 清理已分配的内存
                     for (size_t j = 0; j < i; j++) {
                         if (validator->enum_values[j])
-                            AGENTRT_FREE(validator->enum_values[j]);
+                            AIRY_FREE(validator->enum_values[j]);
                     }
-                    AGENTRT_FREE(validator->enum_values);
+                    AIRY_FREE(validator->enum_values);
                     if (validator->pattern)
-                        AGENTRT_FREE(validator->pattern);
-                    AGENTRT_FREE(validator);
-                    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+                        AIRY_FREE(validator->pattern);
+                    AIRY_FREE(validator);
+                    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
                 }
             }
         }
@@ -364,20 +364,20 @@ void config_validator_destroy(config_validator_t *validator)
         return;
 
     if (validator->pattern)
-        AGENTRT_FREE(validator->pattern);
+        AIRY_FREE(validator->pattern);
 
     if (validator->enum_values) {
         for (size_t i = 0; i < validator->enum_count; i++) {
             if (validator->enum_values[i])
-                AGENTRT_FREE(validator->enum_values[i]);
+                AIRY_FREE(validator->enum_values[i]);
         }
-        AGENTRT_FREE(validator->enum_values);
+        AIRY_FREE(validator->enum_values);
     }
 
     if (validator->error_message)
-        AGENTRT_FREE(validator->error_message);
+        AIRY_FREE(validator->error_message);
 
-    AGENTRT_FREE(validator);
+    AIRY_FREE(validator);
 }
 
 bool config_validator_validate(config_validator_t *validator, const char *key,
@@ -401,7 +401,7 @@ bool config_validator_validate(config_validator_t *validator, const char *key,
                 min_len = sizeof(min_buf) - 1;
             __builtin_memcpy(min_buf, validator->pattern, min_len);
             min_buf[min_len] = '\0';
-            AGENTRT_STRNCPY_TERM(max_buf, comma + 1, sizeof(max_buf));
+            AIRY_STRNCPY_TERM(max_buf, comma + 1, sizeof(max_buf));
             max_buf[sizeof(max_buf) - 1] = '\0';
             return validate_range(value, min_buf, max_buf);
         }
@@ -450,7 +450,7 @@ bool config_validator_validate(config_validator_t *validator, const char *key,
 config_validator_t *config_validator_create_range(const char *min, const char *max)
 {
     if (!min || !max) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_RANGE,
@@ -462,9 +462,9 @@ config_validator_t *config_validator_create_range(const char *min, const char *m
 
     // 构建范围模式字符?"min,max"
     size_t pattern_len = strlen(min) + strlen(max) + 2;
-    char *pattern = (char *)AGENTRT_MALLOC(pattern_len);
+    char *pattern = (char *)AIRY_MALLOC(pattern_len);
     if (!pattern) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     snprintf(pattern, pattern_len, "%s,%s", min, max);
@@ -472,14 +472,14 @@ config_validator_t *config_validator_create_range(const char *min, const char *m
 
     config_validator_t *validator = config_validator_create(&options);
 
-    AGENTRT_FREE(pattern);
+    AIRY_FREE(pattern);
     return validator;
 }
 
 config_validator_t *config_validator_create_regex(const char *pattern)
 {
     if (!pattern) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_REGEX,
@@ -495,7 +495,7 @@ config_validator_t *config_validator_create_regex(const char *pattern)
 config_validator_t *config_validator_create_enum(const char **values, size_t count)
 {
     if (!values || count == 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
         }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_ENUM,
@@ -513,38 +513,38 @@ config_validator_t *config_validator_create_enum(const char **values, size_t cou
 config_schema_t *config_schema_create(const char *name)
 {
     if (!name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
-    config_schema_t *schema = (config_schema_t *)AGENTRT_CALLOC(1, sizeof(config_schema_t));
+    config_schema_t *schema = (config_schema_t *)AIRY_CALLOC(1, sizeof(config_schema_t));
     if (!schema) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     schema->name = duplicate_string(name);
     if (!schema->name) {
-        AGENTRT_FREE(schema);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(schema);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 初始容量
     schema->capacity = 16;
     schema->items =
-        (schema_item_internal_t *)AGENTRT_CALLOC(schema->capacity, sizeof(schema_item_internal_t));
+        (schema_item_internal_t *)AIRY_CALLOC(schema->capacity, sizeof(schema_item_internal_t));
     if (!schema->items) {
-        AGENTRT_FREE(schema->name);
-        AGENTRT_FREE(schema);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(schema->name);
+        AIRY_FREE(schema);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     schema->count = 0;
     schema->error_capacity = 8;
-    schema->errors = (char **)AGENTRT_CALLOC(schema->error_capacity, sizeof(char *));
+    schema->errors = (char **)AIRY_CALLOC(schema->error_capacity, sizeof(char *));
     if (!schema->errors) {
-        AGENTRT_FREE(schema->items);
-        AGENTRT_FREE(schema->name);
-        AGENTRT_FREE(schema);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(schema->items);
+        AIRY_FREE(schema->name);
+        AIRY_FREE(schema);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     schema->error_count = 0;
@@ -558,30 +558,30 @@ void config_schema_destroy(config_schema_t *schema)
         return;
 
     if (schema->name)
-        AGENTRT_FREE(schema->name);
+        AIRY_FREE(schema->name);
 
     // 释放Schema
     for (size_t i = 0; i < schema->count; i++) {
         schema_item_internal_t *item = &schema->items[i];
         if (item->key)
-            AGENTRT_FREE(item->key);
+            AIRY_FREE(item->key);
         if (item->description)
-            AGENTRT_FREE(item->description);
+            AIRY_FREE(item->description);
         if (item->default_value)
-            AGENTRT_FREE(item->default_value);
+            AIRY_FREE(item->default_value);
         if (item->validator)
             config_validator_destroy(item->validator);
     }
 
     if (schema->items)
-        AGENTRT_FREE(schema->items);
+        AIRY_FREE(schema->items);
 
     // 释放错误信息
     clear_schema_errors(schema);
     if (schema->errors)
-        AGENTRT_FREE(schema->errors);
+        AIRY_FREE(schema->errors);
 
-    AGENTRT_FREE(schema);
+    AIRY_FREE(schema);
 }
 
 config_error_t config_schema_add_item(config_schema_t *schema, const config_schema_item_t *item)
@@ -597,7 +597,7 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
     // 确保有足够容
     if (schema->count >= schema->capacity) {
         size_t new_capacity = schema->capacity * 2;
-        schema_item_internal_t *new_items = (schema_item_internal_t *)AGENTRT_REALLOC(
+        schema_item_internal_t *new_items = (schema_item_internal_t *)AIRY_REALLOC(
             schema->items, new_capacity * sizeof(schema_item_internal_t));
         if (!new_items)
             return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -608,7 +608,7 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
 
     // 复制Schema
     schema_item_internal_t *new_item = &schema->items[schema->count];
-    AGENTRT_MEMSET(new_item, 0, sizeof(schema_item_internal_t));
+    AIRY_MEMSET(new_item, 0, sizeof(schema_item_internal_t));
 
     new_item->key = duplicate_string(item->key);
     if (!new_item->key)
@@ -620,7 +620,7 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
     if (item->description) {
         new_item->description = duplicate_string(item->description);
         if (!new_item->description) {
-            AGENTRT_FREE(new_item->key);
+            AIRY_FREE(new_item->key);
             return CONFIG_ERROR_OUT_OF_MEMORY;
         }
     }
@@ -629,8 +629,8 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
         new_item->default_value = duplicate_string(item->default_value);
         if (!new_item->default_value) {
             if (new_item->description)
-                AGENTRT_FREE(new_item->description);
-            AGENTRT_FREE(new_item->key);
+                AIRY_FREE(new_item->description);
+            AIRY_FREE(new_item->key);
             return CONFIG_ERROR_OUT_OF_MEMORY;
         }
     }
@@ -708,7 +708,7 @@ bool config_schema_validate(config_schema_t *schema, const config_context_t *ctx
 const char *config_schema_get_error(config_schema_t *schema, int index)
 {
     if (!schema || index < 0 || (size_t)index >= schema->error_count) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     return schema->errors[index];
@@ -779,13 +779,13 @@ config_hot_reload_manager_t *
 config_hot_reload_manager_create(config_context_t *ctx, config_source_manager_t *source_manager)
 {
     if (!ctx || !source_manager) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     config_hot_reload_manager_t *manager =
-        (config_hot_reload_manager_t *)AGENTRT_CALLOC(1, sizeof(config_hot_reload_manager_t));
+        (config_hot_reload_manager_t *)AIRY_CALLOC(1, sizeof(config_hot_reload_manager_t));
     if (!manager) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     manager->ctx = ctx;
@@ -797,22 +797,22 @@ config_hot_reload_manager_create(config_context_t *ctx, config_source_manager_t 
 
     // 初始回调容量
     manager->callback_capacity = 8;
-    manager->callbacks = (change_callback_item_t *)AGENTRT_CALLOC(manager->callback_capacity,
+    manager->callbacks = (change_callback_item_t *)AIRY_CALLOC(manager->callback_capacity,
                                                                   sizeof(change_callback_item_t));
     if (!manager->callbacks) {
-        AGENTRT_FREE(manager);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(manager);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     manager->callback_count = 0;
     manager->thread_handle = NULL;
-    manager->lock = (void *)AGENTRT_CALLOC(1, sizeof(agentrt_mutex_t));
+    manager->lock = (void *)AIRY_CALLOC(1, sizeof(airy_mtx_t));
     if (!manager->lock) {
-        AGENTRT_FREE(manager->callbacks);
-        AGENTRT_FREE(manager);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(manager->callbacks);
+        AIRY_FREE(manager);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
-    agentrt_mutex_init((agentrt_mutex_t *)manager->lock);
+    airy_mtx_init((airy_mtx_t *)manager->lock);
 
     return manager;
 }
@@ -827,16 +827,16 @@ void config_hot_reload_manager_destroy(config_hot_reload_manager_t *manager)
     for (size_t i = 0; i < manager->callback_count; i++) {
         change_callback_item_t *cb = &manager->callbacks[i];
         if (cb->key)
-            AGENTRT_FREE(cb->key);
+            AIRY_FREE(cb->key);
     }
 
     if (manager->callbacks)
-        AGENTRT_FREE(manager->callbacks);
+        AIRY_FREE(manager->callbacks);
     if (manager->lock) {
-        agentrt_mutex_destroy((agentrt_mutex_t *)manager->lock);
-        AGENTRT_FREE(manager->lock);
+        airy_mtx_destroy((airy_mtx_t *)manager->lock);
+        AIRY_FREE(manager->lock);
     }
-    AGENTRT_FREE(manager);
+    AIRY_FREE(manager);
 }
 
 config_error_t config_hot_reload_register_callback(config_hot_reload_manager_t *manager,
@@ -849,7 +849,7 @@ config_error_t config_hot_reload_register_callback(config_hot_reload_manager_t *
     // 确保有足够容
     if (manager->callback_count >= manager->callback_capacity) {
         size_t new_capacity = manager->callback_capacity * 2;
-        change_callback_item_t *new_callbacks = (change_callback_item_t *)AGENTRT_REALLOC(
+        change_callback_item_t *new_callbacks = (change_callback_item_t *)AIRY_REALLOC(
             manager->callbacks, new_capacity * sizeof(change_callback_item_t));
         if (!new_callbacks)
             return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -887,14 +887,14 @@ config_error_t config_hot_reload_start(config_hot_reload_manager_t *manager,
     manager->running = true;
 
     if (manager->thread_handle == NULL) {
-        agentrt_thread_t *thread = AGENTRT_MALLOC(sizeof(agentrt_thread_t));
+        airy_thread_t *thread = AIRY_MALLOC(sizeof(airy_thread_t));
         if (!thread) {
             manager->running = false;
             return CONFIG_ERROR_OUT_OF_MEMORY;
         }
-        int rc = agentrt_thread_create(thread, config_hot_reload_thread_func, manager);
+        int rc = airy_thread_create(thread, config_hot_reload_thread_func, manager);
         if (rc != 0) {
-            AGENTRT_FREE(thread);
+            AIRY_FREE(thread);
             manager->running = false;
             return CONFIG_ERROR_THREAD;
         }
@@ -915,9 +915,9 @@ config_error_t config_hot_reload_stop(config_hot_reload_manager_t *manager)
     manager->running = false;
 
     if (manager->thread_handle) {
-        agentrt_thread_t *thread = (agentrt_thread_t *)manager->thread_handle;
-        agentrt_thread_join(*thread, NULL);
-        AGENTRT_FREE(thread);
+        airy_thread_t *thread = (airy_thread_t *)manager->thread_handle;
+        airy_thread_join(*thread, NULL);
+        AIRY_FREE(thread);
         manager->thread_handle = NULL;
     }
 
@@ -928,7 +928,7 @@ static void *config_hot_reload_thread_func(void *arg)
 {
     config_hot_reload_manager_t *manager = (config_hot_reload_manager_t *)arg;
     if (!manager) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     while (manager->running) {
@@ -947,7 +947,7 @@ static void *config_hot_reload_thread_func(void *arg)
         }
     }
 
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
 }
 
 config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
@@ -958,12 +958,12 @@ config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
     if (!manager->source_manager)
         return CONFIG_ERROR_INVALID_ARG;
 
-    agentrt_mutex_lock((agentrt_mutex_t *)manager->lock);
+    airy_mtx_lock((airy_mtx_t *)manager->lock);
 
     uint32_t debounce = manager->debounce_ms > 0 ? manager->debounce_ms : 500;
     uint64_t now_ms = (uint64_t)(time(NULL) * 1000);
     if (manager->last_trigger_time_ms > 0 && (now_ms - manager->last_trigger_time_ms) < debounce) {
-        agentrt_mutex_unlock((agentrt_mutex_t *)manager->lock);
+        airy_mtx_unlock((airy_mtx_t *)manager->lock);
         return CONFIG_SUCCESS;
     }
 
@@ -977,7 +977,7 @@ config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
                 changed = true;
                 config_error_t err = config_source_load(source, manager->ctx);
                 if (err != CONFIG_SUCCESS) {
-                    agentrt_mutex_unlock((agentrt_mutex_t *)manager->lock);
+                    airy_mtx_unlock((airy_mtx_t *)manager->lock);
                     return err;
                 }
             }
@@ -994,7 +994,7 @@ config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
         }
     }
 
-    agentrt_mutex_unlock((agentrt_mutex_t *)manager->lock);
+    airy_mtx_unlock((airy_mtx_t *)manager->lock);
     return CONFIG_SUCCESS;
 }
 
@@ -1004,9 +1004,9 @@ config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
 #pragma GCC diagnostic ignored "-Wunused-function"
 static char *config_bytes_to_hex(const unsigned char *data, size_t len)
 {
-    char *hex = (char *)AGENTRT_CALLOC(1, len * 2 + 1);
+    char *hex = (char *)AIRY_CALLOC(1, len * 2 + 1);
     if (!hex) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     for (size_t i = 0; i < len; i++) {
         snprintf(hex + i * 2, 3, "%02x", data[i]);
@@ -1018,12 +1018,12 @@ static unsigned char *config_hex_to_bytes(const char *hex, size_t *out_len)
 {
     size_t hex_len = strlen(hex);
     if (hex_len % 2 != 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
         }
     size_t byte_len = hex_len / 2;
-    unsigned char *bytes = (unsigned char *)AGENTRT_CALLOC(1, byte_len);
+    unsigned char *bytes = (unsigned char *)AIRY_CALLOC(1, byte_len);
     if (!bytes) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     for (size_t i = 0; i < byte_len; i++) {
         unsigned int val;
@@ -1031,8 +1031,8 @@ static unsigned char *config_hex_to_bytes(const char *hex, size_t *out_len)
         __builtin_memcpy(hex_byte, hex + i * 2, 2);
         val = (unsigned int)strtol(hex_byte, NULL, 16);
         if (hex_byte[0] == '\0') {
-            AGENTRT_FREE(bytes);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_FREE(bytes);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
         bytes[i] = (unsigned char)val;
     }
@@ -1045,86 +1045,86 @@ static config_value_t *config_encrypt_string_value(const char *plaintext, size_t
                                                    const encryption_config_t *enc)
 {
     if (!plaintext || !enc || !enc->key || enc->key_len < 32 || !enc->iv || enc->iv_len < 12) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
 #ifdef HAVE_OPENSSL
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1) {
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)enc->iv_len, NULL) != 1) {
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     if (EVP_EncryptInit_ex(ctx, NULL, NULL, (const unsigned char *)enc->key,
                            (const unsigned char *)enc->iv) != 1) {
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t ct_max = plaintext_len + 16;
-    unsigned char *ciphertext = (unsigned char *)AGENTRT_CALLOC(1, ct_max);
+    unsigned char *ciphertext = (unsigned char *)AIRY_CALLOC(1, ct_max);
     if (!ciphertext) {
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     int out_len = 0;
     if (EVP_EncryptUpdate(ctx, ciphertext, &out_len, (const unsigned char *)plaintext,
                           (int)plaintext_len) != 1) {
-        AGENTRT_FREE(ciphertext);
+        AIRY_FREE(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     int final_len = 0;
     if (EVP_EncryptFinal_ex(ctx, ciphertext + out_len, &final_len) != 1) {
-        AGENTRT_FREE(ciphertext);
+        AIRY_FREE(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
     size_t ct_len = (size_t)(out_len + final_len);
 
     unsigned char tag[16];
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag) != 1) {
-        AGENTRT_FREE(ciphertext);
+        AIRY_FREE(ciphertext);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     EVP_CIPHER_CTX_free(ctx);
 
     size_t encoded_len = 16 + enc->iv_len + ct_len;
-    unsigned char *encoded = (unsigned char *)AGENTRT_CALLOC(1, encoded_len);
+    unsigned char *encoded = (unsigned char *)AIRY_CALLOC(1, encoded_len);
     if (!encoded) {
-        AGENTRT_FREE(ciphertext);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(ciphertext);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     __builtin_memcpy(encoded, tag, 16);
     __builtin_memcpy(encoded + 16, enc->iv, enc->iv_len);
     __builtin_memcpy(encoded + 16 + enc->iv_len, ciphertext, ct_len);
-    AGENTRT_FREE(ciphertext);
+    AIRY_FREE(ciphertext);
 
     char *hex = config_bytes_to_hex(encoded, encoded_len);
-    AGENTRT_FREE(encoded);
+    AIRY_FREE(encoded);
     if (!hex) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     config_value_t *result = config_value_create_string(hex);
-    AGENTRT_FREE(hex);
+    AIRY_FREE(hex);
     return result;
 #else
     (void)plaintext_len;
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+    AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 #endif
 }
 
@@ -1132,91 +1132,91 @@ static config_value_t *config_decrypt_string_value(const char *hex_data,
                                                    const encryption_config_t *enc)
 {
     if (!hex_data || !enc || !enc->key || enc->key_len < 32) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
 #ifdef HAVE_OPENSSL
     size_t data_len = 0;
     unsigned char *data = config_hex_to_bytes(hex_data, &data_len);
     if (!data || data_len < 16 + 12) {
-        AGENTRT_FREE(data);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(data);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     const unsigned char *tag = data;
     const unsigned char *iv = data + 16;
     size_t iv_len = enc->iv_len > 0 ? enc->iv_len : 12;
     if (16 + iv_len > data_len) {
-        AGENTRT_FREE(data);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_FREE(data);
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
     const unsigned char *ciphertext = data + 16 + iv_len;
     size_t ct_len = data_len - 16 - iv_len;
 
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
-        AGENTRT_FREE(data);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(data);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1) {
-        AGENTRT_FREE(data);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, (int)iv_len, NULL) != 1) {
-        AGENTRT_FREE(data);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     if (EVP_DecryptInit_ex(ctx, NULL, NULL, (const unsigned char *)enc->key, iv) != 1) {
-        AGENTRT_FREE(data);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
-    unsigned char *plaintext = (unsigned char *)AGENTRT_CALLOC(1, ct_len + 1);
+    unsigned char *plaintext = (unsigned char *)AIRY_CALLOC(1, ct_len + 1);
     if (!plaintext) {
-        AGENTRT_FREE(data);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     int out_len = 0;
     if (EVP_DecryptUpdate(ctx, plaintext, &out_len, ciphertext, (int)ct_len) != 1) {
-        AGENTRT_FREE(plaintext);
-        AGENTRT_FREE(data);
+        AIRY_FREE(plaintext);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, (void *)tag) != 1) {
-        AGENTRT_FREE(plaintext);
-        AGENTRT_FREE(data);
+        AIRY_FREE(plaintext);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     int final_len = 0;
     if (EVP_DecryptFinal_ex(ctx, plaintext + out_len, &final_len) != 1) {
-        AGENTRT_FREE(plaintext);
-        AGENTRT_FREE(data);
+        AIRY_FREE(plaintext);
+        AIRY_FREE(data);
         EVP_CIPHER_CTX_free(ctx);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     size_t pt_len = (size_t)(out_len + final_len);
     plaintext[pt_len] = '\0';
 
     EVP_CIPHER_CTX_free(ctx);
-    AGENTRT_FREE(data);
+    AIRY_FREE(data);
     data = NULL;
 
     config_value_t *result = config_value_create_string((const char *)plaintext);
     explicit_bzero(plaintext, ct_len + 1);
-    AGENTRT_FREE(plaintext);
+    AIRY_FREE(plaintext);
     return result;
 #else
     errno = ENOSYS;
@@ -1228,7 +1228,7 @@ config_value_t *config_encrypt_value(const config_value_t *value,
                                      const encryption_config_t *manager)
 {
     if (!value) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     if (!manager || manager->algorithm == ENCRYPTION_NONE) {
         return config_value_clone(value);
@@ -1238,7 +1238,7 @@ config_value_t *config_encrypt_value(const config_value_t *value,
     if (type == CONFIG_TYPE_STRING) {
         const char *str = config_value_get_string(value, NULL);
         if (!str) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
             }
         size_t str_len = strlen(str);
         config_value_t *encrypted = config_encrypt_string_value(str, str_len, manager);
@@ -1252,7 +1252,7 @@ config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
                                      const encryption_config_t *manager)
 {
     if (!encrypted_value) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     if (!manager || manager->algorithm == ENCRYPTION_NONE) {
         return config_value_clone(encrypted_value);
@@ -1262,7 +1262,7 @@ config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
     if (type == CONFIG_TYPE_STRING) {
         const char *hex_data = config_value_get_string(encrypted_value, NULL);
         if (!hex_data) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
             }
         config_value_t *decrypted = config_decrypt_string_value(hex_data, manager);
         return decrypted ? decrypted : config_value_clone(encrypted_value);
@@ -1275,7 +1275,7 @@ config_source_t *config_source_create_encrypted(config_source_t *source,
                                                 const encryption_config_t *manager)
 {
     if (!source) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     if (!manager || manager->algorithm == ENCRYPTION_NONE)
         return source;
@@ -1287,13 +1287,13 @@ config_source_t *config_source_create_encrypted(config_source_t *source,
 config_version_manager_t *config_version_manager_create(config_context_t *ctx, size_t max_versions)
 {
     if (!ctx) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     config_version_manager_t *manager =
-        (config_version_manager_t *)AGENTRT_CALLOC(1, sizeof(config_version_manager_t));
+        (config_version_manager_t *)AIRY_CALLOC(1, sizeof(config_version_manager_t));
     if (!manager) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     manager->ctx = ctx;
@@ -1303,10 +1303,10 @@ config_version_manager_t *config_version_manager_create(config_context_t *ctx, s
     // 初始容量
     manager->capacity = 8;
     manager->versions =
-        (config_version_item_t *)AGENTRT_CALLOC(manager->capacity, sizeof(config_version_item_t));
+        (config_version_item_t *)AIRY_CALLOC(manager->capacity, sizeof(config_version_item_t));
     if (!manager->versions) {
-        AGENTRT_FREE(manager);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(manager);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     manager->count = 0;
@@ -1322,17 +1322,17 @@ void config_version_manager_destroy(config_version_manager_t *manager)
     for (size_t i = 0; i < manager->count; i++) {
         config_version_item_t *version = &manager->versions[i];
         if (version->author)
-            AGENTRT_FREE(version->author);
+            AIRY_FREE(version->author);
         if (version->description)
-            AGENTRT_FREE(version->description);
+            AIRY_FREE(version->description);
         if (version->snapshot) {
             config_context_destroy(version->snapshot);
         }
     }
 
     if (manager->versions)
-        AGENTRT_FREE(manager->versions);
-    AGENTRT_FREE(manager);
+        AIRY_FREE(manager->versions);
+    AIRY_FREE(manager);
 }
 
 uint32_t config_version_create_snapshot(config_version_manager_t *manager, const char *author,
@@ -1344,7 +1344,7 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
     // 确保有足够容
     if (manager->count >= manager->capacity) {
         size_t new_capacity = manager->capacity * 2;
-        config_version_item_t *new_versions = (config_version_item_t *)AGENTRT_REALLOC(
+        config_version_item_t *new_versions = (config_version_item_t *)AIRY_REALLOC(
             manager->versions, new_capacity * sizeof(config_version_item_t));
         if (!new_versions)
             return 0;
@@ -1355,7 +1355,7 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
 
     // 创建版本
     config_version_item_t *version = &manager->versions[manager->count];
-    AGENTRT_MEMSET(version, 0, sizeof(config_version_item_t));
+    AIRY_MEMSET(version, 0, sizeof(config_version_item_t));
 
     version->version = manager->next_version++;
     version->timestamp = (uint64_t)time(NULL);
@@ -1370,7 +1370,7 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
         version->description = duplicate_string(description);
         if (!version->description) {
             if (version->author)
-                AGENTRT_FREE(version->author);
+                AIRY_FREE(version->author);
             return 0;
         }
     }
@@ -1378,9 +1378,9 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
     version->snapshot = config_context_clone(manager->ctx);
     if (!version->snapshot) {
         if (version->author)
-            AGENTRT_FREE(version->author);
+            AIRY_FREE(version->author);
         if (version->description)
-            AGENTRT_FREE(version->description);
+            AIRY_FREE(version->description);
         return 0;
     }
 
@@ -1391,9 +1391,9 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
         // 删除第一个版本（最旧）
         config_version_item_t *oldest = &manager->versions[0];
         if (oldest->author)
-            AGENTRT_FREE(oldest->author);
+            AIRY_FREE(oldest->author);
         if (oldest->description)
-            AGENTRT_FREE(oldest->description);
+            AIRY_FREE(oldest->description);
         if (oldest->snapshot) {
             config_context_destroy(oldest->snapshot);
         }
@@ -1425,9 +1425,9 @@ config_error_t config_version_rollback(config_version_manager_t *manager, uint32
 
             for (size_t j = i + 1; j < manager->count; j++) {
                 if (manager->versions[j].author)
-                    AGENTRT_FREE(manager->versions[j].author);
+                    AIRY_FREE(manager->versions[j].author);
                 if (manager->versions[j].description)
-                    AGENTRT_FREE(manager->versions[j].description);
+                    AIRY_FREE(manager->versions[j].description);
                 if (manager->versions[j].snapshot)
                     config_context_destroy(manager->versions[j].snapshot);
             }
@@ -1704,12 +1704,12 @@ config_context_t *config_service_create(const char *service_name, config_schema_
                                         bool enable_hot_reload, bool enable_encryption)
 {
     if (!service_name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     config_context_t *ctx = config_context_create(service_name);
     if (!ctx) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     if (schema) {

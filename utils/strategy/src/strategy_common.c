@@ -42,7 +42,7 @@ int strategy_select_best_agent(const strategy_agent_info_t *agents, size_t agent
                                const weighted_config_t *manager, strategy_result_t *result)
 {
     if (!agents || !manager || !result || agent_count == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     int best_index = -1;
@@ -129,16 +129,16 @@ void strategy_cleanup_data(void *data, void (*free_func)(void *))
 char *strategy_generate_name(const char *base_name, const char *suffix)
 {
     if (!base_name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t base_len = strlen(base_name);
     size_t suffix_len = suffix ? strlen(suffix) : 0;
     size_t total_len = base_len + suffix_len + 2; /* 1 for '_' and 1 for null terminator */
 
-    char *name = (char *)AGENTRT_MALLOC(total_len);
+    char *name = (char *)AIRY_MALLOC(total_len);
     if (!name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (suffix && suffix_len > 0) {

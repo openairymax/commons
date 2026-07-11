@@ -19,7 +19,7 @@
 
 **commons** is the **foundational layer** of the Airymax agent runtime. It provides the cross-platform, cross-language, cross-module infrastructure that every upper layer — atomic primitives (`atoms`), daemons, the security dome (`cupolas`), the gateway, protocols, and storage — is built upon. commons itself depends on **no** other Airymax module: it is the lowest layer in the dependency graph and the canonical substrate to which the SDK layer ultimately binds back, closing the Airymax cyclic architecture.
 
-As the project's authoritative source for type definitions (`agentrt_types.h`) and the unified error-code contract (`agentrt_error_t`), commons guarantees type consistency across modules and eliminates cross-module type conflicts. Its design goals are: zero-dependency abstraction (platform-agnostic type system and interface definitions keep the kernel decoupled from peripheral code), a unified error contract, high-performance infrastructure (memory pools, lock-free queues, zero-copy pipelines), built-in observability (standardized capture interfaces for logs/metrics/traces), and safe-by-default I/O paths (parameter validation, boundary checks, resource limits).
+As the project's authoritative source for type definitions (`airy_types.h`) and the unified error-code contract (`airy_err_t`), commons guarantees type consistency across modules and eliminates cross-module type conflicts. Its design goals are: zero-dependency abstraction (platform-agnostic type system and interface definitions keep the kernel decoupled from peripheral code), a unified error contract, high-performance infrastructure (memory pools, lock-free queues, zero-copy pipelines), built-in observability (standardized capture interfaces for logs/metrics/traces), and safe-by-default I/O paths (parameter validation, boundary checks, resource limits).
 
 commons builds a single static library `agentrt_common` aggregating 24+ utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
 
@@ -45,7 +45,7 @@ commons/
 │   ├── compat/                  # Platform compatibility headers (stdbool.h, stdint.h)
 │   └── platform.c               # Platform abstraction implementation
 ├── include/                     # Global public headers
-│   └── agentrt_types.h          # Unified type and error-code definitions (authoritative)
+│   └── airy_types.h          # Unified type and error-code definitions (authoritative)
 ├── utils/                       # Tooling module collection (24+ modules)
 │   ├── include/                 # Cross-module shared headers
 │   │   ├── atomic_compat.h      # Cross-platform atomic operation compat layer
@@ -84,19 +84,19 @@ commons/
 
 ## Core Components
 
-### Type system (`agentrt_types.h`)
+### Type system (`airy_types.h`)
 
 The single authoritative source of type definitions for the entire project:
 
 | Type | Description |
 |------|-------------|
-| `agentrt_error_t` | Unified error code type (`int32_t`; negative = error, 0 = success) |
-| `agentrt_ipc_header_t` | Application-level IPC message header (magic/version/type/flags/msg_id) |
-| `agentrt_ipc_message_t` | Application-level IPC message struct (header + payload) |
+| `airy_err_t` | Unified error code type (`int32_t`; negative = error, 0 = success) |
+| `airy_ipc_hdr_t` | Application-level IPC message header (magic/version/type/flags/msg_id) |
+| `airy_ipc_msg_t` | Application-level IPC message struct (header + payload) |
 | `agentrt_task_id_t` | Task ID type (`uint64_t`) |
 | `agentrt_message_id_t` | Message ID type (`uint64_t`) |
 
-The unified error code system (`AGENTRT_E*`) covers 29 standard errors including invalid argument, out of memory, permission denied, timeout, I/O error, protocol error, quota exceeded, etc.
+The unified error code system (`AIRY_E*`) covers 29 standard errors including invalid argument, out of memory, permission denied, timeout, I/O error, protocol error, quota exceeded, etc.
 
 ### Utility modules (24+)
 
@@ -133,7 +133,7 @@ The unified error code system (`AGENTRT_E*`) covers 29 standard errors including
 
 - **Platform detection** — auto-detects Linux / Windows / macOS.
 - **Filesystem** — path normalization and file-operation abstraction.
-- **Threads & sync** — `agentrt_thread_t`, `agentrt_mutex_t`, `agentrt_cond_t`.
+- **Threads & sync** — `airy_thread_t`, `airy_mtx_t`, `airy_cond_t`.
 - **Dynamic library loading** — cross-platform FFI support.
 - **System info** — CPU core count, memory size, process ID.
 
@@ -151,9 +151,9 @@ Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_in
 
 | Macro | Replaces | Description |
 |-------|----------|-------------|
-| `AGENTRT_MALLOC(size)` | `malloc(size)` | Unified allocation |
-| `AGENTRT_CALLOC(num, size)` | `calloc(num, size)` | Unified zero-init allocation |
-| `AGENTRT_FREE(ptr)` | `free(ptr)` | Unified deallocation |
+| `AIRY_MALLOC(size)` | `malloc(size)` | Unified allocation |
+| `AIRY_CALLOC(num, size)` | `calloc(num, size)` | Unified zero-init allocation |
+| `AIRY_FREE(ptr)` | `free(ptr)` | Unified deallocation |
 
 ## Architecture
 
@@ -176,7 +176,7 @@ Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_in
 
   agentrt_common (single static lib)
   ┌────────────────────────────────────────────┐
-  │  agentrt_types.h  (authoritative types)    │
+  │  airy_types.h  (authoritative types)    │
   │  platform/        (OS abstraction)         │
   │  utils/           (24+ util modules)       │
   │   logging sync memory string ipc token     │
@@ -212,9 +212,9 @@ When cJSON/YAML are unavailable, commons degrades gracefully: `AGENTRT_NO_CJSON`
 | Consumer | What they use |
 |----------|---------------|
 | **atoms** | Platform abstraction, memory management, error framework, type system — every atoms sub-module pulls in ~18 commons util modules (logging, sync, platform, error, types, config_unified, observability, ipc, io, cache, cost, memory, string, token, network, security, resource, uuid) |
-| **cupolas** | Type system (`agentrt_types.h`), sync primitives, memory macros, security/resource utilities for the safety dome |
+| **cupolas** | Type system (`airy_types.h`), sync primitives, memory macros, security/resource utilities for the safety dome |
 | **heapstore** | Logging, config_unified, memory pools, sync primitives for heap persistence |
-| **protocols** | Type system (`agentrt_ipc_header_t` / `agentrt_ipc_message_t`), sync, observability, ipc for the AgentsIPC wire format |
+| **protocols** | Type system (`airy_ipc_hdr_t` / `airy_ipc_msg_t`), sync, observability, ipc for the AgentsIPC wire format |
 | **gateway** | Network utilities, token management, logging, config_unified for the gateway daemon |
 | **daemons** | Logging, config_unified, network, token, cost, observability, cognition, strategy — full surface consumed by all 12 daemons |
 | SDK layer | The Python/Go/Rust/TypeScript SDKs ultimately bind back to commons types and error contract, closing the Airymax cyclic architecture |
@@ -253,18 +253,18 @@ cmake --install /tmp/commons-build --prefix /opt/airymax
 
 commons exposes its surface through the unified type header and per-module public headers. The authoritative entry points:
 
-- `include/agentrt_types.h` — unified type and error-code definitions (`agentrt_error_t`, `agentrt_ipc_header_t`, `agentrt_ipc_message_t`, `AGENTRT_E*` codes)
+- `include/airy_types.h` — unified type and error-code definitions (`airy_err_t`, `airy_ipc_hdr_t`, `airy_ipc_msg_t`, `AIRY_E*` codes)
 - `platform/include/platform.h` — platform detection and base definitions
 - `utils/include/atomic_compat.h` — cross-platform atomic operations (11 types, 3 backends)
 - `utils/include/check.h` — generic check macros
 - Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/memory.h`, `utils/string/include/string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network.h`, `utils/security/include/security.h`, `utils/resource/include/resource.h`, `utils/uuid/include/uuid.h`, `utils/cache/include/cache.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc.h`, `utils/execution/include/execution.h`, `utils/cognition/include/cognition.h`, `utils/strategy/include/strategy.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/print.h`, `utils/compliance/include/compliance.h`, `utils/quality/include/quality.h`, `utils/sd/include/sd.h`
 
-Memory macros (`AGENTRT_MALLOC` / `AGENTRT_CALLOC` / `AGENTRT_FREE`) and the strict-compliance unsafe-function poisoning (e.g. `strcpy` replacement via `utils/string`) are project-wide.
+Memory macros (`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`) and the strict-compliance unsafe-function poisoning (e.g. `strcpy` replacement via `utils/string`) are project-wide.
 
 ### Usage example
 
 ```c
-#include "agentrt_types.h"
+#include "airy_types.h"
 #include "logging.h"
 #include "config_unified.h"
 

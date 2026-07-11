@@ -1,7 +1,7 @@
 # commons 模块测试 CMakeLists.txt
 
 # 测试代码豁免 BAN 严格合规：测试允许使用裸 malloc/free/memset 等函数
-add_compile_definitions(AGENTRT_COMPLIANCE_IMPL)
+add_compile_definitions(AIRY_COMPLIANCE_IMPL)
 # 包含单元测试和集成测试
 
 enable_testing()
@@ -48,13 +48,13 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/network/include
         ${COMMONS_ROOT}/utils/memory/include
         ${COMMONS_ROOT}/utils/print/include
-        ${AGENTRT_ROOT}/atoms/corekern/include
+        ${AIRY_ROOT}/atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
     target_link_libraries(${test_name} PRIVATE
-        agentrt_common
-        agentrt_core
+        airy_common
+        airy_core
     )
 
     add_test(
@@ -77,13 +77,13 @@ foreach(test_source ${INTEGRATION_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/string/include
         ${COMMONS_ROOT}/utils/observability/include
         ${COMMONS_ROOT}/utils/types/include
-        ${AGENTRT_ROOT}/atoms/corekern/include
+        ${AIRY_ROOT}/atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
     target_link_libraries(${test_name} PRIVATE
-        agentrt_common
-        agentrt_core
+        airy_common
+        airy_core
     )
 
     add_test(

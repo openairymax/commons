@@ -9,10 +9,10 @@ set(UUID_SOURCES
 )
 
 # Create library
-add_library(agentrt_uuid STATIC ${UUID_SOURCES})
+add_library(airy_uuid STATIC ${UUID_SOURCES})
 
 # Include directories
-target_include_directories(agentrt_uuid PUBLIC
+target_include_directories(airy_uuid PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../memory/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../string/include
@@ -20,12 +20,12 @@ target_include_directories(agentrt_uuid PUBLIC
 
 # Platform-specific sources
 if(WIN32)
-    target_compile_definitions(agentrt_uuid PRIVATE _WIN32_WINNT=0x0600)
+    target_compile_definitions(airy_uuid PRIVATE _WIN32_WINNT=0x0600)
 endif()
 
 # Security compile options
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(agentrt_uuid PRIVATE
+    target_compile_options(airy_uuid PRIVATE
         -Wall -Wextra -Wpedantic
         -fstack-protector-strong
         $<$<NOT:$<CONFIG:Debug>>:-D_FORTIFY_SOURCE=2>
@@ -33,4 +33,4 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 # Export
-export(TARGETS agentrt_uuid FILE "${CMAKE_BINARY_DIR}/agentrt_uuid_targets.cmake")
+export(TARGETS airy_uuid FILE "${CMAKE_BINARY_DIR}/airy_uuid_targets.cmake")

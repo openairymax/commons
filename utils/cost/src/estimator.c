@@ -44,10 +44,10 @@ typedef struct {
 /**
  * @brief 成本预估器内部结?
  */
-struct agentrt_cost_estimator {
+struct airy_cost_estimator {
     model_cost_config_t configs[MAX_CONFIG_ENTRIES]; /**< 模型配置数组 */
     int config_count;                                /**< 配置数量 */
-    agentrt_mutex_t mutex;                           /**< 互斥?*/
+    airy_mtx_t mutex;                           /**< 互斥?*/
     double total_cost;                               /**< 累计成本 */
     size_t total_input_tokens;                       /**< 累计输入Token */
     size_t total_output_tokens;                      /**< 累计输出Token */
@@ -72,11 +72,11 @@ static const model_cost_config_t default_configs[] = {
 /**
  * @brief 查找模型配置
  */
-static const model_cost_config_t *find_model_config(agentrt_cost_estimator_t *estimator,
+static const model_cost_config_t *find_model_config(airy_cost_estimator_t *estimator,
                                                     const char *model_name)
 {
     if (!estimator || !model_name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     for (int i = 0; i < estimator->config_count; i++) {
@@ -112,14 +112,14 @@ static void normalize_model_name(const char *input, char *output, size_t output_
     output[j] = '\0';
 }
 
-static int load_config_from_file(agentrt_cost_estimator_t *estimator, const char *config_path)
+static int load_config_from_file(airy_cost_estimator_t *estimator, const char *config_path)
 {
     if (!config_path || !estimator)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     FILE *fp = fopen(config_path, "r");
     if (!fp)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     char line[512];
     while (fgets(line, sizeof(line), fp)) {
@@ -142,7 +142,7 @@ static int load_config_from_file(agentrt_cost_estimator_t *estimator, const char
         /* Manual parse: model,input_cost,output_cost,max_in,max_out */
         token = strtok_r(line, ",", &saveptr);
         if (!token) continue;
-        AGENTRT_STRNCPY_TERM(model, token, MAX_MODEL_NAME);
+        AIRY_STRNCPY_TERM(model, token, MAX_MODEL_NAME);
 
         token = strtok_r(NULL, ",", &saveptr);
         if (token) input_cost = strtod(token, NULL);
@@ -158,7 +158,7 @@ static int load_config_from_file(agentrt_cost_estimator_t *estimator, const char
 
         if (model[0] != '\0') {
             if (estimator->config_count < MAX_CONFIG_ENTRIES) {
-                AGENTRT_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model, MAX_MODEL_NAME);
+                AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model, MAX_MODEL_NAME);
                 estimator->configs[estimator->config_count].input_cost_per_1k = input_cost;
                 estimator->configs[estimator->config_count].output_cost_per_1k = output_cost;
                 estimator->configs[estimator->config_count].max_input_tokens =
@@ -174,19 +174,19 @@ static int load_config_from_file(agentrt_cost_estimator_t *estimator, const char
     return 0;
 }
 
-agentrt_cost_estimator_t *agentrt_cost_estimator_create(const char *config_path)
+airy_cost_estimator_t *airy_cost_estimator_create(const char *config_path)
 {
-    agentrt_cost_estimator_t *estimator =
-        (agentrt_cost_estimator_t *)AGENTRT_MALLOC(sizeof(agentrt_cost_estimator_t));
+    airy_cost_estimator_t *estimator =
+        (airy_cost_estimator_t *)AIRY_MALLOC(sizeof(airy_cost_estimator_t));
     if (!estimator) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(estimator, 0, sizeof(agentrt_cost_estimator_t));
+    AIRY_MEMSET(estimator, 0, sizeof(airy_cost_estimator_t));
 
-    if (agentrt_mutex_init(&estimator->mutex) != 0) {
-        AGENTRT_FREE(estimator);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+    if (airy_mtx_init(&estimator->mutex) != 0) {
+        AIRY_FREE(estimator);
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     estimator->config_count = 0;
@@ -197,7 +197,7 @@ agentrt_cost_estimator_t *agentrt_cost_estimator_create(const char *config_path)
 
     for (size_t i = 0; i < sizeof(default_configs) / sizeof(default_configs[0]); i++) {
         if (estimator->config_count < MAX_CONFIG_ENTRIES) {
-            AGENTRT_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name,
+            AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name,
                     default_configs[i].model_name, MAX_MODEL_NAME);
             estimator->configs[estimator->config_count].input_cost_per_1k =
                 default_configs[i].input_cost_per_1k;
@@ -218,21 +218,21 @@ agentrt_cost_estimator_t *agentrt_cost_estimator_create(const char *config_path)
     return estimator;
 }
 
-void agentrt_cost_estimator_destroy(agentrt_cost_estimator_t *estimator)
+void airy_cost_estimator_destroy(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return;
     }
 
-    agentrt_mutex_destroy(&estimator->mutex);
-    AGENTRT_FREE(estimator);
+    airy_mtx_destroy(&estimator->mutex);
+    AIRY_FREE(estimator);
 }
 
-double agentrt_cost_estimator_estimate(agentrt_cost_estimator_t *estimator, const char *model_name,
+double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char *model_name,
                                        size_t input_tokens, size_t output_tokens)
 {
     if (!estimator || !model_name) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     char normalized[MAX_MODEL_NAME];
@@ -240,114 +240,114 @@ double agentrt_cost_estimator_estimate(agentrt_cost_estimator_t *estimator, cons
 
     const model_cost_config_t *manager = find_model_config(estimator, normalized);
     if (!manager) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     double input_cost = (input_tokens / 1000.0) * manager->input_cost_per_1k;
     double output_cost = (output_tokens / 1000.0) * manager->output_cost_per_1k;
     double total_cost = input_cost + output_cost;
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
 
     estimator->total_cost += total_cost;
     estimator->total_input_tokens += input_tokens;
     estimator->total_output_tokens += output_tokens;
     estimator->request_count++;
 
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return total_cost;
 }
 
-double agentrt_cost_estimator_get_total(agentrt_cost_estimator_t *estimator)
+double airy_cost_estimator_get_total(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0.0;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
     double total = estimator->total_cost;
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return total;
 }
 
-size_t agentrt_cost_estimator_get_input_tokens(agentrt_cost_estimator_t *estimator)
+size_t airy_cost_estimator_get_input_tokens(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
     size_t tokens = estimator->total_input_tokens;
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return tokens;
 }
 
-size_t agentrt_cost_estimator_get_output_tokens(agentrt_cost_estimator_t *estimator)
+size_t airy_cost_estimator_get_output_tokens(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
     size_t tokens = estimator->total_output_tokens;
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return tokens;
 }
 
-uint64_t agentrt_cost_estimator_get_request_count(agentrt_cost_estimator_t *estimator)
+uint64_t airy_cost_estimator_get_request_count(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
     uint64_t count = estimator->request_count;
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return count;
 }
 
-void agentrt_cost_estimator_reset(agentrt_cost_estimator_t *estimator)
+void airy_cost_estimator_reset(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
 
     estimator->total_cost = 0.0;
     estimator->total_input_tokens = 0;
     estimator->total_output_tokens = 0;
     estimator->request_count = 0;
 
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 }
 
-int agentrt_cost_estimator_add_model(agentrt_cost_estimator_t *estimator, const char *model_name,
+int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *model_name,
                                      double input_cost_per_1k, double output_cost_per_1k)
 {
     if (!estimator || !model_name) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (estimator->config_count >= MAX_CONFIG_ENTRIES) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&estimator->mutex);
+    airy_mtx_lock(&estimator->mutex);
 
-    AGENTRT_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model_name, MAX_MODEL_NAME);
+    AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model_name, MAX_MODEL_NAME);
     estimator->configs[estimator->config_count].input_cost_per_1k = input_cost_per_1k;
     estimator->configs[estimator->config_count].output_cost_per_1k = output_cost_per_1k;
     estimator->configs[estimator->config_count].max_input_tokens = 4096;
     estimator->configs[estimator->config_count].max_output_tokens = 4096;
     estimator->config_count++;
 
-    agentrt_mutex_unlock(&estimator->mutex);
+    airy_mtx_unlock(&estimator->mutex);
 
     return 0;
 }
