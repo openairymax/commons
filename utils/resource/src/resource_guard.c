@@ -8,8 +8,8 @@
 
 #include "resource_guard.h"
 
-#include "../memory/include/agentrt_memory.h"
-#include "../string/include/agentrt_string.h"
+#include "../memory/include/airy_memory.h"
+#include "../string/include/airy_string.h"
 #include "../sync/include/sync.h"
 #include "atomic_compat.h"
 
@@ -19,8 +19,8 @@
 
 /* ==================== 核心接口实现 ==================== */
 
-void agentrt_resource_guard_init(agentrt_resource_guard_t *guard, void *resource,
-                                 agentrt_resource_cleanup_t cleanup, const char *file, int line,
+void airy_resource_guard_init(airy_resource_guard_t *guard, void *resource,
+                                 airy_resource_cleanup_t cleanup, const char *file, int line,
                                  const char *name)
 {
     if (!guard) {
@@ -35,7 +35,7 @@ void agentrt_resource_guard_init(agentrt_resource_guard_t *guard, void *resource
     guard->active = 1;
 }
 
-void agentrt_resource_guard_cleanup(agentrt_resource_guard_t *guard)
+void airy_resource_guard_cleanup(airy_resource_guard_t *guard)
 {
     if (!guard || !guard->active) {
         return;
@@ -50,7 +50,7 @@ void agentrt_resource_guard_cleanup(agentrt_resource_guard_t *guard)
     guard->cleanup = NULL;
 }
 
-void agentrt_resource_guard_dismiss(agentrt_resource_guard_t *guard)
+void airy_resource_guard_dismiss(airy_resource_guard_t *guard)
 {
     if (!guard) {
         return;
@@ -61,23 +61,23 @@ void agentrt_resource_guard_dismiss(agentrt_resource_guard_t *guard)
 
 /* ==================== 资源追踪实现 ==================== */
 
-#ifdef AGENTRT_RESOURCE_TRACKING
+#ifdef AIRY_RESOURCE_TRACKING
 
 #include "platform.h"
 
 #include <stdint.h>
 
-typedef struct agentrt_resource_record {
+typedef struct airy_resource_record {
     void *resource;
     const char *type;
     const char *file;
     int line;
     uint64_t timestamp_ns;
-    struct agentrt_resource_record *next;
-} agentrt_resource_record_t;
+    struct airy_resource_record *next;
+} airy_resource_record_t;
 
-static agentrt_resource_record_t *g_resource_head = NULL;
-static agentrt_mutex_t g_resource_mutex;
+static airy_resource_record_t *g_resource_head = NULL;
+static airy_mtx_t g_resource_mutex;
 static atomic_int g_resource_mutex_initialized = 0;
 
 static void ensure_mutex_initialized(void)
@@ -85,23 +85,23 @@ static void ensure_mutex_initialized(void)
     int expected = 0;
     if (atomic_compare_exchange_strong_explicit(&g_resource_mutex_initialized, &expected, 1,
                                                 memory_order_seq_cst, memory_order_seq_cst)) {
-        agentrt_mutex_init(&g_resource_mutex);
+        airy_mtx_init(&g_resource_mutex);
     }
 }
 
 static uint64_t get_monotonic_ns(void)
 {
-    return agentrt_time_ns();
+    return airy_time_ns();
 }
 
-void agentrt_resource_track_alloc(void *resource, const char *type, const char *file, int line)
+void airy_resource_track_alloc(void *resource, const char *type, const char *file, int line)
 {
     if (!resource) {
         return;
     }
 
-    agentrt_resource_record_t *record = (agentrt_resource_record_t *)memory_alloc(
-        sizeof(agentrt_resource_record_t), "resource_record");
+    airy_resource_record_t *record = (airy_resource_record_t *)memory_alloc(
+        sizeof(airy_resource_record_t), "resource_record");
     if (!record) {
         return;
     }
@@ -113,23 +113,23 @@ void agentrt_resource_track_alloc(void *resource, const char *type, const char *
     record->timestamp_ns = get_monotonic_ns();
 
     ensure_mutex_initialized();
-    agentrt_mutex_lock(&g_resource_mutex);
+    airy_mtx_lock(&g_resource_mutex);
     record->next = g_resource_head;
     g_resource_head = record;
-    agentrt_mutex_unlock(&g_resource_mutex);
+    airy_mtx_unlock(&g_resource_mutex);
 }
 
-void agentrt_resource_track_free(void *resource)
+void airy_resource_track_free(void *resource)
 {
     if (!resource) {
         return;
     }
 
     ensure_mutex_initialized();
-    agentrt_mutex_lock(&g_resource_mutex);
+    airy_mtx_lock(&g_resource_mutex);
 
-    agentrt_resource_record_t *prev = NULL;
-    agentrt_resource_record_t *curr = g_resource_head;
+    airy_resource_record_t *prev = NULL;
+    airy_resource_record_t *curr = g_resource_head;
 
     while (curr) {
         if (curr->resource == resource) {
@@ -145,16 +145,16 @@ void agentrt_resource_track_free(void *resource)
         curr = curr->next;
     }
 
-    agentrt_mutex_unlock(&g_resource_mutex);
+    airy_mtx_unlock(&g_resource_mutex);
 }
 
-int agentrt_resource_track_report(char **out_report)
+int airy_resource_track_report(char **out_report)
 {
     ensure_mutex_initialized();
-    agentrt_mutex_lock(&g_resource_mutex);
+    airy_mtx_lock(&g_resource_mutex);
 
     int count = 0;
-    agentrt_resource_record_t *curr = g_resource_head;
+    airy_resource_record_t *curr = g_resource_head;
     while (curr) {
         count++;
         curr = curr->next;
@@ -189,24 +189,24 @@ int agentrt_resource_track_report(char **out_report)
         }
     }
 
-    agentrt_mutex_unlock(&g_resource_mutex);
+    airy_mtx_unlock(&g_resource_mutex);
     return count;
 }
 
-void agentrt_resource_track_clear(void)
+void airy_resource_track_clear(void)
 {
     ensure_mutex_initialized();
-    agentrt_mutex_lock(&g_resource_mutex);
+    airy_mtx_lock(&g_resource_mutex);
 
-    agentrt_resource_record_t *curr = g_resource_head;
+    airy_resource_record_t *curr = g_resource_head;
     while (curr) {
-        agentrt_resource_record_t *next = curr->next;
-        AGENTRT_FREE(curr);
+        airy_resource_record_t *next = curr->next;
+        AIRY_FREE(curr);
         curr = next;
     }
     g_resource_head = NULL;
 
-    agentrt_mutex_unlock(&g_resource_mutex);
+    airy_mtx_unlock(&g_resource_mutex);
 }
 
-#endif /* AGENTRT_RESOURCE_TRACKING */
+#endif /* AIRY_RESOURCE_TRACKING */

@@ -17,8 +17,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-1 安全内生原则
  */
 
-#ifndef AGENTRT_CHECK_H
-#define AGENTRT_CHECK_H
+#ifndef AIRY_RT_CHECK_H
+#define AIRY_RT_CHECK_H
 
 #include "../error/include/error.h"
 
@@ -32,11 +32,11 @@
 /**
  * @brief 检查指针是否为NULL，如果是则返回错误码
  * @param ptr 要检查的指针
- * @param err_code 错误码（如AGENTRT_EINVAL）
+ * @param err_code 错误码（如AIRY_EINVAL）
  * @return 如果ptr为NULL，返回err_code
  *
  * @code
- * CHECK_NULL_RET(input, AGENTRT_EINVAL);
+ * CHECK_NULL_RET(input, AIRY_EINVAL);
  * @endcode
  */
 #define CHECK_NULL_RET(ptr, err_code) \
@@ -47,11 +47,11 @@
     } while (0)
 
 /**
- * @brief 检查指针是否为NULL，如果是则返回默认错误AGENTRT_EINVAL
+ * @brief 检查指针是否为NULL，如果是则返回默认错误AIRY_EINVAL
  * @param ptr 要检查的指针
- * @return 如果ptr为NULL，返回AGENTRT_EINVAL
+ * @return 如果ptr为NULL，返回AIRY_EINVAL
  */
-#define CHECK_NULL(ptr) CHECK_NULL_RET(ptr, AGENTRT_EINVAL)
+#define CHECK_NULL(ptr) CHECK_NULL_RET(ptr, AIRY_EINVAL)
 
 /**
  * @brief 检查表达式是否为真，如果为假则返回错误码
@@ -60,7 +60,7 @@
  * @return 如果expr为假，返回err_code
  *
  * @code
- * CHECK_COND_RET(size > 0, AGENTRT_EINVAL);
+ * CHECK_COND_RET(size > 0, AIRY_EINVAL);
  * @endcode
  */
 #define CHECK_COND_RET(expr, err_code) \
@@ -71,43 +71,43 @@
     } while (0)
 
 /**
- * @brief 检查表达式是否为真，如果为假则返回默认错误AGENTRT_EINVAL
+ * @brief 检查表达式是否为真，如果为假则返回默认错误AIRY_EINVAL
  * @param expr 要检查的表达式
- * @return 如果expr为假，返回AGENTRT_EINVAL
+ * @return 如果expr为假，返回AIRY_EINVAL
  */
-#define CHECK_COND(expr) CHECK_COND_RET(expr, AGENTRT_EINVAL)
+#define CHECK_COND(expr) CHECK_COND_RET(expr, AIRY_EINVAL)
 
 /**
  * @brief 检查函数调用结果，如果失败则返回错误码
- * @param func_call 函数调用表达式（返回agentrt_error_t）
+ * @param func_call 函数调用表达式（返回airy_err_t）
  * @param err_var 存储错误结果的变量名
  * @return 如果func_call失败，返回错误码
  *
  * @code
- * CHECK_ERR_RET(agentrt_init(), err);
+ * CHECK_ERR_RET(airy_init(), err);
  * @endcode
  */
 #define CHECK_ERR_RET(func_call, err_var)      \
     do {                                       \
-        agentrt_error_t err_var = (func_call); \
-        if (err_var != AGENTRT_SUCCESS) {      \
+        airy_err_t err_var = (func_call); \
+        if (err_var != AIRY_SUCCESS) {      \
             return err_var;                    \
         }                                      \
     } while (0)
 
 /**
  * @brief 检查函数调用结果，如果失败则跳转到清理标签
- * @param func_call 函数调用表达式（返回agentrt_error_t）
+ * @param func_call 函数调用表达式（返回airy_err_t）
  * @param err_var 存储错误结果的变量名
  *
  * @code
- * CHECK_ERR_GOTO(agentrt_alloc(&ptr), err, cleanup);
+ * CHECK_ERR_GOTO(airy_alloc(&ptr), err, cleanup);
  * @endcode
  */
 #define CHECK_ERR_GOTO(func_call, err_var, label) \
     do {                                          \
-        agentrt_error_t err_var = (func_call);    \
-        if (err_var != AGENTRT_SUCCESS) {         \
+        airy_err_t err_var = (func_call);    \
+        if (err_var != AIRY_SUCCESS) {         \
             goto label;                           \
         }                                         \
     } while (0)
@@ -132,7 +132,7 @@
  * @brief 安全释放指针并将其置为NULL
  * @param ptr 要释放的指针
  *
- * @note 使用AGENTRT_FREE进行释放
+ * @note 使用AIRY_FREE进行释放
  * @code
  * SAFE_FREE(buffer);
  * @endcode
@@ -140,7 +140,7 @@
 #define SAFE_FREE(ptr)         \
     do {                       \
         if ((ptr) != NULL) {   \
-            AGENTRT_FREE(ptr); \
+            AIRY_FREE(ptr); \
             (ptr) = NULL;      \
         }                      \
     } while (0)
@@ -157,7 +157,7 @@
  */
 #define ALLOC_CHECK(ptr_var, size, label) \
     do {                                  \
-        (ptr_var) = AGENTRT_MALLOC(size); \
+        (ptr_var) = AIRY_MALLOC(size); \
         CHECK_NULL_GOTO(ptr_var, label);  \
     } while (0)
 
@@ -174,7 +174,7 @@
  */
 #define CALLOC_CHECK(ptr_var, count, size, label) \
     do {                                          \
-        (ptr_var) = AGENTRT_CALLOC(count, size);  \
+        (ptr_var) = AIRY_CALLOC(count, size);  \
         CHECK_NULL_GOTO(ptr_var, label);          \
     } while (0)
 
@@ -190,7 +190,7 @@
  */
 #define STRDUP_CHECK(dest, src, label) \
     do {                               \
-        (dest) = AGENTRT_STRDUP(src);  \
+        (dest) = AIRY_STRDUP(src);  \
         CHECK_NULL_GOTO(dest, label);  \
     } while (0)
 
@@ -243,7 +243,7 @@
  * @param err_code 错误码
  *
  * @code
- * CHECK_NULL_GOTO_ERR(buffer, cleanup, ret, AGENTRT_ENOMEM);
+ * CHECK_NULL_GOTO_ERR(buffer, cleanup, ret, AIRY_ENOMEM);
  * @endcode
  */
 #define CHECK_NULL_GOTO_ERR(ptr, label, err_var, err_code) \
@@ -263,12 +263,12 @@
  * @param err_code 错误码
  *
  * @code
- * STRDUP_CHECK_ERR(copy, original, cleanup, ret, AGENTRT_ENOMEM);
+ * STRDUP_CHECK_ERR(copy, original, cleanup, ret, AIRY_ENOMEM);
  * @endcode
  */
 #define STRDUP_CHECK_ERR(dest, src, label, err_var, err_code) \
     do {                                                      \
-        (dest) = AGENTRT_STRDUP(src);                         \
+        (dest) = AIRY_STRDUP(src);                         \
         CHECK_NULL_GOTO_ERR(dest, label, err_var, err_code);  \
     } while (0)
 
@@ -281,12 +281,12 @@
  * @param err_code 错误码
  *
  * @code
- * MALLOC_CHECK_ERR(buffer, sizeof(buffer_t), cleanup, ret, AGENTRT_ENOMEM);
+ * MALLOC_CHECK_ERR(buffer, sizeof(buffer_t), cleanup, ret, AIRY_ENOMEM);
  * @endcode
  */
 #define MALLOC_CHECK_ERR(ptr_var, size, label, err_var, err_code) \
     do {                                                          \
-        (ptr_var) = AGENTRT_MALLOC(size);                         \
+        (ptr_var) = AIRY_MALLOC(size);                         \
         CHECK_NULL_GOTO_ERR(ptr_var, label, err_var, err_code);   \
     } while (0)
 
@@ -300,15 +300,15 @@
  * @param err_code 错误码
  *
  * @code
- * CALLOC_CHECK_ERR(array, 10, sizeof(int), cleanup, ret, AGENTRT_ENOMEM);
+ * CALLOC_CHECK_ERR(array, 10, sizeof(int), cleanup, ret, AIRY_ENOMEM);
  * @endcode
  */
 #define CALLOC_CHECK_ERR(ptr_var, count, size, label, err_var, err_code) \
     do {                                                                 \
-        (ptr_var) = AGENTRT_CALLOC(count, size);                         \
+        (ptr_var) = AIRY_CALLOC(count, size);                         \
         CHECK_NULL_GOTO_ERR(ptr_var, label, err_var, err_code);          \
     } while (0)
 
 /** @} */  // end of check_macros
 
-#endif /* AGENTRT_CHECK_H */
+#endif /* AIRY_RT_CHECK_H */

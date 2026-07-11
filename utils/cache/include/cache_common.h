@@ -11,8 +11,8 @@
  * - 带过期时间的缓存
  */
 
-#ifndef AGENTRT_CACHE_COMMON_H
-#define AGENTRT_CACHE_COMMON_H
+#ifndef AIRY_RT_CACHE_COMMON_H
+#define AIRY_RT_CACHE_COMMON_H
 
 #include <stdbool.h>
 #include <stddef.h>

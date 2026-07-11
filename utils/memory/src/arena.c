@@ -33,7 +33,7 @@ typedef struct arena_chunk {
 
 /* ==================== Arena 结构 ==================== */
 
-struct agentrt_arena {
+struct airy_arena {
     arena_chunk_t *first_chunk;  /**< 第一个 chunk（链表头） */
     arena_chunk_t *current;      /**< 当前活跃 chunk */
     size_t         chunk_size;   /**< 默认 chunk 大小 */
@@ -47,7 +47,7 @@ struct agentrt_arena {
     uint64_t       fallback_count;
 
     /* 线程同步 */
-    agentrt_mutex_t lock;
+    airy_mtx_t lock;
     bool            thread_safe;
 };
 
@@ -55,16 +55,16 @@ struct agentrt_arena {
 
 static arena_chunk_t *chunk_create(size_t size)
 {
-    arena_chunk_t *chunk = (arena_chunk_t *)AGENTRT_MALLOC(sizeof(arena_chunk_t));
+    arena_chunk_t *chunk = (arena_chunk_t *)AIRY_MALLOC(sizeof(arena_chunk_t));
     if (!chunk) {
-        AGENTRT_LOG_ERROR("arena: chunk_create failed to alloc chunk_t (size=%zu)", size);
+        AIRY_LOG_ERROR("arena: chunk_create failed to alloc chunk_t (size=%zu)", size);
         return NULL;
     }
 
-    chunk->start = (uint8_t *)AGENTRT_MALLOC(size);
+    chunk->start = (uint8_t *)AIRY_MALLOC(size);
     if (!chunk->start) {
-        AGENTRT_LOG_ERROR("arena: chunk_create failed to alloc data region (size=%zu)", size);
-        AGENTRT_FREE(chunk);
+        AIRY_LOG_ERROR("arena: chunk_create failed to alloc data region (size=%zu)", size);
+        AIRY_FREE(chunk);
         return NULL;
     }
 
@@ -73,7 +73,7 @@ static arena_chunk_t *chunk_create(size_t size)
     chunk->size = size;
     chunk->next = NULL;
 
-    AGENTRT_LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)",
+    AIRY_LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)",
                       size, (void *)chunk->start, (void *)chunk->end);
     return chunk;
 }
@@ -82,15 +82,15 @@ static void chunk_destroy(arena_chunk_t *chunk)
 {
     while (chunk) {
         arena_chunk_t *next = chunk->next;
-        AGENTRT_FREE(chunk->start);
-        AGENTRT_FREE(chunk);
+        AIRY_FREE(chunk->start);
+        AIRY_FREE(chunk);
         chunk = next;
     }
 }
 
 /* ==================== 公共 API 实现 ==================== */
 
-agentrt_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
+airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
 {
     if (chunk_size == 0) {
         chunk_size = ARENA_DEFAULT_CHUNK_SIZE;
@@ -99,12 +99,12 @@ agentrt_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
         chunk_size = ARENA_MAX_CHUNK_SIZE;
     }
 
-    AGENTRT_LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)",
+    AIRY_LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)",
                      chunk_size, max_chunks);
 
-    agentrt_arena_t *arena = (agentrt_arena_t *)AGENTRT_CALLOC(1, sizeof(agentrt_arena_t));
+    airy_arena_t *arena = (airy_arena_t *)AIRY_CALLOC(1, sizeof(airy_arena_t));
     if (!arena) {
-        AGENTRT_LOG_ERROR("arena: arena_create failed to alloc arena struct");
+        AIRY_LOG_ERROR("arena: arena_create failed to alloc arena struct");
         return NULL;
     }
 
@@ -115,51 +115,51 @@ agentrt_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
     /* 创建第一个 chunk */
     arena->first_chunk = chunk_create(chunk_size);
     if (!arena->first_chunk) {
-        AGENTRT_LOG_ERROR("arena: arena_create failed to create first chunk");
-        AGENTRT_FREE(arena);
+        AIRY_LOG_ERROR("arena: arena_create failed to create first chunk");
+        AIRY_FREE(arena);
         return NULL;
     }
     arena->current = arena->first_chunk;
     arena->num_chunks = 1;
 
-    agentrt_mutex_init(&arena->lock);
+    airy_mtx_init(&arena->lock);
 
-    AGENTRT_LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)",
+    AIRY_LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)",
                      chunk_size, (void *)arena);
     return arena;
 }
 
-void arena_destroy(agentrt_arena_t *arena)
+void arena_destroy(airy_arena_t *arena)
 {
     if (!arena) return;
 
-    AGENTRT_LOG_INFO("arena: arena_destroy (arena=%p, chunks=%zu, total_alloc=%zu, allocs=%" PRIu64 ")",
+    AIRY_LOG_INFO("arena: arena_destroy (arena=%p, chunks=%zu, total_alloc=%zu, allocs=%" PRIu64 ")",
                      (void *)arena, arena->num_chunks, arena->total_allocated, arena->alloc_count);
 
-    agentrt_mutex_destroy(&arena->lock);
+    airy_mtx_destroy(&arena->lock);
     chunk_destroy(arena->first_chunk);
-    AGENTRT_FREE(arena);
+    AIRY_FREE(arena);
 
-    AGENTRT_LOG_DEBUG("arena: arena_destroy done");
+    AIRY_LOG_DEBUG("arena: arena_destroy done");
 }
 
-void *arena_alloc(agentrt_arena_t *arena, size_t size)
+void *arena_alloc(airy_arena_t *arena, size_t size)
 {
     if (!arena || size == 0) return NULL;
 
     /* 对齐到 ARENA_ALIGNMENT */
     size_t aligned = (size + ARENA_ALIGNMENT - 1) & ~((size_t)ARENA_ALIGNMENT - 1);
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
-    /* 超大分配直接回退到 AGENTRT_MALLOC */
+    /* 超大分配直接回退到 AIRY_MALLOC */
     if (aligned > arena->chunk_size / 2) {
         arena->fallback_count++;
         arena->total_allocated += aligned;
         arena->alloc_count++;
-        agentrt_mutex_unlock(&arena->lock);
-        void *ptr = AGENTRT_MALLOC(aligned);
-        AGENTRT_LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64 ")",
+        airy_mtx_unlock(&arena->lock);
+        void *ptr = AIRY_MALLOC(aligned);
+        AIRY_LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64 ")",
                           size, aligned, ptr, arena->fallback_count);
         return ptr;
     }
@@ -168,8 +168,8 @@ void *arena_alloc(agentrt_arena_t *arena, size_t size)
     if (arena->current->bump + aligned > arena->current->end) {
         /* 检查 chunk 数量限制 */
         if (arena->max_chunks > 0 && arena->num_chunks >= arena->max_chunks) {
-            agentrt_mutex_unlock(&arena->lock);
-            AGENTRT_LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)",
+            airy_mtx_unlock(&arena->lock);
+            AIRY_LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)",
                              size, aligned, arena->num_chunks, arena->max_chunks);
             return NULL;  /* 达到 chunk 上限 */
         }
@@ -181,13 +181,13 @@ void *arena_alloc(agentrt_arena_t *arena, size_t size)
             if (new_size > ARENA_MAX_CHUNK_SIZE) new_size = ARENA_MAX_CHUNK_SIZE;
         }
 
-        AGENTRT_LOG_INFO("arena: arena_alloc NEW_CHUNK (chunk#=%zu→%zu, new_size=%zu, aligned=%zu)",
+        AIRY_LOG_INFO("arena: arena_alloc NEW_CHUNK (chunk#=%zu→%zu, new_size=%zu, aligned=%zu)",
                          arena->num_chunks, arena->num_chunks + 1, new_size, aligned);
 
         arena_chunk_t *new_chunk = chunk_create(new_size);
         if (!new_chunk) {
-            agentrt_mutex_unlock(&arena->lock);
-            AGENTRT_LOG_ERROR("arena: arena_alloc failed to create new chunk (size=%zu)", new_size);
+            airy_mtx_unlock(&arena->lock);
+            AIRY_LOG_ERROR("arena: arena_alloc failed to create new chunk (size=%zu)", new_size);
             return NULL;
         }
 
@@ -204,36 +204,36 @@ void *arena_alloc(agentrt_arena_t *arena, size_t size)
     arena->total_allocated += aligned;
     arena->alloc_count++;
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
 
-    AGENTRT_LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64 ")",
+    AIRY_LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64 ")",
                       size, aligned, ptr, arena->num_chunks, arena->alloc_count);
     return ptr;
 }
 
-void *arena_calloc(agentrt_arena_t *arena, size_t size)
+void *arena_calloc(airy_arena_t *arena, size_t size)
 {
     void *ptr = arena_alloc(arena, size);
     if (ptr) {
-        AGENTRT_MEMSET(ptr, 0, size);  /* BAN-154 */
+        AIRY_MEMSET(ptr, 0, size);  /* BAN-154 */
     }
     return ptr;
 }
 
-void arena_reset(agentrt_arena_t *arena)
+void arena_reset(airy_arena_t *arena)
 {
     if (!arena) return;
 
-    AGENTRT_LOG_INFO("arena: arena_reset (arena=%p, chunks=%zu, reset#=%" PRIu64 "→%" PRIu64 ")",
+    AIRY_LOG_INFO("arena: arena_reset (arena=%p, chunks=%zu, reset#=%" PRIu64 "→%" PRIu64 ")",
                      (void *)arena, arena->num_chunks, arena->reset_count, arena->reset_count + 1);
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
     /* 将所有 chunk 的 bump 指针回退到起始位置 */
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         c->bump = c->start;
         /* 清零内存以辅助调试（检测 use-after-reset） */
-        AGENTRT_MEMSET(c->start, 0, c->size);  /* BAN-154 */
+        AIRY_MEMSET(c->start, 0, c->size);  /* BAN-154 */
     }
 
     /* 重置当前 chunk 为第一个 */
@@ -241,26 +241,26 @@ void arena_reset(agentrt_arena_t *arena)
 
     arena->reset_count++;
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
 
-    AGENTRT_LOG_DEBUG("arena: arena_reset done");
+    AIRY_LOG_DEBUG("arena: arena_reset done");
 }
 
 /* ==================== 标记 / 回退 API ==================== */
 
-void arena_mark(agentrt_arena_t *arena, arena_mark_t *mark)
+void arena_mark(airy_arena_t *arena, arena_mark_t *mark)
 {
     if (!arena || !mark) return;
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
     mark->arena = arena;
     mark->bump  = arena->current->bump;
-    mark->chunk = (agentrt_arena_t *)arena->current;
+    mark->chunk = (airy_arena_t *)arena->current;
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
 
-    AGENTRT_LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
+    AIRY_LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
                       (void *)arena, mark->bump, mark->chunk);
 }
 
@@ -268,19 +268,19 @@ void arena_release(arena_mark_t *mark)
 {
     if (!mark || !mark->arena || !mark->chunk) return;
 
-    agentrt_arena_t *arena = mark->arena;
+    airy_arena_t *arena = mark->arena;
     arena_chunk_t *target = (arena_chunk_t *)mark->chunk;
 
-    AGENTRT_LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)",
+    AIRY_LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)",
                      (void *)arena, (void *)target, mark->bump);
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
     /* 从目标 chunk 开始，回退所有后续 chunk */
     arena_chunk_t *c = arena->first_chunk;
     while (c && c != target) {
         c->bump = c->start;  /* 回退较早的 chunk */
-        AGENTRT_MEMSET(c->start, 0, c->size);  /* BAN-154 */
+        AIRY_MEMSET(c->start, 0, c->size);  /* BAN-154 */
         c = c->next;
     }
 
@@ -290,30 +290,30 @@ void arena_release(arena_mark_t *mark)
 
         /* 清零已释放区域 */
         if (c->bump < c->end) {
-            AGENTRT_MEMSET(c->bump, 0, (size_t)(c->end - c->bump));  /* BAN-154 */
+            AIRY_MEMSET(c->bump, 0, (size_t)(c->end - c->bump));  /* BAN-154 */
         }
 
         /* 后续 chunk 也回退 */
         for (arena_chunk_t *nc = c->next; nc; nc = nc->next) {
             nc->bump = nc->start;
-            AGENTRT_MEMSET(nc->start, 0, nc->size);
+            AIRY_MEMSET(nc->start, 0, nc->size);
         }
     }
 
     arena->current = target;
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
 
-    AGENTRT_LOG_DEBUG("arena: arena_release done");
+    AIRY_LOG_DEBUG("arena: arena_release done");
 }
 
 /* ==================== 查询 API ==================== */
 
-bool arena_get_stats(agentrt_arena_t *arena, arena_stats_t *stats)
+bool arena_get_stats(airy_arena_t *arena, arena_stats_t *stats)
 {
     if (!arena || !stats) return false;
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
     stats->total_allocated = arena->total_allocated;
     stats->alloc_count     = arena->alloc_count;
@@ -329,63 +329,63 @@ bool arena_get_stats(agentrt_arena_t *arena, arena_stats_t *stats)
         stats->total_chunk_bytes += c->size;
     }
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
     return true;
 }
 
-bool arena_contains(agentrt_arena_t *arena, const void *ptr)
+bool arena_contains(airy_arena_t *arena, const void *ptr)
 {
     if (!arena || !ptr) return false;
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
 
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         if ((const uint8_t *)ptr >= c->start && (const uint8_t *)ptr < c->end) {
-            agentrt_mutex_unlock(&arena->lock);
+            airy_mtx_unlock(&arena->lock);
             return true;
         }
     }
 
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
     return false;
 }
 
-size_t arena_capacity(agentrt_arena_t *arena)
+size_t arena_capacity(airy_arena_t *arena)
 {
     if (!arena) return 0;
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
     size_t cap = 0;
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         cap += c->size;
     }
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
     return cap;
 }
 
-size_t arena_used(agentrt_arena_t *arena)
+size_t arena_used(airy_arena_t *arena)
 {
     if (!arena) return 0;
 
-    agentrt_mutex_lock(&arena->lock);
+    airy_mtx_lock(&arena->lock);
     size_t used = 0;
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         used += (size_t)(c->bump - c->start);
     }
-    agentrt_mutex_unlock(&arena->lock);
+    airy_mtx_unlock(&arena->lock);
     return used;
 }
 
 /* ==================== 线程局部 Arena (TLS) ==================== */
 
-static _Thread_local agentrt_arena_t *g_tls_arena = NULL;
+static _Thread_local airy_arena_t *g_tls_arena = NULL;
 
-agentrt_arena_t *agentrt_arena_get_current(void)
+airy_arena_t *airy_arena_get_current(void)
 {
     return g_tls_arena;
 }
 
-void agentrt_arena_set_current(agentrt_arena_t *arena)
+void airy_arena_set_current(airy_arena_t *arena)
 {
     g_tls_arena = arena;
 }

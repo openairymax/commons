@@ -84,16 +84,16 @@ platform/
 
 | 函数 | 说明 |
 |------|------|
-| `platform_get_env(name, default_value)` | 获取环境变量（返回需 `AGENTRT_FREE` 释放） |
+| `platform_get_env(name, default_value)` | 获取环境变量（返回需 `AIRY_FREE` 释放） |
 | `platform_set_env(name, value)` | 设置环境变量 |
-| `platform_get_cwd()` | 获取当前工作目录（返回需 `AGENTRT_FREE` 释放） |
+| `platform_get_cwd()` | 获取当前工作目录（返回需 `AIRY_FREE` 释放） |
 | `platform_chdir(path)` | 改变当前工作目录 |
-| `platform_get_temp_dir()` | 获取临时目录（返回需 `AGENTRT_FREE` 释放） |
-| `platform_get_temp_file(prefix)` | 生成临时文件路径（返回需 `AGENTRT_FREE` 释放） |
-| `platform_path_join(path1, path2)` | 路径连接（自动处理分隔符，返回需 `AGENTRT_FREE` 释放） |
-| `platform_path_normalize(path)` | 路径规范化（返回需 `AGENTRT_FREE` 释放） |
-| `platform_path_basename(path)` | 获取路径文件名部分（返回需 `AGENTRT_FREE` 释放） |
-| `platform_path_dirname(path)` | 获取路径目录部分（返回需 `AGENTRT_FREE` 释放） |
+| `platform_get_temp_dir()` | 获取临时目录（返回需 `AIRY_FREE` 释放） |
+| `platform_get_temp_file(prefix)` | 生成临时文件路径（返回需 `AIRY_FREE` 释放） |
+| `platform_path_join(path1, path2)` | 路径连接（自动处理分隔符，返回需 `AIRY_FREE` 释放） |
+| `platform_path_normalize(path)` | 路径规范化（返回需 `AIRY_FREE` 释放） |
+| `platform_path_basename(path)` | 获取路径文件名部分（返回需 `AIRY_FREE` 释放） |
+| `platform_path_dirname(path)` | 获取路径目录部分（返回需 `AIRY_FREE` 释放） |
 | `platform_path_exists(path)` | 检查路径是否存在 |
 | `platform_path_is_directory(path)` | 检查路径是否为目录 |
 | `platform_path_is_file(path)` | 检查路径是否为文件 |
@@ -133,13 +133,13 @@ if (info.exists && !info.is_directory) {
 char *joined = platform_path_join("/tmp/agentrt_data", "output.log");
 char *basename = platform_path_basename(joined);
 printf("Basename: %s\n", basename);
-AGENTRT_FREE(basename);
-AGENTRT_FREE(joined);
+AIRY_FREE(basename);
+AIRY_FREE(joined);
 
 // 环境变量
 char *home = platform_get_env("HOME", "/home/default");
 printf("HOME: %s\n", home);
-AGENTRT_FREE(home);
+AIRY_FREE(home);
 
 // 时间戳
 uint64_t start = platform_get_timestamp_ms();
@@ -165,7 +165,7 @@ platform_adapter_cleanup();
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AGENTRT_MALLOC`、`AGENTRT_FREE` 等） |
+| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
 | `string_compat.h` | 字符串操作兼容层 |
 | `platform.h` | 顶层系统级平台抽象（时间戳等） |
 | `error.h` | 统一错误码定义 |

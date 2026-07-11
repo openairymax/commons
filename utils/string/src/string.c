@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "agentrt_string.h"
+#include "airy_string.h"
 
 #include <stdlib.h>
 
@@ -86,7 +86,7 @@ static void string_set_error(string_error_t error, const char *message)
 {
     g_context.last_error = error;
     if (message != NULL) {
-        AGENTRT_STRNCPY_TERM(g_context.error_message, message, sizeof(g_context.error_message));
+        AIRY_STRNCPY_TERM(g_context.error_message, message, sizeof(g_context.error_message));
         g_context.error_message[sizeof(g_context.error_message) - 1] = '\0';
     }
 }
@@ -134,7 +134,7 @@ int string_copy(char *dest, const char *src, size_t dest_size)
 
     if (dest == NULL || src == NULL || dest_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t src_len = string_safe_strlen(src, dest_size - 1);
@@ -143,7 +143,7 @@ int string_copy(char *dest, const char *src, size_t dest_size)
         __builtin_memcpy(dest, src, dest_size - 1);
         dest[dest_size - 1] = '\0';
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(dest, src, src_len);
@@ -158,7 +158,7 @@ int string_copy_n(char *dest, const char *src, size_t count, size_t dest_size)
 
     if (dest == NULL || src == NULL || dest_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t src_len = string_safe_strlen(src, count);
@@ -172,7 +172,7 @@ int string_copy_n(char *dest, const char *src, size_t count, size_t dest_size)
             dest[actual_copy] = '\0';
         }
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(dest, src, copy_len);
@@ -187,7 +187,7 @@ int string_concat(char *dest, const char *src, size_t dest_size)
 
     if (dest == NULL || src == NULL || dest_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t dest_len = string_safe_strlen(dest, dest_size);
@@ -201,7 +201,7 @@ int string_concat(char *dest, const char *src, size_t dest_size)
             dest[dest_len + available] = '\0';
         }
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(dest + dest_len, src, src_len);
@@ -216,7 +216,7 @@ int string_concat_n(char *dest, const char *src, size_t count, size_t dest_size)
 
     if (dest == NULL || src == NULL || dest_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t dest_len = string_safe_strlen(dest, dest_size);
@@ -231,7 +231,7 @@ int string_concat_n(char *dest, const char *src, size_t count, size_t dest_size)
             dest[dest_len + available] = '\0';
         }
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     __builtin_memcpy(dest + dest_len, src, copy_len);
@@ -247,7 +247,7 @@ int string_compare(const char *str1, const char *str2, int options)
     }
 
     if (str1 == NULL) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (str2 == NULL) {
@@ -273,7 +273,7 @@ int string_compare_n(const char *str1, const char *str2, size_t len, int options
     }
 
     if (str1 == NULL) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (str2 == NULL) {
@@ -305,7 +305,7 @@ size_t string_length(const char *str, size_t max_len)
 const char *string_find(const char *haystack, const char *needle, int options)
 {
     if (haystack == NULL || needle == NULL || needle[0] == '\0') {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     if (options & STRING_COMPARE_CASE_INSENSITIVE) {
@@ -320,7 +320,7 @@ const char *string_find(const char *haystack, const char *needle, int options)
             h++;
         }
 
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     } else {
         // 区分大小写查
         return strstr(haystack, needle);
@@ -330,14 +330,14 @@ const char *string_find(const char *haystack, const char *needle, int options)
 const char *string_find_last(const char *haystack, const char *needle, int options)
 {
     if (haystack == NULL || needle == NULL || needle[0] == '\0') {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t haystack_len = strlen(haystack);
     size_t needle_len = strlen(needle);
 
     if (needle_len > haystack_len) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     const char *last_found = NULL;
@@ -356,7 +356,7 @@ const char *string_find_last(const char *haystack, const char *needle, int optio
 const char *string_find_char(const char *str, char ch)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     return strchr(str, ch);
@@ -365,7 +365,7 @@ const char *string_find_char(const char *str, char ch)
 const char *string_find_char_last(const char *str, char ch)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     return strrchr(str, ch);
@@ -401,7 +401,7 @@ char *string_trim(char *str)
 char *string_trim_start(char *str)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     char *start = str;
@@ -436,7 +436,7 @@ char *string_trim_end(char *str)
 char *string_to_lower(char *str)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     char *p = str;
@@ -451,7 +451,7 @@ char *string_to_lower(char *str)
 char *string_to_upper(char *str)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     char *p = str;
@@ -469,7 +469,7 @@ int string_replace(const char *str, const char *old_substr, const char *new_subs
     if (str == NULL || old_substr == NULL || new_substr == NULL || result == NULL ||
         result_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t old_len = strlen(old_substr);
@@ -491,7 +491,7 @@ int string_replace(const char *str, const char *old_substr, const char *new_subs
     if (result_len >= result_size) {
         // 缓冲区不
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 执行替换
@@ -607,7 +607,7 @@ int string_join(const string_list_t *list, const char *delimiter, char *result, 
 {
     if (list == NULL || result == NULL || result_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t delimiter_len = (delimiter != NULL) ? strlen(delimiter) : 0;
@@ -623,7 +623,7 @@ int string_join(const string_list_t *list, const char *delimiter, char *result, 
 
     if (total_len >= result_size) {
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 执行连接
@@ -693,7 +693,7 @@ bool string_is_blank(const char *str)
 int string_common_json_escape(const char *src, char **out)
 {
     if (!src || !out)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t len = 0;
     const char *p = src;
@@ -723,9 +723,9 @@ int string_common_json_escape(const char *src, char **out)
         p++;
     }
 
-    char *escaped = (char *)AGENTRT_MALLOC(len + 1);
+    char *escaped = (char *)AIRY_MALLOC(len + 1);
     if (!escaped)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     char *q = escaped;
     p = src;
@@ -910,7 +910,7 @@ int string_format(char *buffer, size_t buffer_size, const char *format, ...)
 {
     if (buffer == NULL || format == NULL || buffer_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     va_list args;
@@ -925,7 +925,7 @@ int string_format_v(char *buffer, size_t buffer_size, const char *format, va_lis
 {
     if (buffer == NULL || format == NULL || buffer_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "无效参数");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 使用vsnprintf进行格式
@@ -937,13 +937,13 @@ int string_format_v(char *buffer, size_t buffer_size, const char *format, va_lis
 
     if (result < 0) {
         string_set_error(STRING_ERROR_FORMAT, "format failed");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if ((size_t)result >= buffer_size) {
         string_set_error(STRING_ERROR_BUFFER_TOO_SMALL, "buffer too small");
         // 缓冲区被截断，但已正确以空字符结
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     return result;
@@ -952,7 +952,7 @@ int string_format_v(char *buffer, size_t buffer_size, const char *format, va_lis
 char *string_alloc_format(const char *format, ...)
 {
     if (format == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     va_list args;
@@ -966,7 +966,7 @@ char *string_alloc_format(const char *format, ...)
 char *string_alloc_format_v(const char *format, va_list args)
 {
     if (format == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     // 第一次调用计算所需长度
@@ -977,14 +977,14 @@ char *string_alloc_format_v(const char *format, va_list args)
 
     if (needed < 0) {
         string_set_error(STRING_ERROR_FORMAT, "format failed");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     // 分配内存
-    char *buffer = (char *)AGENTRT_MALLOC((size_t)needed + 1);
+    char *buffer = (char *)AIRY_MALLOC((size_t)needed + 1);
     if (buffer == NULL) {
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     // 第二次调用实际格式化
@@ -995,9 +995,9 @@ char *string_alloc_format_v(const char *format, va_list args)
     va_end(args_copy);
 
     if (result < 0) {
-        AGENTRT_FREE(buffer);
+        AIRY_FREE(buffer);
         string_set_error(STRING_ERROR_FORMAT, "format failed");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     return buffer;
@@ -1006,14 +1006,14 @@ char *string_alloc_format_v(const char *format, va_list args)
 char *string_alloc_copy(const char *str)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t len = strlen(str);
-    char *copy = (char *)AGENTRT_MALLOC(len + 1);
+    char *copy = (char *)AIRY_MALLOC(len + 1);
     if (copy == NULL) {
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     __builtin_memcpy(copy, str, len);
@@ -1025,14 +1025,14 @@ char *string_alloc_copy(const char *str)
 char *string_alloc_copy_n(const char *str, size_t len)
 {
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t actual_len = string_safe_strlen(str, len);
-    char *copy = (char *)AGENTRT_MALLOC(actual_len + 1);
+    char *copy = (char *)AIRY_MALLOC(actual_len + 1);
     if (copy == NULL) {
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     __builtin_memcpy(copy, str, actual_len);
@@ -1044,16 +1044,16 @@ char *string_alloc_copy_n(const char *str, size_t len)
 char *string_alloc_concat(const char *str1, const char *str2)
 {
     if (str1 == NULL && str2 == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     size_t len1 = (str1 != NULL) ? strlen(str1) : 0;
     size_t len2 = (str2 != NULL) ? strlen(str2) : 0;
 
-    char *result = (char *)AGENTRT_MALLOC(len1 + len2 + 1);
+    char *result = (char *)AIRY_MALLOC(len1 + len2 + 1);
     if (result == NULL) {
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     if (str1 != NULL) {
@@ -1075,17 +1075,17 @@ string_buffer_t *string_buffer_create(size_t initial_capacity, string_encoding_t
         initial_capacity = 16;
     }
 
-    string_buffer_t *buffer = (string_buffer_t *)AGENTRT_MALLOC(sizeof(string_buffer_t));
+    string_buffer_t *buffer = (string_buffer_t *)AIRY_MALLOC(sizeof(string_buffer_t));
     if (buffer == NULL) {
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    buffer->data = (char *)AGENTRT_MALLOC(initial_capacity + 1);
+    buffer->data = (char *)AIRY_MALLOC(initial_capacity + 1);
     if (buffer->data == NULL) {
-        AGENTRT_FREE(buffer);
+        AIRY_FREE(buffer);
         string_set_error(STRING_ERROR_MEMORY_ALLOCATION, "内存分配失败");
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     buffer->data[0] = '\0';
@@ -1104,10 +1104,10 @@ void string_buffer_destroy(string_buffer_t *buffer)
     }
 
     if (buffer->gateway && buffer->data != NULL) {
-        AGENTRT_FREE(buffer->data);
+        AIRY_FREE(buffer->data);
     }
 
-    AGENTRT_FREE(buffer);
+    AIRY_FREE(buffer);
 }
 
 bool string_buffer_append(string_buffer_t *buffer, const char *str)
@@ -1134,7 +1134,7 @@ bool string_buffer_append_n(string_buffer_t *buffer, const char *str, size_t len
             new_capacity *= 2;
         }
 
-        char *new_data = (char *)AGENTRT_REALLOC(buffer->data, new_capacity);
+        char *new_data = (char *)AIRY_REALLOC(buffer->data, new_capacity);
         if (new_data == NULL) {
             return false;
         }
@@ -1179,7 +1179,7 @@ bool string_buffer_append_format(string_buffer_t *buffer, const char *format, ..
             new_capacity *= 2;
         }
 
-        char *new_data = (char *)AGENTRT_REALLOC(buffer->data, new_capacity);
+        char *new_data = (char *)AIRY_REALLOC(buffer->data, new_capacity);
         if (new_data == NULL) {
             va_end(args);
             return false;
@@ -1211,7 +1211,7 @@ bool string_buffer_append_char(string_buffer_t *buffer, char ch)
     // 检查是否需要扩
     if (buffer->length + 1 >= buffer->capacity) {
         size_t new_capacity = buffer->capacity * 2;
-        char *new_data = (char *)AGENTRT_REALLOC(buffer->data, new_capacity);
+        char *new_data = (char *)AIRY_REALLOC(buffer->data, new_capacity);
         if (new_data == NULL) {
             return false;
         }
@@ -1243,7 +1243,7 @@ void string_buffer_clear(string_buffer_t *buffer)
 const char *string_buffer_cstr(const string_buffer_t *buffer)
 {
     if (buffer == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     return buffer->data;
@@ -1280,7 +1280,7 @@ int string_view_compare(const string_view_t *view1, const string_view_t *view2, 
     }
 
     if (view1 == NULL) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (view2 == NULL) {
@@ -1319,7 +1319,7 @@ ssize_t string_view_find(const string_view_t *haystack, const string_view_t *nee
 {
     if (haystack == NULL || needle == NULL || needle->length == 0 ||
         needle->length > haystack->length) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     for (size_t i = 0; i <= haystack->length - needle->length; i++) {
@@ -1331,18 +1331,18 @@ ssize_t string_view_find(const string_view_t *haystack, const string_view_t *nee
         }
     }
 
-    return AGENTRT_EINVAL;
+    return AIRY_EINVAL;
 }
 
 char *string_view_to_cstr(const string_view_t *view)
 {
     if (view == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
-    char *str = (char *)AGENTRT_MALLOC(view->length + 1);
+    char *str = (char *)AIRY_MALLOC(view->length + 1);
     if (str == NULL) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     __builtin_memcpy(str, view->data, view->length);
@@ -1359,7 +1359,7 @@ string_list_t string_list_create(size_t initial_capacity)
         if (initial_capacity > SIZE_MAX / sizeof(string_view_t)) {
             return list;
         }
-        list.items = (string_view_t *)AGENTRT_MALLOC(initial_capacity * sizeof(string_view_t));
+        list.items = (string_view_t *)AIRY_MALLOC(initial_capacity * sizeof(string_view_t));
         if (list.items != NULL) {
             list.capacity = initial_capacity;
         }
@@ -1375,7 +1375,7 @@ void string_list_destroy(string_list_t *list)
     }
 
     if (list->items != NULL) {
-        AGENTRT_FREE(list->items);
+        AIRY_FREE(list->items);
         list->items = NULL;
     }
 
@@ -1393,7 +1393,7 @@ bool string_list_add(string_list_t *list, const string_view_t *item)
     if (list->count >= list->capacity) {
         size_t new_capacity = (list->capacity == 0) ? 8 : list->capacity * 2;
         string_view_t *new_items =
-            (string_view_t *)AGENTRT_REALLOC(list->items, new_capacity * sizeof(string_view_t));
+            (string_view_t *)AIRY_REALLOC(list->items, new_capacity * sizeof(string_view_t));
         if (new_items == NULL) {
             return false;
         }
@@ -1553,7 +1553,7 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
 
     /* ASCII 和 UTF-8 源：直接复制（ASCII 是 UTF-8 的子集） */
     if (src_enc == STRING_ENCODING_ASCII || src_enc == STRING_ENCODING_UTF8) {
-        if (src_len >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+        if (src_len >= buf_size) return AIRY_ERR_BUFFER_TOO_SMALL;
         __builtin_memcpy(buf, src, src_len);
         buf[src_len] = '\0';
         return (int)src_len;
@@ -1564,10 +1564,10 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
         for (size_t i = 0; i < src_len; i++) {
             unsigned char ch = (unsigned char)src[i];
             if (ch <= 0x7F) {
-                if (di + 1 >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+                if (di + 1 >= buf_size) return AIRY_ERR_BUFFER_TOO_SMALL;
                 buf[di++] = (char)ch;
             } else {
-                if (di + 2 >= buf_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+                if (di + 2 >= buf_size) return AIRY_ERR_BUFFER_TOO_SMALL;
                 buf[di++] = (char)(0xC0 | (ch >> 6));
                 buf[di++] = (char)(0x80 | (ch & 0x3F));
             }
@@ -1584,7 +1584,7 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
             if (ch >= 0x80 && ch <= 0x9F)
                 cp = win1252_special_map[ch - 0x80];
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (n == 0) return AIRY_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
@@ -1603,22 +1603,22 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
             uint32_t cp;
             if (unit >= 0xD800 && unit <= 0xDBFF) {
                 /* 高代理项，需要低代理项 */
-                if (i + 3 >= src_len) return AGENTRT_ERR_PARSE_ERROR;
+                if (i + 3 >= src_len) return AIRY_ERR_PARSE_ERROR;
                 uint16_t low;
                 if (src_enc == STRING_ENCODING_UTF16_LE)
                     low = (uint16_t)((unsigned char)src[i+2] | ((unsigned char)src[i+3] << 8));
                 else
                     low = (uint16_t)(((unsigned char)src[i+2] << 8) | (unsigned char)src[i+3]);
-                if (low < 0xDC00 || low > 0xDFFF) return AGENTRT_ERR_PARSE_ERROR;
+                if (low < 0xDC00 || low > 0xDFFF) return AIRY_ERR_PARSE_ERROR;
                 cp = 0x10000 + ((uint32_t)(unit - 0xD800) << 10) + (low - 0xDC00);
                 i += 2; /* 额外消耗 2 字节 */
             } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
-                return AGENTRT_ERR_PARSE_ERROR; /* 孤立低代理项 */
+                return AIRY_ERR_PARSE_ERROR; /* 孤立低代理项 */
             } else {
                 cp = unit;
             }
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (n == 0) return AIRY_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
@@ -1639,16 +1639,16 @@ static int to_utf8_intermediate(const char *src, string_encoding_t src_enc,
                      ((uint32_t)(unsigned char)src[i+1] << 16) |
                      ((uint32_t)(unsigned char)src[i+2] << 8) |
                      (uint32_t)(unsigned char)src[i+3];
-            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return AGENTRT_ERR_PARSE_ERROR;
+            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return AIRY_ERR_PARSE_ERROR;
             size_t n = utf8_encode_codepoint(cp, buf + di, buf_size - di - 1);
-            if (n == 0) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (n == 0) return AIRY_ERR_BUFFER_TOO_SMALL;
             di += n;
         }
         buf[di] = '\0';
         return (int)di;
     }
 
-    return AGENTRT_ERR_NOT_SUPPORTED; /* 不支持的源编码 */
+    return AIRY_ERR_NOT_SUPPORTED; /* 不支持的源编码 */
 }
 
 /**
@@ -1664,7 +1664,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* ASCII 目标：非 ASCII 字符替换为 '?' */
     if (dest_enc == STRING_ENCODING_ASCII) {
         for (size_t i = 0; i < utf8_len; i++) {
-            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (di + 1 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
             unsigned char ch = (unsigned char)utf8[i];
             dest[di++] = (ch <= 0x7F) ? (char)ch : '?';
         }
@@ -1674,7 +1674,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
 
     /* UTF-8 目标：直接复制 */
     if (dest_enc == STRING_ENCODING_UTF8) {
-        if (utf8_len >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+        if (utf8_len >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
         __builtin_memcpy(dest, utf8, utf8_len);
         dest[utf8_len] = '\0';
         return (int)utf8_len;
@@ -1683,10 +1683,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* Latin-1 目标：U+0000-U+00FF 直接映射，超出范围替换为 '?' */
     if (dest_enc == STRING_ENCODING_LATIN1) {
         while (si < utf8_len) {
-            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (di + 1 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
+            if (n == 0) return AIRY_ERR_PARSE_ERROR;
             si += n;
             dest[di++] = (cp <= 0xFF) ? (char)cp : '?';
         }
@@ -1697,10 +1697,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* Windows-1252 目标：U+0000-U+00FF 映射（0x80-0x9F 逆映射） */
     if (dest_enc == STRING_ENCODING_WINDOWS_1252) {
         while (si < utf8_len) {
-            if (di + 1 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (di + 1 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
+            if (n == 0) return AIRY_ERR_PARSE_ERROR;
             si += n;
             if (cp <= 0x7F || (cp >= 0xA0 && cp <= 0xFF)) {
                 dest[di++] = (char)cp;
@@ -1726,11 +1726,11 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
         while (si < utf8_len) {
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
+            if (n == 0) return AIRY_ERR_PARSE_ERROR;
             si += n;
 
             if (cp <= 0xFFFF) {
-                if (di + 2 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+                if (di + 2 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
                 if (dest_enc == STRING_ENCODING_UTF16_LE) {
                     dest[di++] = (char)(cp & 0xFF);
                     dest[di++] = (char)((cp >> 8) & 0xFF);
@@ -1740,7 +1740,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
                 }
             } else {
                 /* 代理对编码 */
-                if (di + 4 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+                if (di + 4 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
                 uint32_t adj = cp - 0x10000;
                 uint16_t high = (uint16_t)(0xD800 + (adj >> 10));
                 uint16_t low = (uint16_t)(0xDC00 + (adj & 0x3FF));
@@ -1764,10 +1764,10 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
     /* UTF-32 目标：码点 → 4 字节 */
     if (dest_enc == STRING_ENCODING_UTF32_LE || dest_enc == STRING_ENCODING_UTF32_BE) {
         while (si < utf8_len) {
-            if (di + 4 >= dest_size) return AGENTRT_ERR_BUFFER_TOO_SMALL;
+            if (di + 4 >= dest_size) return AIRY_ERR_BUFFER_TOO_SMALL;
             uint32_t cp;
             size_t n = utf8_decode_codepoint(utf8 + si, utf8_len - si, &cp);
-            if (n == 0) return AGENTRT_ERR_PARSE_ERROR;
+            if (n == 0) return AIRY_ERR_PARSE_ERROR;
             si += n;
             if (dest_enc == STRING_ENCODING_UTF32_LE) {
                 dest[di++] = (char)(cp & 0xFF);
@@ -1785,7 +1785,7 @@ static int from_utf8_intermediate(const char *utf8, size_t utf8_len,
         return (int)di;
     }
 
-    return AGENTRT_ERR_NOT_SUPPORTED; /* 不支持的目标编码 */
+    return AIRY_ERR_NOT_SUPPORTED; /* 不支持的目标编码 */
 }
 
 /**
@@ -1800,7 +1800,7 @@ int string_convert_encoding(const char *src, string_encoding_t src_encoding, cha
 {
     if (src == NULL || dest == NULL || dest_size == 0) {
         string_set_error(STRING_ERROR_INVALID_ARGUMENT, "invalid argument");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 相同编码：直接复制 */
@@ -1816,10 +1816,10 @@ int string_convert_encoding(const char *src, string_encoding_t src_encoding, cha
     bool heap_allocated = false;
 
     if (mid_size > sizeof(stack_buf)) {
-        mid_buf = (char *)AGENTRT_MALLOC(mid_size);
+        mid_buf = (char *)AIRY_MALLOC(mid_size);
         if (!mid_buf) {
             string_set_error(STRING_ERROR_ENCODING_CONVERSION, "out of memory for intermediate buffer");
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         }
         heap_allocated = true;
     }
@@ -1827,21 +1827,21 @@ int string_convert_encoding(const char *src, string_encoding_t src_encoding, cha
     /* 第一步：源编码 → UTF-8 */
     int mid_len = to_utf8_intermediate(src, src_encoding, mid_buf, mid_size);
     if (mid_len < 0) {
-        if (heap_allocated) AGENTRT_FREE(mid_buf);
+        if (heap_allocated) AIRY_FREE(mid_buf);
         string_set_error(STRING_ERROR_ENCODING_CONVERSION, "source encoding decode failed");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     /* 第二步：UTF-8 → 目标编码 */
     int dest_len = from_utf8_intermediate(mid_buf, (size_t)mid_len, dest_encoding, dest, dest_size);
-    if (heap_allocated) AGENTRT_FREE(mid_buf);
+    if (heap_allocated) AIRY_FREE(mid_buf);
 
     if (dest_len < 0) {
         string_set_error(STRING_ERROR_ENCODING_CONVERSION, "target encoding encode failed or buffer too small");
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    return AGENTRT_OK;
+    return AIRY_OK;
 }
 
 size_t string_utf8_char_count(const char *str, size_t max_len)

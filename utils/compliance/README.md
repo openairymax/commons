@@ -10,7 +10,7 @@ Compliance 是 AgentRT 的代码合规性实施模块，通过禁止危险函数
 ## 设计目标
 
 - **编译期安全强制**：通过 `#pragma GCC poison` 在编译期禁止危险函数的使用
-- **安全 API 替代**：提供 `AGENTRT_MALLOC`、`AGENTRT_FREE`、`AGENTRT_STRCPY` 等安全替代宏
+- **安全 API 替代**：提供 `AIRY_MALLOC`、`AIRY_FREE`、`AIRY_STRCPY` 等安全替代宏
 - **分级合规**：支持 Strict 模式（编译期阻断）和 Standard 模式（编译期警告）
 - **可豁免**：提供 `compliance_exempt.h` 豁免机制，允许特定文件在审查后使用受限函数
 
@@ -32,8 +32,8 @@ compliance/
 
 | 类别 | 被禁止的函数 | 安全替代 |
 |------|-------------|----------|
-| **内存分配** | `malloc`、`free`、`calloc`、`realloc` | `AGENTRT_MALLOC`、`AGENTRT_FREE`、`AGENTRT_CALLOC`、`AGENTRT_REALLOC` |
-| **字符串复制** | `strcpy`、`strcat`、`strncpy`、`strdup`、`strndup` | `AGENTRT_STRCPY`、`AGENTRT_STRCAT`、`AGENTRT_STRDUP`、`AGENTRT_STRNDUP` |
+| **内存分配** | `malloc`、`free`、`calloc`、`realloc` | `AIRY_MALLOC`、`AIRY_FREE`、`AIRY_CALLOC`、`AIRY_REALLOC` |
+| **字符串复制** | `strcpy`、`strcat`、`strncpy`、`strdup`、`strndup` | `AIRY_STRCPY`、`AGENTRT_STRCAT`、`AGENTRT_STRDUP`、`AGENTRT_STRNDUP` |
 | **格式化输出** | `sprintf`、`vsprintf`、`fprintf`、`asprintf`、`vasprintf` | `snprintf`、`AGENTRT_SNPRINTF` |
 | **输入扫描** | `scanf`、`fscanf`、`sscanf`、`gets` | 结构化解析 API |
 | **内存操作** | `memcpy`、`memmove`、`memset` | `AGENTRT_MEMCPY_SAFE`、`AGENTRT_MEMSET_SAFE` |
@@ -81,8 +81,8 @@ char *buf = malloc(1024);
 strcpy(buf, src);
 
 /* 安全 — 使用 AgentRT 替代 API */
-char *buf = AGENTRT_MALLOC(1024);
-AGENTRT_STRCPY(buf, sizeof(buf), src);
+char *buf = AIRY_MALLOC(1024);
+AIRY_STRCPY(buf, sizeof(buf), src);
 ```
 
 ### 豁免示例
@@ -112,8 +112,8 @@ Compliance 模块在 CI 流水线中通过以下检查强制执行：
 | 依赖 | 说明 |
 |------|------|
 | 根 `CMakeLists.txt` | 通过 `-include` 编译选项注入 `banned_functions.h` |
-| `memory_compat.h` | 提供 `AGENTRT_MALLOC`/`AGENTRT_FREE` 等安全替代宏 |
-| `string_compat.h` | 提供 `AGENTRT_STRCPY`/`AGENTRT_STRDUP` 等安全字符串宏 |
+| `memory_compat.h` | 提供 `AIRY_MALLOC`/`AIRY_FREE` 等安全替代宏 |
+| `string_compat.h` | 提供 `AIRY_STRCPY`/`AGENTRT_STRDUP` 等安全字符串宏 |
 | GCC/Clang 编译器 | `#pragma GCC poison` 依赖 GCC/Clang 扩展 |
 
 ---

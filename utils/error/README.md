@@ -13,7 +13,7 @@ Error 模块提供 AgentRT 统一的错误处理框架，涵盖错误码定义�
 - **错误链追踪**：支持最多 16 层深度的错误上下文记录，包含源文件、行号、函数名和时间戳
 - **线程安全**：所有公共接口均为线程安全，每线程独立错误链
 - **多语言支持**：内建 8 种语言的错误描述（中/英/日/韩/德/法等）
-- **便捷宏**：提供 `AGENTRT_ERROR`、`AGENTRT_CHECK`、`AGENTRT_PROPAGATE` 等宏减少样板代码
+- **便捷宏**：提供 `AIRY_ERROR`、`AGENTRT_CHECK`、`AGENTRT_PROPAGATE` 等宏减少样板代码
 
 ## 目录结构
 
@@ -33,44 +33,44 @@ error/
 
 | 范围 | 说明 |
 |------|------|
-| `-1 ~ -99` | 通用基础错误（`AGENTRT_ERR_INVALID_PARAM`、`AGENTRT_ERR_OUT_OF_MEMORY` 等） |
-| `-100 ~ -199` | 系统与平台错误（`AGENTRT_ERR_SYS_NOT_INIT`、`AGENTRT_ERR_SYS_THREAD` 等） |
-| `-200 ~ -299` | 内核层错误（`AGENTRT_ERR_KERN_IPC`、`AGENTRT_ERR_KERN_TASK` 等） |
-| `-300 ~ -399` | 服务层错误（`AGENTRT_ERR_SVC_NOT_READY`、`AGENTRT_ERR_SVC_CONFIG` 等） |
-| `-400 ~ -499` | LLM/AI 服务错误（`AGENTRT_ERR_LLM_NO_PROVIDER`、`AGENTRT_ERR_LLM_RATE_LIMIT` 等） |
-| `-500 ~ -599` | 执行/工具错误（`AGENTRT_ERR_EXEC_TIMEOUT`、`AGENTRT_ERR_EXEC_SANDBOX` 等） |
-| `-600 ~ -699` | 记忆/存储错误（`AGENTRT_ERR_MEM_WRITE`、`AGENTRT_ERR_MEM_FULL` 等） |
-| `-700 ~ -799` | 安全/沙箱错误（`AGENTRT_ERR_SEC_VIOLATION`、`AGENTRT_ERR_SEC_PATH_TRAV` 等） |
-| `-800 ~ -899` | 协调/规划错误（`AGENTRT_ERR_COORD_PLAN_FAIL`、`AGENTRT_ERR_COORD_RETRY_EXCEED` 等） |
+| `-1 ~ -99` | 通用基础错误（`AIRY_ERR_INVALID_PARAM`、`AIRY_ERR_OUT_OF_MEMORY` 等） |
+| `-100 ~ -199` | 系统与平台错误（`AIRY_ERR_SYS_NOT_INIT`、`AIRY_ERR_SYS_THREAD` 等） |
+| `-200 ~ -299` | 内核层错误（`AIRY_ERR_KERN_IPC`、`AIRY_ERR_KERN_TASK` 等） |
+| `-300 ~ -399` | 服务层错误（`AIRY_ERR_SVC_NOT_READY`、`AIRY_ERR_SVC_CONFIG` 等） |
+| `-400 ~ -499` | LLM/AI 服务错误（`AIRY_ERR_LLM_NO_PROVIDER`、`AIRY_ERR_LLM_RATE_LIMIT` 等） |
+| `-500 ~ -599` | 执行/工具错误（`AIRY_ERR_EXEC_TIMEOUT`、`AIRY_ERR_EXEC_SANDBOX` 等） |
+| `-600 ~ -699` | 记忆/存储错误（`AIRY_ERR_MEM_WRITE`、`AIRY_ERR_MEM_FULL` 等） |
+| `-700 ~ -799` | 安全/沙箱错误（`AIRY_ERR_SEC_VIOLATION`、`AIRY_ERR_SEC_PATH_TRAV` 等） |
+| `-800 ~ -899` | 协调/规划错误（`AIRY_ERR_COORD_PLAN_FAIL`、`AIRY_ERR_COORD_RETRY_EXCEED` 等） |
 
 ### 常用错误码
 
 | 宏 | 值 | 说明 |
 |------|------|------|
 | `AGENTRT_OK` | `0` | 操作成功 |
-| `AGENTRT_ERR_UNKNOWN` | `-1` | 未知错误 |
-| `AGENTRT_ERR_INVALID_PARAM` | `-2` | 无效参数 |
-| `AGENTRT_ERR_NULL_POINTER` | `-3` | 空指针 |
-| `AGENTRT_ERR_OUT_OF_MEMORY` | `-4` | 内存不足 |
-| `AGENTRT_ERR_NOT_FOUND` | `-6` | 未找到 |
-| `AGENTRT_ERR_TIMEOUT` | `-8` | 超时 |
-| `AGENTRT_ERR_PERMISSION_DENIED` | `-10` | 权限不足 |
-| `AGENTRT_ERR_IO` | `-11` | I/O 错误 |
+| `AIRY_ERR_UNKNOWN` | `-1` | 未知错误 |
+| `AIRY_ERR_INVALID_PARAM` | `-2` | 无效参数 |
+| `AIRY_ERR_NULL_POINTER` | `-3` | 空指针 |
+| `AIRY_ERR_OUT_OF_MEMORY` | `-4` | 内存不足 |
+| `AIRY_ERR_NOT_FOUND` | `-6` | 未找到 |
+| `AIRY_ERR_TIMEOUT` | `-8` | 超时 |
+| `AIRY_ERR_PERMISSION_DENIED` | `-10` | 权限不足 |
+| `AIRY_ERR_IO` | `-11` | I/O 错误 |
 
 ### agentrt_error_severity_t — 错误严重程度
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_ERR_SEVERITY_INFO` | 信息 |
-| `AGENTRT_ERR_SEVERITY_WARNING` | 警告 |
-| `AGENTRT_ERR_SEVERITY_ERROR` | 错误 |
-| `AGENTRT_ERR_SEVERITY_CRITICAL` | 严重 |
+| `AIRY_ERR_SEVERITY_INFO` | 信息 |
+| `AIRY_ERR_SEVERITY_WARNING` | 警告 |
+| `AIRY_ERR_SEVERITY_ERROR` | 错误 |
+| `AIRY_ERR_SEVERITY_CRITICAL` | 严重 |
 
 ### agentrt_error_chain_t — 错误链
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `code` | `agentrt_error_t` | 错误码 |
+| `code` | `airy_err_t` | 错误码 |
 | `depth` | `int` | 当前链深度 |
 | `contexts` | `agentrt_error_context_entry_t[16]` | 错误上下文条目数组 |
 
@@ -82,7 +82,7 @@ error/
 | `line` | `int` | 行号 |
 | `function` | `const char *` | 函数名 |
 | `message` | `const char *` | 错误消息 |
-| `error_code` | `agentrt_error_t` | 错误码 |
+| `error_code` | `airy_err_t` | 错误码 |
 | `timestamp_ns` | `uint64_t` | 纳秒时间戳 |
 
 ## 接口说明
@@ -123,8 +123,8 @@ error/
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_ERROR(code, msg)` | 设置错误并返回 |
-| `AGENTRT_ERROR_FMT(code, fmt, ...)` | 设置格式化错误并返回 |
+| `AIRY_ERROR(code, msg)` | 设置错误并返回 |
+| `AIRY_ERROR_FMT(code, fmt, ...)` | 设置格式化错误并返回 |
 | `AGENTRT_CHECK(cond, code, msg)` | 条件检查，失败时返回错误 |
 | `AGENTRT_CHECK_NULL(ptr, name)` | 空指针检查 |
 | `AGENTRT_CHECK_ALLOC(ptr)` | 内存分配检查 |
@@ -144,28 +144,28 @@ error/
 #include "error.h"
 
 // 基本错误处理
-agentrt_error_t do_something(void *ptr) {
+airy_err_t do_something(void *ptr) {
     AGENTRT_CHECK_NULL(ptr, "ptr");
-    // 等价于: if (ptr == NULL) { AGENTRT_ERROR(AGENTRT_ERR_NULL_POINTER, "ptr is NULL"); }
+    // 等价于: if (ptr == NULL) { AIRY_ERROR(AIRY_ERR_NULL_POINTER, "ptr is NULL"); }
 
     if (some_condition_fails) {
-        AGENTRT_ERROR(AGENTRT_ERR_INVALID_PARAM, "Invalid parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "Invalid parameter");
     }
 
     return AGENTRT_OK;
 }
 
 // 错误传播
-agentrt_error_t caller() {
+airy_err_t caller() {
     AGENTRT_PROPAGATE(do_something(NULL));
     // 自动记录: Propagated from do_something(NULL)
     return AGENTRT_OK;
 }
 
 // 带格式化消息的错误
-agentrt_error_t validate(size_t size) {
+airy_err_t validate(size_t size) {
     if (size > MAX_SIZE) {
-        AGENTRT_ERROR_FMT(AGENTRT_ERR_OVERFLOW,
+        AIRY_ERROR_FMT(AIRY_ERR_OVERFLOW,
                           "Size %zu exceeds maximum %zu", size, (size_t)MAX_SIZE);
     }
     return AGENTRT_OK;

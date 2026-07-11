@@ -45,21 +45,21 @@ platform/
 
 | 类型 | 说明 |
 |------|------|
-| `agentrt_thread_t` | 跨平台线程句柄，封装 `pthread_t` / `HANDLE` |
-| `agentrt_mutex_t` | 跨平台互斥锁，封装 `pthread_mutex_t` / `CRITICAL_SECTION` |
-| `agentrt_cond_t` | 跨平台条件变量，封装 `pthread_cond_t` / `CONDITION_VARIABLE` |
+| `airy_thread_t` | 跨平台线程句柄，封装 `pthread_t` / `HANDLE` |
+| `airy_mtx_t` | 跨平台互斥锁，封装 `pthread_mutex_t` / `CRITICAL_SECTION` |
+| `airy_cond_t` | 跨平台条件变量，封装 `pthread_cond_t` / `CONDITION_VARIABLE` |
 | `agentrt_rwlock_t` | 跨平台读写锁，封装 `pthread_rwlock_t` / `SRWLOCK` |
 
 ### 3. 平台抽象实现 (`platform.c`)
 
 提供统一的跨平台实现：
 
-- **线程管理**：`agentrt_thread_create` / `agentrt_thread_join` / `agentrt_thread_detach`
+- **线程管理**：`airy_thread_create` / `airy_thread_join` / `airy_thread_detach`
 - **互斥锁**：`agentrt_mutex_init` / `agentrt_mutex_lock` / `agentrt_mutex_unlock` / `agentrt_mutex_destroy`
 - **条件变量**：`agentrt_cond_init` / `agentrt_cond_wait` / `agentrt_cond_signal` / `agentrt_cond_broadcast` / `agentrt_cond_destroy`
 - **Socket 网络**：`agentrt_socket_create` / `agentrt_socket_bind` / `agentrt_socket_listen` / `agentrt_socket_accept` / `agentrt_socket_connect` / `agentrt_socket_send` / `agentrt_socket_recv` / `agentrt_socket_close`
 - **进程管理**：`agentrt_process_spawn` / `agentrt_process_wait` / `agentrt_process_kill`
-- **时间与休眠**：`agentrt_sleep_ms` / `agentrt_get_time_ms` / `agentrt_get_monotonic_time`
+- **时间与休眠**：`airy_sleep_ms` / `airy_time_ms` / `airy_time_mono`
 - **文件系统**：`agentrt_file_exists` / `agentrt_mkdir` / `agentrt_path_join` / `agentrt_get_temp_dir`
 - **随机数**：`agentrt_random_bytes`（Windows 使用 `BCryptGenRandom`，POSIX 使用 `/dev/urandom`）
 - **动态库加载**：`agentrt_dlopen` / `agentrt_dlsym` / `agentrt_dlclose`
@@ -70,7 +70,7 @@ platform/
 
 | 宏 | 说明 |
 |-----|------|
-| `AGENTRT_EXPORT` | 导出符号（`__declspec(dllexport)` / `__attribute__((visibility("default")))`） |
+| `AIRY_EXPORT` | 导出符号（`__declspec(dllexport)` / `__attribute__((visibility("default")))`） |
 | `AGENTRT_IMPORT` | 导入符号（`__declspec(dllimport)`） |
 | `AGENTRT_LOCAL` | 隐藏符号（`__attribute__((visibility("hidden")))`） |
 
@@ -89,11 +89,11 @@ platform/
 #include "platform.h"
 
 /* 线程创建 */
-agentrt_thread_t thread;
-agentrt_thread_create(&thread, my_thread_func, my_arg);
+airy_thread_t thread;
+airy_thread_create(&thread, my_thread_func, my_arg);
 
 /* 互斥锁 */
-agentrt_mutex_t mutex;
+airy_mtx_t mutex;
 agentrt_mutex_init(&mutex);
 agentrt_mutex_lock(&mutex);
 /* ... 临界区 ... */
@@ -101,7 +101,7 @@ agentrt_mutex_unlock(&mutex);
 agentrt_mutex_destroy(&mutex);
 
 /* 休眠 */
-agentrt_sleep_ms(100);
+airy_sleep_ms(100);
 
 /* 文件系统 */
 if (!agentrt_file_exists("/tmp/myapp")) {
@@ -109,7 +109,7 @@ if (!agentrt_file_exists("/tmp/myapp")) {
 }
 
 /* 等待线程完成 */
-agentrt_thread_join(thread, NULL);
+airy_thread_join(thread, NULL);
 ```
 
 ## 平台差异适配表

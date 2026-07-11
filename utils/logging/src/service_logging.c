@@ -57,7 +57,7 @@ typedef struct {
     int outputter_count;
     filter_t *filters[MAX_FILTERS];
     int filter_count;
-    agentrt_mutex_t mutex;
+    airy_mtx_t mutex;
     service_logging_stats_t stats;
     log_rotation_config_t rotation_config;
     log_transport_config_t transport_config;
@@ -70,7 +70,7 @@ static int console_outputter_output(outputter_t *self, const log_record_t *recor
 {
     (void)self;
     if (!record)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     /* 路由到核心层 log_write()，统一处理色彩/时间戳/节流/trace_id
      * 注意：此处使用 log_write 而非直接 fprintf，确保所有日志经核心层格式化 */
     log_write(record->level, record->module, record->line, "[SERVICE] %s", record->message);
@@ -79,19 +79,19 @@ static int console_outputter_output(outputter_t *self, const log_record_t *recor
 
 static void console_outputter_destroy(outputter_t *self)
 {
-    AGENTRT_FREE(self);
+    AIRY_FREE(self);
 }
 
 static int file_outputter_output(outputter_t *self, const log_record_t *record)
 {
     if (!self || !record)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     FILE *fp = (FILE *)self->user_data;
     if (!fp) {
         fp = fopen(self->name, "a");
         if (!fp)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         self->user_data = fp;
     }
 
@@ -140,7 +140,7 @@ static void file_outputter_destroy(outputter_t *self)
         fclose((FILE *)self->user_data);
         self->user_data = NULL;
     }
-    AGENTRT_FREE(self);
+    AIRY_FREE(self);
 }
 
 static bool level_filter_filter(filter_t *self, const log_record_t *record)
@@ -155,7 +155,7 @@ static bool level_filter_filter(filter_t *self, const log_record_t *record)
 
 static void level_filter_destroy(filter_t *self)
 {
-    AGENTRT_FREE(self);
+    AIRY_FREE(self);
 }
 
 void service_log_output_record(const log_record_t *record)
@@ -163,7 +163,7 @@ void service_log_output_record(const log_record_t *record)
     if (!record || !g_service_state.initialized)
         return;
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
     bool passed = true;
     for (int i = 0; i < g_service_state.filter_count; i++) {
@@ -185,17 +185,17 @@ void service_log_output_record(const log_record_t *record)
     }
 
     g_service_state.stats.throughput.total_records++;
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
 }
 
 int service_logging_init(const service_logging_config_t *manager)
 {
     if (g_service_state.initialized) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    if (agentrt_mutex_init(&g_service_state.mutex) != 0) {
-        return AGENTRT_ERR_SYS_NOT_INIT;
+    if (airy_mtx_init(&g_service_state.mutex) != 0) {
+        return AIRY_ERR_SYS_NOT_INIT;
     }
 
     if (manager) {
@@ -212,9 +212,9 @@ int service_logging_init(const service_logging_config_t *manager)
         g_service_state.manager.config_reload_interval = DEFAULT_CONFIG_RELOAD_INTERVAL;
     }
 
-    AGENTRT_MEMSET(&g_service_state.stats, 0, sizeof(service_logging_stats_t));
+    AIRY_MEMSET(&g_service_state.stats, 0, sizeof(service_logging_stats_t));
 
-    outputter_t *console_outputter = (outputter_t *)AGENTRT_CALLOC(1, sizeof(outputter_t));
+    outputter_t *console_outputter = (outputter_t *)AIRY_CALLOC(1, sizeof(outputter_t));
     if (console_outputter) {
         console_outputter->type = 1;
         snprintf(console_outputter->name, sizeof(console_outputter->name), "%s", "console");
@@ -230,20 +230,20 @@ int service_logging_init(const service_logging_config_t *manager)
 int service_logging_configure_rotation(const log_rotation_config_t *manager)
 {
     if (!g_service_state.initialized || !manager)
-        return AGENTRT_EINVAL;
-    agentrt_mutex_lock(&g_service_state.mutex);
+        return AIRY_EINVAL;
+    airy_mtx_lock(&g_service_state.mutex);
     __builtin_memcpy(&g_service_state.rotation_config, manager, sizeof(log_rotation_config_t));
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     return 0;
 }
 
 int service_logging_configure_transport(const log_transport_config_t *manager)
 {
     if (!g_service_state.initialized || !manager)
-        return AGENTRT_EINVAL;
-    agentrt_mutex_lock(&g_service_state.mutex);
+        return AIRY_EINVAL;
+    airy_mtx_lock(&g_service_state.mutex);
     __builtin_memcpy(&g_service_state.transport_config, manager, sizeof(log_transport_config_t));
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     return 0;
 }
 
@@ -251,19 +251,19 @@ int service_logging_add_outputter(const char *name, int type, void *user_data)
 {
     if (!g_service_state.initialized || !name ||
         g_service_state.outputter_count >= MAX_OUTPUTTERS) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
-    outputter_t *outputter = (outputter_t *)AGENTRT_CALLOC(1, sizeof(outputter_t));
+    outputter_t *outputter = (outputter_t *)AIRY_CALLOC(1, sizeof(outputter_t));
     if (!outputter) {
-        agentrt_mutex_unlock(&g_service_state.mutex);
-        return AGENTRT_ERR_OUT_OF_MEMORY;
+        airy_mtx_unlock(&g_service_state.mutex);
+        return AIRY_ERR_OUT_OF_MEMORY;
     }
 
     outputter->type = type;
-    AGENTRT_STRNCPY_TERM(outputter->name, name, sizeof(outputter->name));
+    AIRY_STRNCPY_TERM(outputter->name, name, sizeof(outputter->name));
     outputter->name[sizeof(outputter->name) - 1] = '\0';
     outputter->user_data = user_data;
 
@@ -277,32 +277,32 @@ int service_logging_add_outputter(const char *name, int type, void *user_data)
         outputter->destroy = file_outputter_destroy;
         break;
     default:
-        AGENTRT_FREE(outputter);
-        agentrt_mutex_unlock(&g_service_state.mutex);
-        return AGENTRT_ERR_NULL_POINTER;
+        AIRY_FREE(outputter);
+        airy_mtx_unlock(&g_service_state.mutex);
+        return AIRY_ERR_NULL_POINTER;
     }
 
     g_service_state.outputters[g_service_state.outputter_count++] = outputter;
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     return 0;
 }
 
 int service_logging_add_filter(const char *name, int type, void *user_data)
 {
     if (!g_service_state.initialized || !name || g_service_state.filter_count >= MAX_FILTERS) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
-    filter_t *filter = (filter_t *)AGENTRT_CALLOC(1, sizeof(filter_t));
+    filter_t *filter = (filter_t *)AIRY_CALLOC(1, sizeof(filter_t));
     if (!filter) {
-        agentrt_mutex_unlock(&g_service_state.mutex);
-        return AGENTRT_ERR_OUT_OF_MEMORY;
+        airy_mtx_unlock(&g_service_state.mutex);
+        return AIRY_ERR_OUT_OF_MEMORY;
     }
 
     filter->type = type;
-    AGENTRT_STRNCPY_TERM(filter->name, name, sizeof(filter->name));
+    AIRY_STRNCPY_TERM(filter->name, name, sizeof(filter->name));
     filter->name[sizeof(filter->name) - 1] = '\0';
     filter->user_data = user_data;
 
@@ -312,22 +312,22 @@ int service_logging_add_filter(const char *name, int type, void *user_data)
         filter->destroy = level_filter_destroy;
         break;
     default:
-        AGENTRT_FREE(filter);
-        agentrt_mutex_unlock(&g_service_state.mutex);
-        return AGENTRT_ERR_NULL_POINTER;
+        AIRY_FREE(filter);
+        airy_mtx_unlock(&g_service_state.mutex);
+        return AIRY_ERR_NULL_POINTER;
     }
 
     g_service_state.filters[g_service_state.filter_count++] = filter;
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     return 0;
 }
 
 int service_logging_process_record(const log_record_t *record)
 {
     if (!g_service_state.initialized || !record)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
     bool passed = true;
     for (int i = 0; i < g_service_state.filter_count; i++) {
@@ -349,7 +349,7 @@ int service_logging_process_record(const log_record_t *record)
     }
 
     g_service_state.stats.throughput.total_records++;
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
 
     return success_count > 0 ? 0 : -2;
 }
@@ -357,23 +357,23 @@ int service_logging_process_record(const log_record_t *record)
 int service_logging_get_stats(service_logging_stats_t *stats)
 {
     if (!g_service_state.initialized || !stats)
-        return AGENTRT_EINVAL;
-    agentrt_mutex_lock(&g_service_state.mutex);
+        return AIRY_EINVAL;
+    airy_mtx_lock(&g_service_state.mutex);
     __builtin_memcpy(stats, &g_service_state.stats, sizeof(service_logging_stats_t));
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     return 0;
 }
 
 int service_logging_reload_config(const char *config_path)
 {
     if (!g_service_state.initialized || !config_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     FILE *f = fopen(config_path, "r");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
     char line[512];
     while (fgets(line, sizeof(line), f)) {
@@ -401,7 +401,7 @@ int service_logging_reload_config(const char *config_path)
         }
     }
 
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
     fclose(f);
     return 0;
 }
@@ -411,7 +411,7 @@ void service_logging_cleanup(void)
     if (!g_service_state.initialized)
         return;
 
-    agentrt_mutex_lock(&g_service_state.mutex);
+    airy_mtx_lock(&g_service_state.mutex);
 
     for (int i = 0; i < g_service_state.outputter_count; i++) {
         outputter_t *outputter = g_service_state.outputters[i];
@@ -429,9 +429,9 @@ void service_logging_cleanup(void)
     }
     g_service_state.filter_count = 0;
 
-    agentrt_mutex_unlock(&g_service_state.mutex);
+    airy_mtx_unlock(&g_service_state.mutex);
 
-    agentrt_mutex_destroy(&g_service_state.mutex);
+    airy_mtx_destroy(&g_service_state.mutex);
 
-    AGENTRT_MEMSET(&g_service_state, 0, sizeof(g_service_state));
+    AIRY_MEMSET(&g_service_state, 0, sizeof(g_service_state));
 }

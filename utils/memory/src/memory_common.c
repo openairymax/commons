@@ -36,7 +36,7 @@ void *memory_safe_alloc(size_t size)
         return NULL;
     }
 
-    void *ptr = AGENTRT_MALLOC(size);
+    void *ptr = AIRY_MALLOC(size);
     if (ptr) {
         g_memory_stats.total_allocated += size;
         g_memory_stats.current_allocated += size;
@@ -57,7 +57,7 @@ void *memory_safe_realloc(void *ptr, size_t size)
     }
 
     size_t old_size = ptr ? malloc_usable_size(ptr) : 0;
-    void *new_ptr = AGENTRT_REALLOC(ptr, size);
+    void *new_ptr = AIRY_REALLOC(ptr, size);
     if (new_ptr) {
         if (old_size > 0) {
             g_memory_stats.total_freed += old_size;
@@ -82,7 +82,7 @@ void memory_safe_free(void *ptr)
     }
 
     size_t size = malloc_usable_size(ptr);
-    AGENTRT_FREE(ptr);
+    AIRY_FREE(ptr);
 
     g_memory_stats.total_freed += size;
     g_memory_stats.current_allocated -= size;
@@ -115,7 +115,7 @@ void memory_get_global_stats(memory_stats_t *stats)
 
 void memory_reset_global_stats(void)
 {
-    AGENTRT_MEMSET(&g_memory_stats, 0, sizeof(g_memory_stats));
+    AIRY_MEMSET(&g_memory_stats, 0, sizeof(g_memory_stats));
 }
 
 void memory_set_strategy(memory_strategy_t strategy)

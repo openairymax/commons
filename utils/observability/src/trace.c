@@ -57,14 +57,14 @@ typedef struct trace_event {
 /**
  * @brief 跨平台互斥锁类型
  */
-typedef agentrt_mutex_t trace_mutex_t;
+typedef airy_mtx_t trace_mutex_t;
 
 /**
  * @brief 初始化互斥锁
  */
 static int trace_mutex_init(trace_mutex_t *mutex)
 {
-    return agentrt_mutex_init(mutex);
+    return airy_mtx_init(mutex);
 }
 
 /**
@@ -72,7 +72,7 @@ static int trace_mutex_init(trace_mutex_t *mutex)
  */
 static void trace_mutex_destroy(trace_mutex_t *mutex)
 {
-    agentrt_mutex_destroy(mutex);
+    airy_mtx_destroy(mutex);
 }
 
 /**
@@ -80,7 +80,7 @@ static void trace_mutex_destroy(trace_mutex_t *mutex)
  */
 static void trace_mutex_lock(trace_mutex_t *mutex)
 {
-    agentrt_mutex_lock(mutex);
+    airy_mtx_lock(mutex);
 }
 
 /**
@@ -88,13 +88,13 @@ static void trace_mutex_lock(trace_mutex_t *mutex)
  */
 static void trace_mutex_unlock(trace_mutex_t *mutex)
 {
-    agentrt_mutex_unlock(mutex);
+    airy_mtx_unlock(mutex);
 }
 
 /**
  * @brief 追踪Span内部结构
  */
-struct agentrt_trace_span {
+struct airy_trace_span {
     char trace_id[MAX_TRACE_ID_LEN]; /**< 追踪ID */
     char span_id[MAX_SPAN_ID_LEN];   /**< Span ID */
     char parent_id[MAX_SPAN_ID_LEN]; /**< 父Span ID */
@@ -106,7 +106,7 @@ struct agentrt_trace_span {
     trace_event_t *events_tail;      /**< 事件链表?*/
     int event_count;                 /**< 事件数量 */
     trace_mutex_t mutex;             /**< 互斥?*/
-    struct agentrt_trace_span *next; /**< 下一个Span */
+    struct airy_trace_span *next; /**< 下一个Span */
 };
 
 /**
@@ -115,8 +115,8 @@ struct agentrt_trace_span {
 static struct {
     atomic_uint64_t span_counter;  /**< Span计数?*/
     atomic_uint64_t trace_counter; /**< 追踪计数?*/
-    agentrt_trace_span_t *head;    /**< Span链表?*/
-    agentrt_trace_span_t *tail;    /**< Span链表?*/
+    airy_trace_span_t *head;    /**< Span链表?*/
+    airy_trace_span_t *tail;    /**< Span链表?*/
     trace_mutex_t mutex;           /**< 互斥?*/
     int initialized;               /**< 初始化标?*/
 } g_trace_state;
@@ -134,7 +134,7 @@ static int64_t get_current_time_us(void)
     uli.HighPart = ft.dwHighDateTime;
     return (int64_t)((uli.QuadPart - 116444736000000000LL) / 10);
 #else
-    return (int64_t)(agentrt_time_ns() / 1000);
+    return (int64_t)(airy_time_ns() / 1000);
 #endif
 }
 
@@ -148,7 +148,7 @@ static int init_trace_system(void)
     }
 
     if (trace_mutex_init(&g_trace_state.mutex) != 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     atomic_init(&g_trace_state.span_counter, 0);
@@ -173,22 +173,22 @@ static void generate_id(char *buffer, size_t size, uint64_t counter, const char 
  */
 static trace_event_t *create_event(const char *name, const char *attributes)
 {
-    trace_event_t *event = (trace_event_t *)AGENTRT_MALLOC(sizeof(trace_event_t));
+    trace_event_t *event = (trace_event_t *)AIRY_MALLOC(sizeof(trace_event_t));
     if (!event) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(event, 0, sizeof(trace_event_t));
+    AIRY_MEMSET(event, 0, sizeof(trace_event_t));
 
     if (name) {
-        AGENTRT_STRNCPY_TERM(event->name, name, sizeof(event->name));
+        AIRY_STRNCPY_TERM(event->name, name, sizeof(event->name));
         event->name[sizeof(event->name) - 1] = '\0';
     }
 
     event->timestamp = get_current_time_us();
 
     if (attributes) {
-        AGENTRT_STRNCPY_TERM(event->attributes, attributes, sizeof(event->attributes));
+        AIRY_STRNCPY_TERM(event->attributes, attributes, sizeof(event->attributes));
         event->attributes[sizeof(event->attributes) - 1] = '\0';
     }
 
@@ -202,28 +202,28 @@ static void free_events(trace_event_t *head)
 {
     while (head) {
         trace_event_t *next = head->next;
-        AGENTRT_FREE(head);
+        AIRY_FREE(head);
         head = next;
     }
 }
 
-agentrt_trace_span_t *agentrt_trace_begin(const char *name, const char *parent_id)
+airy_trace_span_t *airy_trace_begin(const char *name, const char *parent_id)
 {
     if (!name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     if (init_trace_system() != 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    agentrt_trace_span_t *span =
-        (agentrt_trace_span_t *)AGENTRT_MALLOC(sizeof(agentrt_trace_span_t));
+    airy_trace_span_t *span =
+        (airy_trace_span_t *)AIRY_MALLOC(sizeof(airy_trace_span_t));
     if (!span) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(span, 0, sizeof(agentrt_trace_span_t));
+    AIRY_MEMSET(span, 0, sizeof(airy_trace_span_t));
 
     uint64_t trace_id = atomic_fetch_add(&g_trace_state.trace_counter, 1);
     uint64_t span_id = atomic_fetch_add(&g_trace_state.span_counter, 1);
@@ -232,13 +232,13 @@ agentrt_trace_span_t *agentrt_trace_begin(const char *name, const char *parent_i
     generate_id(span->span_id, sizeof(span->span_id), span_id, "sp");
 
     if (parent_id) {
-        AGENTRT_STRNCPY_TERM(span->parent_id, parent_id, sizeof(span->parent_id));
+        AIRY_STRNCPY_TERM(span->parent_id, parent_id, sizeof(span->parent_id));
         span->parent_id[sizeof(span->parent_id) - 1] = '\0';
     } else {
         span->parent_id[0] = '\0';
     }
 
-    AGENTRT_STRNCPY_TERM(span->name, name, sizeof(span->name));
+    AIRY_STRNCPY_TERM(span->name, name, sizeof(span->name));
     span->name[sizeof(span->name) - 1] = '\0';
 
     span->start_time = get_current_time_us();
@@ -249,8 +249,8 @@ agentrt_trace_span_t *agentrt_trace_begin(const char *name, const char *parent_i
     span->event_count = 0;
 
     if (trace_mutex_init(&span->mutex) != 0) {
-        AGENTRT_FREE(span);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_FREE(span);
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     trace_mutex_lock(&g_trace_state.mutex);
@@ -269,7 +269,7 @@ agentrt_trace_span_t *agentrt_trace_begin(const char *name, const char *parent_i
     return span;
 }
 
-void agentrt_trace_end(agentrt_trace_span_t *span)
+void airy_trace_end(airy_trace_span_t *span)
 {
     if (!span) {
         return;
@@ -288,7 +288,7 @@ void agentrt_trace_end(agentrt_trace_span_t *span)
     trace_mutex_unlock(&span->mutex);
 }
 
-void agentrt_trace_add_event(agentrt_trace_span_t *span, const char *name, const char *attributes)
+void airy_trace_add_event(airy_trace_span_t *span, const char *name, const char *attributes)
 {
     if (!span || !name) {
         return;
@@ -325,25 +325,25 @@ void agentrt_trace_add_event(agentrt_trace_span_t *span, const char *name, const
     trace_mutex_unlock(&span->mutex);
 }
 
-char *agentrt_trace_export(void)
+char *airy_trace_export(void)
 {
     if (init_trace_system() != 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     trace_mutex_lock(&g_trace_state.mutex);
 
     size_t buffer_size = 4096;
-    char *buffer = (char *)AGENTRT_MALLOC(buffer_size);
+    char *buffer = (char *)AIRY_MALLOC(buffer_size);
     if (!buffer) {
         trace_mutex_unlock(&g_trace_state.mutex);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     size_t offset = 0;
     offset += snprintf(buffer + offset, buffer_size - offset, "[\n");
 
-    agentrt_trace_span_t *span = g_trace_state.head;
+    airy_trace_span_t *span = g_trace_state.head;
     int first = 1;
 
     while (span) {
@@ -418,11 +418,11 @@ char *agentrt_trace_export(void)
 
         if (buffer_size > 512 && offset >= buffer_size - 512) {
             buffer_size *= 2;
-            char *new_buffer = (char *)AGENTRT_REALLOC(buffer, buffer_size);
+            char *new_buffer = (char *)AIRY_REALLOC(buffer, buffer_size);
             if (!new_buffer) {
                 trace_mutex_unlock(&g_trace_state.mutex);
-                AGENTRT_FREE(buffer);
-                AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+                AIRY_FREE(buffer);
+                AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
             }
             buffer = new_buffer;
         }
@@ -435,7 +435,7 @@ char *agentrt_trace_export(void)
     return buffer;
 }
 
-void agentrt_trace_cleanup(void)
+void airy_trace_cleanup(void)
 {
     if (!g_trace_state.initialized) {
         return;
@@ -443,9 +443,9 @@ void agentrt_trace_cleanup(void)
 
     trace_mutex_lock(&g_trace_state.mutex);
 
-    agentrt_trace_span_t *span = g_trace_state.head;
+    airy_trace_span_t *span = g_trace_state.head;
     while (span) {
-        agentrt_trace_span_t *next = span->next;
+        airy_trace_span_t *next = span->next;
 
         trace_mutex_lock(&span->mutex);
         span->end_time = get_current_time_us();
@@ -454,7 +454,7 @@ void agentrt_trace_cleanup(void)
         trace_mutex_unlock(&span->mutex);
 
         trace_mutex_destroy(&span->mutex);
-        AGENTRT_FREE(span);
+        AIRY_FREE(span);
 
         span = next;
     }
@@ -465,7 +465,7 @@ void agentrt_trace_cleanup(void)
     trace_mutex_unlock(&g_trace_state.mutex);
 }
 
-int agentrt_trace_get_span_count(void)
+int airy_trace_get_span_count(void)
 {
     if (!g_trace_state.initialized) {
         return 0;
@@ -474,7 +474,7 @@ int agentrt_trace_get_span_count(void)
     trace_mutex_lock(&g_trace_state.mutex);
 
     int count = 0;
-    agentrt_trace_span_t *span = g_trace_state.head;
+    airy_trace_span_t *span = g_trace_state.head;
     while (span) {
         count++;
         span = span->next;
@@ -487,37 +487,37 @@ int agentrt_trace_get_span_count(void)
 
 /* ==================== Span 字段访问器 ==================== */
 
-const char *agentrt_trace_span_get_trace_id(const agentrt_trace_span_t *span)
+const char *airy_trace_span_get_trace_id(const airy_trace_span_t *span)
 {
     return span ? span->trace_id : NULL;
 }
 
-const char *agentrt_trace_span_get_span_id(const agentrt_trace_span_t *span)
+const char *airy_trace_span_get_span_id(const airy_trace_span_t *span)
 {
     return span ? span->span_id : NULL;
 }
 
-const char *agentrt_trace_span_get_parent_id(const agentrt_trace_span_t *span)
+const char *airy_trace_span_get_parent_id(const airy_trace_span_t *span)
 {
     return span ? span->parent_id : NULL;
 }
 
-const char *agentrt_trace_span_get_name(const agentrt_trace_span_t *span)
+const char *airy_trace_span_get_name(const airy_trace_span_t *span)
 {
     return span ? span->name : NULL;
 }
 
-int64_t agentrt_trace_span_get_start_time_us(const agentrt_trace_span_t *span)
+int64_t airy_trace_span_get_start_time_us(const airy_trace_span_t *span)
 {
     return span ? span->start_time : 0;
 }
 
-int64_t agentrt_trace_span_get_end_time_us(const agentrt_trace_span_t *span)
+int64_t airy_trace_span_get_end_time_us(const airy_trace_span_t *span)
 {
     return span ? span->end_time : 0;
 }
 
-int agentrt_trace_span_get_status(const agentrt_trace_span_t *span)
+int airy_trace_span_get_status(const airy_trace_span_t *span)
 {
     return span ? atomic_load(&span->status) : 0;
 }

@@ -34,8 +34,8 @@
  * @see P1.8 C-L09 连接线
  */
 
-#ifndef AGENTRT_IPC_BUS_HELPER_H
-#define AGENTRT_IPC_BUS_HELPER_H
+#ifndef AIRY_RT_IPC_BUS_HELPER_H
+#define AIRY_RT_IPC_BUS_HELPER_H
 
 #include "ipc_service_bus.h"
 #include "ipc_backpressure.h"
@@ -360,4 +360,4 @@ int ipc_bus_helper_get_routing_stats(ipc_bus_helper_t *ibh,
 }
 #endif
 
-#endif /* AGENTRT_IPC_BUS_HELPER_H */
+#endif /* AIRY_RT_IPC_BUS_HELPER_H */

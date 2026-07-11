@@ -23,7 +23,7 @@ sync_result_t sync_condition_create(sync_condition_t *condition, const sync_attr
     }
 
     struct sync_condition *c =
-        (struct sync_condition *)AGENTRT_CALLOC(1, sizeof(struct sync_condition));
+        (struct sync_condition *)AIRY_CALLOC(1, sizeof(struct sync_condition));
     if (c == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -32,15 +32,15 @@ sync_result_t sync_condition_create(sync_condition_t *condition, const sync_attr
     if (attr != NULL && attr->name != NULL) {
         c->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&c->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&c->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     InitializeConditionVariable(&c->cond);
 #else
     int result = pthread_cond_init(&c->cond, NULL);
     if (result != 0) {
-        AGENTRT_FREE(c->name);
-        AGENTRT_FREE(c);
+        AIRY_FREE(c->name);
+        AIRY_FREE(c);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -57,8 +57,8 @@ sync_result_t sync_condition_free(sync_condition_t condition)
     }
 
     if (!condition->initialized) {
-        AGENTRT_FREE(condition->name);
-        AGENTRT_FREE(condition);
+        AIRY_FREE(condition->name);
+        AIRY_FREE(condition);
         return SYNC_SUCCESS;
     }
 
@@ -66,8 +66,8 @@ sync_result_t sync_condition_free(sync_condition_t condition)
     pthread_cond_destroy(&condition->cond);
 #endif
 
-    AGENTRT_FREE(condition->name);
-    AGENTRT_FREE(condition);
+    AIRY_FREE(condition->name);
+    AIRY_FREE(condition);
     return SYNC_SUCCESS;
 }
 

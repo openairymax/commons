@@ -21,8 +21,8 @@
  *
  * 注意：兼容层会增加少量性能开销，建议生产代码最终迁移到新API? */
 
-#ifndef AGENTRT_COMMON_LOGGING_COMPAT_H
-#define AGENTRT_COMMON_LOGGING_COMPAT_H
+#ifndef AIRY_RT_COMMON_LOGGING_COMPAT_H
+#define AIRY_RT_COMMON_LOGGING_COMPAT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,27 +63,27 @@ typedef struct migration_validation_result {
  * @brief 现有日志级别宏定义
  *
  * 使用条件编译保护，避免与logger.h中的定义冲突。
- * logger.h 中已定义 AGENTRT_LOG_LEVEL_ERROR 等宏（值为1/2/3/4），
+ * logger.h 中已定义 AIRY_LOG_LEVEL_ERROR 等宏（值为1/2/3/4），
  * 此处仅在未被定义时才定义。
  */
-#ifndef AGENTRT_LOG_LEVEL_ERROR
-#define AGENTRT_LOG_LEVEL_ERROR LOG_LEVEL_ERROR
+#ifndef AIRY_LOG_LEVEL_ERROR
+#define AIRY_LOG_LEVEL_ERROR LOG_LEVEL_ERROR
 #endif
 
-#ifndef AGENTRT_LOG_LEVEL_WARN
-#define AGENTRT_LOG_LEVEL_WARN LOG_LEVEL_WARN
+#ifndef AIRY_LOG_LEVEL_WARN
+#define AIRY_LOG_LEVEL_WARN LOG_LEVEL_WARN
 #endif
 
-#ifndef AGENTRT_LOG_LEVEL_INFO
-#define AGENTRT_LOG_LEVEL_INFO LOG_LEVEL_INFO
+#ifndef AIRY_LOG_LEVEL_INFO
+#define AIRY_LOG_LEVEL_INFO LOG_LEVEL_INFO
 #endif
 
-#ifndef AGENTRT_LOG_LEVEL_DEBUG
-#define AGENTRT_LOG_LEVEL_DEBUG LOG_LEVEL_DEBUG
+#ifndef AIRY_LOG_LEVEL_DEBUG
+#define AIRY_LOG_LEVEL_DEBUG LOG_LEVEL_DEBUG
 #endif
 
-#ifndef AGENTRT_LOG_LEVEL
-#define AGENTRT_LOG_LEVEL LOG_LEVEL_INFO
+#ifndef AIRY_LOG_LEVEL
+#define AIRY_LOG_LEVEL LOG_LEVEL_INFO
 #endif
 
 /* ==================== 现有API函数声明 ==================== */
@@ -91,27 +91,27 @@ typedef struct migration_validation_result {
 /**
  * @brief 设置当前线程的追踪ID（兼容版本）
  *
- * 兼容现有`agentrt_log_set_trace_id()`函数? *
+ * 兼容现有`airy_log_set_trace_id()`函数? *
  * @param trace_id 追踪ID，若为NULL则自动生? * @return 实际设置的追踪ID（静态内存，无需释放? */
-const char *agentrt_log_set_trace_id(const char *trace_id);
+const char *airy_log_set_trace_id(const char *trace_id);
 
 /**
  * @brief 获取当前线程的追踪ID（兼容版本）
  *
- * 兼容现有`agentrt_log_get_trace_id()`函数? *
+ * 兼容现有`airy_log_get_trace_id()`函数? *
  * @return 追踪ID，可能为NULL
  */
-const char *agentrt_log_get_trace_id(void);
+const char *airy_log_get_trace_id(void);
 
 /**
  * @brief 记录日志（兼容版本）
  *
- * 兼容现有`agentrt_log_write()`函数? *
+ * 兼容现有`airy_log_write()`函数? *
  * @param level 日志级别
  * @param file 文件名（通常?__FILE__? * @param line 行号
  * @param fmt 格式字符? * @param ... 参数
  */
-void agentrt_log_write(int level, const char *file, int line, const char *fmt, ...)
+void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
 #if defined(__GNUC__) || defined(__clang__)
     __attribute__((format(__printf__, 4, 5)))
 #endif
@@ -120,48 +120,48 @@ void agentrt_log_write(int level, const char *file, int line, const char *fmt, .
 /**
  * @brief 记录可变参数日志（兼容版本）
  *
- * 兼容现有`agentrt_log_write_va()`函数（如果存在）? *
+ * 兼容现有`airy_log_write_va()`函数（如果存在）? *
  * @param level 日志级别
  * @param file 文件? * @param line 行号
  * @param fmt 格式字符? * @param args 可变参数列表
  */
-void agentrt_log_write_va(int level, const char *file, int line, const char *fmt, va_list args);
+void airy_log_write_va(int level, const char *file, int line, const char *fmt, va_list args);
 
 /* ==================== 现有API宏定义兼?==================== */
 
 /**
  * @brief 错误级别日志宏（兼容版本? *
- * 兼容现有`AGENTRT_LOG_ERROR`宏? */
-#ifndef AGENTRT_LOG_ERROR
-#define AGENTRT_LOG_ERROR(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+ * 兼容现有`AIRY_LOG_ERROR`宏? */
+#ifndef AIRY_LOG_ERROR
+#define AIRY_LOG_ERROR(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
 /**
  * @brief 警告级别日志宏（兼容版本? *
- * 兼容现有`AGENTRT_LOG_WARN`宏? */
-#ifndef AGENTRT_LOG_WARN
-#define AGENTRT_LOG_WARN(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+ * 兼容现有`AIRY_LOG_WARN`宏? */
+#ifndef AIRY_LOG_WARN
+#define AIRY_LOG_WARN(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
 /**
  * @brief 信息级别日志宏（兼容版本? *
- * 兼容现有`AGENTRT_LOG_INFO`宏? */
-#ifndef AGENTRT_LOG_INFO
-#define AGENTRT_LOG_INFO(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+ * 兼容现有`AIRY_LOG_INFO`宏? */
+#ifndef AIRY_LOG_INFO
+#define AIRY_LOG_INFO(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
 /**
  * @brief 调试级别日志宏（兼容版本? *
- * 兼容现有`AGENTRT_LOG_DEBUG`宏? * 注意：根据原common版本的行为，DEBUG日志可能被条件编译禁用? */
-#ifndef AGENTRT_LOG_DEBUG
-#ifdef AGENTRT_DEBUG
-#define AGENTRT_LOG_DEBUG(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+ * 兼容现有`AIRY_LOG_DEBUG`宏? * 注意：根据原common版本的行为，DEBUG日志可能被条件编译禁用? */
+#ifndef AIRY_LOG_DEBUG
+#ifdef AIRY_DEBUG
+#define AIRY_LOG_DEBUG(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #else
-#define AGENTRT_LOG_DEBUG(fmt, ...) ((void)0)
+#define AIRY_LOG_DEBUG(fmt, ...) ((void)0)
 #endif
 #endif
 
@@ -303,26 +303,26 @@ const migration_validation_result_t *logging_validate_migration(const char *modu
 struct logging_compat_stats {
     /** @brief 旧API调用次数统计 */
     struct {
-        /** @brief agentrt_log_write调用次数 */
-        uint64_t agentrt_log_write_calls;
+        /** @brief airy_log_write调用次数 */
+        uint64_t airy_log_write_calls;
 
-        /** @brief agentrt_log_set_trace_id调用次数 */
-        uint64_t agentrt_log_set_trace_id_calls;
+        /** @brief airy_log_set_trace_id调用次数 */
+        uint64_t airy_log_set_trace_id_calls;
 
-        /** @brief agentrt_log_get_trace_id调用次数 */
-        uint64_t agentrt_log_get_trace_id_calls;
+        /** @brief airy_log_get_trace_id调用次数 */
+        uint64_t airy_log_get_trace_id_calls;
 
-        /** @brief AGENTRT_LOG_DEBUG宏使用次?*/
-        uint64_t agentrt_log_debug_calls;
+        /** @brief AIRY_LOG_DEBUG宏使用次?*/
+        uint64_t airy_log_debug_calls;
 
-        /** @brief AGENTRT_LOG_INFO宏使用次?*/
-        uint64_t agentrt_log_info_calls;
+        /** @brief AIRY_LOG_INFO宏使用次?*/
+        uint64_t airy_log_info_calls;
 
-        /** @brief AGENTRT_LOG_WARN宏使用次?*/
-        uint64_t agentrt_log_warn_calls;
+        /** @brief AIRY_LOG_WARN宏使用次?*/
+        uint64_t airy_log_warn_calls;
 
-        /** @brief AGENTRT_LOG_ERROR宏使用次?*/
-        uint64_t agentrt_log_error_calls;
+        /** @brief AIRY_LOG_ERROR宏使用次?*/
+        uint64_t airy_log_error_calls;
 
         /** @brief 服务日志API调用次数 */
         uint64_t svc_logger_calls;
@@ -378,4 +378,4 @@ struct logging_compat_stats {
 }
 #endif
 
-#endif /* AGENTRT_COMMON_LOGGING_COMPAT_H */
+#endif /* AIRY_RT_COMMON_LOGGING_COMPAT_H */

@@ -11,8 +11,8 @@
  * On Windows, it provides shims for POSIX functions using Win32/Winsock APIs.
  */
 
-#ifndef AGENTRT_COMPAT_UNISTD_H
-#define AGENTRT_COMPAT_UNISTD_H
+#ifndef AIRY_RT_COMPAT_UNISTD_H
+#define AIRY_RT_COMPAT_UNISTD_H
 
 #pragma GCC system_header
 
@@ -101,9 +101,9 @@ long sysconf(int name);
 #define HOST_NAME_MAX 256
 
 #include <stdlib.h>
-long agentrt_platform_getentropy(void *buf, size_t len);
+long airy_platform_getentropy(void *buf, size_t len);
 #ifndef getentropy
-#define getentropy(buf, len) agentrt_platform_getentropy(buf, len)
+#define getentropy(buf, len) airy_platform_getentropy(buf, len)
 #endif
 
 #define readlink(p, b, s) (-1)
@@ -141,4 +141,4 @@ long agentrt_platform_getentropy(void *buf, size_t len);
 }
 #endif
 
-#endif /* AGENTRT_COMPAT_UNISTD_H */
+#endif /* AIRY_RT_COMPAT_UNISTD_H */

@@ -8,8 +8,8 @@
  * On non-Windows platforms, this header simply includes the system <netdb.h>.
  */
 
-#ifndef AGENTRT_COMPAT_NETDB_H
-#define AGENTRT_COMPAT_NETDB_H
+#ifndef AIRY_RT_COMPAT_NETDB_H
+#define AIRY_RT_COMPAT_NETDB_H
 
 #pragma GCC system_header
 
@@ -32,4 +32,4 @@ extern "C" {
 }
 #endif
 
-#endif /* AGENTRT_COMPAT_NETDB_H */
+#endif /* AIRY_RT_COMPAT_NETDB_H */

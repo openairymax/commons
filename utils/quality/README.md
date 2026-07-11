@@ -107,26 +107,26 @@ quality/
 #include "agentrt_quality.h"
 
 // ===== 输入验证 =====
-agentrt_error_t process_data(const char *name, int *values, size_t count) {
+airy_err_t process_data(const char *name, int *values, size_t count) {
     // 检查指针非空
-    AGENTRT_CHECK_NULL(name, AGENTRT_EINVAL);
-    AGENTRT_CHECK_NULL(values, AGENTRT_EINVAL);
+    AGENTRT_CHECK_NULL(name, AIRY_EINVAL);
+    AGENTRT_CHECK_NULL(values, AIRY_EINVAL);
 
     // 检查字符串非空
-    AGENTRT_CHECK_EMPTY(name, AGENTRT_EINVAL);
+    AGENTRT_CHECK_EMPTY(name, AIRY_EINVAL);
 
     // 检查字符串长度
-    AGENTRT_CHECK_STR_LEN(name, 256, AGENTRT_EINVAL);
+    AGENTRT_CHECK_STR_LEN(name, 256, AIRY_EINVAL);
 
     // 检查范围
-    AGENTRT_CHECK_RANGE(count, 1, 1024, AGENTRT_EINVAL);
+    AGENTRT_CHECK_RANGE(count, 1, 1024, AIRY_EINVAL);
 
     // 处理数据...
     return AGENTRT_SUCCESS;
 }
 
 // ===== 错误处理 + goto 清理模式 =====
-agentrt_error_t allocate_and_process(const char *path) {
+airy_err_t allocate_and_process(const char *path) {
     int err = AGENTRT_SUCCESS;
     char *buffer = NULL;
     FILE *file = NULL;
@@ -134,7 +134,7 @@ agentrt_error_t allocate_and_process(const char *path) {
     AGENTRT_SAFE_ALLOC(buffer, 4096, cleanup, err);
 
     file = fopen(path, "r");
-    AGENTRT_CHECK_NULL_GOTO(file, cleanup, AGENTRT_EIO);
+    AGENTRT_CHECK_NULL_GOTO(file, cleanup, AIRY_EIO);
 
     // 处理文件...
     fread(buffer, 1, 4096, file);
@@ -191,7 +191,7 @@ if (safe_strcpy(dest, sizeof(dest), user_input) == 0) {
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 统一错误码定义（`AGENTRT_SUCCESS`、`AGENTRT_EINVAL` 等） |
+| `error.h` | 统一错误码定义（`AGENTRT_SUCCESS`、`AIRY_EINVAL` 等） |
 | `<stddef.h>` | `size_t` 类型定义 |
 | `<stdint.h>` | 定长整数类型 |
 

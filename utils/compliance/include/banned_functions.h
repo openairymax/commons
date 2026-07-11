@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
-#ifndef AGENTRT_BANNED_FUNCTIONS_H
-#define AGENTRT_BANNED_FUNCTIONS_H
+#ifndef AIRY_RT_BANNED_FUNCTIONS_H
+#define AIRY_RT_BANNED_FUNCTIONS_H
 
-#ifdef AGENTRT_COMPLIANCE_STRICT
+#ifdef AIRY_COMPLIANCE_STRICT
 
-#ifndef AGENTRT_COMPLIANCE_IMPL
+#ifndef AIRY_COMPLIANCE_IMPL
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,8 +18,8 @@
 #pragma GCC poison realloc
 #pragma GCC poison strdup
 #pragma GCC poison strndup
-/* 兼容 AGENTRT_HAS_CURL（新名）和 AGENTRT_HAS_CURL（旧名）两种宏定义 */
-#if !defined(AGENTRT_HAS_CURL) && !defined(AGENTRT_HAS_CURL)
+/* 兼容 AIRY_HAS_CURL（新名）和 AIRY_HAS_CURL（旧名）两种宏定义 */
+#if !defined(AIRY_HAS_CURL) && !defined(AIRY_HAS_CURL)
 #pragma GCC poison printf
 #pragma GCC poison fprintf
 #endif
@@ -41,14 +41,14 @@
 #pragma GCC poison fscanf          /* BAN-151: 无界文件输入 */
 #pragma GCC poison sscanf           /* BAN-152: 无界字符串解析 */
 #pragma GCC poison strncpy         /* BAN-155: 不保证null终止 */
-#pragma GCC poison memcpy           /* BAN-154: 需AGENTRT_MEMCPY_SAFE替代 */
+#pragma GCC poison memcpy           /* BAN-154: 需AIRY_MEMCPY_SAFE替代 */
 #pragma GCC poison memmove          /* BAN-154: 需安全包装替代 */
 #pragma GCC poison memset           /* BAN-154: 需验证大小参数 */
 #endif
 
 #else
 
-#ifndef AGENTRT_COMPLIANCE_IMPL
+#ifndef AIRY_COMPLIANCE_IMPL
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,28 +56,28 @@
 #include <time.h>
 #include <stdarg.h>
 
-__attribute__((deprecated("Use AGENTRT_MALLOC instead")))
+__attribute__((deprecated("Use AIRY_MALLOC instead")))
 static inline void *__banned_malloc(size_t s) { return (malloc)(s); }
 
-__attribute__((deprecated("Use AGENTRT_FREE instead")))
+__attribute__((deprecated("Use AIRY_FREE instead")))
 static inline void __banned_free(void *p) { (free)(p); }
 
-__attribute__((deprecated("Use AGENTRT_CALLOC instead")))
+__attribute__((deprecated("Use AIRY_CALLOC instead")))
 static inline void *__banned_calloc(size_t n, size_t s) { return (calloc)(n, s); }
 
-__attribute__((deprecated("Use AGENTRT_REALLOC instead")))
+__attribute__((deprecated("Use AIRY_REALLOC instead")))
 static inline void *__banned_realloc(void *p, size_t s) { return (realloc)(p, s); }
 
-__attribute__((deprecated("Use AGENTRT_STRDUP instead")))
+__attribute__((deprecated("Use AIRY_STRDUP instead")))
 static inline char *__banned_strdup(const char *s) { return (strdup)(s); }
 
-__attribute__((deprecated("Use AGENTRT_STRNDUP instead")))
+__attribute__((deprecated("Use AIRY_STRNDUP instead")))
 static inline char *__banned_strndup(const char *s, size_t n) { return (strndup)(s, n); }
 
-__attribute__((deprecated("Use AGENTRT_STRCPY instead")))
+__attribute__((deprecated("Use AIRY_STRCPY instead")))
 static inline char *__banned_strcpy(char *d, const char *s) { return (strcpy)(d, s); }
 
-__attribute__((deprecated("Use AGENTRT_STRCAT instead")))
+__attribute__((deprecated("Use AIRY_STRCAT instead")))
 static inline char *__banned_strcat(char *d, const char *s) { return (strcat)(d, s); }
 
 __attribute__((deprecated("Use strtok_r instead")))
@@ -106,8 +106,8 @@ static inline struct tm *__banned_gmtime(const time_t *t) { return (gmtime)(t); 
 #include <stdarg.h>
 #include <stdio.h>
 
-__attribute__((deprecated("Use AGENTRT_PRINTF instead — printf() has no output limit")))
-static inline int __agentrt_banned_printf(const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vprintf(fmt, ap); va_end(ap); return r; }
+__attribute__((deprecated("Use AIRY_PRINTF instead — printf() has no output limit")))
+static inline int __airy_banned_printf(const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vprintf(fmt, ap); va_end(ap); return r; }
 
 __attribute__((deprecated("Use fgets instead — gets() has no buffer limit and causes buffer overflow")))
 static inline char *__banned_gets(char *s) { (void)s; return NULL; }
@@ -121,7 +121,7 @@ static inline int __banned_fscanf(FILE *fp, const char *fmt, ...) { va_list ap; 
 __attribute__((deprecated("Validate buffer bounds before sscanf — prefer snprintf for output")))
 static inline int __banned_sscanf(const char *s, const char *fmt, ...) { va_list ap; va_start(ap, fmt); int r = vsscanf(s, fmt, ap); va_end(ap); return r; }
 
-#define printf(fmt, ...) __agentrt_banned_printf(fmt, ##__VA_ARGS__)
+#define printf(fmt, ...) __airy_banned_printf(fmt, ##__VA_ARGS__)
 #define gets(s)         __banned_gets(s)
 #define scanf(fmt, ...) __banned_scanf(fmt, ##__VA_ARGS__)
 #define fscanf(fp, fmt, ...) __banned_fscanf(fp, fmt, ##__VA_ARGS__)

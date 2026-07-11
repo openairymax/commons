@@ -11,7 +11,7 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 #include "arena.h"
 #include "logging_compat.h"
 #include "memory_compat.h"
@@ -36,7 +36,7 @@ static void test_arena_basic(void)
     printf("\n=== Arena 基础分配场景 ===\n");
 
     /* 创建 Arena（1KB chunk，最多 4 个 chunk） */
-    agentrt_arena_t *arena = arena_create(1024, 4);
+    airy_arena_t *arena = arena_create(1024, 4);
     assert(arena != NULL);
 
     /* 场景1：多次小分配，触发新 chunk 创建 */
@@ -59,7 +59,7 @@ static void test_arena_basic(void)
     void *huge = arena_alloc(arena, 2048); /* > chunk_size/2 */
     if (huge) {
         printf("  Fallback allocation succeeded (expected)\n");
-        AGENTRT_FREE(huge);
+        AIRY_FREE(huge);
     }
 
     arena_get_stats(arena, &stats);
@@ -121,7 +121,7 @@ static void test_tcache_basic(void)
     assert(pool != NULL);
 
     /* 创建 tcache（batch_size=8, max_cached=64） */
-    agentrt_tcache_t *tc = tcache_create(pool, 8, 64);
+    airy_tcache_t *tc = tcache_create(pool, 8, 64);
     assert(tc != NULL);
 
     /* 场景1：首次分配（触发预填充 + HIT） */
@@ -194,7 +194,7 @@ static void test_combined_scenario(void)
     printf("\n=== 综合场景：Arena + Tcache 协同 ===\n");
 
     /* 创建 Arena 用于请求级短生命周期分配 */
-    agentrt_arena_t *req_arena = arena_create(4096, 0); /* 无限制 */
+    airy_arena_t *req_arena = arena_create(4096, 0); /* 无限制 */
     assert(req_arena != NULL);
 
     /* 创建内存池 + tcache 用于固定大小对象缓存 */
@@ -209,7 +209,7 @@ static void test_combined_scenario(void)
     memory_pool_t *pool = memory_pool_create(&pool_opts);
     assert(pool != NULL);
 
-    agentrt_tcache_t *tc = tcache_create(pool, 4, 32);
+    airy_tcache_t *tc = tcache_create(pool, 4, 32);
     assert(tc != NULL);
 
     printf("  --- 模拟请求处理循环 ---\n");
@@ -267,7 +267,7 @@ static void test_arena_oom(void)
     printf("\n=== Arena OOM 场景 ===\n");
 
     /* 创建受限 Arena（1KB chunk，最多 1 个 chunk） */
-    agentrt_arena_t *arena = arena_create(1024, 1);
+    airy_arena_t *arena = arena_create(1024, 1);
     assert(arena != NULL);
 
     /* 填满 chunk */
@@ -312,20 +312,20 @@ static void test_tcache_benchmark(void)
     /* === 基准测试：直接 pool 分配/释放 === */
     printf("  --- 基准：直接 pool_alloc/pool_free (%d 次) ---\n", BENCH_ITERATIONS);
 
-    void **ptrs = (void **)AGENTRT_MALLOC(sizeof(void *) * BENCH_ITERATIONS);
+    void **ptrs = (void **)AIRY_MALLOC(sizeof(void *) * BENCH_ITERATIONS);
     assert(ptrs != NULL);
 
-    uint64_t pool_start = agentrt_time_ns();
+    uint64_t pool_start = airy_time_ns();
     for (int i = 0; i < BENCH_ITERATIONS; i++) {
         ptrs[i] = memory_pool_alloc(pool);
     }
-    uint64_t pool_alloc_ns = agentrt_time_ns() - pool_start;
+    uint64_t pool_alloc_ns = airy_time_ns() - pool_start;
 
-    uint64_t free_start = agentrt_time_ns();
+    uint64_t free_start = airy_time_ns();
     for (int i = 0; i < BENCH_ITERATIONS; i++) {
         memory_pool_free(pool, ptrs[i]);
     }
-    uint64_t pool_free_ns = agentrt_time_ns() - free_start;
+    uint64_t pool_free_ns = airy_time_ns() - free_start;
 
     double pool_alloc_us = (double)pool_alloc_ns / (double)BENCH_ITERATIONS / 1000.0;
     double pool_free_us = (double)pool_free_ns / (double)BENCH_ITERATIONS / 1000.0;
@@ -335,20 +335,20 @@ static void test_tcache_benchmark(void)
     /* === tcache 测试 === */
     printf("  --- tcache_alloc/tcache_free (%d 次) ---\n", BENCH_ITERATIONS);
 
-    agentrt_tcache_t *tc = tcache_create(pool, 16, 64);
+    airy_tcache_t *tc = tcache_create(pool, 16, 64);
     assert(tc != NULL);
 
-    uint64_t tc_start = agentrt_time_ns();
+    uint64_t tc_start = airy_time_ns();
     for (int i = 0; i < BENCH_ITERATIONS; i++) {
         ptrs[i] = tcache_alloc(tc);
     }
-    uint64_t tc_alloc_ns = agentrt_time_ns() - tc_start;
+    uint64_t tc_alloc_ns = airy_time_ns() - tc_start;
 
-    uint64_t tc_free_start = agentrt_time_ns();
+    uint64_t tc_free_start = airy_time_ns();
     for (int i = 0; i < BENCH_ITERATIONS; i++) {
         tcache_free(tc, ptrs[i]);
     }
-    uint64_t tc_free_ns = agentrt_time_ns() - tc_free_start;
+    uint64_t tc_free_ns = airy_time_ns() - tc_free_start;
 
     double tc_alloc_us = (double)tc_alloc_ns / (double)BENCH_ITERATIONS / 1000.0;
     double tc_free_us = (double)tc_free_ns / (double)BENCH_ITERATIONS / 1000.0;
@@ -379,7 +379,7 @@ static void test_tcache_benchmark(void)
 
     tcache_destroy(tc);
     memory_pool_destroy(pool);
-    AGENTRT_FREE(ptrs);
+    AIRY_FREE(ptrs);
     printf("  Tcache benchmark PASSED\n");
 }
 

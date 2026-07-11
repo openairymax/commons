@@ -13,8 +13,8 @@
  * @date 2026-04-05
  */
 
-#ifndef AGENTRT_SYNC_TYPES_H
-#define AGENTRT_SYNC_TYPES_H
+#ifndef AIRY_RT_SYNC_TYPES_H
+#define AIRY_RT_SYNC_TYPES_H
 
 #include "memory_compat.h"
 #include "sync.h"
@@ -102,4 +102,4 @@ struct sync_event {
 }
 #endif
 
-#endif /* AGENTRT_SYNC_TYPES_H */
+#endif /* AIRY_RT_SYNC_TYPES_H */

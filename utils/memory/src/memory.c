@@ -38,7 +38,7 @@ typedef struct {
     memory_stats_t stats; /**< 内存统计信息 */
 
     // 线程同步
-    agentrt_mutex_t lock; /**< 平台抽象互斥锁 */
+    airy_mtx_t lock; /**< 平台抽象互斥锁 */
 
     // 调试信息链表头
     struct memory_debug_info *debug_list_head; /**< 调试信息链表头*/
@@ -60,7 +60,7 @@ static memory_state_t g_state = {0};
  */
 static bool memory_lock_init(void)
 {
-    return agentrt_mutex_init(&g_state.lock) == 0;
+    return airy_mtx_init(&g_state.lock) == 0;
 }
 
 /**
@@ -68,7 +68,7 @@ static bool memory_lock_init(void)
  */
 static void memory_lock_destroy(void)
 {
-    agentrt_mutex_destroy(&g_state.lock);
+    airy_mtx_destroy(&g_state.lock);
 }
 
 /**
@@ -76,7 +76,7 @@ static void memory_lock_destroy(void)
  */
 static void memory_lock(void)
 {
-    agentrt_mutex_lock(&g_state.lock);
+    airy_mtx_lock(&g_state.lock);
 }
 
 /**
@@ -84,7 +84,7 @@ static void memory_lock(void)
  */
 static void memory_unlock(void)
 {
-    agentrt_mutex_unlock(&g_state.lock);
+    airy_mtx_unlock(&g_state.lock);
 }
 
 /**
@@ -121,7 +121,7 @@ static void memory_handle_fail(size_t size, const char *tag)
     // 根据策略处理
     switch (g_state.options.fail_strategy) {
     case MEMORY_FAIL_STRATEGY_ABORT:
-        AGENTRT_LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
+        AIRY_LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
         abort();
         break;
 
@@ -310,7 +310,7 @@ bool memory_init(const memory_options_t *options)
         return true;
     }
 
-    AGENTRT_LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
+    AIRY_LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
                      options && options->zero_memory ? "true" : "false",
                      options ? options->alignment : 0);
 
@@ -345,7 +345,7 @@ void memory_cleanup(void)
         return;
     }
 
-    AGENTRT_LOG_INFO("memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
+    AIRY_LOG_INFO("memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
                      g_state.stats.total_allocated, g_state.stats.current_allocated,
                      g_state.stats.peak_allocated, g_state.stats.allocation_count,
                      g_state.stats.free_count);
@@ -354,7 +354,7 @@ void memory_cleanup(void)
 
     // 检查内存泄漏
     if (g_state.debug_enabled && g_state.debug_list_head != NULL) {
-        AGENTRT_LOG_WARN("警告：内存清理时发现未释放的内存块");
+        AIRY_LOG_WARN("警告：内存清理时发现未释放的内存块");
 
         struct memory_debug_info *current = g_state.debug_list_head;
         size_t leak_count = 0;
@@ -363,11 +363,11 @@ void memory_cleanup(void)
         while (current != NULL) {
             leak_count++;
             leak_size += current->size;
-            AGENTRT_LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
+            AIRY_LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
                     current->tag ? current->tag : "(null)");
 
             // 释放泄漏的内存（可选）
-            // AGENTRT_FREE(current->address);
+            // AIRY_FREE(current->address);
 
             struct memory_debug_info *next = current->next;
 
@@ -382,7 +382,7 @@ void memory_cleanup(void)
             current = next;
         }
 
-        AGENTRT_LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
+        AIRY_LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
         g_state.debug_list_head = NULL;
     }
 
@@ -484,11 +484,11 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     if (debug_info && g_state.debug_enabled) {
         debug_info_saved = true;
         if (debug_info->tag)
-            AGENTRT_STRNCPY_TERM(saved_tag, debug_info->tag, sizeof(saved_tag));
+            AIRY_STRNCPY_TERM(saved_tag, debug_info->tag, sizeof(saved_tag));
         if (debug_info->file)
-            AGENTRT_STRNCPY_TERM(saved_file, debug_info->file, sizeof(saved_file));
+            AIRY_STRNCPY_TERM(saved_file, debug_info->file, sizeof(saved_file));
         if (debug_info->function)
-            AGENTRT_STRNCPY_TERM(saved_func, debug_info->function, sizeof(saved_func));
+            AIRY_STRNCPY_TERM(saved_func, debug_info->function, sizeof(saved_func));
         saved_line = debug_info->line;
         memory_remove_debug_info(old_ptr);
     }
@@ -637,7 +637,7 @@ bool memory_debug_enable(bool enable)
         return false;
     }
 
-    AGENTRT_LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)",
+    AIRY_LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)",
                      enable ? "true" : "false",
                      g_state.debug_enabled ? "true" : "false");
 

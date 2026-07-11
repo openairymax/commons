@@ -5,13 +5,13 @@
  * @brief 统一配置模块 - 向后兼容层接? * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 向后兼容层提供与现有配置API的兼容性，确保现有代码无需修改即可继续工作? * 支持兼容的API? * 1.
- * agentrt/commons/utils/manager.h (agentrt_config_*)
+ * agentrt/commons/utils/manager.h (airy_config_*)
  * 2. agentrt/daemons/agentrt/commons/include/svc_config.h (svc_config_*)
  * 3. 其他相关配置接口
  */
 
-#ifndef AGENTRT_CONFIG_COMPAT_H
-#define AGENTRT_CONFIG_COMPAT_H
+#ifndef AIRY_RT_CONFIG_COMPAT_H
+#define AIRY_RT_CONFIG_COMPAT_H
 
 #include "core_config.h"
 
@@ -27,7 +27,7 @@ extern "C" {
 
 typedef enum {
     COMPAT_MODE_NONE = 0,            // 无兼容模式
-    COMPAT_MODE_AGENTRT_CONFIG = 1,  // 兼容 agentrt_config_* API
+    COMPAT_MODE_AIRY_CONFIG = 1,  // 兼容 airy_config_* API
     COMPAT_MODE_SVC_CONFIG = 2,      // 兼容 svc_config_* API
     COMPAT_MODE_MIXED = 3            // 混合兼容模式
 } config_compat_mode_t;
@@ -48,7 +48,7 @@ typedef struct {
 
 typedef struct {
     size_t total_calls;           // 总调用次
-    size_t agentrt_config_calls;  // agentrt_config_* 调用次数
+    size_t airy_config_calls;  // airy_config_* 调用次数
     size_t svc_config_calls;      // svc_config_* 调用次数
     size_t migration_count;       // 已迁移配置项数量
     size_t error_count;           // 错误次数
@@ -80,101 +80,101 @@ void config_compat_get_stats(config_compat_stats_t *stats);
  * @brief 重置兼容层统计信? */
 void config_compat_reset_stats(void);
 
-/* ==================== agentrt_config_* API 兼容?==================== */
+/* ==================== airy_config_* API 兼容?==================== */
 
 /**
- * @brief 兼容层代理：agentrt_config_create
+ * @brief 兼容层代理：airy_config_create
  * @return 兼容配置对象
  */
-void *agentrt_config_create(void);
+void *airy_config_create(void);
 
 /**
- * @brief 兼容层代理：agentrt_config_destroy
+ * @brief 兼容层代理：airy_config_destroy
  * @param manager 兼容配置对象
  */
-void agentrt_config_destroy(void *manager);
+void airy_config_destroy(void *manager);
 
 /**
- * @brief 兼容层代理：agentrt_config_parse
+ * @brief 兼容层代理：airy_config_parse
  * @param manager 兼容配置对象
  * @param text 配置文本
  * @return 错误? */
-int agentrt_config_parse(void *manager, const char *text);
+int airy_config_parse(void *manager, const char *text);
 
 /**
- * @brief 兼容层代理：agentrt_config_load_file
+ * @brief 兼容层代理：airy_config_load_file
  * @param manager 兼容配置对象
  * @param path 文件路径
  * @return 错误? */
-int agentrt_config_load_file(void *manager, const char *path);
+int airy_config_load_file(void *manager, const char *path);
 
 /**
- * @brief 兼容层代理：agentrt_config_save_file
+ * @brief 兼容层代理：airy_config_save_file
  * @param manager 兼容配置对象
  * @param path 文件路径
  * @return 错误? */
-int agentrt_config_save_file(void *manager, const char *path);
+int airy_config_save_file(void *manager, const char *path);
 
 /**
- * @brief 兼容层代理：agentrt_config_get_string
+ * @brief 兼容层代理：airy_config_get_string
  * @param manager 兼容配置对象
  * @param key 配置? * @param default_value 默认? * @return 配置? */
-const char *agentrt_config_get_string(void *manager, const char *key, const char *default_value);
+const char *airy_config_get_string(void *manager, const char *key, const char *default_value);
 
 /**
- * @brief 兼容层代理：agentrt_config_get_int
+ * @brief 兼容层代理：airy_config_get_int
  * @param manager 兼容配置对象
  * @param key 配置? * @param default_value 默认? * @return 配置? */
-int agentrt_config_get_int(void *manager, const char *key, int default_value);
+int airy_config_get_int(void *manager, const char *key, int default_value);
 
 /**
- * @brief 兼容层代理：agentrt_config_get_double
+ * @brief 兼容层代理：airy_config_get_double
  * @param manager 兼容配置对象
  * @param key 配置? * @param default_value 默认? * @return 配置? */
-double agentrt_config_get_double(void *manager, const char *key, double default_value);
+double airy_config_get_double(void *manager, const char *key, double default_value);
 
 /**
- * @brief 兼容层代理：agentrt_config_get_bool
+ * @brief 兼容层代理：airy_config_get_bool
  * @param manager 兼容配置对象
  * @param key 配置? * @param default_value 默认? * @return 配置? */
-int agentrt_config_get_bool(void *manager, const char *key, int default_value);
+int airy_config_get_bool(void *manager, const char *key, int default_value);
 
 /**
- * @brief 兼容层代理：agentrt_config_set_string
+ * @brief 兼容层代理：airy_config_set_string
  * @param manager 兼容配置对象
  * @param key 配置? * @param value 配置? * @return 错误? */
-int agentrt_config_set_string(void *manager, const char *key, const char *value);
+int airy_config_set_string(void *manager, const char *key, const char *value);
 
 /**
- * @brief 兼容层代理：agentrt_config_set_int
+ * @brief 兼容层代理：airy_config_set_int
  * @param manager 兼容配置对象
  * @param key 配置? * @param value 配置? * @return 错误? */
-int agentrt_config_set_int(void *manager, const char *key, int value);
+int airy_config_set_int(void *manager, const char *key, int value);
 
 /**
- * @brief 兼容层代理：agentrt_config_set_double
+ * @brief 兼容层代理：airy_config_set_double
  * @param manager 兼容配置对象
  * @param key 配置? * @param value 配置? * @return 错误? */
-int agentrt_config_set_double(void *manager, const char *key, double value);
+int airy_config_set_double(void *manager, const char *key, double value);
 
 /**
- * @brief 兼容层代理：agentrt_config_set_bool
+ * @brief 兼容层代理：airy_config_set_bool
  * @param manager 兼容配置对象
  * @param key 配置? * @param value 配置? * @return 错误? */
-int agentrt_config_set_bool(void *manager, const char *key, int value);
+int airy_config_set_bool(void *manager, const char *key, int value);
 
 /**
- * @brief 兼容层代理：agentrt_config_remove
+ * @brief 兼容层代理：airy_config_remove
  * @param manager 兼容配置对象
  * @param key 配置? * @return 错误? */
-int agentrt_config_remove(void *manager, const char *key);
+int airy_config_remove(void *manager, const char *key);
 
 /**
- * @brief 兼容层代理：agentrt_config_has
+ * @brief 兼容层代理：airy_config_has
  * @param manager 兼容配置对象
  * @param key 配置? * @return 是否存在
  */
-int agentrt_config_has(void *manager, const char *key);
+int airy_config_has(void *manager, const char *key);
 
 /* ==================== svc_config_* API 兼容?==================== */
 
@@ -298,9 +298,9 @@ int config_rollback_transaction(void);
 /* ==================== 迁移辅助函数 ==================== */
 
 /**
- * @brief 将agentrt_config对象迁移到统一配置上下? * @param agentrt_config agentrt配置对象
+ * @brief 将airy_config对象迁移到统一配置上下? * @param airy_config agentrt配置对象
  * @param target_ctx 目标配置上下? * @return 错误? */
-config_error_t config_compat_migrate_agentrt_config(void *agentrt_config,
+config_error_t config_compat_migrate_airy_config(void *airy_config,
                                                     config_context_t *target_ctx);
 
 /**
@@ -309,11 +309,11 @@ config_error_t config_compat_migrate_agentrt_config(void *agentrt_config,
 config_error_t config_compat_migrate_svc_config(void *svc_config, config_context_t *target_ctx);
 
 /**
- * @brief 从统一配置上下文创建agentrt_config对象
+ * @brief 从统一配置上下文创建airy_config对象
  * @param source_ctx 源配置上下文
  * @return agentrt配置对象，失败返回NULL
  */
-void *config_compat_create_agentrt_config_from_ctx(const config_context_t *source_ctx);
+void *config_compat_create_airy_config_from_ctx(const config_context_t *source_ctx);
 
 /**
  * @brief 从统一配置上下文创建svc_config对象
@@ -360,4 +360,4 @@ int config_compat_batch_migrate_files(const char *dir_path, const char *pattern,
 }
 #endif
 
-#endif /* AGENTRT_CONFIG_COMPAT_H */
+#endif /* AIRY_RT_CONFIG_COMPAT_H */

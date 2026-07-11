@@ -236,7 +236,7 @@ ipc_server_start(server);
 ipc_channel_t *client_chan = ipc_server_accept(server, 5000);
 if (client_chan != NULL) {
     ipc_message_t msg;
-    agentrt_error_t err = ipc_receive(client_chan, &msg, 5000);
+    airy_err_t err = ipc_receive(client_chan, &msg, 5000);
     if (err == AGENTRT_OK) {
         printf("Received: %.*s\n", (int)msg.payload_size, (char *)msg.payload);
         ipc_send(client_chan, &msg);  // echo back
@@ -280,7 +280,7 @@ ipc_cleanup();
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 错误码定义（`agentrt_error_t`） |
+| `error.h` | 错误码定义（`airy_err_t`） |
 | `types.h` | 基础类型定义（`agentrt_timestamp_t`、`agentrt_ipc_type_t`） |
 
 ---

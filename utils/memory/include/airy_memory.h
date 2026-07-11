@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
- * @file agentrt_memory.h
+ * @file airy_memory.h
  * @brief 统一内存管理模块 - 核心层API
  *
  * 提供安全、高效、统一的内存管理接口，支持内存分配、释放、调试和统计功能。
@@ -17,8 +17,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-3 资源确定性原则
  */
 
-#ifndef AGENTRT_MEMORY_H
-#define AGENTRT_MEMORY_H
+#ifndef AIRY_RT_MEMORY_H
+#define AIRY_RT_MEMORY_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -58,7 +58,7 @@ typedef struct {
 /**
  * @brief 内存统计信息
  */
-#define AGENTRT_MEMORY_STATS_T_DEFINED
+#define AIRY_MEMORY_STATS_T_DEFINED
 typedef struct {
     size_t total_allocated;   /**< 总分配内存（字节） */
     size_t total_freed;       /**< 总释放内存（字节） */
@@ -254,4 +254,4 @@ size_t memory_get_peak_usage(void);
 }
 #endif
 
-#endif /* AGENTRT_MEMORY_H */
+#endif /* AIRY_RT_MEMORY_H */

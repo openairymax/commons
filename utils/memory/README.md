@@ -13,7 +13,7 @@ Memory 模块提供 AgentRT 统一的内存管理框架，包括安全内存分�
 - **内存池**：高效的内存池管理，减少频繁分配/释放的内存碎片和开销
 - **调试支持**：可选的泄漏检测、边界检查、释放后使用检查和双重释放检查
 - **统计追踪**：全局内存统计、按类别跟踪、水位监控和 OOM 响应
-- **向后兼容**：提供与标准 C 库兼容的 `AGENTRT_MALLOC` / `AGENTRT_FREE` 等宏，便于渐进式迁移
+- **向后兼容**：提供与标准 C 库兼容的 `AIRY_MALLOC` / `AIRY_FREE` 等宏，便于渐进式迁移
 - **线程安全**：所有公共接口均为线程安全
 
 ## 目录结构
@@ -175,10 +175,10 @@ memory/
 
 | 函数/宏 | 说明 |
 |------|------|
-| `AGENTRT_MALLOC(size)` | 安全内存分配（兼容 `malloc`） |
-| `AGENTRT_CALLOC(num, size)` | 安全内存分配并清零（兼容 `calloc`） |
-| `AGENTRT_REALLOC(ptr, new_size)` | 安全内存重分配（兼容 `realloc`） |
-| `AGENTRT_FREE(ptr)` | 安全内存释放（兼容 `free`） |
+| `AIRY_MALLOC(size)` | 安全内存分配（兼容 `malloc`） |
+| `AIRY_CALLOC(num, size)` | 安全内存分配并清零（兼容 `calloc`） |
+| `AIRY_REALLOC(ptr, new_size)` | 安全内存重分配（兼容 `realloc`） |
+| `AIRY_FREE(ptr)` | 安全内存释放（兼容 `free`） |
 | `AGENTRT_STRDUP(str)` | 安全字符串复制（兼容 `strdup`） |
 | `AGENTRT_STRNDUP(str, n)` | 安全字符串复制（带长度限制） |
 | `AGENTRT_STRNCPY_TERM(dst, src, size)` | 安全字符串复制（保证 null 终止） |
@@ -218,8 +218,8 @@ memory_free(buf);
 MEMORY_FREE_SAFE(&buf);  // buf 现在为 NULL
 
 // === 使用兼容层宏 ===
-void *data = AGENTRT_MALLOC(4096);
-AGENTRT_FREE(data);
+void *data = AIRY_MALLOC(4096);
+AIRY_FREE(data);
 
 // === 内存池 ===
 memory_pool_options_t opts = {
@@ -274,7 +274,7 @@ memory_cleanup();
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 错误码定义（`agentrt_error_t`） |
+| `error.h` | 错误码定义（`airy_err_t`） |
 | `stdbool.h` | 布尔类型支持 |
 | `stddef.h` | 标准类型定义 |
 | `stdint.h` | 固定宽度整数类型 |

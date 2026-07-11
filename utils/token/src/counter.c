@@ -35,9 +35,9 @@
 /**
  * @brief Token计数器内部结构
  */
-struct agentrt_token_counter {
+struct airy_token_counter {
     char model_name[MAX_MODEL_NAME]; /**< 模型名称 */
-    agentrt_mutex_t mutex;           /**< 互斥锁，保证线程安全 */
+    airy_mtx_t mutex;           /**< 互斥锁，保证线程安全 */
     size_t total_count;              /**< 历史累计Token数 */
     uint64_t request_count;          /**< 请求计数 */
     size_t max_token_length;         /**< 最大Token长度 */
@@ -46,7 +46,7 @@ struct agentrt_token_counter {
 /**
  * @brief 计算文本的Token数量
  */
-size_t agentrt_token_count(const char *text, const agentrt_token_config_t *config)
+size_t airy_token_count(const char *text, const airy_token_config_t *config)
 {
     if (!text)
         return 0;
@@ -55,8 +55,8 @@ size_t agentrt_token_count(const char *text, const agentrt_token_config_t *confi
     if (length == 0)
         return 0;
 
-    agentrt_token_config_t default_cfg = AGENTRT_TOKEN_CONFIG_DEFAULT;
-    const agentrt_token_config_t *cfg = config ? config : &default_cfg;
+    airy_token_config_t default_cfg = AIRY_TOKEN_CONFIG_DEFAULT;
+    const airy_token_config_t *cfg = config ? config : &default_cfg;
 
     size_t word_count = 0;
     size_t cjk_count = 0;
@@ -182,16 +182,16 @@ size_t agentrt_token_count(const char *text, const agentrt_token_config_t *confi
     }
 
     switch (cfg->model_type) {
-    case AGENTRT_TOKEN_MODEL_GPT4:
+    case AIRY_TOKEN_MODEL_GPT4:
         count = (count * 4 + 2) / 3;
         break;
-    case AGENTRT_TOKEN_MODEL_GPT35:
+    case AIRY_TOKEN_MODEL_GPT35:
         count = (count * 5 + 2) / 4;
         break;
-    case AGENTRT_TOKEN_MODEL_CLAUDE:
+    case AIRY_TOKEN_MODEL_CLAUDE:
         count = (count * 7 + 2) / 5;
         break;
-    case AGENTRT_TOKEN_MODEL_LLAMA:
+    case AIRY_TOKEN_MODEL_LLAMA:
         count = (count * 3 + 1) / 2;
         break;
     default:
@@ -203,44 +203,44 @@ size_t agentrt_token_count(const char *text, const agentrt_token_config_t *confi
 
 static size_t count_tokens_by_model(const char *model_name, const char *text, size_t length)
 {
-    agentrt_token_config_t config = AGENTRT_TOKEN_CONFIG_DEFAULT;
+    airy_token_config_t config = AIRY_TOKEN_CONFIG_DEFAULT;
 
     if (model_name) {
         if (strstr(model_name, "gpt-4") || strstr(model_name, "gpt-4o")) {
-            config.model_type = AGENTRT_TOKEN_MODEL_GPT4;
+            config.model_type = AIRY_TOKEN_MODEL_GPT4;
         } else if (strstr(model_name, "gpt-35") || strstr(model_name, "gpt-3.5")) {
-            config.model_type = AGENTRT_TOKEN_MODEL_GPT35;
+            config.model_type = AIRY_TOKEN_MODEL_GPT35;
         } else if (strstr(model_name, "claude")) {
-            config.model_type = AGENTRT_TOKEN_MODEL_CLAUDE;
+            config.model_type = AIRY_TOKEN_MODEL_CLAUDE;
         } else if (strstr(model_name, "llama") || strstr(model_name, "vicuna") ||
                    strstr(model_name, "alpaca")) {
-            config.model_type = AGENTRT_TOKEN_MODEL_LLAMA;
+            config.model_type = AIRY_TOKEN_MODEL_LLAMA;
         }
     }
 
-    return agentrt_token_standard_count(text, length, &config);
+    return airy_token_standard_count(text, length, &config);
 }
 
-agentrt_token_counter_t *agentrt_token_counter_create(const char *model_name)
+airy_token_counter_t *airy_token_counter_create(const char *model_name)
 {
     if (!model_name) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    agentrt_token_counter_t *counter =
-        (agentrt_token_counter_t *)AGENTRT_MALLOC(sizeof(agentrt_token_counter_t));
+    airy_token_counter_t *counter =
+        (airy_token_counter_t *)AIRY_MALLOC(sizeof(airy_token_counter_t));
     if (!counter) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(counter, 0, sizeof(agentrt_token_counter_t));
+    AIRY_MEMSET(counter, 0, sizeof(airy_token_counter_t));
 
-    AGENTRT_STRNCPY_TERM(counter->model_name, model_name, MAX_MODEL_NAME);
+    AIRY_STRNCPY_TERM(counter->model_name, model_name, MAX_MODEL_NAME);
     counter->model_name[MAX_MODEL_NAME - 1] = '\0';
 
-    if (agentrt_mutex_init(&counter->mutex) != 0) {
-        AGENTRT_FREE(counter);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+    if (airy_mtx_init(&counter->mutex) != 0) {
+        AIRY_FREE(counter);
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     counter->total_count = 0;
@@ -250,17 +250,17 @@ agentrt_token_counter_t *agentrt_token_counter_create(const char *model_name)
     return counter;
 }
 
-void agentrt_token_counter_destroy(agentrt_token_counter_t *counter)
+void airy_token_counter_destroy(airy_token_counter_t *counter)
 {
     if (!counter) {
         return;
     }
 
-    agentrt_mutex_destroy(&counter->mutex);
-    AGENTRT_FREE(counter);
+    airy_mtx_destroy(&counter->mutex);
+    AIRY_FREE(counter);
 }
 
-size_t agentrt_token_counter_count(agentrt_token_counter_t *counter, const char *text)
+size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text)
 {
     if (!counter || !text) {
         return (size_t)-1;
@@ -271,25 +271,25 @@ size_t agentrt_token_counter_count(agentrt_token_counter_t *counter, const char 
         return 0;
     }
 
-    agentrt_mutex_lock(&counter->mutex);
+    airy_mtx_lock(&counter->mutex);
 
     size_t token_count = count_tokens_by_model(counter->model_name, text, length);
     counter->total_count += token_count;
     counter->request_count++;
 
-    agentrt_mutex_unlock(&counter->mutex);
+    airy_mtx_unlock(&counter->mutex);
 
     return token_count;
 }
 
-size_t agentrt_token_counter_count_batch(agentrt_token_counter_t *counter, const char **texts,
+size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char **texts,
                                          size_t count, size_t *out_counts)
 {
     if (!counter || !texts || !out_counts) {
         return (size_t)-1;
     }
 
-    agentrt_mutex_lock(&counter->mutex);
+    airy_mtx_lock(&counter->mutex);
 
     size_t total = 0;
     for (size_t i = 0; i < count; i++) {
@@ -305,30 +305,30 @@ size_t agentrt_token_counter_count_batch(agentrt_token_counter_t *counter, const
     counter->total_count += total;
     counter->request_count += count;
 
-    agentrt_mutex_unlock(&counter->mutex);
+    airy_mtx_unlock(&counter->mutex);
 
     return 0;
 }
 
-char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const char *text,
+char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *text,
                                      size_t max_tokens, const char *side)
 {
     if (!counter || !text || max_tokens == 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     size_t length = strlen(text);
     if (length == 0) {
-        return AGENTRT_STRDUP("");
+        return AIRY_STRDUP("");
     }
 
-    agentrt_mutex_lock(&counter->mutex);
+    airy_mtx_lock(&counter->mutex);
 
     size_t current_tokens = count_tokens_by_model(counter->model_name, text, length);
 
     if (current_tokens <= max_tokens) {
-        agentrt_mutex_unlock(&counter->mutex);
-        return AGENTRT_STRDUP(text);
+        airy_mtx_unlock(&counter->mutex);
+        return AIRY_STRDUP(text);
     }
 
     size_t target_chars = (length * max_tokens) / current_tokens;
@@ -339,7 +339,7 @@ char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const cha
     char *result = NULL;
 
     if (side && strcmp(side, "left") == 0) {
-        result = AGENTRT_MALLOC(target_chars + 4);
+        result = AIRY_MALLOC(target_chars + 4);
         if (result) {
             __builtin_memcpy(result, text + length - target_chars, target_chars);
             result[target_chars] = '\0';
@@ -347,7 +347,7 @@ char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const cha
         }
     } else if (side && strcmp(side, "middle") == 0) {
         size_t half = target_chars / 2;
-        result = AGENTRT_MALLOC(target_chars + 8);
+        result = AIRY_MALLOC(target_chars + 8);
         if (result) {
             __builtin_memcpy(result, text, half);
             result[half] = '\0';
@@ -362,7 +362,7 @@ char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const cha
             }
         }
     } else {
-        result = AGENTRT_MALLOC(target_chars + 4);
+        result = AIRY_MALLOC(target_chars + 4);
         if (result) {
             __builtin_memcpy(result, text, target_chars);
             result[target_chars] = '\0';
@@ -370,7 +370,7 @@ char *agentrt_token_counter_truncate(agentrt_token_counter_t *counter, const cha
         }
     }
 
-    agentrt_mutex_unlock(&counter->mutex);
+    airy_mtx_unlock(&counter->mutex);
 
     return result;
 }

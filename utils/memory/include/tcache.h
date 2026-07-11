@@ -5,7 +5,7 @@
  * @brief P1.20: per-Thread 缓存层 — 减少 pool.c 全局锁竞争
  *
  * 每个线程维护本地缓存（tcache），批量从全局内存池获取/归还内存块，
- * 减少对 pool.c 全局 agentrt_mutex_t 的锁竞争。
+ * 减少对 pool.c 全局 airy_mtx_t 的锁竞争。
  *
  * 设计：
  *   - _Thread_local 存储每个线程的缓存
@@ -18,8 +18,8 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_TCACHE_H
-#define AGENTRT_TCACHE_H
+#ifndef AIRY_RT_TCACHE_H
+#define AIRY_RT_TCACHE_H
 
 #include "memory_pool.h"
 
@@ -39,7 +39,7 @@ extern "C" {
 
 /* ==================== tcache 句柄 ==================== */
 
-typedef struct agentrt_tcache agentrt_tcache_t;
+typedef struct airy_tcache airy_tcache_t;
 
 /* ==================== tcache 统计 ==================== */
 
@@ -66,7 +66,7 @@ typedef struct {
  * @param max_cached 最大缓存块数（0 使用默认）
  * @return tcache 句柄，失败返回 NULL
  */
-agentrt_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached);
+airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached);
 
 /**
  * @brief P1.20.1: 销毁 tcache（归还所有缓存块到池）
@@ -75,7 +75,7 @@ agentrt_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t m
  *
  * @param tc tcache 句柄
  */
-void tcache_destroy(agentrt_tcache_t *tc);
+void tcache_destroy(airy_tcache_t *tc);
 
 /* ==================== 分配 / 释放 API ==================== */
 
@@ -89,7 +89,7 @@ void tcache_destroy(agentrt_tcache_t *tc);
  * @param tc tcache 句柄
  * @return 内存块指针，失败返回 NULL
  */
-void *tcache_alloc(agentrt_tcache_t *tc);
+void *tcache_alloc(airy_tcache_t *tc);
 
 /**
  * @brief P1.20.2: 归还内存块到 tcache
@@ -101,7 +101,7 @@ void *tcache_alloc(agentrt_tcache_t *tc);
  * @param tc  tcache 句柄
  * @param ptr 内存块指针（可为 NULL）
  */
-void tcache_free(agentrt_tcache_t *tc, void *ptr);
+void tcache_free(airy_tcache_t *tc, void *ptr);
 
 /* ==================== 批量操作 ==================== */
 
@@ -110,7 +110,7 @@ void tcache_free(agentrt_tcache_t *tc, void *ptr);
  * @param tc tcache 句柄
  * @return 填充的块数
  */
-size_t tcache_batch_fill(agentrt_tcache_t *tc);
+size_t tcache_batch_fill(airy_tcache_t *tc);
 
 /**
  * @brief P1.20.1: 将 tcache 缓存批量归还到全局池
@@ -120,13 +120,13 @@ size_t tcache_batch_fill(agentrt_tcache_t *tc);
  * @param tc tcache 句柄
  * @return 归还的块数
  */
-size_t tcache_batch_flush(agentrt_tcache_t *tc);
+size_t tcache_batch_flush(airy_tcache_t *tc);
 
 /**
  * @brief 立即归还所有缓存块到全局池
  * @param tc tcache 句柄
  */
-void tcache_flush_all(agentrt_tcache_t *tc);
+void tcache_flush_all(airy_tcache_t *tc);
 
 /* ==================== 查询 API ==================== */
 
@@ -136,24 +136,24 @@ void tcache_flush_all(agentrt_tcache_t *tc);
  * @param stats 输出统计信息
  * @return true 成功
  */
-bool tcache_get_stats(agentrt_tcache_t *tc, tcache_stats_t *stats);
+bool tcache_get_stats(airy_tcache_t *tc, tcache_stats_t *stats);
 
 /**
  * @brief 获取 tcache 当前缓存块数
  * @param tc tcache 句柄
  * @return 缓存块数
  */
-size_t tcache_cached_count(agentrt_tcache_t *tc);
+size_t tcache_cached_count(airy_tcache_t *tc);
 
 /**
  * @brief 检查 tcache 是否已满（达到 max_cached 上限）
  * @param tc tcache 句柄
  * @return true 已满
  */
-bool tcache_is_full(agentrt_tcache_t *tc);
+bool tcache_is_full(airy_tcache_t *tc);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_TCACHE_H */
+#endif /* AIRY_RT_TCACHE_H */

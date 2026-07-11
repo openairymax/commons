@@ -128,7 +128,7 @@ struct config_source_manager {
     bool watching;
 
     /** 互斥锁保护管理器 */
-    agentrt_mutex_t internal_mutex;
+    airy_mtx_t internal_mutex;
 
     /** 防抖上次通知时间（毫秒，CLOCK_MONOTONIC） */
     uint64_t last_notify_time_ms;
@@ -149,13 +149,13 @@ struct config_source_manager {
 static config_source_t *config_source_create_base(config_source_type_t type, const char *name,
                                                   const config_source_adapter_t *adapter)
 {
-    config_source_t *source = (config_source_t *)AGENTRT_CALLOC(1, sizeof(config_source_t));
+    config_source_t *source = (config_source_t *)AIRY_CALLOC(1, sizeof(config_source_t));
     if (!source) return NULL;
 
     // 初始化属
     source->adapter = adapter;
     source->attributes.type = type;
-    source->attributes.name = name ? AGENTRT_STRDUP(name) : NULL;
+    source->attributes.name = name ? AIRY_STRDUP(name) : NULL;
     source->attributes.priority = 50;  // 默认优先
     source->attributes.read_only = false;
     source->attributes.watchable = false;
@@ -176,11 +176,11 @@ static void config_source_free_base(config_source_t *source)
         return;
 
     if (source->attributes.name) {
-        AGENTRT_FREE((void *)source->attributes.name);
+        AIRY_FREE((void *)source->attributes.name);
         source->attributes.name = NULL;
     }
 
-    AGENTRT_FREE(source);
+    AIRY_FREE(source);
 }
 
 /**
@@ -193,7 +193,7 @@ static char *duplicate_string(const char *str)
 {
     if (!str) return NULL;
     size_t len = strlen(str);
-    char *copy = (char *)AGENTRT_MALLOC(len + 1);
+    char *copy = (char *)AIRY_MALLOC(len + 1);
     if (copy) {
         __builtin_memcpy(copy, str, len);
         copy[len] = '\0';
@@ -567,7 +567,7 @@ static int yaml_ps_peek(yaml_parse_state_t *s)
 static int yaml_ps_advance(yaml_parse_state_t *s)
 {
     if (s->pos >= s->len)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     int c = (unsigned char)s->src[s->pos++];
     if (c == '\n')
         s->line++;
@@ -1115,11 +1115,11 @@ static bool check_file_modified(const char *file_path, uint64_t last_modified)
 static int file_source_init_inotify(file_source_priv_t *priv)
 {
     if (!priv || !priv->file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     priv->inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
     if (priv->inotify_fd < 0) {
         priv->inotify_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     priv->inotify_wd =
         inotify_add_watch(priv->inotify_fd, priv->file_path,
@@ -1128,7 +1128,7 @@ static int file_source_init_inotify(file_source_priv_t *priv)
         close(priv->inotify_fd);
         priv->inotify_fd = -1;
         priv->inotify_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     priv->inotify_enabled = true;
     return 0;
@@ -1181,11 +1181,11 @@ static void file_source_close_inotify(file_source_priv_t *priv)
 static int file_source_init_kqueue(file_source_priv_t *priv)
 {
     if (!priv || !priv->file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     priv->kqueue_fd = kqueue();
     if (priv->kqueue_fd < 0) {
         priv->kqueue_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     int fd = open(priv->file_path, O_RDONLY);
@@ -1193,7 +1193,7 @@ static int file_source_init_kqueue(file_source_priv_t *priv)
         close(priv->kqueue_fd);
         priv->kqueue_fd = -1;
         priv->kqueue_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     struct kevent ev;
@@ -1204,7 +1204,7 @@ static int file_source_init_kqueue(file_source_priv_t *priv)
         close(priv->kqueue_fd);
         priv->kqueue_fd = -1;
         priv->kqueue_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     close(fd);
@@ -1248,12 +1248,12 @@ static void file_source_close_kqueue(file_source_priv_t *priv)
 static int file_source_init_rdcw(file_source_priv_t *priv)
 {
     if (!priv || !priv->file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     char dir_path[MAX_PATH];
     size_t len = strlen(priv->file_path);
     if (len >= MAX_PATH)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     __builtin_memcpy(dir_path, priv->file_path, len + 1);
 
     char *last_sep = strrchr(dir_path, '\\');
@@ -1273,7 +1273,7 @@ static int file_source_init_rdcw(file_source_priv_t *priv)
     if (priv->dir_handle == INVALID_HANDLE_VALUE) {
         priv->dir_handle = NULL;
         priv->rdcw_enabled = false;
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     priv->rdcw_enabled = true;
@@ -1338,7 +1338,7 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
     }
 
     // 读取文件内容
-    char *buffer = (char *)AGENTRT_MALLOC(file_size + 1);
+    char *buffer = (char *)AIRY_MALLOC(file_size + 1);
     if (!buffer) {
         fclose(file);
         return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -1348,7 +1348,7 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
     fclose(file);
 
     if (bytes_read != (size_t)file_size) {
-        AGENTRT_FREE(buffer);
+        AIRY_FREE(buffer);
         return CONFIG_ERROR_IO;
     }
 
@@ -1368,7 +1368,7 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
         }
     }
 
-    AGENTRT_FREE(buffer);
+    AIRY_FREE(buffer);
     return error;
 }
 
@@ -1484,14 +1484,14 @@ static void file_source_destroy(config_source_t *source)
         file_source_close_rdcw(priv);
 #endif
         if (priv->file_path)
-            AGENTRT_FREE(priv->file_path);
+            AIRY_FREE(priv->file_path);
         if (priv->format)
-            AGENTRT_FREE(priv->format);
+            AIRY_FREE(priv->format);
         if (priv->encoding)
-            AGENTRT_FREE(priv->encoding);
+            AIRY_FREE(priv->encoding);
         if (priv->file_handle)
             fclose(priv->file_handle);
-        AGENTRT_FREE(priv);
+        AIRY_FREE(priv);
     }
 
     config_source_free_base(source);
@@ -1553,7 +1553,7 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
          * 2. 替换所有 _ 为 .：应使用双分隔符（如 __）作为层级分隔符，
          *    单分隔符保留为键内词边界（Viper/Django 等配置系统通用惯例）
          * 3. 未使用 separator 选项值：硬编码替换 _ 而非使用 priv->separator
-         * 修复后语义示例：AGENTRT_KERNEL__MAX_ALLOC_MB → kernel.max_alloc_mb
+         * 修复后语义示例：AIRY_KERNEL__MAX_ALLOC_MB → kernel.max_alloc_mb
          *   （双 __ 分隔层级，单 _ 保留为词边界，与 YAML dotted path 对齐） */
 
         /* 1. 大小写处理 */
@@ -1620,7 +1620,7 @@ static config_error_t env_source_save(config_source_t *source, const config_cont
 {
     (void)source;
     (void)ctx;
-    AGENTRT_LOG_WARN("环境变量配置源为只读，不支持保存操作");
+    AIRY_LOG_WARN("环境变量配置源为只读，不支持保存操作");
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
@@ -1689,17 +1689,17 @@ static void env_source_destroy(config_source_t *source)
     env_source_priv_t *priv = (env_source_priv_t *)source->priv_data;
     if (priv) {
         if (priv->prefix)
-            AGENTRT_FREE(priv->prefix);
+            AIRY_FREE(priv->prefix);
         if (priv->separator)
-            AGENTRT_FREE(priv->separator);
+            AIRY_FREE(priv->separator);
         if (priv->env_keys) {
             for (size_t i = 0; i < priv->env_count; i++) {
                 if (priv->env_keys[i])
-                    AGENTRT_FREE(priv->env_keys[i]);
+                    AIRY_FREE(priv->env_keys[i]);
             }
-            AGENTRT_FREE(priv->env_keys);
+            AIRY_FREE(priv->env_keys);
         }
-        AGENTRT_FREE(priv);
+        AIRY_FREE(priv);
     }
 
     config_source_free_base(source);
@@ -1761,7 +1761,7 @@ static config_error_t args_source_save(config_source_t *source, const config_con
 {
     (void)source;
     (void)ctx;
-    AGENTRT_LOG_WARN("命令行配置源为只读，不支持保存操作");
+    AIRY_LOG_WARN("命令行配置源为只读，不支持保存操作");
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
@@ -1798,11 +1798,11 @@ static void args_source_destroy(config_source_t *source)
     args_source_priv_t *priv = (args_source_priv_t *)source->priv_data;
     if (priv) {
         if (priv->prefix)
-            AGENTRT_FREE(priv->prefix);
+            AIRY_FREE(priv->prefix);
         if (priv->assign_char)
-            AGENTRT_FREE(priv->assign_char);
+            AIRY_FREE(priv->assign_char);
         // 注意：不释放argv，因为通常不拥有所有权
-        AGENTRT_FREE(priv);
+        AIRY_FREE(priv);
     }
 
     config_source_free_base(source);
@@ -1864,7 +1864,7 @@ static config_error_t memory_source_save(config_source_t *source, const config_c
     memory_source_priv_t *priv = (memory_source_priv_t *)source->priv_data;
     if (!priv || !priv->data)
         return CONFIG_ERROR_IO;
-    AGENTRT_LOG_INFO("内存配置源保存成功 (len=%zu)", priv->data_len);
+    AIRY_LOG_INFO("内存配置源保存成功 (len=%zu)", priv->data_len);
     return CONFIG_SUCCESS;
 }
 
@@ -1901,10 +1901,10 @@ static void memory_source_destroy(config_source_t *source)
     memory_source_priv_t *priv = (memory_source_priv_t *)source->priv_data;
     if (priv) {
         if (priv->owns_data && priv->data)
-            AGENTRT_FREE(priv->data);
+            AIRY_FREE(priv->data);
         if (priv->format)
-            AGENTRT_FREE(priv->format);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->format);
+        AIRY_FREE(priv);
     }
 
     config_source_free_base(source);
@@ -1951,7 +1951,7 @@ static config_error_t defaults_source_save(config_source_t *source, const config
 {
     (void)source;
     (void)ctx;
-    AGENTRT_LOG_WARN("默认值配置源为只读，不支持保存操作");
+    AIRY_LOG_WARN("默认值配置源为只读，不支持保存操作");
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
@@ -1990,18 +1990,18 @@ static void defaults_source_destroy(config_source_t *source)
         if (priv->keys) {
             for (size_t i = 0; i < priv->num_entries; i++) {
                 if (priv->keys[i])
-                    AGENTRT_FREE(priv->keys[i]);
+                    AIRY_FREE(priv->keys[i]);
             }
-            AGENTRT_FREE(priv->keys);
+            AIRY_FREE(priv->keys);
         }
         if (priv->vals) {
             for (size_t i = 0; i < priv->num_entries; i++) {
                 if (priv->vals[i])
-                    AGENTRT_FREE(priv->vals[i]);
+                    AIRY_FREE(priv->vals[i]);
             }
-            AGENTRT_FREE(priv->vals);
+            AIRY_FREE(priv->vals);
         }
-        AGENTRT_FREE(priv);
+        AIRY_FREE(priv);
     }
 
     config_source_free_base(source);
@@ -2091,14 +2091,14 @@ static void remote_source_destroy(config_source_t *source)
     remote_source_priv_t *priv = (remote_source_priv_t *)source->priv_data;
     if (priv) {
         if (priv->url)
-            AGENTRT_FREE(priv->url);
+            AIRY_FREE(priv->url);
         if (priv->token)
-            AGENTRT_FREE(priv->token);
+            AIRY_FREE(priv->token);
         if (priv->namespace_name)
-            AGENTRT_FREE(priv->namespace_name);
+            AIRY_FREE(priv->namespace_name);
         if (priv->last_response)
-            AGENTRT_FREE(priv->last_response);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->last_response);
+        AIRY_FREE(priv);
     }
     config_source_free_base(source);
 }
@@ -2122,10 +2122,10 @@ config_source_t *config_source_create_file(const config_file_source_options_t *o
     if (!source) return NULL;
 
     // 创建私有数据
-    file_source_priv_t *priv = (file_source_priv_t *)AGENTRT_CALLOC(1, sizeof(file_source_priv_t));
+    file_source_priv_t *priv = (file_source_priv_t *)AIRY_CALLOC(1, sizeof(file_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 复制选项数据
@@ -2141,14 +2141,14 @@ config_source_t *config_source_create_file(const config_file_source_options_t *o
     // 检查资源分配是否成功
     if (!priv->file_path || !priv->format || !priv->encoding) {
         if (priv->file_path)
-            AGENTRT_FREE(priv->file_path);
+            AIRY_FREE(priv->file_path);
         if (priv->format)
-            AGENTRT_FREE(priv->format);
+            AIRY_FREE(priv->format);
         if (priv->encoding)
-            AGENTRT_FREE(priv->encoding);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->encoding);
+        AIRY_FREE(priv);
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "operation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
     // 更新属
@@ -2184,10 +2184,10 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
     if (!source) return NULL;
 
     // 创建私有数据
-    env_source_priv_t *priv = (env_source_priv_t *)AGENTRT_CALLOC(1, sizeof(env_source_priv_t));
+    env_source_priv_t *priv = (env_source_priv_t *)AIRY_CALLOC(1, sizeof(env_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 复制选项数据
@@ -2202,10 +2202,10 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
     // 检查资源分配是否成功
     if (options->separator && !priv->separator) {
         if (priv->prefix)
-            AGENTRT_FREE(priv->prefix);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->prefix);
+        AIRY_FREE(priv);
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 更新属
@@ -2227,10 +2227,10 @@ config_source_t *config_source_create_args(const config_args_source_options_t *o
     if (!source) return NULL;
 
     // 创建私有数据
-    args_source_priv_t *priv = (args_source_priv_t *)AGENTRT_CALLOC(1, sizeof(args_source_priv_t));
+    args_source_priv_t *priv = (args_source_priv_t *)AIRY_CALLOC(1, sizeof(args_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 复制选项数据
@@ -2244,10 +2244,10 @@ config_source_t *config_source_create_args(const config_args_source_options_t *o
     // 检查资源分配是否成功
     if (!priv->assign_char) {
         if (priv->prefix)
-            AGENTRT_FREE(priv->prefix);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->prefix);
+        AIRY_FREE(priv);
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 更新属
@@ -2268,10 +2268,10 @@ config_source_t *config_source_create_memory(const config_memory_source_options_
 
     // 创建私有数据
     memory_source_priv_t *priv =
-        (memory_source_priv_t *)AGENTRT_CALLOC(1, sizeof(memory_source_priv_t));
+        (memory_source_priv_t *)AIRY_CALLOC(1, sizeof(memory_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 复制选项数据
@@ -2283,12 +2283,12 @@ config_source_t *config_source_create_memory(const config_memory_source_options_
     // 检查资源分配是否成功
     if (!priv->data || !priv->format) {
         if (priv->data)
-            AGENTRT_FREE(priv->data);
+            AIRY_FREE(priv->data);
         if (priv->format)
-            AGENTRT_FREE(priv->format);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->format);
+        AIRY_FREE(priv);
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 更新属
@@ -2310,23 +2310,23 @@ config_source_t *config_source_create_defaults(const char *const *default_values
 
     // 创建私有数据
     defaults_source_priv_t *priv =
-        (defaults_source_priv_t *)AGENTRT_CALLOC(1, sizeof(defaults_source_priv_t));
+        (defaults_source_priv_t *)AIRY_CALLOC(1, sizeof(defaults_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     // 分配键值对数组
-    priv->keys = (char **)AGENTRT_CALLOC(count, sizeof(char *));
-    priv->vals = (char **)AGENTRT_CALLOC(count, sizeof(char *));
+    priv->keys = (char **)AIRY_CALLOC(count, sizeof(char *));
+    priv->vals = (char **)AIRY_CALLOC(count, sizeof(char *));
     if (!priv->keys || !priv->vals) {
         if (priv->keys)
-            AGENTRT_FREE(priv->keys);
+            AIRY_FREE(priv->keys);
         if (priv->vals)
-            AGENTRT_FREE(priv->vals);
-        AGENTRT_FREE(priv);
+            AIRY_FREE(priv->vals);
+        AIRY_FREE(priv);
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     priv->num_entries = count / 2;
@@ -2355,10 +2355,10 @@ config_source_t *config_source_create_remote(const char *url, const char *token,
     if (!source) return NULL;
 
     remote_source_priv_t *priv =
-        (remote_source_priv_t *)AGENTRT_CALLOC(1, sizeof(remote_source_priv_t));
+        (remote_source_priv_t *)AIRY_CALLOC(1, sizeof(remote_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     priv->url = duplicate_string(url);
@@ -2419,7 +2419,7 @@ bool config_source_has_changed(config_source_t *source)
 const config_source_attr_t *config_source_get_attributes(config_source_t *source)
 {
     if (!source || !source->adapter || !source->adapter->get_attributes) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     return source->adapter->get_attributes(source);
@@ -2442,16 +2442,16 @@ config_source_type_t config_source_get_type(config_source_t *source)
 config_source_manager_t *config_source_manager_create(void)
 {
     config_source_manager_t *manager =
-        (config_source_manager_t *)AGENTRT_CALLOC(1, sizeof(config_source_manager_t));
+        (config_source_manager_t *)AIRY_CALLOC(1, sizeof(config_source_manager_t));
     if (!manager) return NULL;
 
     // 初始容量
     manager->capacity = 16;
     manager->sources =
-        (config_source_t **)AGENTRT_CALLOC(manager->capacity, sizeof(config_source_t *));
+        (config_source_t **)AIRY_CALLOC(manager->capacity, sizeof(config_source_t *));
     if (!manager->sources) {
-        AGENTRT_FREE(manager);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(manager);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     manager->count = 0;
@@ -2460,7 +2460,7 @@ config_source_manager_t *config_source_manager_create(void)
     manager->watching = false;
     manager->last_notify_time_ms = 0;
     manager->debounce_ms = 500;
-    agentrt_mutex_init(&manager->internal_mutex);
+    airy_mtx_init(&manager->internal_mutex);
     return manager;
 }
 
@@ -2478,9 +2478,9 @@ void config_source_manager_destroy(config_source_manager_t *manager)
 
     // 释放资源
     if (manager->sources)
-        AGENTRT_FREE(manager->sources);
-    agentrt_mutex_destroy(&manager->internal_mutex);
-    AGENTRT_FREE(manager);
+        AIRY_FREE(manager->sources);
+    airy_mtx_destroy(&manager->internal_mutex);
+    AIRY_FREE(manager);
 }
 
 config_error_t config_source_manager_add(config_source_manager_t *manager, config_source_t *source)
@@ -2491,7 +2491,7 @@ config_error_t config_source_manager_add(config_source_manager_t *manager, confi
     // 检查容量，必要时扩
     if (manager->count >= manager->capacity) {
         size_t new_capacity = manager->capacity * 2;
-        config_source_t **new_sources = (config_source_t **)AGENTRT_REALLOC(
+        config_source_t **new_sources = (config_source_t **)AIRY_REALLOC(
             manager->sources, new_capacity * sizeof(config_source_t *));
         if (!new_sources)
             return CONFIG_ERROR_OUT_OF_MEMORY;
@@ -2548,7 +2548,7 @@ config_source_t *config_source_manager_find(config_source_manager_t *manager, co
         }
     }
 
-    AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+    AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
 }
 
 config_error_t config_source_manager_load_all(config_source_manager_t *manager,
@@ -2598,10 +2598,10 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
     if (!manager)
         return 0;
 
-    agentrt_mutex_lock(&manager->internal_mutex);
+    airy_mtx_lock(&manager->internal_mutex);
 
     if (!manager->watching || !manager->change_callback) {
-        agentrt_mutex_unlock(&manager->internal_mutex);
+        airy_mtx_unlock(&manager->internal_mutex);
         return 0;
     }
 
@@ -2611,13 +2611,13 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
         now_ms = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
     } else {
         now_ms = (uint64_t)time(NULL) * 1000;
-        agentrt_mutex_unlock(&manager->internal_mutex);
+        airy_mtx_unlock(&manager->internal_mutex);
         return 0;
     }
 
     if (manager->last_notify_time_ms > 0 &&
         now_ms - manager->last_notify_time_ms < manager->debounce_ms) {
-        agentrt_mutex_unlock(&manager->internal_mutex);
+        airy_mtx_unlock(&manager->internal_mutex);
         return 0;
     }
 
@@ -2647,7 +2647,7 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
         void (*cb)(config_source_t *, void *) = manager->change_callback;
         void *ud = manager->callback_user_data;
 
-        agentrt_mutex_unlock(&manager->internal_mutex);
+        airy_mtx_unlock(&manager->internal_mutex);
 
         for (size_t i = 0; i < manager->count; i++) {
             config_source_t *source = manager->sources[i];
@@ -2664,7 +2664,7 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
         return change_count;
     }
 
-    agentrt_mutex_unlock(&manager->internal_mutex);
+    airy_mtx_unlock(&manager->internal_mutex);
     return 0;
 }
 
@@ -2724,7 +2724,7 @@ char *config_source_create_name(config_source_type_t type, const char *identifie
     size_t type_len = strlen(type_str);
     size_t id_len = strlen(identifier);
 
-    char *name = (char *)AGENTRT_MALLOC(type_len + id_len + 2);  // +2 for ':' and null terminator
+    char *name = (char *)AIRY_MALLOC(type_len + id_len + 2);  // +2 for ':' and null terminator
     if (!name) return NULL;
 
     snprintf(name, type_len + id_len + 2, "%s:%s", type_str, identifier);

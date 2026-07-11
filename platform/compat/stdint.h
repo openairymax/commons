@@ -10,8 +10,8 @@
  * 迁移至: agentrt/commons/platform/compat/ (2026-04-19 include/整合重构)
  */
 
-#ifndef AGENTRT_COMPAT_STDINT_H
-#define AGENTRT_COMPAT_STDINT_H
+#ifndef AIRY_RT_COMPAT_STDINT_H
+#define AIRY_RT_COMPAT_STDINT_H
 
 #include <stdint.h>
 
@@ -64,4 +64,4 @@ typedef ptrdiff_t intptr_t;
 typedef size_t uintptr_t;
 #endif
 
-#endif /* AGENTRT_COMPAT_STDINT_H */
+#endif /* AIRY_RT_COMPAT_STDINT_H */

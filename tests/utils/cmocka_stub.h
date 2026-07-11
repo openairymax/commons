@@ -9,8 +9,8 @@
  * 提供基本的测试宏定义和函数声明，支持单元测试的基本功能。
  */
 
-#ifndef AGENTRT_CMOCKA_STUB_H
-#define AGENTRT_CMOCKA_STUB_H
+#ifndef AIRY_RT_CMOCKA_STUB_H
+#define AIRY_RT_CMOCKA_STUB_H
 
 #include <setjmp.h>
 #include <stdarg.h>
@@ -202,4 +202,4 @@ static inline int cmocka_run_group_tests(const struct CMUnitTest *tests, size_t 
 }
 #endif
 
-#endif /* AGENTRT_CMOCKA_STUB_H */
+#endif /* AIRY_RT_CMOCKA_STUB_H */

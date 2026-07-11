@@ -193,7 +193,7 @@ sync_result_t sync_reset_stats(void *lock)
     }
 
     // 实际重置统计信息
-    AGENTRT_MEMSET(&base->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&base->stats, 0, sizeof(sync_stats_t));
 
     return SYNC_SUCCESS;
 }
@@ -481,7 +481,7 @@ static void registry_register(void *lock, const char *name, sync_type_t type)
     for (size_t i = 0; i < s_registry_count; i++) {
         if (s_lock_registry[i].in_use && s_lock_registry[i].lock == lock) {
             if (s_lock_registry[i].name)
-                AGENTRT_FREE(s_lock_registry[i].name);
+                AIRY_FREE(s_lock_registry[i].name);
             s_lock_registry[i].name = name ? sync_internal_strdup(name) : NULL;
             s_lock_registry[i].type = type;
             REGISTRY_UNLOCK();
@@ -522,7 +522,7 @@ static void registry_unregister(void *lock)
     for (size_t i = 0; i < s_registry_count; i++) {
         if (s_lock_registry[i].in_use && s_lock_registry[i].lock == lock) {
             if (s_lock_registry[i].name)
-                AGENTRT_FREE(s_lock_registry[i].name);
+                AIRY_FREE(s_lock_registry[i].name);
             s_lock_registry[i].in_use = false;
             s_lock_registry[i].lock = NULL;
             s_lock_registry[i].name = NULL;
@@ -662,55 +662,55 @@ sync_result_t sync_set_name(void *lock, const char *name)
     case SYNC_TYPE_RECURSIVE_MUTEX: {
         struct sync_mutex *m = (struct sync_mutex *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)m->name);
+            AIRY_FREE((void *)m->name);
         m->name = new_name;
         break;
     }
     case SYNC_TYPE_RWLOCK: {
         struct sync_rwlock *rw = (struct sync_rwlock *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)rw->name);
+            AIRY_FREE((void *)rw->name);
         rw->name = new_name;
         break;
     }
     case SYNC_TYPE_SPINLOCK: {
         struct sync_spinlock *sp = (struct sync_spinlock *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)sp->name);
+            AIRY_FREE((void *)sp->name);
         sp->name = new_name;
         break;
     }
     case SYNC_TYPE_SEMAPHORE: {
         struct sync_semaphore *sem = (struct sync_semaphore *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)sem->name);
+            AIRY_FREE((void *)sem->name);
         sem->name = new_name;
         break;
     }
     case SYNC_TYPE_CONDITION: {
         struct sync_condition *c = (struct sync_condition *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)c->name);
+            AIRY_FREE((void *)c->name);
         c->name = new_name;
         break;
     }
     case SYNC_TYPE_BARRIER: {
         struct sync_barrier *b = (struct sync_barrier *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)b->name);
+            AIRY_FREE((void *)b->name);
         b->name = new_name;
         break;
     }
     case SYNC_TYPE_EVENT: {
         struct sync_event *e = (struct sync_event *)lock;
         if (old_name)
-            AGENTRT_FREE((void *)e->name);
+            AIRY_FREE((void *)e->name);
         e->name = new_name;
         break;
     }
     default:
         if (new_name)
-            AGENTRT_FREE(new_name);
+            AIRY_FREE(new_name);
         return SYNC_ERROR_UNSUPPORTED;
     }
 
@@ -741,7 +741,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
         return SYNC_ERROR_INVALID;
     }
 
-    AGENTRT_MEMSET(info, 0, sizeof(sync_deadlock_info_t));
+    AIRY_MEMSET(info, 0, sizeof(sync_deadlock_info_t));
     info->detection_time = (uint64_t)time(NULL);
 
     /* 本地缓冲：收集被持有的锁名 */
@@ -762,7 +762,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
         /* 自清理：移除已释放的陈旧条目 */
         if (base == NULL || !base->initialized) {
             if (s_lock_registry[i].name)
-                AGENTRT_FREE(s_lock_registry[i].name);
+                AIRY_FREE(s_lock_registry[i].name);
             s_lock_registry[i].in_use = false;
             s_lock_registry[i].lock = NULL;
             s_lock_registry[i].name = NULL;
@@ -786,7 +786,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
     if (total_held > 0) {
         /* 分配输出数组并转移所有权 */
         if (held_count > 0) {
-            info->lock_names = (char **)AGENTRT_CALLOC(held_count, sizeof(char *));
+            info->lock_names = (char **)AIRY_CALLOC(held_count, sizeof(char *));
             if (info->lock_names) {
                 for (size_t i = 0; i < held_count; i++)
                     info->lock_names[i] = held_names[i];
@@ -794,7 +794,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
                 /* 内存不足，释放本地缓冲 */
                 for (size_t i = 0; i < held_count; i++) {
                     if (held_names[i])
-                        AGENTRT_FREE(held_names[i]);
+                        AIRY_FREE(held_names[i]);
                 }
             }
         }

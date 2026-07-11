@@ -16,7 +16,7 @@
 #include "string_compat.h"
 
 #include <string.h>
-#ifndef AGENTRT_NO_CJSON
+#ifndef AIRY_NO_CJSON
 #include <cjson/cJSON.h>
 #endif
 #include <stdint.h>
@@ -44,46 +44,46 @@ typedef struct metric_timing {
     struct metric_timing *next;
 } metric_timing_t;
 
-struct agentrt_metrics {
+struct airy_metrics {
     metric_counter_t *counters;
     metric_gauge_t *gauges;
     metric_timing_t *timings;
 };
 
-agentrt_metrics_t *agentrt_metrics_create(void)
+airy_metrics_t *airy_metrics_create(void)
 {
-    return (agentrt_metrics_t *)AGENTRT_CALLOC(1, sizeof(agentrt_metrics_t));
+    return (airy_metrics_t *)AIRY_CALLOC(1, sizeof(airy_metrics_t));
 }
 
-void agentrt_metrics_destroy(agentrt_metrics_t *metrics)
+void airy_metrics_destroy(airy_metrics_t *metrics)
 {
     if (!metrics)
         return;
     metric_counter_t *c = metrics->counters;
     while (c) {
         metric_counter_t *next = c->next;
-        AGENTRT_FREE(c->name);
-        AGENTRT_FREE(c);
+        AIRY_FREE(c->name);
+        AIRY_FREE(c);
         c = next;
     }
     metric_gauge_t *g = metrics->gauges;
     while (g) {
         metric_gauge_t *next = g->next;
-        AGENTRT_FREE(g->name);
-        AGENTRT_FREE(g);
+        AIRY_FREE(g->name);
+        AIRY_FREE(g);
         g = next;
     }
     metric_timing_t *t = metrics->timings;
     while (t) {
         metric_timing_t *next = t->next;
-        AGENTRT_FREE(t->name);
-        AGENTRT_FREE(t);
+        AIRY_FREE(t->name);
+        AIRY_FREE(t);
         t = next;
     }
-    AGENTRT_FREE(metrics);
+    AIRY_FREE(metrics);
 }
 
-void agentrt_metrics_increment(agentrt_metrics_t *metrics, const char *name, uint64_t value)
+void airy_metrics_increment(airy_metrics_t *metrics, const char *name, uint64_t value)
 {
     if (!metrics || !name)
         return;
@@ -95,16 +95,16 @@ void agentrt_metrics_increment(agentrt_metrics_t *metrics, const char *name, uin
         }
         c = c->next;
     }
-    c = (metric_counter_t *)AGENTRT_MALLOC(sizeof(metric_counter_t));
+    c = (metric_counter_t *)AIRY_MALLOC(sizeof(metric_counter_t));
     if (!c)
         return;
-    c->name = AGENTRT_STRDUP(name);
+    c->name = AIRY_STRDUP(name);
     c->value = value;
     c->next = metrics->counters;
     metrics->counters = c;
 }
 
-void agentrt_metrics_gauge(agentrt_metrics_t *metrics, const char *name, double value)
+void airy_metrics_gauge(airy_metrics_t *metrics, const char *name, double value)
 {
     if (!metrics || !name)
         return;
@@ -116,16 +116,16 @@ void agentrt_metrics_gauge(agentrt_metrics_t *metrics, const char *name, double 
         }
         g = g->next;
     }
-    g = (metric_gauge_t *)AGENTRT_MALLOC(sizeof(metric_gauge_t));
+    g = (metric_gauge_t *)AIRY_MALLOC(sizeof(metric_gauge_t));
     if (!g)
         return;
-    g->name = AGENTRT_STRDUP(name);
+    g->name = AIRY_STRDUP(name);
     g->value = value;
     g->next = metrics->gauges;
     metrics->gauges = g;
 }
 
-void agentrt_metrics_timing(agentrt_metrics_t *metrics, const char *name, double duration_ms)
+void airy_metrics_timing(airy_metrics_t *metrics, const char *name, double duration_ms)
 {
     if (!metrics || !name)
         return;
@@ -138,25 +138,25 @@ void agentrt_metrics_timing(agentrt_metrics_t *metrics, const char *name, double
         }
         t = t->next;
     }
-    t = (metric_timing_t *)AGENTRT_MALLOC(sizeof(metric_timing_t));
+    t = (metric_timing_t *)AIRY_MALLOC(sizeof(metric_timing_t));
     if (!t)
         return;
-    t->name = AGENTRT_STRDUP(name);
+    t->name = AIRY_STRDUP(name);
     t->sum = duration_ms;
     t->count = 1;
     t->next = metrics->timings;
     metrics->timings = t;
 }
 
-char *agentrt_metrics_export(agentrt_metrics_t *metrics)
+char *airy_metrics_export(airy_metrics_t *metrics)
 {
     if (!metrics) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
-#ifndef AGENTRT_NO_CJSON
+#ifndef AIRY_NO_CJSON
     cJSON *root = cJSON_CreateObject();
     if (!root) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     cJSON *counters = cJSON_CreateObject();
@@ -198,7 +198,7 @@ char *agentrt_metrics_export(agentrt_metrics_t *metrics)
 static int sanitize_metric_name(const char *name, char *out, size_t out_size)
 {
     if (!name || !out || out_size == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     size_t j = 0;
     for (size_t i = 0; name[i] && j < out_size - 1; i++) {
         char ch = name[i];
@@ -213,16 +213,16 @@ static int sanitize_metric_name(const char *name, char *out, size_t out_size)
     return (j > 0) ? 0 : -1;
 }
 
-char *agentrt_metrics_export_prometheus_filtered(agentrt_metrics_t *metrics, const char *prefix)
+char *airy_metrics_export_prometheus_filtered(airy_metrics_t *metrics, const char *prefix)
 {
     if (!metrics) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
     size_t buf_size = 4096;
-    char *buf = (char *)AGENTRT_MALLOC(buf_size);
+    char *buf = (char *)AIRY_MALLOC(buf_size);
     if (!buf) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
     size_t pos = 0;
 
@@ -232,24 +232,24 @@ char *agentrt_metrics_export_prometheus_filtered(agentrt_metrics_t *metrics, con
             snprintf(buf + pos, buf_size - pos, fmt,                                               \
                      ##__VA_ARGS__); /* flawfinder: ignore - bounded snprintf in APPEND macro */   \
         if (written < 0) {                                                                         \
-            AGENTRT_FREE(buf);                                                                     \
+            AIRY_FREE(buf);                                                                     \
             return NULL;                                                                           \
         }                                                                                          \
         if ((size_t)written >= buf_size - pos) {                                                   \
             buf_size *= 2;                                                                         \
-            char *new_buf = (char *)AGENTRT_MALLOC(buf_size);                                      \
+            char *new_buf = (char *)AIRY_MALLOC(buf_size);                                      \
             if (!new_buf) {                                                                        \
-                AGENTRT_FREE(buf);                                                                 \
+                AIRY_FREE(buf);                                                                 \
                 return NULL;                                                                       \
             }                                                                                      \
             __builtin_memcpy(new_buf, buf, pos);                                                             \
-            AGENTRT_FREE(buf);                                                                     \
+            AIRY_FREE(buf);                                                                     \
             buf = new_buf;                                                                         \
             written =                                                                              \
                 snprintf(buf + pos, buf_size - pos, fmt,                                           \
                          ##__VA_ARGS__); /* flawfinder: ignore - bounded realloc+snprintf retry */ \
             if (written < 0 || (size_t)written >= buf_size - pos) {                                \
-                AGENTRT_FREE(buf);                                                                 \
+                AIRY_FREE(buf);                                                                 \
                 return NULL;                                                                       \
             }                                                                                      \
         }                                                                                          \
@@ -306,7 +306,7 @@ char *agentrt_metrics_export_prometheus_filtered(agentrt_metrics_t *metrics, con
     return buf;
 }
 
-char *agentrt_metrics_export_prometheus(agentrt_metrics_t *metrics)
+char *airy_metrics_export_prometheus(airy_metrics_t *metrics)
 {
-    return agentrt_metrics_export_prometheus_filtered(metrics, NULL);
+    return airy_metrics_export_prometheus_filtered(metrics, NULL);
 }

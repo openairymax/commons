@@ -3,15 +3,15 @@
 #ifndef MEMORY_COMMON_H
 #define MEMORY_COMMON_H
 
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 
 #include <error.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef AGENTRT_MEMORY_STATS_T_DEFINED
-#define AGENTRT_MEMORY_STATS_T_DEFINED
+#ifndef AIRY_MEMORY_STATS_T_DEFINED
+#define AIRY_MEMORY_STATS_T_DEFINED
 typedef struct {
     size_t total_allocated;
     size_t total_freed;

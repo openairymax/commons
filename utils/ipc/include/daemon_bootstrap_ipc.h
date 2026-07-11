@@ -36,8 +36,8 @@
  * @see P1.8 C-L09 连接线
  */
 
-#ifndef AGENTRT_DAEMON_BOOTSTRAP_IPC_H
-#define AGENTRT_DAEMON_BOOTSTRAP_IPC_H
+#ifndef AIRY_RT_DAEMON_BOOTSTRAP_IPC_H
+#define AIRY_RT_DAEMON_BOOTSTRAP_IPC_H
 
 #include "ipc_bus_helper.h"
 
@@ -141,4 +141,4 @@ bool daemon_bootstrap_ipc_is_running(daemon_bootstrap_ipc_t *bipc);
 }
 #endif
 
-#endif /* AGENTRT_DAEMON_BOOTSTRAP_IPC_H */
+#endif /* AIRY_RT_DAEMON_BOOTSTRAP_IPC_H */

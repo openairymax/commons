@@ -36,9 +36,9 @@
  * @brief 跨平台互斥锁类型
  */
 #ifdef _WIN32
-typedef agentrt_mutex_t budget_mutex_t;
+typedef airy_mtx_t budget_mutex_t;
 #else
-typedef agentrt_mutex_t budget_mutex_t;
+typedef airy_mtx_t budget_mutex_t;
 #endif
 
 /**
@@ -47,10 +47,10 @@ typedef agentrt_mutex_t budget_mutex_t;
 static int budget_mutex_init(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_init(mutex);
+    airy_mtx_init(mutex);
     return 0;
 #else
-    return agentrt_mutex_init(mutex);
+    return airy_mtx_init(mutex);
 #endif
 }
 
@@ -60,9 +60,9 @@ static int budget_mutex_init(budget_mutex_t *mutex)
 static void budget_mutex_destroy(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_destroy(mutex);
+    airy_mtx_destroy(mutex);
 #else
-    agentrt_mutex_destroy(mutex);
+    airy_mtx_destroy(mutex);
 #endif
 }
 
@@ -72,9 +72,9 @@ static void budget_mutex_destroy(budget_mutex_t *mutex)
 static void budget_mutex_lock(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_lock(mutex);
+    airy_mtx_lock(mutex);
 #else
-    agentrt_mutex_lock(mutex);
+    airy_mtx_lock(mutex);
 #endif
 }
 
@@ -84,16 +84,16 @@ static void budget_mutex_lock(budget_mutex_t *mutex)
 static void budget_mutex_unlock(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_unlock(mutex);
+    airy_mtx_unlock(mutex);
 #else
-    agentrt_mutex_unlock(mutex);
+    airy_mtx_unlock(mutex);
 #endif
 }
 
 /**
  * @brief Token预算内部结构
  */
-struct agentrt_token_budget {
+struct airy_token_budget {
     size_t max_tokens;           /**< 最大Token配额 */
     atomic_size_t used_tokens;   /**< 已使用Token?*/
     atomic_size_t input_tokens;  /**< 输入Token?*/
@@ -108,10 +108,10 @@ struct agentrt_token_budget {
 /**
  * @brief 检查预算是否充?
  */
-static int check_budget_available(agentrt_token_budget_t *budget, size_t input, size_t output)
+static int check_budget_available(airy_token_budget_t *budget, size_t input, size_t output)
 {
     if (!budget) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t total = atomic_load(&budget->used_tokens);
@@ -119,25 +119,25 @@ static int check_budget_available(agentrt_token_budget_t *budget, size_t input, 
 
     if (total + requested > budget->max_tokens) {
         atomic_fetch_add(&budget->denied_count, 1);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     return 0;
 }
 
-agentrt_token_budget_t *agentrt_token_budget_create(size_t max_tokens)
+airy_token_budget_t *airy_token_budget_create(size_t max_tokens)
 {
     if (max_tokens == 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    agentrt_token_budget_t *budget =
-        (agentrt_token_budget_t *)AGENTRT_MALLOC(sizeof(agentrt_token_budget_t));
+    airy_token_budget_t *budget =
+        (airy_token_budget_t *)AIRY_MALLOC(sizeof(airy_token_budget_t));
     if (!budget) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(budget, 0, sizeof(agentrt_token_budget_t));
+    AIRY_MEMSET(budget, 0, sizeof(airy_token_budget_t));
 
     budget->max_tokens = max_tokens;
     atomic_init(&budget->used_tokens, 0);
@@ -147,8 +147,8 @@ agentrt_token_budget_t *agentrt_token_budget_create(size_t max_tokens)
     atomic_init(&budget->denied_count, 0);
 
     if (budget_mutex_init(&budget->mutex) != 0) {
-        AGENTRT_FREE(budget);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_FREE(budget);
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     budget->reset_time = 0;
@@ -157,28 +157,28 @@ agentrt_token_budget_t *agentrt_token_budget_create(size_t max_tokens)
     return budget;
 }
 
-void agentrt_token_budget_destroy(agentrt_token_budget_t *budget)
+void airy_token_budget_destroy(airy_token_budget_t *budget)
 {
     if (!budget) {
         return;
     }
 
     budget_mutex_destroy(&budget->mutex);
-    AGENTRT_FREE(budget);
+    AIRY_FREE(budget);
 }
 
-int agentrt_token_budget_add(agentrt_token_budget_t *budget, size_t input_tokens,
+int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens,
                              size_t output_tokens)
 {
     if (!budget) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_mutex_lock(&budget->mutex);
 
     if (check_budget_available(budget, input_tokens, output_tokens) != 0) {
         budget_mutex_unlock(&budget->mutex);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     atomic_fetch_add(&budget->used_tokens, input_tokens + output_tokens);
@@ -191,7 +191,7 @@ int agentrt_token_budget_add(agentrt_token_budget_t *budget, size_t input_tokens
     return 0;
 }
 
-size_t agentrt_token_budget_remaining(agentrt_token_budget_t *budget)
+size_t airy_token_budget_remaining(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -206,7 +206,7 @@ size_t agentrt_token_budget_remaining(agentrt_token_budget_t *budget)
     return budget->max_tokens - used;
 }
 
-void agentrt_token_budget_reset(agentrt_token_budget_t *budget)
+void airy_token_budget_reset(airy_token_budget_t *budget)
 {
     if (!budget) {
         return;
@@ -221,7 +221,7 @@ void agentrt_token_budget_reset(agentrt_token_budget_t *budget)
     budget_mutex_unlock(&budget->mutex);
 }
 
-size_t agentrt_token_budget_used(agentrt_token_budget_t *budget)
+size_t airy_token_budget_used(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -230,7 +230,7 @@ size_t agentrt_token_budget_used(agentrt_token_budget_t *budget)
     return atomic_load(&budget->used_tokens);
 }
 
-size_t agentrt_token_budget_input(agentrt_token_budget_t *budget)
+size_t airy_token_budget_input(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -239,7 +239,7 @@ size_t agentrt_token_budget_input(agentrt_token_budget_t *budget)
     return atomic_load(&budget->input_tokens);
 }
 
-size_t agentrt_token_budget_output(agentrt_token_budget_t *budget)
+size_t airy_token_budget_output(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -248,7 +248,7 @@ size_t agentrt_token_budget_output(agentrt_token_budget_t *budget)
     return atomic_load(&budget->output_tokens);
 }
 
-uint32_t agentrt_token_budget_requests(agentrt_token_budget_t *budget)
+uint32_t airy_token_budget_requests(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -257,7 +257,7 @@ uint32_t agentrt_token_budget_requests(agentrt_token_budget_t *budget)
     return atomic_load(&budget->request_count);
 }
 
-uint32_t agentrt_token_budget_denied(agentrt_token_budget_t *budget)
+uint32_t airy_token_budget_denied(airy_token_budget_t *budget)
 {
     if (!budget) {
         return 0;
@@ -266,10 +266,10 @@ uint32_t agentrt_token_budget_denied(agentrt_token_budget_t *budget)
     return atomic_load(&budget->denied_count);
 }
 
-int agentrt_token_budget_set_window(agentrt_token_budget_t *budget, size_t window_seconds)
+int airy_token_budget_set_window(airy_token_budget_t *budget, size_t window_seconds)
 {
     if (!budget) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_mutex_lock(&budget->mutex);
@@ -282,10 +282,10 @@ int agentrt_token_budget_set_window(agentrt_token_budget_t *budget, size_t windo
     return 0;
 }
 
-int agentrt_token_budget_check_window(agentrt_token_budget_t *budget)
+int airy_token_budget_check_window(airy_token_budget_t *budget)
 {
     if (!budget) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_mutex_lock(&budget->mutex);

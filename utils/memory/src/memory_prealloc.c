@@ -22,8 +22,8 @@
  * Global pre-allocation pool (static singleton)
  * ============================================================================ */
 
-static agentrt_prealloc_pool_t g_prealloc_pool = {0};
-static agentrt_mutex_t g_prealloc_lock;
+static airy_prealloc_pool_t g_prealloc_pool = {0};
+static airy_mtx_t g_prealloc_lock;
 
 /* ============================================================================
  * Internal helpers
@@ -35,10 +35,10 @@ static agentrt_mutex_t g_prealloc_lock;
 static void *prealloc_get_buf(int category)
 {
     switch (category) {
-    case AGENTRT_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf;
-    case AGENTRT_PREALLOC_OOM:      return g_prealloc_pool.oom_buf;
-    case AGENTRT_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf;
-    case AGENTRT_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf;
+    case AIRY_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf;
+    case AIRY_PREALLOC_OOM:      return g_prealloc_pool.oom_buf;
+    case AIRY_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf;
+    case AIRY_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf;
     default:                        return NULL;
     }
 }
@@ -49,10 +49,10 @@ static void *prealloc_get_buf(int category)
 static size_t prealloc_get_buf_size(int category)
 {
     switch (category) {
-    case AGENTRT_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf_size;
-    case AGENTRT_PREALLOC_OOM:      return g_prealloc_pool.oom_buf_size;
-    case AGENTRT_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf_size;
-    case AGENTRT_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf_size;
+    case AIRY_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf_size;
+    case AIRY_PREALLOC_OOM:      return g_prealloc_pool.oom_buf_size;
+    case AIRY_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf_size;
+    case AIRY_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf_size;
     default:                        return 0;
     }
 }
@@ -63,10 +63,10 @@ static size_t prealloc_get_buf_size(int category)
 static int *prealloc_get_in_use(int category)
 {
     switch (category) {
-    case AGENTRT_PREALLOC_SIGNAL:   return &g_prealloc_pool.signal_buf_in_use;
-    case AGENTRT_PREALLOC_OOM:      return &g_prealloc_pool.oom_buf_in_use;
-    case AGENTRT_PREALLOC_AUDIT:    return &g_prealloc_pool.audit_buf_in_use;
-    case AGENTRT_PREALLOC_SHUTDOWN: return &g_prealloc_pool.shutdown_buf_in_use;
+    case AIRY_PREALLOC_SIGNAL:   return &g_prealloc_pool.signal_buf_in_use;
+    case AIRY_PREALLOC_OOM:      return &g_prealloc_pool.oom_buf_in_use;
+    case AIRY_PREALLOC_AUDIT:    return &g_prealloc_pool.audit_buf_in_use;
+    case AIRY_PREALLOC_SHUTDOWN: return &g_prealloc_pool.shutdown_buf_in_use;
     default:                        return NULL;
     }
 }
@@ -77,10 +77,10 @@ static int *prealloc_get_in_use(int category)
 static const char *prealloc_category_name(int category)
 {
     switch (category) {
-    case AGENTRT_PREALLOC_SIGNAL:   return "SIGNAL";
-    case AGENTRT_PREALLOC_OOM:      return "OOM";
-    case AGENTRT_PREALLOC_AUDIT:    return "AUDIT";
-    case AGENTRT_PREALLOC_SHUTDOWN: return "SHUTDOWN";
+    case AIRY_PREALLOC_SIGNAL:   return "SIGNAL";
+    case AIRY_PREALLOC_OOM:      return "OOM";
+    case AIRY_PREALLOC_AUDIT:    return "AUDIT";
+    case AIRY_PREALLOC_SHUTDOWN: return "SHUTDOWN";
     default:                        return "UNKNOWN";
     }
 }
@@ -89,154 +89,154 @@ static const char *prealloc_category_name(int category)
  * Public API
  * ============================================================================ */
 
-int agentrt_prealloc_init(void)
+int airy_prealloc_init(void)
 {
     if (g_prealloc_pool.initialized) {
         return 0; /* already initialized */
     }
 
-    agentrt_mutex_init(&g_prealloc_lock);
+    airy_mtx_init(&g_prealloc_lock);
 
-    agentrt_mutex_lock(&g_prealloc_lock);
+    airy_mtx_lock(&g_prealloc_lock);
 
     /* Allocate signal handler buffer */
-    g_prealloc_pool.signal_buf = AGENTRT_MALLOC(AGENTRT_PREALLOC_SIGNAL_BUF_SIZE);
+    g_prealloc_pool.signal_buf = AIRY_MALLOC(AIRY_PREALLOC_SIGNAL_BUF_SIZE);
     if (!g_prealloc_pool.signal_buf) {
         goto fail;
     }
-    g_prealloc_pool.signal_buf_size = AGENTRT_PREALLOC_SIGNAL_BUF_SIZE;
+    g_prealloc_pool.signal_buf_size = AIRY_PREALLOC_SIGNAL_BUF_SIZE;
     g_prealloc_pool.signal_buf_in_use = 0;
 
     /* Allocate OOM error reporting buffer */
-    g_prealloc_pool.oom_buf = AGENTRT_MALLOC(AGENTRT_PREALLOC_OOM_BUF_SIZE);
+    g_prealloc_pool.oom_buf = AIRY_MALLOC(AIRY_PREALLOC_OOM_BUF_SIZE);
     if (!g_prealloc_pool.oom_buf) {
-        AGENTRT_FREE(g_prealloc_pool.signal_buf);
+        AIRY_FREE(g_prealloc_pool.signal_buf);
         g_prealloc_pool.signal_buf = NULL;
         goto fail;
     }
-    g_prealloc_pool.oom_buf_size = AGENTRT_PREALLOC_OOM_BUF_SIZE;
+    g_prealloc_pool.oom_buf_size = AIRY_PREALLOC_OOM_BUF_SIZE;
     g_prealloc_pool.oom_buf_in_use = 0;
 
     /* Allocate audit log emergency buffer */
-    g_prealloc_pool.audit_buf = AGENTRT_MALLOC(AGENTRT_PREALLOC_AUDIT_BUF_SIZE);
+    g_prealloc_pool.audit_buf = AIRY_MALLOC(AIRY_PREALLOC_AUDIT_BUF_SIZE);
     if (!g_prealloc_pool.audit_buf) {
-        AGENTRT_FREE(g_prealloc_pool.signal_buf);
+        AIRY_FREE(g_prealloc_pool.signal_buf);
         g_prealloc_pool.signal_buf = NULL;
-        AGENTRT_FREE(g_prealloc_pool.oom_buf);
+        AIRY_FREE(g_prealloc_pool.oom_buf);
         g_prealloc_pool.oom_buf = NULL;
         goto fail;
     }
-    g_prealloc_pool.audit_buf_size = AGENTRT_PREALLOC_AUDIT_BUF_SIZE;
+    g_prealloc_pool.audit_buf_size = AIRY_PREALLOC_AUDIT_BUF_SIZE;
     g_prealloc_pool.audit_buf_in_use = 0;
 
     /* Allocate emergency shutdown buffer */
-    g_prealloc_pool.shutdown_buf = AGENTRT_MALLOC(AGENTRT_PREALLOC_SHUTDOWN_BUF_SIZE);
+    g_prealloc_pool.shutdown_buf = AIRY_MALLOC(AIRY_PREALLOC_SHUTDOWN_BUF_SIZE);
     if (!g_prealloc_pool.shutdown_buf) {
-        AGENTRT_FREE(g_prealloc_pool.signal_buf);
+        AIRY_FREE(g_prealloc_pool.signal_buf);
         g_prealloc_pool.signal_buf = NULL;
-        AGENTRT_FREE(g_prealloc_pool.oom_buf);
+        AIRY_FREE(g_prealloc_pool.oom_buf);
         g_prealloc_pool.oom_buf = NULL;
-        AGENTRT_FREE(g_prealloc_pool.audit_buf);
+        AIRY_FREE(g_prealloc_pool.audit_buf);
         g_prealloc_pool.audit_buf = NULL;
         goto fail;
     }
-    g_prealloc_pool.shutdown_buf_size = AGENTRT_PREALLOC_SHUTDOWN_BUF_SIZE;
+    g_prealloc_pool.shutdown_buf_size = AIRY_PREALLOC_SHUTDOWN_BUF_SIZE;
     g_prealloc_pool.shutdown_buf_in_use = 0;
 
     g_prealloc_pool.initialized = 1;
 
-    agentrt_mutex_unlock(&g_prealloc_lock);
+    airy_mtx_unlock(&g_prealloc_lock);
 
-    AGENTRT_LOG_INFO("[PREALLOC] Emergency buffer pool initialized: "
+    AIRY_LOG_INFO("[PREALLOC] Emergency buffer pool initialized: "
             "signal=%d, oom=%d, audit=%d, shutdown=%d bytes",
-            AGENTRT_PREALLOC_SIGNAL_BUF_SIZE,
-            AGENTRT_PREALLOC_OOM_BUF_SIZE,
-            AGENTRT_PREALLOC_AUDIT_BUF_SIZE,
-            AGENTRT_PREALLOC_SHUTDOWN_BUF_SIZE);
+            AIRY_PREALLOC_SIGNAL_BUF_SIZE,
+            AIRY_PREALLOC_OOM_BUF_SIZE,
+            AIRY_PREALLOC_AUDIT_BUF_SIZE,
+            AIRY_PREALLOC_SHUTDOWN_BUF_SIZE);
 
     return 0;
 
 fail:
-    agentrt_mutex_unlock(&g_prealloc_lock);
-    agentrt_mutex_destroy(&g_prealloc_lock);
-    return AGENTRT_ERR_OUT_OF_MEMORY;  /* fail 路径均为 AGENTRT_MALLOC 返回 NULL */
+    airy_mtx_unlock(&g_prealloc_lock);
+    airy_mtx_destroy(&g_prealloc_lock);
+    return AIRY_ERR_OUT_OF_MEMORY;  /* fail 路径均为 AIRY_MALLOC 返回 NULL */
 }
 
-void agentrt_prealloc_shutdown(void)
+void airy_prealloc_shutdown(void)
 {
     if (!g_prealloc_pool.initialized) {
         return;
     }
 
-    agentrt_mutex_lock(&g_prealloc_lock);
+    airy_mtx_lock(&g_prealloc_lock);
 
-    AGENTRT_FREE(g_prealloc_pool.signal_buf);
+    AIRY_FREE(g_prealloc_pool.signal_buf);
     g_prealloc_pool.signal_buf = NULL;
     g_prealloc_pool.signal_buf_size = 0;
     g_prealloc_pool.signal_buf_in_use = 0;
 
-    AGENTRT_FREE(g_prealloc_pool.oom_buf);
+    AIRY_FREE(g_prealloc_pool.oom_buf);
     g_prealloc_pool.oom_buf = NULL;
     g_prealloc_pool.oom_buf_size = 0;
     g_prealloc_pool.oom_buf_in_use = 0;
 
-    AGENTRT_FREE(g_prealloc_pool.audit_buf);
+    AIRY_FREE(g_prealloc_pool.audit_buf);
     g_prealloc_pool.audit_buf = NULL;
     g_prealloc_pool.audit_buf_size = 0;
     g_prealloc_pool.audit_buf_in_use = 0;
 
-    AGENTRT_FREE(g_prealloc_pool.shutdown_buf);
+    AIRY_FREE(g_prealloc_pool.shutdown_buf);
     g_prealloc_pool.shutdown_buf = NULL;
     g_prealloc_pool.shutdown_buf_size = 0;
     g_prealloc_pool.shutdown_buf_in_use = 0;
 
     g_prealloc_pool.initialized = 0;
 
-    agentrt_mutex_unlock(&g_prealloc_lock);
-    agentrt_mutex_destroy(&g_prealloc_lock);
+    airy_mtx_unlock(&g_prealloc_lock);
+    airy_mtx_destroy(&g_prealloc_lock);
 
-    AGENTRT_LOG_INFO("[PREALLOC] Emergency buffer pool shut down");
+    AIRY_LOG_INFO("[PREALLOC] Emergency buffer pool shut down");
 }
 
-void *agentrt_prealloc_acquire(int category)
+void *airy_prealloc_acquire(int category)
 {
     if (!g_prealloc_pool.initialized) {
         return NULL;
     }
 
-    if (category < 0 || category > AGENTRT_PREALLOC_SHUTDOWN) {
+    if (category < 0 || category > AIRY_PREALLOC_SHUTDOWN) {
         return NULL;
     }
 
-    agentrt_mutex_lock(&g_prealloc_lock);
+    airy_mtx_lock(&g_prealloc_lock);
 
     int *in_use = prealloc_get_in_use(category);
     if (!in_use || *in_use) {
-        AGENTRT_LOG_WARN("[PREALLOC] Buffer already in use for category %s, "
+        AIRY_LOG_WARN("[PREALLOC] Buffer already in use for category %s, "
                 "cannot acquire",
                 prealloc_category_name(category));
-        agentrt_mutex_unlock(&g_prealloc_lock);
+        airy_mtx_unlock(&g_prealloc_lock);
         return NULL;
     }
 
     *in_use = 1;
     void *buf = prealloc_get_buf(category);
 
-    agentrt_mutex_unlock(&g_prealloc_lock);
+    airy_mtx_unlock(&g_prealloc_lock);
     return buf;
 }
 
-void agentrt_prealloc_release(int category)
+void airy_prealloc_release(int category)
 {
     if (!g_prealloc_pool.initialized) {
         return;
     }
 
-    if (category < 0 || category > AGENTRT_PREALLOC_SHUTDOWN) {
+    if (category < 0 || category > AIRY_PREALLOC_SHUTDOWN) {
         return;
     }
 
-    agentrt_mutex_lock(&g_prealloc_lock);
+    airy_mtx_lock(&g_prealloc_lock);
 
     int *in_use = prealloc_get_in_use(category);
     void *buf = prealloc_get_buf(category);
@@ -251,10 +251,10 @@ void agentrt_prealloc_release(int category)
         *in_use = 0;
     }
 
-    agentrt_mutex_unlock(&g_prealloc_lock);
+    airy_mtx_unlock(&g_prealloc_lock);
 }
 
-int agentrt_prealloc_is_initialized(void)
+int airy_prealloc_is_initialized(void)
 {
     return g_prealloc_pool.initialized;
 }

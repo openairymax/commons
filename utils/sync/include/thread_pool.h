@@ -11,8 +11,8 @@
  * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
  */
 
-#ifndef AGENTRT_THREAD_POOL_H
-#define AGENTRT_THREAD_POOL_H
+#ifndef AIRY_RT_THREAD_POOL_H
+#define AIRY_RT_THREAD_POOL_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -67,4 +67,4 @@ static inline void thread_pool_get_default_config(thread_pool_config_t *cfg)
 }
 #endif
 
-#endif /* AGENTRT_THREAD_POOL_H */
+#endif /* AIRY_RT_THREAD_POOL_H */

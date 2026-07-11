@@ -14,7 +14,7 @@
 #include "core_config.h"
 #include "error.h"
 
-/* 跨平台路径常量（AGENTRT_CONFIG_DIR） */
+/* 跨平台路径常量（AIRY_CONFIG_DIR） */
 #include "platform.h"
 
 #include <stdio.h>
@@ -123,10 +123,10 @@ int config_set_int(const char *key, int value)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_int(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_set(ctx, key, val);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -136,10 +136,10 @@ int config_set_int64(const char *key, int64_t value)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_int64(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_set(ctx, key, val);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -149,10 +149,10 @@ int config_set_double(const char *key, double value)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_double(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_set(ctx, key, val);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -162,10 +162,10 @@ int config_set_bool(const char *key, bool value)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_bool(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_set(ctx, key, val);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -175,10 +175,10 @@ int config_set_string(const char *key, const char *value)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_string(value ? value : "");
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_set(ctx, key, val);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -187,27 +187,27 @@ int config_load_file(const char *file_path)
 {
     g_compat_stats.total_calls++;
     if (!file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     FILE *f = fopen(file_path, "r");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
     if (fsize <= 0 || fsize > 10 * 1024 * 1024) {
         fclose(f);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
-    char *buf = (char *)AGENTRT_MALLOC(fsize + 1);
+    char *buf = (char *)AIRY_MALLOC(fsize + 1);
     if (!buf) {
         fclose(f);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     size_t nread = fread(buf, 1, fsize, f);
     fclose(f);
     if (nread != (size_t)fsize) {
-        AGENTRT_FREE(buf);
-        return AGENTRT_EINVAL;
+        AIRY_FREE(buf);
+        return AIRY_EINVAL;
     }
     buf[nread] = '\0';
     char *line = buf;
@@ -242,7 +242,7 @@ int config_load_file(const char *file_path)
         if (line)
             line++;
     }
-    AGENTRT_FREE(buf);
+    AIRY_FREE(buf);
     return 0;
 }
 
@@ -250,13 +250,13 @@ int config_save_file(const char *file_path)
 {
     g_compat_stats.total_calls++;
     if (!file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     FILE *f = fopen(file_path, "w");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     size_t count = config_context_count(ctx);
     for (size_t i = 0; i < count; i++) {
         const char *key = config_context_get_key_at(ctx, i);
@@ -289,7 +289,7 @@ int config_remove_key(const char *key)
     g_compat_stats.total_calls++;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_error_t err = config_context_delete(ctx, key);
     return err == CONFIG_SUCCESS ? 0 : -1;
 }
@@ -306,7 +306,7 @@ int config_register_callback(config_change_callback_t callback, void *user_data)
 {
     g_compat_stats.total_calls++;
     if (!callback || g_callback_count >= MAX_CALLBACKS)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     g_callbacks[g_callback_count] = callback;
     g_callback_user_data[g_callback_count] = user_data;
     g_callback_count++;
@@ -317,7 +317,7 @@ int config_unregister_callback(config_change_callback_t callback)
 {
     g_compat_stats.total_calls++;
     if (!callback)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     for (int i = 0; i < g_callback_count; i++) {
         if (g_callbacks[i] == callback) {
             g_callbacks[i] = g_callbacks[g_callback_count - 1];
@@ -326,7 +326,7 @@ int config_unregister_callback(config_change_callback_t callback)
             return 0;
         }
     }
-    return AGENTRT_EINVAL;
+    return AIRY_EINVAL;
 }
 
 const char *config_get_last_error(void)
@@ -340,7 +340,7 @@ int config_init(void)
         return 0;
     g_compat_ctx = config_context_create("compat_global");
     g_compat_initialized = true;
-    AGENTRT_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
+    AIRY_MEMSET(&g_compat_stats, 0, sizeof(g_compat_stats));
     return 0;
 }
 
@@ -367,11 +367,11 @@ int config_get_string_with_maxlen(const char *key, const char *default_value, ch
                                   size_t buffer_size)
 {
     if (!buffer || buffer_size == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     const char *value = config_get_string(key, default_value);
     if (!value) {
         buffer[0] = '\0';
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
     size_t len = strlen(value);
     if (len >= buffer_size)
@@ -422,7 +422,7 @@ int config_set_array_item_int(const char *key, int index, int value)
 {
     g_compat_stats.total_calls++;
     if (index < 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     char item_key[256];
     snprintf(item_key, sizeof(item_key), "%s.%d", key, index);
     return config_set_int(item_key, value);
@@ -432,7 +432,7 @@ int config_set_array_item_string(const char *key, int index, const char *value)
 {
     g_compat_stats.total_calls++;
     if (index < 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     char item_key[256];
     snprintf(item_key, sizeof(item_key), "%s.%d", key, index);
     return config_set_string(item_key, value);
@@ -442,9 +442,9 @@ int config_add_source(const char *source_type, const char *source_config)
 {
     g_compat_stats.total_calls++;
     if (!source_type || !source_config)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (g_source_count >= MAX_SOURCES)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     snprintf(g_sources[g_source_count], sizeof(g_sources[g_source_count]), "%s:%s", source_type,
              source_config);
     g_source_count++;
@@ -458,7 +458,7 @@ int config_remove_source(const char *source_type)
 {
     g_compat_stats.total_calls++;
     if (!source_type)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     for (int i = 0; i < g_source_count; i++) {
         if (strncmp(g_sources[i], source_type, strlen(source_type)) == 0 &&
             g_sources[i][strlen(source_type)] == ':') {
@@ -471,7 +471,7 @@ int config_remove_source(const char *source_type)
             return 0;
         }
     }
-    return AGENTRT_EINVAL;
+    return AIRY_EINVAL;
 }
 
 int config_reload_all_sources(void)
@@ -491,8 +491,8 @@ int config_set_environment(const char *environment)
 {
     g_compat_stats.total_calls++;
     if (!environment)
-        return AGENTRT_EINVAL;
-    AGENTRT_STRNCPY_TERM(g_environment, environment, sizeof(g_environment));
+        return AIRY_EINVAL;
+    AIRY_STRNCPY_TERM(g_environment, environment, sizeof(g_environment));
     g_environment[sizeof(g_environment) - 1] = '\0';
     return 0;
 }
@@ -506,11 +506,11 @@ int config_load_environment_config(const char *environment)
 {
     g_compat_stats.total_calls++;
     if (!environment)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     char path[512];
     snprintf(path, sizeof(path), "%s.d/%s.conf", environment, environment);
     if (config_load_file(path) != 0) {
-        snprintf(path, sizeof(path), AGENTRT_CONFIG_DIR "/%s.conf", environment);
+        snprintf(path, sizeof(path), AIRY_CONFIG_DIR "/%s.conf", environment);
         config_load_file(path);
     }
     config_set_environment(environment);
@@ -521,13 +521,13 @@ int config_dump_to_file(const char *file_path, const char *format)
 {
     g_compat_stats.total_calls++;
     if (!file_path)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_context_t *ctx = _get_or_create_ctx();
     if (!ctx)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     FILE *f = fopen(file_path, "w");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     size_t count = config_context_count(ctx);
     for (size_t i = 0; i < count; i++) {
         const char *key = config_context_get_key_at(ctx, i);
@@ -562,10 +562,10 @@ int config_validate_schema(const char *schema_file)
 {
     g_compat_stats.total_calls++;
     if (!schema_file)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     FILE *f = fopen(schema_file, "r");
     if (!f)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     fclose(f);
     return 0;
 }
@@ -578,7 +578,7 @@ int config_begin_transaction(void)
     if (!g_transaction_ctx) {
         g_transaction_ctx = _get_or_create_ctx();
         if (!g_transaction_ctx)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
     }
     g_transaction_depth++;
     return 0;
@@ -587,12 +587,12 @@ int config_begin_transaction(void)
 int config_commit_transaction(void)
 {
     if (g_transaction_depth <= 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     g_transaction_depth--;
     if (g_transaction_depth == 0) {
         config_error_t err = config_save(g_transaction_ctx);
         if (err != CONFIG_SUCCESS)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         g_transaction_ctx = NULL;
     }
     return 0;
@@ -601,42 +601,42 @@ int config_commit_transaction(void)
 int config_rollback_transaction(void)
 {
     if (g_transaction_depth <= 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     g_transaction_depth--;
     if (g_transaction_depth == 0) {
         config_error_t err = config_reload(g_transaction_ctx);
         if (err != CONFIG_SUCCESS)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         g_transaction_ctx = NULL;
     }
     return 0;
 }
 
-void *agentrt_config_create(void)
+void *airy_config_create(void)
 {
-    g_compat_stats.agentrt_config_calls++;
-    config_context_t *ctx = config_context_create("agentrt_compat");
+    g_compat_stats.airy_config_calls++;
+    config_context_t *ctx = config_context_create("airy_compat");
     return ctx;
 }
 
-void agentrt_config_destroy(void *manager)
+void airy_config_destroy(void *manager)
 {
     if (manager) {
         config_context_destroy((config_context_t *)manager);
     }
 }
 
-int agentrt_config_parse(void *manager, const char *text)
+int airy_config_parse(void *manager, const char *text)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     if (!text)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
-    char *text_copy = AGENTRT_STRDUP(text);
+    char *text_copy = AIRY_STRDUP(text);
     if (!text_copy)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     char *line = text_copy;
     while (line && *line) {
         while (*line == ' ' || *line == '\t' || *line == '\n' || *line == '\r')
@@ -671,25 +671,25 @@ int agentrt_config_parse(void *manager, const char *text)
         if (line)
             line++;
     }
-    AGENTRT_FREE(text_copy);
+    AIRY_FREE(text_copy);
     return 0;
 }
 
-int agentrt_config_load_file(void *manager, const char *path)
+int airy_config_load_file(void *manager, const char *path)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     return config_load_file(path);
 }
 
-int agentrt_config_save_file(void *manager, const char *path)
+int airy_config_save_file(void *manager, const char *path)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     return config_save_file(path);
 }
 
-const char *agentrt_config_get_string(void *manager, const char *key, const char *default_value)
+const char *airy_config_get_string(void *manager, const char *key, const char *default_value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
@@ -701,9 +701,9 @@ const char *agentrt_config_get_string(void *manager, const char *key, const char
     return config_value_get_string(val, default_value);
 }
 
-int agentrt_config_get_int(void *manager, const char *key, int default_value)
+int airy_config_get_int(void *manager, const char *key, int default_value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
@@ -715,9 +715,9 @@ int agentrt_config_get_int(void *manager, const char *key, int default_value)
     return config_value_get_int(val, default_value);
 }
 
-double agentrt_config_get_double(void *manager, const char *key, double default_value)
+double airy_config_get_double(void *manager, const char *key, double default_value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
@@ -729,9 +729,9 @@ double agentrt_config_get_double(void *manager, const char *key, double default_
     return config_value_get_double(val, default_value);
 }
 
-int agentrt_config_get_bool(void *manager, const char *key, int default_value)
+int airy_config_get_bool(void *manager, const char *key, int default_value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
@@ -743,76 +743,76 @@ int agentrt_config_get_bool(void *manager, const char *key, int default_value)
     return (int)config_value_get_bool(val, (bool)default_value);
 }
 
-int agentrt_config_set_string(void *manager, const char *key, const char *value)
+int airy_config_set_string(void *manager, const char *key, const char *value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_string(value ? value : "");
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return config_context_set(ctx, key, val) == CONFIG_SUCCESS ? 0 : -1;
 }
 
-int agentrt_config_set_int(void *manager, const char *key, int value)
+int airy_config_set_int(void *manager, const char *key, int value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_int(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return config_context_set(ctx, key, val) == CONFIG_SUCCESS ? 0 : -1;
 }
 
-int agentrt_config_set_double(void *manager, const char *key, double value)
+int airy_config_set_double(void *manager, const char *key, double value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_double(value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return config_context_set(ctx, key, val) == CONFIG_SUCCESS ? 0 : -1;
 }
 
-int agentrt_config_set_bool(void *manager, const char *key, int value)
+int airy_config_set_bool(void *manager, const char *key, int value)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     config_value_t *val = config_value_create_bool((bool)value);
     if (!val)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return config_context_set(ctx, key, val) == CONFIG_SUCCESS ? 0 : -1;
 }
 
-int agentrt_config_remove(void *manager, const char *key)
+int airy_config_remove(void *manager, const char *key)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();
     if (!ctx || !key)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     return config_context_delete(ctx, key) == CONFIG_SUCCESS ? 0 : -1;
 }
 
-int agentrt_config_has(void *manager, const char *key)
+int airy_config_has(void *manager, const char *key)
 {
-    g_compat_stats.agentrt_config_calls++;
+    g_compat_stats.airy_config_calls++;
     config_context_t *ctx = (config_context_t *)manager;
     if (!ctx)
         ctx = _get_or_create_ctx();

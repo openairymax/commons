@@ -10,16 +10,16 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_MEMORY_COMPAT_H
-#define AGENTRT_MEMORY_COMPAT_H
+#ifndef AIRY_RT_MEMORY_COMPAT_H
+#define AIRY_RT_MEMORY_COMPAT_H
 
 #include "error.h"
 
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 
 /* Forward declarations for memory stats reporter (memory_stats_reporter.h) */
-extern void agentrt_mem_stats_record_alloc(size_t bytes);
-extern void agentrt_mem_stats_record_dealloc(size_t bytes);
+extern void airy_mem_stats_record_alloc(size_t bytes);
+extern void airy_mem_stats_record_dealloc(size_t bytes);
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -29,8 +29,8 @@ extern void agentrt_mem_stats_record_dealloc(size_t bytes);
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef AGENTRT_MEMORY_STATS_T_DEFINED
-#define AGENTRT_MEMORY_STATS_T_DEFINED
+#ifndef AIRY_MEMORY_STATS_T_DEFINED
+#define AIRY_MEMORY_STATS_T_DEFINED
 typedef struct {
     size_t total_allocated;
     size_t total_freed;
@@ -176,7 +176,7 @@ extern "C" {
  * @note 使用统一内存管理模块，支持调试和统计
  * @note 默认使用"compat_malloc"标签
  */
-static inline void *agentrt_malloc(size_t size)
+static inline void *airy_malloc(size_t size)
 {
     return memory_alloc(size, "compat_malloc");
 }
@@ -190,7 +190,7 @@ static inline void *agentrt_malloc(size_t size)
  * @param[in] element_size 元素大小
  * @return 分配的内存指针，溢出或失败返回NULL
  */
-static inline void *agentrt_malloc_array(size_t count, size_t element_size)
+static inline void *airy_malloc_array(size_t count, size_t element_size)
 {
     if (count > 0 && element_size > 0 && count > SIZE_MAX / element_size)
         return NULL;
@@ -206,7 +206,7 @@ static inline void *agentrt_malloc_array(size_t count, size_t element_size)
  * @param[in] element_size 元素大小
  * @return 分配的内存指针，溢出或失败返回NULL
  */
-static inline void *agentrt_calloc_array(size_t count, size_t element_size)
+static inline void *airy_calloc_array(size_t count, size_t element_size)
 {
     if (count > 0 && element_size > 0 && count > SIZE_MAX / element_size)
         return NULL;
@@ -223,7 +223,7 @@ static inline void *agentrt_calloc_array(size_t count, size_t element_size)
  * @note 内存会自动清零
  * @note 编码契约 SEC-03: 包含溢出检查
  */
-static inline void *agentrt_calloc(size_t num, size_t size)
+static inline void *airy_calloc(size_t num, size_t size)
 {
     if (num > 0 && size > 0 && num > SIZE_MAX / size)
         return NULL;
@@ -237,7 +237,7 @@ static inline void *agentrt_calloc(size_t num, size_t size)
  * @param[in] new_size 新大小
  * @return 重分配的内存指针，失败返回NULL
  */
-static inline void *agentrt_realloc(void *ptr, size_t new_size)
+static inline void *airy_realloc(void *ptr, size_t new_size)
 {
     return memory_realloc(ptr, new_size, "compat_realloc");
 }
@@ -247,7 +247,7 @@ static inline void *agentrt_realloc(void *ptr, size_t new_size)
  *
  * @param[in] ptr 要释放的指针
  */
-static inline void agentrt_free(const void *ptr)
+static inline void airy_free(const void *ptr)
 {
     memory_free((void *)ptr);
 }
@@ -258,7 +258,7 @@ static inline void agentrt_free(const void *ptr)
  * @param[in] str 源字符串
  * @return 复制的字符串，失败返回NULL
  */
-static inline char *agentrt_strdup(const char *str)
+static inline char *airy_strdup(const char *str)
 {
     if (str == NULL)
         return NULL;
@@ -285,7 +285,7 @@ static inline char *agentrt_strdup(const char *str)
  * @param[in] n 最大复制长度
  * @return 复制的字符串，失败返回NULL
  */
-static inline char *agentrt_strndup(const char *str, size_t n)
+static inline char *airy_strndup(const char *str, size_t n)
 {
     if (str == NULL)
         return NULL;
@@ -315,38 +315,38 @@ static inline char *agentrt_strndup(const char *str, size_t n)
  */
 
 /**
- * @def AGENTRT_MALLOC(size)
+ * @def AIRY_MALLOC(size)
  * @brief 安全内存分配宏
  */
-#define AGENTRT_MALLOC(size) __extension__({ \
-    void *__ptr = agentrt_malloc(size); \
-    if (__ptr) { agentrt_mem_stats_record_alloc(size); } \
+#define AIRY_MALLOC(size) __extension__({ \
+    void *__ptr = airy_malloc(size); \
+    if (__ptr) { airy_mem_stats_record_alloc(size); } \
     __ptr; \
 })
 
 /**
- * @def AGENTRT_CALLOC(num, size)
+ * @def AIRY_CALLOC(num, size)
  * @brief 安全内存分配（清零）宏
  */
-#define AGENTRT_CALLOC(num, size) agentrt_calloc(num, size)
+#define AIRY_CALLOC(num, size) airy_calloc(num, size)
 
 /**
- * @def AGENTRT_REALLOC(ptr, new_size)
+ * @def AIRY_REALLOC(ptr, new_size)
  * @brief 安全内存重分配宏
  */
-#define AGENTRT_REALLOC(ptr, new_size) agentrt_realloc(ptr, new_size)
+#define AIRY_REALLOC(ptr, new_size) airy_realloc(ptr, new_size)
 
 /**
- * @def AGENTRT_FREE(ptr)
+ * @def AIRY_FREE(ptr)
  * @brief 安全内存释放宏
  *
- * Note: agentrt_mem_stats_record_dealloc(0) is called because we don't
+ * Note: airy_mem_stats_record_dealloc(0) is called because we don't
  * track individual block sizes at free time. The dealloc counter is
  * incremented but no bytes are subtracted from current_bytes_allocated.
  */
-#define AGENTRT_FREE(ptr) do { \
-    agentrt_mem_stats_record_dealloc(0); \
-    agentrt_free(ptr); \
+#define AIRY_FREE(ptr) do { \
+    airy_mem_stats_record_dealloc(0); \
+    airy_free(ptr); \
 } while (0)
 
 /* ==================== P0.11: AUTO_FREE 自动清理宏 ==================== */
@@ -356,10 +356,10 @@ static inline char *agentrt_strndup(const char *str, size_t n)
  * @{
  *
  * AUTO_FREE 使用 GCC/Clang 的 __attribute__((cleanup)) 实现自动内存释放。
- * 当变量离开作用域时自动调用 agentrt_free，无需手动释放。
+ * 当变量离开作用域时自动调用 airy_free，无需手动释放。
  *
  * 用法：
- *   AUTO_FREE char *buf = AGENTRT_MALLOC(1024);
+ *   AUTO_FREE char *buf = AIRY_MALLOC(1024);
  *   // buf 在离开作用域时自动释放
  *
  * MSVC 不支持 cleanup 属性，回退到手动释放。
@@ -375,11 +375,11 @@ static inline char *agentrt_strndup(const char *str, size_t n)
  *
  * @param p 指向指针变量的指针
  */
-static inline void agentrt_auto_free_impl(void *p)
+static inline void airy_auto_free_impl(void *p)
 {
     void **pp = (void **)p;
     if (*pp) {
-        agentrt_free(*pp);
+        airy_free(*pp);
         *pp = NULL;
     }
 }
@@ -392,11 +392,11 @@ static inline void agentrt_auto_free_impl(void *p)
  * 适用于函数返回前需要释放的临时缓冲区。
  *
  * 使用示例：
- *   AUTO_FREE char *buf = (char *)AGENTRT_MALLOC(1024);
+ *   AUTO_FREE char *buf = (char *)AIRY_MALLOC(1024);
  *   // 使用 buf...
- *   // 函数返回时 buf 自动释放，无需手动 AGENTRT_FREE(buf)
+ *   // 函数返回时 buf 自动释放，无需手动 AIRY_FREE(buf)
  */
-#define AUTO_FREE __attribute__((cleanup(agentrt_auto_free_impl)))
+#define AUTO_FREE __attribute__((cleanup(airy_auto_free_impl)))
 
 #elif defined(_MSC_VER)
 
@@ -405,7 +405,7 @@ static inline void agentrt_auto_free_impl(void *p)
  * @brief 自动内存清理属性（MSVC — 回退到手动释放）
  *
  * MSVC 不支持 __attribute__((cleanup))，AUTO_FREE 为空宏。
- * 使用 MSVC 时需手动调用 AGENTRT_FREE。
+ * 使用 MSVC 时需手动调用 AIRY_FREE。
  */
 #define AUTO_FREE /* MSVC: manual cleanup required */
 
@@ -421,13 +421,13 @@ static inline void agentrt_auto_free_impl(void *p)
 
 /** @} */  // end of auto_free
 
-/* ==================== P0.11: AGENTRT_SECURE_FREE 安全清零释放 ==================== */
+/* ==================== P0.11: AIRY_SECURE_FREE 安全清零释放 ==================== */
 
 /**
  * @defgroup secure_free 安全内存释放（P0.11.3）
  * @{
  *
- * AGENTRT_SECURE_FREE 在释放敏感内存前先清零内容，防止敏感数据
+ * AIRY_SECURE_FREE 在释放敏感内存前先清零内容，防止敏感数据
  * （密钥、令牌、PII）残留在内存中。
  *
  * 清零操作使用 volatile 指针和内存屏障，防止编译器优化掉清零操作。
@@ -439,26 +439,26 @@ static inline void agentrt_auto_free_impl(void *p)
  */
 
 /**
- * @def AGENTRT_SECURE_FREE(ptr, size)
+ * @def AIRY_SECURE_FREE(ptr, size)
  * @brief 安全清零并释放内存
  *
  * 1. 使用 volatile 指针将内存区域清零
  * 2. 插入内存屏障防止编译器重排或优化掉清零
- * 3. 调用 AGENTRT_FREE 释放内存
+ * 3. 调用 AIRY_FREE 释放内存
  * 4. 将指针置为 NULL
  *
  * @param ptr  指向要释放的内存的指针变量
  * @param size 内存块大小（字节），必须 > 0
  *
  * 使用示例：
- *   char *api_key = AGENTRT_MALLOC(256);
+ *   char *api_key = AIRY_MALLOC(256);
  *   // 使用 api_key...
- *   AGENTRT_SECURE_FREE(api_key, 256);
+ *   AIRY_SECURE_FREE(api_key, 256);
  *   // api_key 现在为 NULL，原内存内容已清零
  *
  * 安全测试验证：
  *   1. 分配内存并写入已知模式
- *   2. 调用 AGENTRT_SECURE_FREE
+ *   2. 调用 AIRY_SECURE_FREE
  *   3. 检查内存是否已被清零（通过 /proc/self/mem 或调试器）
  *
  * 注意：
@@ -469,27 +469,27 @@ static inline void agentrt_auto_free_impl(void *p)
 #if defined(_MSC_VER)
 /* MSVC 使用 SecureZeroMemory */
 #include <windows.h>
-#define AGENTRT_SECURE_FREE(ptr, size) do { \
+#define AIRY_SECURE_FREE(ptr, size) do { \
     if ((ptr) && (size) > 0) { \
         SecureZeroMemory((ptr), (size)); \
     } \
-    AGENTRT_FREE(ptr); \
+    AIRY_FREE(ptr); \
     (ptr) = NULL; \
 } while (0)
 #else
 /* GCC/Clang/Linux: 使用 volatile + 内存屏障 */
-#define AGENTRT_SECURE_FREE(ptr, size) do { \
+#define AIRY_SECURE_FREE(ptr, size) do { \
     if ((ptr) && (size) > 0) { \
-        volatile char *__agentrt_sf_ptr = (volatile char *)(ptr); \
-        for (size_t __agentrt_sf_i = 0; \
-             __agentrt_sf_i < (size); \
-             __agentrt_sf_i++) { \
-            __agentrt_sf_ptr[__agentrt_sf_i] = 0; \
+        volatile char *__airy_sf_ptr = (volatile char *)(ptr); \
+        for (size_t __airy_sf_i = 0; \
+             __airy_sf_i < (size); \
+             __airy_sf_i++) { \
+            __airy_sf_ptr[__airy_sf_i] = 0; \
         } \
         /* 内存屏障：防止编译器优化掉清零操作 */ \
-        __asm__ __volatile__("" : : "r"(__agentrt_sf_ptr) : "memory"); \
+        __asm__ __volatile__("" : : "r"(__airy_sf_ptr) : "memory"); \
     } \
-    AGENTRT_FREE(ptr); \
+    AIRY_FREE(ptr); \
     (ptr) = NULL; \
 } while (0)
 #endif
@@ -504,43 +504,43 @@ static inline void agentrt_auto_free_impl(void *p)
  * Arena 分配器提供 O(1) 分配和 O(1) 整体释放，适合请求处理路径。
  *
  * 用法：
- *   AGENTRT_ARENA_PUSH(arena);          // 设置当前线程的 Arena
- *   void *p = AGENTRT_ARENA_ALLOC(128); // 从 Arena 分配
- *   AGENTRT_ARENA_POP();                // 恢复之前的 Arena
+ *   AIRY_ARENA_PUSH(arena);          // 设置当前线程的 Arena
+ *   void *p = AIRY_ARENA_ALLOC(128); // 从 Arena 分配
+ *   AIRY_ARENA_POP();                // 恢复之前的 Arena
  *
  * 或者直接使用 Arena 句柄：
- *   void *p = agentrt_arena_alloc(arena, 128);
- *   agentrt_arena_reset(arena);  // 整体释放
+ *   void *p = airy_arena_alloc(arena, 128);
+ *   airy_arena_reset(arena);  // 整体释放
  */
 
 #include "arena.h"
 
 /**
- * @def AGENTRT_ARENA_ALLOC(size)
+ * @def AIRY_ARENA_ALLOC(size)
  * @brief 从当前线程 Arena 分配内存
  *
- * 如果当前线程没有设置 Arena，回退到 AGENTRT_MALLOC。
+ * 如果当前线程没有设置 Arena，回退到 AIRY_MALLOC。
  */
 
-/* 前向声明：agentrt_arena_alloc 由 corekern/arena.h 提供 */
-void *agentrt_arena_alloc(agentrt_arena_t *arena, size_t size);
+/* 前向声明：airy_arena_alloc 由 corekern/arena.h 提供 */
+void *airy_arena_alloc(airy_arena_t *arena, size_t size);
 
-#define AGENTRT_ARENA_ALLOC(size) \
-    (agentrt_arena_get_current() ? \
-     agentrt_arena_alloc(agentrt_arena_get_current(), size) : \
-     AGENTRT_MALLOC(size))
+#define AIRY_ARENA_ALLOC(size) \
+    (airy_arena_get_current() ? \
+     airy_arena_alloc(airy_arena_get_current(), size) : \
+     AIRY_MALLOC(size))
 
 /**
  * @brief 获取当前线程的 Arena（线程局部存储）
  * @return Arena 句柄，未设置时返回 NULL
  */
-agentrt_arena_t *agentrt_arena_get_current(void);
+airy_arena_t *airy_arena_get_current(void);
 
 /**
  * @brief 设置当前线程的 Arena
  * @param arena Arena 句柄（可为 NULL 清除）
  */
-void agentrt_arena_set_current(agentrt_arena_t *arena);
+void airy_arena_set_current(airy_arena_t *arena);
 
 /** @} */
 
@@ -551,19 +551,19 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @brief 带自动NULL检查的安全内存分配宏
  *
  * 使用方法：
- *   SAFE_MALLOC(ptr, sizeof(my_struct_t));  // 失败时return AGENTRT_ENOMEM
- *   SAFE_CALLOC(arr, count, sizeof(element_t));  // 失败时return AGENTRT_ENOMEM
+ *   SAFE_MALLOC(ptr, sizeof(my_struct_t));  // 失败时return AIRY_ENOMEM
+ *   SAFE_CALLOC(arr, count, sizeof(element_t));  // 失败时return AIRY_ENOMEM
  *
  * 注意：这些宏只能在有返回值的函数中使用（因为包含return语句）
  */
 
 /**
  * @def SAFE_MALLOC(ptr, size)
- * @brief 安全内存分配，失败时记录日志并返回AGENTRT_ENOMEM
+ * @brief 安全内存分配，失败时记录日志并返回AIRY_ENOMEM
  */
 #define SAFE_MALLOC(ptr, size)                                                                  \
     do {                                                                                        \
-        (ptr) = AGENTRT_MALLOC(size);                                                           \
+        (ptr) = AIRY_MALLOC(size);                                                           \
         if (!(ptr)) {                                                                           \
             (ptr) = NULL;                                                                        \
         }                                                                                       \
@@ -571,11 +571,11 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
 
 /**
  * @def SAFE_CALLOC(ptr, num, size)
- * @brief 安全内存清零分配，失败时记录日志并返回AGENTRT_ENOMEM
+ * @brief 安全内存清零分配，失败时记录日志并返回AIRY_ENOMEM
  */
 #define SAFE_CALLOC(ptr, num, size)                                                       \
     do {                                                                                  \
-        (ptr) = AGENTRT_CALLOC(num, size);                                                \
+        (ptr) = AIRY_CALLOC(num, size);                                                \
         if (!(ptr)) {                                                                     \
             (ptr) = NULL;                                                                  \
         }                                                                                 \
@@ -583,7 +583,7 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
 
 /**
  * @def CHECK_ALLOC(ptr)
- * @brief 检查指针是否为NULL，如果是则记录错误并返回AGENTRT_ENOMEM
+ * @brief 检查指针是否为NULL，如果是则记录错误并返回AIRY_ENOMEM
  */
 #define CHECK_ALLOC(ptr)                                                      \
     do {                                                                      \
@@ -593,7 +593,7 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
     } while (0)
 
 /**
- * @def AGENTRT_STRNCPY_TERM(dst, src, size)
+ * @def AIRY_STRNCPY_TERM(dst, src, size)
  * @brief 安全字符串复制宏，确保目标缓冲区始终以 null 终止
  *
  * 替代裸 strncpy(dst, src, size) 调用，确保目标缓冲区始终以 null 终止。
@@ -604,9 +604,9 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @param size 目标缓冲区的总大小（字节），必须 > 0
  *
  * 使用示例：
- *   AGENTRT_STRNCPY_TERM(buf, "hello", sizeof(buf));
+ *   AIRY_STRNCPY_TERM(buf, "hello", sizeof(buf));
  */
-#define AGENTRT_STRNCPY_TERM(dst, src, size) \
+#define AIRY_STRNCPY_TERM(dst, src, size) \
     do {                                     \
         size_t _len = __builtin_strlen(src); \
         size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
@@ -623,19 +623,19 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @brief 带边界检查的安全缓冲区操作宏
  *
  * 使用方法：
- *   AGENTRT_STRNCPY_TERM(dst, src, sizeof(dst));  // 已在上方定义，strncpy 并保证 null 终止
- *   AGENTRT_MEMCPY_SAFE(dst, src, size, dst_capacity);  // memcpy 带边界检查
+ *   AIRY_STRNCPY_TERM(dst, src, sizeof(dst));  // 已在上方定义，strncpy 并保证 null 终止
+ *   AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity);  // memcpy 带边界检查
  *   SAFE_MALLOC_ARRAY(ptr, count, element_size);  // 数组分配带溢出检查
  *
- * 注意：这些宏中的 AGENTRT_MEMCPY_SAFE 需要返回值上下文（包含 return 语句）
+ * 注意：这些宏中的 AIRY_MEMCPY_SAFE 需要返回值上下文（包含 return 语句）
  */
 
 /**
- * @def AGENTRT_MEMCPY_SAFE(dst, src, size, dst_capacity)
+ * @def AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)
  * @brief 带边界检查的安全 memcpy
  *
  * 在 memcpy 前检查 src_size 是否超过 dst_capacity，防止缓冲区溢出。
- * 如果溢出，返回 AGENTRT_E_OVERFLOW 错误码。
+ * 如果溢出，返回 AIRY_E_OVERFLOW 错误码。
  *
  * @param dst          目标缓冲区指针
  * @param src          源缓冲区指针
@@ -643,9 +643,9 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @param dst_capacity 目标缓冲区的最大容量
  *
  * 使用示例：
- *   AGENTRT_MEMCPY_SAFE(buf, data, payload_size, sizeof(buf));
+ *   AIRY_MEMCPY_SAFE(buf, data, payload_size, sizeof(buf));
  */
-#define AGENTRT_MEMCPY_SAFE(dst, src, size, dst_capacity)              \
+#define AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)              \
     do {                                                               \
         if ((size_t)(size) > (size_t)(dst_capacity)) {                 \
             break;  /* overflow: skip copy */                          \
@@ -658,7 +658,7 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @brief 安全数组分配，带整数溢出检查
  *
  * 替代 malloc(count * sizeof(T)) 模式，自动检测 count * size 是否溢出 SIZE_MAX。
- * 如果溢出，返回 AGENTRT_E_OVERFLOW；如果分配失败，返回 AGENTRT_ENOMEM。
+ * 如果溢出，返回 AIRY_E_OVERFLOW；如果分配失败，返回 AIRY_ENOMEM。
  *
  * @param ptr          分配的指针变量
  * @param count        元素数量
@@ -667,13 +667,13 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * 使用示例：
  *   SAFE_MALLOC_ARRAY(tasks, num_tasks, sizeof(task_node_t));
  *   等价于：
- *   if (num_tasks > SIZE_MAX / sizeof(task_node_t)) return AGENTRT_E_OVERFLOW;
- *   tasks = AGENTRT_MALLOC(num_tasks * sizeof(task_node_t));
- *   if (!tasks) return AGENTRT_ENOMEM;
+ *   if (num_tasks > SIZE_MAX / sizeof(task_node_t)) return AIRY_E_OVERFLOW;
+ *   tasks = AIRY_MALLOC(num_tasks * sizeof(task_node_t));
+ *   if (!tasks) return AIRY_ENOMEM;
  */
 #define SAFE_MALLOC_ARRAY(ptr, count, element_size)                              \
     do {                                                                         \
-        (ptr) = agentrt_malloc_array((size_t)(count), (size_t)(element_size));   \
+        (ptr) = airy_malloc_array((size_t)(count), (size_t)(element_size));   \
         if (!(ptr)) {                                                             \
             (ptr) = NULL;                                                         \
         }                                                                         \
@@ -684,11 +684,11 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @brief 安全数组清零分配，带整数溢出检查
  *
  * 替代 calloc(count, sizeof(T)) 模式，自动检测溢出。
- * 底层使用 agentrt_calloc_array 实现溢出检测。
+ * 底层使用 airy_calloc_array 实现溢出检测。
  */
 #define SAFE_CALLOC_ARRAY(ptr, count, element_size)                               \
     do {                                                                          \
-        (ptr) = agentrt_calloc_array((size_t)(count), (size_t)(element_size));    \
+        (ptr) = airy_calloc_array((size_t)(count), (size_t)(element_size));    \
         if (!(ptr)) {                                                              \
             (ptr) = NULL;                                                          \
         }                                                                          \
@@ -697,7 +697,7 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
 /** @} */  // end of safe_buffer_ops
 
 /**
- * @def AGENTRT_MEMSET(ptr, value, size)
+ * @def AIRY_MEMSET(ptr, value, size)
  * @brief 带零大小保护的安全 memset
  *
  * 编码契约 SEC-04: 当 size == 0 时不执行任何操作，避免空指针解引用。
@@ -707,31 +707,31 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @param value 填充值
  * @param size  填充字节数
  */
-#define AGENTRT_MEMSET(ptr, value, size) \
+#define AIRY_MEMSET(ptr, value, size) \
     do {                                 \
         if ((size) > 0)                  \
             __builtin_memset((ptr), (value), (size)); \
     } while (0)
 
 /**
- * @def AGENTRT_MEMCPY(dst, src, size)
+ * @def AIRY_MEMCPY(dst, src, size)
  * @brief 安全内存复制宏（绕过 BAN poison，调用者需确保边界安全）
  *
  * 使用 __builtin_memcpy 绕过 BAN-154 的 memcpy poison。
- * 适用于已进行边界检查的场景。如需自动边界检查，使用 AGENTRT_MEMCPY_SAFE。
+ * 适用于已进行边界检查的场景。如需自动边界检查，使用 AIRY_MEMCPY_SAFE。
  *
  * @param dst  目标指针
  * @param src  源指针
  * @param size 复制字节数
  */
-#define AGENTRT_MEMCPY(dst, src, size) \
+#define AIRY_MEMCPY(dst, src, size) \
     do { \
         if ((size) > 0) \
             __builtin_memcpy((dst), (src), (size)); \
     } while (0)
 
 /**
- * @def AGENTRT_MEMMOVE(dst, src, size)
+ * @def AIRY_MEMMOVE(dst, src, size)
  * @brief 安全内存移动宏（处理重叠区域，绕过 BAN poison）
  *
  * 使用 __builtin_memmove 绕过 BAN-154 的 memmove poison。
@@ -741,32 +741,32 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @param src  源指针
  * @param size 移动字节数
  */
-#define AGENTRT_MEMMOVE(dst, src, size) \
+#define AIRY_MEMMOVE(dst, src, size) \
     do { \
         if ((size) > 0) \
             __builtin_memmove((dst), (src), (size)); \
     } while (0)
 
 /**
- * @def AGENTRT_STRDUP(str)
+ * @def AIRY_STRDUP(str)
  * @brief 安全字符串复制宏
  */
-#define AGENTRT_STRDUP(str) agentrt_strdup(str)
+#define AIRY_STRDUP(str) airy_strdup(str)
 
 /**
- * @def AGENTRT_STRNDUP(str, n)
+ * @def AIRY_STRNDUP(str, n)
  * @brief 安全字符串复制（带长度限制）宏
  */
-#define AGENTRT_STRNDUP(str, n) agentrt_strndup(str, n)
+#define AIRY_STRNDUP(str, n) airy_strndup(str, n)
 
 /**
  * @brief 迁移辅助宏：将malloc替换为安全版本
  *
  * 在代码中可以使用以下模式：
  * 原代码：ptr = malloc(size);
- * 新代码：ptr = AGENTRT_MALLOC(size);
+ * 新代码：ptr = AIRY_MALLOC(size);
  */
-#define MIGRATE_TO_AGENTRT_MALLOC
+#define MIGRATE_TO_AIRY_MALLOC
 
 /**
  * @brief 检查内存泄漏
@@ -774,7 +774,7 @@ void agentrt_arena_set_current(agentrt_arena_t *arena);
  * @param[in] dump_to_stderr 是否输出泄漏信息到stderr
  * @return 泄漏的字节数
  */
-static inline size_t agentrt_check_memory_leaks(bool dump_to_stderr)
+static inline size_t airy_check_memory_leaks(bool dump_to_stderr)
 {
     return memory_check_leaks(dump_to_stderr);
 }
@@ -785,7 +785,7 @@ static inline size_t agentrt_check_memory_leaks(bool dump_to_stderr)
  * @param[out] stats 统计信息结构体
  * @return 成功返回true，失败返回false
  */
-static inline bool agentrt_get_memory_stats(memory_stats_t *stats)
+static inline bool airy_get_memory_stats(memory_stats_t *stats)
 {
     return memory_get_stats(stats);
 }
@@ -798,29 +798,29 @@ static inline bool agentrt_get_memory_stats(memory_stats_t *stats)
  *
  * @param[out] ext_stats  扩展统计结构体（调用者分配）
  * @param[in]  tracker_capacity 环形缓冲区容量（建议 1024~4096）
- * @return AGENTRT_SUCCESS 或 AGENTRT_ENOMEM
+ * @return AIRY_SUCCESS 或 AIRY_ENOMEM
  */
-static inline int agentrt_memory_stats_extended_init(
+static inline int airy_memory_stats_extended_init(
     memory_stats_extended_t *ext_stats, size_t tracker_capacity)
 {
     if (!ext_stats || tracker_capacity == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
-    AGENTRT_MEMSET(ext_stats, 0, sizeof(*ext_stats));
+    AIRY_MEMSET(ext_stats, 0, sizeof(*ext_stats));
     ext_stats->allocation_tracker =
-        (alloc_track_entry_t *)AGENTRT_CALLOC(tracker_capacity, sizeof(alloc_track_entry_t));
+        (alloc_track_entry_t *)AIRY_CALLOC(tracker_capacity, sizeof(alloc_track_entry_t));
     if (!ext_stats->allocation_tracker) {
-        return AGENTRT_ERR_OUT_OF_MEMORY;
+        return AIRY_ERR_OUT_OF_MEMORY;
     }
     ext_stats->tracker_capacity = tracker_capacity;
     ext_stats->tracker_index = 0;
     ext_stats->tracker_count = 0;
-    return 0; /* AGENTRT_SUCCESS */
+    return 0; /* AIRY_SUCCESS */
 }
 
-/* 前向声明 — agentrt_memory_check_watermark 在下方定义，
- * 但 agentrt_memory_track_alloc 需要调用它 */
-static inline void agentrt_memory_check_watermark(
+/* 前向声明 — airy_memory_check_watermark 在下方定义，
+ * 但 airy_memory_track_alloc 需要调用它 */
+static inline void airy_memory_check_watermark(
     memory_stats_extended_t *ext_stats);
 
 /**
@@ -833,7 +833,7 @@ static inline void agentrt_memory_check_watermark(
  * @param[in]     file      源文件
  * @param[in]     line      行号
  */
-static inline void agentrt_memory_track_alloc(
+static inline void airy_memory_track_alloc(
     memory_stats_extended_t *ext_stats,
     void *ptr, size_t size, alloc_category_t category,
     const char *file, int line)
@@ -845,7 +845,7 @@ static inline void agentrt_memory_track_alloc(
     entry->ptr        = ptr;
     entry->size       = size;
     entry->category   = category;
-    entry->alloc_time = agentrt_time_ms();
+    entry->alloc_time = airy_time_ms();
     entry->file       = file;
     entry->line       = line;
     entry->freed      = false;
@@ -869,7 +869,7 @@ static inline void agentrt_memory_track_alloc(
     }
 
     /* 检查水位变化并触发回调 */
-    agentrt_memory_check_watermark(ext_stats);
+    airy_memory_check_watermark(ext_stats);
 }
 
 /**
@@ -880,7 +880,7 @@ static inline void agentrt_memory_track_alloc(
  * @param[in,out] ext_stats 扩展统计
  * @param[in]     ptr       释放的指针
  */
-static inline void agentrt_memory_track_free(
+static inline void airy_memory_track_free(
     memory_stats_extended_t *ext_stats, void *ptr)
 {
     if (!ext_stats || !ext_stats->allocation_tracker || !ptr) return;
@@ -909,13 +909,13 @@ static inline void agentrt_memory_track_free(
  * @param[in]     max_age_ms   最大分配时间（毫秒），超过视为疑似泄漏
  * @return 疑似泄漏的字节数
  */
-static inline size_t agentrt_check_leaks_scheduled(
+static inline size_t airy_check_leaks_scheduled(
     memory_stats_extended_t *ext_stats, uint64_t max_age_ms)
 {
     if (!ext_stats || !ext_stats->allocation_tracker) return 0;
 
     size_t suspected = 0;
-    uint64_t now = agentrt_time_ms();
+    uint64_t now = airy_time_ms();
 
     for (size_t i = 0; i < ext_stats->tracker_count; i++) {
         alloc_track_entry_t *entry = &ext_stats->allocation_tracker[i];
@@ -936,7 +936,7 @@ static inline size_t agentrt_check_leaks_scheduled(
  * @param[in,out] ext_stats 扩展统计
  * @return 当前水位级别
  */
-static inline watermark_level_t agentrt_memory_calc_watermark(
+static inline watermark_level_t airy_memory_calc_watermark(
     memory_stats_extended_t *ext_stats)
 {
     if (!ext_stats || ext_stats->total_system_memory == 0) {
@@ -959,18 +959,18 @@ static inline watermark_level_t agentrt_memory_calc_watermark(
  * @param[in,out] ext_stats 扩展统计结构体
  * @param[in]     callback  回调函数
  * @param[in]     context   用户上下文（透传给回调）
- * @return AGENTRT_SUCCESS 或 AGENTRT_EINVAL/EAGAIN
+ * @return AIRY_SUCCESS 或 AIRY_EINVAL/EAGAIN
  *
  * 使用示例:
- *   agentrt_register_watermark_callback(&stats, my_oom_handler, my_daemon_ctx);
+ *   airy_register_watermark_callback(&stats, my_oom_handler, my_daemon_ctx);
  */
-static inline int agentrt_register_watermark_callback(
+static inline int airy_register_watermark_callback(
     memory_stats_extended_t *ext_stats,
     watermark_callback_t callback,
     void *context)
 {
     if (!ext_stats || !callback) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
@@ -978,11 +978,11 @@ static inline int agentrt_register_watermark_callback(
             ext_stats->watermark_callbacks[i].callback = callback;
             ext_stats->watermark_callbacks[i].context  = context;
             ext_stats->watermark_callbacks[i].active   = true;
-            return 0; /* AGENTRT_SUCCESS */
+            return 0; /* AIRY_SUCCESS */
         }
     }
 
-    return AGENTRT_ERR_BUSY; /* 回调槽位已满 */
+    return AIRY_ERR_BUSY; /* 回调槽位已满 */
 }
 
 /**
@@ -991,7 +991,7 @@ static inline int agentrt_register_watermark_callback(
  * @param[in,out] ext_stats 扩展统计结构体
  * @param[in]     callback  要注销的回调函数
  */
-static inline void agentrt_unregister_watermark_callback(
+static inline void airy_unregister_watermark_callback(
     memory_stats_extended_t *ext_stats,
     watermark_callback_t callback)
 {
@@ -1011,13 +1011,13 @@ static inline void agentrt_unregister_watermark_callback(
  *
  * @param[in,out] ext_stats 扩展统计结构体
  */
-static inline void agentrt_memory_check_watermark(
+static inline void airy_memory_check_watermark(
     memory_stats_extended_t *ext_stats)
 {
     if (!ext_stats || ext_stats->total_system_memory == 0) return;
 
     watermark_level_t old_level = ext_stats->current_watermark;
-    watermark_level_t new_level = agentrt_memory_calc_watermark(ext_stats);
+    watermark_level_t new_level = airy_memory_calc_watermark(ext_stats);
 
     if (new_level != old_level) {
         ext_stats->current_watermark = new_level;
@@ -1040,9 +1040,9 @@ static inline void agentrt_memory_check_watermark(
  * @brief 确定 OOM 响应级别（SEC-15）
  *
  * 完整实现见 oom_handler.h / oom_handler.c（支持五级 FATAL_TERMINATE）。
- * 此处仅保留声明，避免与 oom_handler.h 的 AGENTRT_API 定义冲突。
+ * 此处仅保留声明，避免与 oom_handler.h 的 AIRY_API 定义冲突。
  */
-oom_response_level_t agentrt_oom_determine_response(watermark_level_t level);
+oom_response_level_t airy_oom_determine_response(watermark_level_t level);
 
 /**
  * @brief 内存统计定期上报（SEC-15 核心功能）
@@ -1053,14 +1053,14 @@ oom_response_level_t agentrt_oom_determine_response(watermark_level_t level);
  * @param[in] ext_stats 扩展统计结构体
  * @param[in] tag       上报标签（通常为服务名称）
  */
-static inline void agentrt_memory_stats_report(
+static inline void airy_memory_stats_report(
     memory_stats_extended_t *ext_stats, const char *tag)
 {
     if (!ext_stats) return;
     (void)tag;  /* tag reserved for future logging integration */
 
     /* 更新水位 */
-    ext_stats->current_watermark = agentrt_memory_calc_watermark(ext_stats);
+    ext_stats->current_watermark = airy_memory_calc_watermark(ext_stats);
 
     /* 计算碎片率（已释放但未归还系统的估计比例） */
     double fragment_ratio = 0.0;
@@ -1092,11 +1092,11 @@ static inline void agentrt_memory_stats_report(
  *
  * @param[in,out] ext_stats 扩展统计结构体
  */
-static inline void agentrt_memory_stats_extended_destroy(
+static inline void airy_memory_stats_extended_destroy(
     memory_stats_extended_t *ext_stats)
 {
     if (!ext_stats) return;
-    agentrt_free(ext_stats->allocation_tracker);
+    airy_free(ext_stats->allocation_tracker);
     ext_stats->allocation_tracker = NULL;
     ext_stats->tracker_capacity = 0;
     ext_stats->tracker_index = 0;
@@ -1105,25 +1105,25 @@ static inline void agentrt_memory_stats_extended_destroy(
 
 /** @} */  // end of memory_compat_api
 
-/* ==================== P0.18.3: AGENTRT_MALLOC_GUARD / AGENTRT_CALLOC_GUARD ==================== */
+/* ==================== P0.18.3: AIRY_MALLOC_GUARD / AIRY_CALLOC_GUARD ==================== */
 
 /**
  * @defgroup malloc_guard RAII 内存分配守卫（P0.18.3）
  * @{
  *
- * AGENTRT_MALLOC_GUARD / AGENTRT_CALLOC_GUARD 将 malloc/calloc + NULL 检查 +
+ * AIRY_MALLOC_GUARD / AIRY_CALLOC_GUARD 将 malloc/calloc + NULL 检查 +
  * 自动释放三步合一，消除 `ptr = malloc(size); if (!ptr) return -1;` 样板。
  *
  * 内置 AUTO_FREE 语义（GCC/Clang），变量离开作用域时自动释放。
- * MSVC 回退到无自动释放（需手动 AGENTRT_FREE）。
+ * MSVC 回退到无自动释放（需手动 AIRY_FREE）。
  *
  * 用法：
- *   AGENTRT_MALLOC_GUARD(buf, 1024, return AGENTRT_ERR_OUT_OF_MEMORY);
+ *   AIRY_MALLOC_GUARD(buf, 1024, return AIRY_ERR_OUT_OF_MEMORY);
  *   char *str = (char *)buf;   // void* 可隐式转换为目标类型
  *   // 使用 str...
- *   // 函数返回时 buf 自动释放，无需 AGENTRT_FREE(buf)
+ *   // 函数返回时 buf 自动释放，无需 AIRY_FREE(buf)
  *
- *   AGENTRT_CALLOC_GUARD(arr, n, sizeof(item_t), return NULL);
+ *   AIRY_CALLOC_GUARD(arr, n, sizeof(item_t), return NULL);
  *   item_t *items = (item_t *)arr;
  *   // 使用 items...
  */
@@ -1131,7 +1131,7 @@ static inline void agentrt_memory_stats_extended_destroy(
 #if defined(__GNUC__) || defined(__clang__)
 
 /**
- * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
+ * @def AIRY_MALLOC_GUARD(ptr, size, on_fail)
  * @brief RAII 内存分配守卫：malloc + NULL 检查 + 自动释放
  *
  * 声明一个 void* 变量，分配 size 字节内存。分配失败时执行 on_fail。
@@ -1139,19 +1139,19 @@ static inline void agentrt_memory_stats_extended_destroy(
  *
  * @param ptr     变量名（声明为 void*，可强制转换为目标类型）
  * @param size    分配字节数
- * @param on_fail 分配失败时执行的语句（如 return AGENTRT_ERR_OUT_OF_MEMORY; / return NULL;） BAN-073
+ * @param on_fail 分配失败时执行的语句（如 return AIRY_ERR_OUT_OF_MEMORY; / return NULL;） BAN-073
  *
  * 使用示例：
- *   AGENTRT_MALLOC_GUARD(buf, 1024, return AGENTRT_ERR_OUT_OF_MEMORY);
- *   AGENTRT_MEMCPY(buf, src, 1024);  BAN-154
+ *   AIRY_MALLOC_GUARD(buf, 1024, return AIRY_ERR_OUT_OF_MEMORY);
+ *   AIRY_MEMCPY(buf, src, 1024);  BAN-154
  *   // 函数返回时 buf 自动释放
  */
-#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
-    AUTO_FREE void *ptr = AGENTRT_MALLOC(size); \
+#define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
+    AUTO_FREE void *ptr = AIRY_MALLOC(size); \
     if (!(ptr)) { on_fail; }
 
 /**
- * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
  * @brief RAII 内存分配守卫：calloc + NULL 检查 + 自动释放
  *
  * 声明一个 void* 变量，分配 num*size 字节内存并清零。
@@ -1162,44 +1162,44 @@ static inline void agentrt_memory_stats_extended_destroy(
  * @param size    每个元素大小
  * @param on_fail 分配失败时执行的语句
  */
-#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
-    AUTO_FREE void *ptr = AGENTRT_CALLOC(num, size); \
+#define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
+    AUTO_FREE void *ptr = AIRY_CALLOC(num, size); \
     if (!(ptr)) { on_fail; }
 
 #elif defined(_MSC_VER)
 
 /**
- * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
- * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AGENTRT_FREE）
+ * @def AIRY_MALLOC_GUARD(ptr, size, on_fail)
+ * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
  */
-#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
-    void *ptr = AGENTRT_MALLOC(size); \
+#define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
+    void *ptr = AIRY_MALLOC(size); \
     if (!(ptr)) { on_fail; }
 
 /**
- * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
- * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AGENTRT_FREE）
+ * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
  */
-#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
-    void *ptr = AGENTRT_CALLOC(num, size); \
+#define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
+    void *ptr = AIRY_CALLOC(num, size); \
     if (!(ptr)) { on_fail; }
 
 #else
 
 /**
- * @def AGENTRT_MALLOC_GUARD(ptr, size, on_fail)
- * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AGENTRT_FREE）
+ * @def AIRY_MALLOC_GUARD(ptr, size, on_fail)
+ * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
  */
-#define AGENTRT_MALLOC_GUARD(ptr, size, on_fail) \
-    void *ptr = AGENTRT_MALLOC(size); \
+#define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
+    void *ptr = AIRY_MALLOC(size); \
     if (!(ptr)) { on_fail; }
 
 /**
- * @def AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail)
- * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AGENTRT_FREE）
+ * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
+ * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
  */
-#define AGENTRT_CALLOC_GUARD(ptr, num, size, on_fail) \
-    void *ptr = AGENTRT_CALLOC(num, size); \
+#define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
+    void *ptr = AIRY_CALLOC(num, size); \
     if (!(ptr)) { on_fail; }
 
 #endif
@@ -1210,4 +1210,4 @@ static inline void agentrt_memory_stats_extended_destroy(
 }
 #endif
 
-#endif /* AGENTRT_MEMORY_COMPAT_H */
+#endif /* AIRY_RT_MEMORY_COMPAT_H */

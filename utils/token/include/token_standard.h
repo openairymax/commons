@@ -11,8 +11,8 @@
  * @date 2026-04-07
  */
 
-#ifndef AGENTRT_TOKEN_STANDARD_H
-#define AGENTRT_TOKEN_STANDARD_H
+#ifndef AIRY_RT_TOKEN_STANDARD_H
+#define AIRY_RT_TOKEN_STANDARD_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -24,45 +24,45 @@ extern "C" {
 /**
  * @brief Token 计算算法版本
  */
-#define AGENTRT_TOKEN_ALGORITHM_VERSION "1.0"
+#define AIRY_TOKEN_ALGORITHM_VERSION "1.0"
 
 /**
  * @brief Token 计算模型类型
  */
 typedef enum {
-    AGENTRT_TOKEN_MODEL_GENERIC = 0,  ///< 通用模型（默认）
-    AGENTRT_TOKEN_MODEL_GPT4,         ///< GPT-4 系列模型
-    AGENTRT_TOKEN_MODEL_GPT35,        ///< GPT-3.5 系列模型
-    AGENTRT_TOKEN_MODEL_CLAUDE,       ///< Claude 系列模型
-    AGENTRT_TOKEN_MODEL_LLAMA,        ///< LLaMA 系列模型
-    AGENTRT_TOKEN_MODEL_CUSTOM        ///< 自定义模型
-} agentrt_token_model_t;
+    AIRY_TOKEN_MODEL_GENERIC = 0,  ///< 通用模型（默认）
+    AIRY_TOKEN_MODEL_GPT4,         ///< GPT-4 系列模型
+    AIRY_TOKEN_MODEL_GPT35,        ///< GPT-3.5 系列模型
+    AIRY_TOKEN_MODEL_CLAUDE,       ///< Claude 系列模型
+    AIRY_TOKEN_MODEL_LLAMA,        ///< LLaMA 系列模型
+    AIRY_TOKEN_MODEL_CUSTOM        ///< 自定义模型
+} airy_token_model_t;
 
 /**
  * @brief Token 计算配置
  */
 typedef struct {
-    agentrt_token_model_t model_type;  ///< 模型类型
+    airy_token_model_t model_type;  ///< 模型类型
     const char *model_name;            ///< 模型名称（可选）
     float cjk_ratio;                   ///< 中日韩字符比例阈值（默认 0.3）
     float alpha_ratio;                 ///< 字母字符比例阈值（默认 0.5）
     uint32_t flags;                    ///< 计算标志位
-} agentrt_token_config_t;
+} airy_token_config_t;
 
 /**
  * @brief Token 计算标志位
  */
-#define AGENTRT_TOKEN_FLAG_ACCURATE 0x01     ///< 高精度模式（较慢）
-#define AGENTRT_TOKEN_FLAG_ESTIMATE 0x02     ///< 估算模式（较快）
-#define AGENTRT_TOKEN_FLAG_INCLUDE_BOM 0x04  ///< 包含 BOM 字符
+#define AIRY_TOKEN_FLAG_ACCURATE 0x01     ///< 高精度模式（较慢）
+#define AIRY_TOKEN_FLAG_ESTIMATE 0x02     ///< 估算模式（较快）
+#define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04  ///< 包含 BOM 字符
 
 /**
  * @brief 默认 Token 计算配置
  */
-#define AGENTRT_TOKEN_CONFIG_DEFAULT                                                           \
+#define AIRY_TOKEN_CONFIG_DEFAULT                                                           \
     {                                                                                          \
-        .model_type = AGENTRT_TOKEN_MODEL_GENERIC, .model_name = "generic", .cjk_ratio = 0.3f, \
-        .alpha_ratio = 0.5f, .flags = AGENTRT_TOKEN_FLAG_ESTIMATE                              \
+        .model_type = AIRY_TOKEN_MODEL_GENERIC, .model_name = "generic", .cjk_ratio = 0.3f, \
+        .alpha_ratio = 0.5f, .flags = AIRY_TOKEN_FLAG_ESTIMATE                              \
     }
 
 /**
@@ -75,8 +75,8 @@ typedef struct {
  * @param config Token 计算配置，如果为 NULL 则使用默认配置
  * @return Token 数量，如果出错返回 (size_t)-1
  */
-size_t agentrt_token_standard_count(const char *text, size_t length,
-                                    const agentrt_token_config_t *config);
+size_t airy_token_standard_count(const char *text, size_t length,
+                                    const airy_token_config_t *config);
 
 /**
  * @brief 批量 Token 计算
@@ -90,8 +90,8 @@ size_t agentrt_token_standard_count(const char *text, size_t length,
  * @param config Token 计算配置，如果为 NULL 则使用默认配置
  * @return 成功返回 0，失败返回错误码
  */
-int agentrt_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
-                                       size_t *out_counts, const agentrt_token_config_t *config);
+int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
+                                       size_t *out_counts, const airy_token_config_t *config);
 
 /**
  * @brief 检测文本语言特征
@@ -105,7 +105,7 @@ int agentrt_token_standard_count_batch(const char **texts, const size_t *lengths
  * @param out_total_chars 输出总字符数量
  * @return 成功返回 0，失败返回错误码
  */
-int agentrt_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
+int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
                                size_t *out_alpha_chars, size_t *out_total_chars);
 
 /**
@@ -113,7 +113,7 @@ int agentrt_token_analyze_text(const char *text, size_t length, size_t *out_cjk_
  *
  * @return 算法描述字符串
  */
-const char *agentrt_token_get_algorithm_info(void);
+const char *airy_token_get_algorithm_info(void);
 
 /**
  * @brief 验证 Token 计算配置
@@ -121,16 +121,16 @@ const char *agentrt_token_get_algorithm_info(void);
  * @param config 配置参数
  * @return 配置有效返回 0，无效返回错误码
  */
-int agentrt_token_validate_config(const agentrt_token_config_t *config);
+int airy_token_validate_config(const airy_token_config_t *config);
 
 /**
  * @brief Token 计算精度级别
  */
 typedef enum {
-    AGENTRT_TOKEN_PRECISION_LOW = 0,  ///< 低精度（快速估算）
-    AGENTRT_TOKEN_PRECISION_MEDIUM,   ///< 中等精度
-    AGENTRT_TOKEN_PRECISION_HIGH      ///< 高精度（准确但较慢）
-} agentrt_token_precision_t;
+    AIRY_TOKEN_PRECISION_LOW = 0,  ///< 低精度（快速估算）
+    AIRY_TOKEN_PRECISION_MEDIUM,   ///< 中等精度
+    AIRY_TOKEN_PRECISION_HIGH      ///< 高精度（准确但较慢）
+} airy_token_precision_t;
 
 /**
  * @brief 设置 Token 计算精度
@@ -139,8 +139,8 @@ typedef enum {
  * @param config 输出配置（可选）
  * @return 成功返回 0，失败返回错误码
  */
-int agentrt_token_set_precision(agentrt_token_precision_t precision,
-                                agentrt_token_config_t *config);
+int airy_token_set_precision(airy_token_precision_t precision,
+                                airy_token_config_t *config);
 
 /**
  * @brief 资源配额限制
@@ -153,12 +153,12 @@ typedef struct {
     size_t max_requests_per_minute;  ///< 每分钟最大请求数
     size_t max_requests_per_hour;    ///< 每小时最大请求数
     size_t max_requests_per_day;     ///< 每天最大请求数
-} agentrt_token_quota_t;
+} airy_token_quota_t;
 
 /**
  * @brief 默认资源配额
  */
-#define AGENTRT_TOKEN_QUOTA_DEFAULT                                     \
+#define AIRY_TOKEN_QUOTA_DEFAULT                                     \
     {                                                                   \
         .max_tokens_per_request = 8000, .max_tokens_per_minute = 60000, \
         .max_tokens_per_hour = 360000, .max_tokens_per_day = 2000000,   \
@@ -176,7 +176,7 @@ typedef struct {
     size_t requests_used_per_minute;  ///< 当前分钟已使用请求数
     size_t requests_used_per_hour;    ///< 当前小时已使用请求数
     size_t requests_used_per_day;     ///< 当前天已使用请求数
-} agentrt_token_usage_t;
+} airy_token_usage_t;
 
 /**
  * @brief 检查资源配额是否足够
@@ -191,11 +191,11 @@ typedef struct {
  *         3 超出小时Token限制，4 超出日Token限制，
  *         5 超出分钟请求限制，6 超出小时请求限制，7 超出日请求限制
  */
-int agentrt_token_check_quota(const agentrt_token_quota_t *quota, size_t requested_tokens,
-                              const agentrt_token_usage_t *current_usage);
+int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
+                              const airy_token_usage_t *current_usage);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_TOKEN_STANDARD_H */
+#endif /* AIRY_RT_TOKEN_STANDARD_H */

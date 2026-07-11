@@ -11,7 +11,7 @@
 
 #include "memory_debug.h"
 
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 #include "logging_compat.h"
 
 #include <stdlib.h>
@@ -70,9 +70,9 @@ typedef struct {
 
     // 线程同步
 #ifdef _WIN32
-    agentrt_mutex_t lock; /**< Windows临界?*/
+    airy_mtx_t lock; /**< Windows临界?*/
 #else
-    agentrt_mutex_t lock; /**< POSIX互斥?*/
+    airy_mtx_t lock; /**< POSIX互斥?*/
 #endif
 
     // 回调函数
@@ -104,10 +104,10 @@ static memory_debug_state_t g_debug_state = {0};
 static bool memory_debug_lock_init(void)
 {
 #ifdef _WIN32
-    agentrt_mutex_init(&g_debug_state.lock);
+    airy_mtx_init(&g_debug_state.lock);
     return true;
 #else
-    return agentrt_mutex_init(&g_debug_state.lock) == 0;
+    return airy_mtx_init(&g_debug_state.lock) == 0;
 #endif
 }
 
@@ -118,9 +118,9 @@ static bool memory_debug_lock_init(void)
 static void memory_debug_lock_destroy(void)
 {
 #ifdef _WIN32
-    agentrt_mutex_destroy(&g_debug_state.lock);
+    airy_mtx_destroy(&g_debug_state.lock);
 #else
-    agentrt_mutex_destroy(&g_debug_state.lock);
+    airy_mtx_destroy(&g_debug_state.lock);
 #endif
 }
 
@@ -130,9 +130,9 @@ static void memory_debug_lock_destroy(void)
 static void memory_debug_lock(void)
 {
 #ifdef _WIN32
-    agentrt_mutex_lock(&g_debug_state.lock);
+    airy_mtx_lock(&g_debug_state.lock);
 #else
-    agentrt_mutex_lock(&g_debug_state.lock);
+    airy_mtx_lock(&g_debug_state.lock);
 #endif
 }
 
@@ -142,9 +142,9 @@ static void memory_debug_lock(void)
 static void memory_debug_unlock(void)
 {
 #ifdef _WIN32
-    agentrt_mutex_unlock(&g_debug_state.lock);
+    airy_mtx_unlock(&g_debug_state.lock);
 #else
-    agentrt_mutex_unlock(&g_debug_state.lock);
+    airy_mtx_unlock(&g_debug_state.lock);
 #endif
 }
 
@@ -196,12 +196,12 @@ static void __attribute__((unused)) memory_debug_record_error(memory_error_type_
 
     // 输出到日志
     if (g_debug_state.options.verbosity_level >= 1) {
-        AGENTRT_LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
+        AIRY_LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
         if (description != NULL) {
-            AGENTRT_LOG_ERROR("描述%s", description);
+            AIRY_LOG_ERROR("描述%s", description);
         }
         if (file != NULL && function != NULL) {
-            AGENTRT_LOG_ERROR("位置%s:%d (%s)", file, line, function);
+            AIRY_LOG_ERROR("位置%s:%d (%s)", file, line, function);
         }
     }
 
@@ -368,7 +368,7 @@ bool memory_debug_init(const memory_debug_options_t *options)
         return true;
     }
 
-    AGENTRT_LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, boundary_check=%s)",
+    AIRY_LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, boundary_check=%s)",
                      options ? options->redzone_size : 0,
                      options && options->track_allocations ? "true" : "false",
                      options && options->enable_leak_check ? "true" : "false",
@@ -954,7 +954,7 @@ void memory_debug_log_operation(const char *operation, void *ptr, size_t size, c
     if (file != NULL && function != NULL) {
         offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " at %s:%d (%s)", file, line, function);
     }
-    AGENTRT_LOG_DEBUG("%s", log_buf);
+    AIRY_LOG_DEBUG("%s", log_buf);
 }
 
 /**
@@ -1001,7 +1001,7 @@ unsigned int memory_debug_checkpoint(const char *name)
     cp->valid = true;
 
     if (name != NULL) {
-        AGENTRT_STRNCPY_TERM(cp->name, name, sizeof(cp->name));
+        AIRY_STRNCPY_TERM(cp->name, name, sizeof(cp->name));
         cp->name[sizeof(cp->name) - 1] = '\0';
     } else {
         cp->name[0] = '\0';
@@ -1010,11 +1010,11 @@ unsigned int memory_debug_checkpoint(const char *name)
     g_checkpoint_count++;
 
     if (g_debug_state.options.verbosity_level >= 1) {
-        AGENTRT_LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu",
+        AIRY_LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu",
                          id, cp->name, cp->block_count,
                          cp->total_allocations, cp->total_frees);
     } else if (g_debug_state.options.verbosity_level >= 2) {
-        AGENTRT_LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
+        AIRY_LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
     }
 
     memory_debug_unlock();
@@ -1097,11 +1097,11 @@ size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int c
     }
 
     if (g_debug_state.options.verbosity_level >= 2) {
-        AGENTRT_LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
-        AGENTRT_LOG_DEBUG("  新分配: %zu次", new_allocations);
-        AGENTRT_LOG_DEBUG("  新释放: %zu次", new_frees);
-        AGENTRT_LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
-        AGENTRT_LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
+        AIRY_LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
+        AIRY_LOG_DEBUG("  新分配: %zu次", new_allocations);
+        AIRY_LOG_DEBUG("  新释放: %zu次", new_frees);
+        AIRY_LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
+        AIRY_LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
     }
 
     memory_debug_unlock();

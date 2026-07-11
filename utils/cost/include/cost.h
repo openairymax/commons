@@ -6,8 +6,8 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_UTILS_COST_H
-#define AGENTRT_UTILS_COST_H
+#ifndef AIRY_RT_UTILS_COST_H
+#define AIRY_RT_UTILS_COST_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,20 +16,20 @@
 extern "C" {
 #endif
 
-typedef struct agentrt_cost_estimator agentrt_cost_estimator_t;
+typedef struct airy_cost_estimator airy_cost_estimator_t;
 
 /**
  * @brief 创建成本预估器
  * @param config_path 配置文件路径（YAML），若为 NULL 则使用内置默认
  * @return 预估器句柄，失败返回 NULL
  */
-agentrt_cost_estimator_t *agentrt_cost_estimator_create(const char *config_path);
+airy_cost_estimator_t *airy_cost_estimator_create(const char *config_path);
 
 // From data intelligence emerges. by spharx
 /**
  * @brief 销毁预估器
  */
-void agentrt_cost_estimator_destroy(agentrt_cost_estimator_t *estimator);
+void airy_cost_estimator_destroy(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 预估一次调用成本
@@ -39,10 +39,10 @@ void agentrt_cost_estimator_destroy(agentrt_cost_estimator_t *estimator);
  * @param output_tokens 输出Token数
  * @return 成本（美元），失败返回 -1.0
  */
-double agentrt_cost_estimator_estimate(agentrt_cost_estimator_t *estimator, const char *model_name,
+double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char *model_name,
                                        size_t input_tokens, size_t output_tokens);
 
-typedef struct agentrt_budget_controller agentrt_budget_controller_t;
+typedef struct airy_budget_controller airy_budget_controller_t;
 
 /**
  * @brief 创建预算控制器
@@ -50,13 +50,13 @@ typedef struct agentrt_budget_controller agentrt_budget_controller_t;
  * @param period_seconds 周期（秒）
  * @return 控制器句柄，失败返回 NULL
  */
-agentrt_budget_controller_t *agentrt_budget_controller_create(double max_cost_usd,
+airy_budget_controller_t *airy_budget_controller_create(double max_cost_usd,
                                                               uint32_t period_seconds);
 
 /**
  * @brief 销毁控制器
  */
-void agentrt_budget_controller_destroy(agentrt_budget_controller_t *controller);
+void airy_budget_controller_destroy(airy_budget_controller_t *controller);
 
 /**
  * @brief 消耗成本
@@ -64,41 +64,41 @@ void agentrt_budget_controller_destroy(agentrt_budget_controller_t *controller);
  * @param cost_usd 成本
  * @return 0 成功，-1 超出预算
  */
-int agentrt_budget_controller_consume(agentrt_budget_controller_t *controller, double cost_usd);
+int airy_budget_controller_consume(airy_budget_controller_t *controller, double cost_usd);
 
 /**
  * @brief 获取剩余预算
  * @return 剩余成本（美元）
  */
-double agentrt_budget_controller_remaining(agentrt_budget_controller_t *controller);
+double airy_budget_controller_remaining(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取已消耗成本
  * @param controller 控制器
  * @return 已消耗成本（美元）
  */
-double agentrt_budget_controller_consumed(agentrt_budget_controller_t *controller);
+double airy_budget_controller_consumed(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取周期内消耗
  * @param controller 控制器
  * @return 周期内消耗成本（美元）
  */
-double agentrt_budget_controller_period_consumed(agentrt_budget_controller_t *controller);
+double airy_budget_controller_period_consumed(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取请求计数
  * @param controller 控制器
  * @return 请求计数
  */
-uint64_t agentrt_budget_controller_requests(agentrt_budget_controller_t *controller);
+uint64_t airy_budget_controller_requests(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取拒绝计数
  * @param controller 控制器
  * @return 拒绝计数
  */
-uint64_t agentrt_budget_controller_denied(agentrt_budget_controller_t *controller);
+uint64_t airy_budget_controller_denied(airy_budget_controller_t *controller);
 
 /**
  * @brief 设置警告阈值
@@ -106,7 +106,7 @@ uint64_t agentrt_budget_controller_denied(agentrt_budget_controller_t *controlle
  * @param threshold 阈值（0.0-1.0）
  * @return 0 成功，-1 失败
  */
-int agentrt_budget_controller_set_warning(agentrt_budget_controller_t *controller,
+int airy_budget_controller_set_warning(airy_budget_controller_t *controller,
                                           double threshold);
 
 /**
@@ -114,55 +114,55 @@ int agentrt_budget_controller_set_warning(agentrt_budget_controller_t *controlle
  * @param controller 控制器
  * @return 0 成功，-1 失败
  */
-int agentrt_budget_controller_reset_period(agentrt_budget_controller_t *controller);
+int airy_budget_controller_reset_period(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取平均成本
  * @param controller 控制器
  * @return 平均成本（美元）
  */
-double agentrt_budget_controller_average(agentrt_budget_controller_t *controller);
+double airy_budget_controller_average(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取预算状态
  * @param controller 控制器
  * @return 0=正常，1=警告，2=超限，-1=失败
  */
-int agentrt_budget_controller_get_status(agentrt_budget_controller_t *controller);
+int airy_budget_controller_get_status(airy_budget_controller_t *controller);
 
 /**
  * @brief 获取累计总成本
  * @param estimator 预估器
  * @return 累计成本（美元）
  */
-double agentrt_cost_estimator_get_total(agentrt_cost_estimator_t *estimator);
+double airy_cost_estimator_get_total(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 获取累计输入Token数
  * @param estimator 预估器
  * @return 累计输入Token数
  */
-size_t agentrt_cost_estimator_get_input_tokens(agentrt_cost_estimator_t *estimator);
+size_t airy_cost_estimator_get_input_tokens(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 获取累计输出Token数
  * @param estimator 预估器
  * @return 累计输出Token数
  */
-size_t agentrt_cost_estimator_get_output_tokens(agentrt_cost_estimator_t *estimator);
+size_t airy_cost_estimator_get_output_tokens(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 获取请求计数
  * @param estimator 预估器
  * @return 请求计数
  */
-uint64_t agentrt_cost_estimator_get_request_count(agentrt_cost_estimator_t *estimator);
+uint64_t airy_cost_estimator_get_request_count(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 重置统计
  * @param estimator 预估器
  */
-void agentrt_cost_estimator_reset(agentrt_cost_estimator_t *estimator);
+void airy_cost_estimator_reset(airy_cost_estimator_t *estimator);
 
 /**
  * @brief 添加自定义模型配置
@@ -172,11 +172,11 @@ void agentrt_cost_estimator_reset(agentrt_cost_estimator_t *estimator);
  * @param output_cost_per_1k 输出成本（美元/1K Token）
  * @return 0 成功，-1 失败
  */
-int agentrt_cost_estimator_add_model(agentrt_cost_estimator_t *estimator, const char *model_name,
+int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *model_name,
                                      double input_cost_per_1k, double output_cost_per_1k);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_UTILS_COST_H */
+#endif /* AIRY_RT_UTILS_COST_H */

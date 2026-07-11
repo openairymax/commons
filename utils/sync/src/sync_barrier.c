@@ -23,7 +23,7 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_barrier *b = (struct sync_barrier *)AGENTRT_CALLOC(1, sizeof(struct sync_barrier));
+    struct sync_barrier *b = (struct sync_barrier *)AIRY_CALLOC(1, sizeof(struct sync_barrier));
     if (b == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -32,7 +32,7 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
     if (attr != NULL && attr->name != NULL) {
         b->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&b->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&b->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     InitializeCriticalSection(&b->barrier.cs);
@@ -43,8 +43,8 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
 #else
     int result = pthread_barrier_init(&b->barrier, NULL, count);
     if (result != 0) {
-        AGENTRT_FREE(b->name);
-        AGENTRT_FREE(b);
+        AIRY_FREE(b->name);
+        AIRY_FREE(b);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -61,8 +61,8 @@ sync_result_t sync_barrier_free(sync_barrier_t barrier)
     }
 
     if (!barrier->initialized) {
-        AGENTRT_FREE(barrier->name);
-        AGENTRT_FREE(barrier);
+        AIRY_FREE(barrier->name);
+        AIRY_FREE(barrier);
         return SYNC_SUCCESS;
     }
 
@@ -72,8 +72,8 @@ sync_result_t sync_barrier_free(sync_barrier_t barrier)
     pthread_barrier_destroy(&barrier->barrier);
 #endif
 
-    AGENTRT_FREE(barrier->name);
-    AGENTRT_FREE(barrier);
+    AIRY_FREE(barrier->name);
+    AIRY_FREE(barrier);
     return SYNC_SUCCESS;
 }
 

@@ -24,8 +24,8 @@
  * @see ARCHITECTURAL_PRINCIPLES.md E-4 跨平台一致性原则
  */
 
-#ifndef AGENTRT_PLATFORM_H
-#define AGENTRT_PLATFORM_H
+#ifndef AIRY_RT_PLATFORM_H
+#define AIRY_RT_PLATFORM_H
 
 #include <compat.h>
 #include <stdbool.h>
@@ -41,28 +41,28 @@ extern "C" {
 
 /* ==================== 平台检测 ==================== */
 #if defined(_WIN32) || defined(_WIN64)
-#define AGENTRT_PLATFORM_WINDOWS 1
-#define AGENTRT_PLATFORM_NAME "Windows"
+#define AIRY_PLATFORM_WINDOWS 1
+#define AIRY_PLATFORM_NAME "Windows"
 #if defined(_WIN64)
-#define AGENTRT_PLATFORM_BITS 64
+#define AIRY_PLATFORM_BITS 64
 #else
-#define AGENTRT_PLATFORM_BITS 32
+#define AIRY_PLATFORM_BITS 32
 #endif
-#define AGENTRT_PLATFORM_POSIX 0
+#define AIRY_PLATFORM_POSIX 0
 #elif defined(__APPLE__) && defined(__MACH__)
-#define AGENTRT_PLATFORM_MACOS 1
-#define AGENTRT_PLATFORM_NAME "macOS"
-#define AGENTRT_PLATFORM_BITS 64
-#define AGENTRT_PLATFORM_POSIX 1
+#define AIRY_PLATFORM_MACOS 1
+#define AIRY_PLATFORM_NAME "macOS"
+#define AIRY_PLATFORM_BITS 64
+#define AIRY_PLATFORM_POSIX 1
 #elif defined(__linux__)
-#define AGENTRT_PLATFORM_LINUX 1
-#define AGENTRT_PLATFORM_NAME "Linux"
+#define AIRY_PLATFORM_LINUX 1
+#define AIRY_PLATFORM_NAME "Linux"
 #if defined(__x86_64__) || defined(__aarch64__)
-#define AGENTRT_PLATFORM_BITS 64
+#define AIRY_PLATFORM_BITS 64
 #else
-#define AGENTRT_PLATFORM_BITS 32
+#define AIRY_PLATFORM_BITS 32
 #endif
-#define AGENTRT_PLATFORM_POSIX 1
+#define AIRY_PLATFORM_POSIX 1
 #else
 #error "Unsupported platform"
 #endif
@@ -72,102 +72,102 @@ extern "C" {
 
 /* ==================== 线程局部存储 ==================== */
 #if defined(_WIN32) || defined(_WIN64)
-#define AGENTRT_THREAD_LOCAL __declspec(thread)
+#define AIRY_THREAD_LOCAL __declspec(thread)
 #else
-#define AGENTRT_THREAD_LOCAL __thread
+#define AIRY_THREAD_LOCAL __thread
 #endif
 
 /* ==================== 内联函数 ==================== */
 #if defined(_WIN32) || defined(_WIN64)
-#ifndef AGENTRT_INLINE
-#define AGENTRT_INLINE __forceinline
+#ifndef AIRY_INLINE
+#define AIRY_INLINE __forceinline
 #endif
 #else
-#define AGENTRT_INLINE static inline __attribute__((always_inline))
+#define AIRY_INLINE static inline __attribute__((always_inline))
 #endif
 
 /* ==================== 未使用参数标记 ==================== */
-#ifndef AGENTRT_UNUSED
-#define AGENTRT_UNUSED(x) ((void)(x))
+#ifndef AIRY_UNUSED
+#define AIRY_UNUSED(x) ((void)(x))
 #endif
 
 /* ==================== 路径分隔符 ==================== */
-#if AGENTRT_PLATFORM_WINDOWS
-#define AGENTRT_PATH_SEP '\\'
-#define AGENTRT_PATH_SEP_STR "\\"
-#define AGENTRT_PATH_MAX 260
+#if AIRY_PLATFORM_WINDOWS
+#define AIRY_PATH_SEP '\\'
+#define AIRY_PATH_SEP_STR "\\"
+#define AIRY_PATH_MAX 260
 #else
-#define AGENTRT_PATH_SEP '/'
-#define AGENTRT_PATH_SEP_STR "/"
-#define AGENTRT_PATH_MAX 4096
+#define AIRY_PATH_SEP '/'
+#define AIRY_PATH_SEP_STR "/"
+#define AIRY_PATH_MAX 4096
 #endif
 
 /* ==================== 标准路径常量 (BAN-32合规) ==================== */
 /* 注意：使用 #ifndef 守卫，允许 CMake target_compile_definitions 覆盖（如 cupolas/channel_d） */
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 /* Windows: 系统级数据目录（%ProgramData%） */
-#ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "C:\\ProgramData\\agentrt\\run"
+#ifndef AIRY_RUNTIME_DIR
+#define AIRY_RUNTIME_DIR "C:\\ProgramData\\agentrt\\run"
 #endif
-#ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "C:\\ProgramData\\agentrt\\logs"
+#ifndef AIRY_LOG_DIR
+#define AIRY_LOG_DIR "C:\\ProgramData\\agentrt\\logs"
 #endif
-#ifndef AGENTRT_CONFIG_DIR
-#define AGENTRT_CONFIG_DIR "C:\\ProgramData\\agentrt\\config"
+#ifndef AIRY_CONFIG_DIR
+#define AIRY_CONFIG_DIR "C:\\ProgramData\\agentrt\\config"
 #endif
-#ifndef AGENTRT_DATA_DIR
-#define AGENTRT_DATA_DIR "C:\\ProgramData\\agentrt\\data"
+#ifndef AIRY_DATA_DIR
+#define AIRY_DATA_DIR "C:\\ProgramData\\agentrt\\data"
 #endif
-#ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "C:\\ProgramData\\agentrt\\tmp"
+#ifndef AIRY_TMP_DIR
+#define AIRY_TMP_DIR "C:\\ProgramData\\agentrt\\tmp"
 #endif
-#ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "C:\\ProgramData\\agentrt\\cache"
+#ifndef AIRY_CACHE_DIR
+#define AIRY_CACHE_DIR "C:\\ProgramData\\agentrt\\cache"
 #endif
-#elif AGENTRT_PLATFORM_LINUX
+#elif AIRY_PLATFORM_LINUX
 /* Linux: FHS 标准路径（保持原有行为不变） */
-#ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "/tmp/agentrt"
+#ifndef AIRY_RUNTIME_DIR
+#define AIRY_RUNTIME_DIR "/tmp/agentrt"
 #endif
-#ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "/var/log/agentrt"
+#ifndef AIRY_LOG_DIR
+#define AIRY_LOG_DIR "/var/log/agentrt"
 #endif
-#ifndef AGENTRT_CONFIG_DIR
-#define AGENTRT_CONFIG_DIR "/etc/agentrt"
+#ifndef AIRY_CONFIG_DIR
+#define AIRY_CONFIG_DIR "/etc/agentrt"
 #endif
-#ifndef AGENTRT_DATA_DIR
-#define AGENTRT_DATA_DIR "/var/lib/agentrt"
+#ifndef AIRY_DATA_DIR
+#define AIRY_DATA_DIR "/var/lib/agentrt"
 #endif
-#ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "/var/tmp/agentrt"
+#ifndef AIRY_TMP_DIR
+#define AIRY_TMP_DIR "/var/tmp/agentrt"
 #endif
-#ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "/var/cache/agentrt"
+#ifndef AIRY_CACHE_DIR
+#define AIRY_CACHE_DIR "/var/cache/agentrt"
 #endif
 #else
 /* macOS 及其他 POSIX: 相对路径（避免硬编码 /var 与 /etc，保持 Linux 行为不变） */
-#ifndef AGENTRT_RUNTIME_DIR
-#define AGENTRT_RUNTIME_DIR "./agentrt/run"
+#ifndef AIRY_RUNTIME_DIR
+#define AIRY_RUNTIME_DIR "./agentrt/run"
 #endif
-#ifndef AGENTRT_LOG_DIR
-#define AGENTRT_LOG_DIR "./agentrt/logs"
+#ifndef AIRY_LOG_DIR
+#define AIRY_LOG_DIR "./agentrt/logs"
 #endif
-#ifndef AGENTRT_CONFIG_DIR
-#define AGENTRT_CONFIG_DIR "./agentrt/config"
+#ifndef AIRY_CONFIG_DIR
+#define AIRY_CONFIG_DIR "./agentrt/config"
 #endif
-#ifndef AGENTRT_DATA_DIR
-#define AGENTRT_DATA_DIR "./agentrt/data"
+#ifndef AIRY_DATA_DIR
+#define AIRY_DATA_DIR "./agentrt/data"
 #endif
-#ifndef AGENTRT_TMP_DIR
-#define AGENTRT_TMP_DIR "./agentrt/tmp"
+#ifndef AIRY_TMP_DIR
+#define AIRY_TMP_DIR "./agentrt/tmp"
 #endif
-#ifndef AGENTRT_CACHE_DIR
-#define AGENTRT_CACHE_DIR "./agentrt/cache"
+#ifndef AIRY_CACHE_DIR
+#define AIRY_CACHE_DIR "./agentrt/cache"
 #endif
 #endif
 
 /* ==================== 平台头文件包含 ==================== */
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -194,28 +194,28 @@ extern "C" {
 
 /* ==================== 基础类型定义 ==================== */
 
-#if AGENTRT_PLATFORM_WINDOWS
-typedef HANDLE agentrt_thread_t;
-typedef DWORD agentrt_thread_id_t;
-typedef CRITICAL_SECTION agentrt_mutex_t;
-typedef CONDITION_VARIABLE agentrt_cond_t;
-typedef DWORD agentrt_pid_t;
-typedef SOCKET agentrt_socket_t;
-typedef HANDLE agentrt_process_t;
+#if AIRY_PLATFORM_WINDOWS
+typedef HANDLE airy_thread_t;
+typedef DWORD airy_thread_id_t;
+typedef CRITICAL_SECTION airy_mtx_t;
+typedef CONDITION_VARIABLE airy_cond_t;
+typedef DWORD airy_pid_t;
+typedef SOCKET airy_sock_t;
+typedef HANDLE airy_process_t;
 #else
-typedef pthread_t agentrt_thread_t;
-typedef pthread_t agentrt_thread_id_t;
-typedef pthread_mutex_t agentrt_mutex_t;
-typedef pthread_cond_t agentrt_cond_t;
-typedef pid_t agentrt_pid_t;
-typedef int agentrt_socket_t;
-typedef pid_t agentrt_process_t;
+typedef pthread_t airy_thread_t;
+typedef pthread_t airy_thread_id_t;
+typedef pthread_mutex_t airy_mtx_t;
+typedef pthread_cond_t airy_cond_t;
+typedef pid_t airy_pid_t;
+typedef int airy_sock_t;
+typedef pid_t airy_process_t;
 #endif
 
-#define AGENTRT_INVALID_THREAD ((agentrt_thread_t)0)
-#define AGENTRT_INVALID_MUTEX ((agentrt_mutex_t){0})
-#define AGENTRT_INVALID_SOCKET (-1)
-#define AGENTRT_INVALID_PROCESS ((agentrt_process_t)0)
+#define AIRY_INVALID_THREAD ((airy_thread_t)0)
+#define AIRY_INVALID_MUTEX ((airy_mtx_t){0})
+#define AIRY_INVALID_SOCKET (-1)
+#define AIRY_INVALID_PROCESS ((airy_process_t)0)
 
 /* ==================== 互斥锁接口 ==================== */
 
@@ -224,46 +224,46 @@ typedef pid_t agentrt_process_t;
  * @param mutex 互斥锁指针
  * @return 0 成功，非0 失败
  */
-int agentrt_mutex_init(agentrt_mutex_t *mutex);
+int airy_mtx_init(airy_mtx_t *mutex);
 
 /**
  * @brief 销毁互斥锁
  * @param mutex 互斥锁指针
  */
-void agentrt_mutex_destroy(agentrt_mutex_t *mutex);
+void airy_mtx_destroy(airy_mtx_t *mutex);
 
 /**
  * @brief 加锁
  * @param mutex 互斥锁指针
  * @return 0 成功，非0 失败
  */
-int agentrt_mutex_lock(agentrt_mutex_t *mutex);
+int airy_mtx_lock(airy_mtx_t *mutex);
 
 /**
  * @brief 尝试加锁
  * @param mutex 互斥锁指针
  * @return 0 成功，非0 失败或已锁定
  */
-int agentrt_mutex_trylock(agentrt_mutex_t *mutex);
+int airy_mtx_trylock(airy_mtx_t *mutex);
 
 /**
  * @brief 解锁
  * @param mutex 互斥锁指针
  * @return 0 成功，非0 失败
  */
-int agentrt_mutex_unlock(agentrt_mutex_t *mutex);
+int airy_mtx_unlock(airy_mtx_t *mutex);
 
 /**
  * @brief 动态创建互斥锁（分配内存并初始化）
  * @return 互斥锁指针，失败返回NULL
  */
-agentrt_mutex_t *agentrt_mutex_create(void);
+airy_mtx_t *airy_mtx_create(void);
 
 /**
  * @brief 动态销毁互斥锁（销毁并释放内存）
  * @param mutex 互斥锁指针
  */
-void agentrt_mutex_free(agentrt_mutex_t *mutex);
+void airy_mtx_free(airy_mtx_t *mutex);
 
 /* ==================== 条件变量接口 ==================== */
 
@@ -272,13 +272,13 @@ void agentrt_mutex_free(agentrt_mutex_t *mutex);
  * @param cond 条件变量指针
  * @return 0 成功，非0 失败
  */
-int agentrt_cond_init(agentrt_cond_t *cond);
+int airy_cond_init(airy_cond_t *cond);
 
 /**
  * @brief 销毁条件变量
  * @param cond 条件变量指针
  */
-void agentrt_cond_destroy(agentrt_cond_t *cond);
+void airy_cond_destroy(airy_cond_t *cond);
 
 /**
  * @brief 等待条件变量
@@ -286,7 +286,7 @@ void agentrt_cond_destroy(agentrt_cond_t *cond);
  * @param mutex 互斥锁指针
  * @return 0 成功，非0 失败
  */
-int agentrt_cond_wait(agentrt_cond_t *cond, agentrt_mutex_t *mutex);
+int airy_cond_wait(airy_cond_t *cond, airy_mtx_t *mutex);
 
 /**
  * @brief 超时等待条件变量
@@ -295,40 +295,40 @@ int agentrt_cond_wait(agentrt_cond_t *cond, agentrt_mutex_t *mutex);
  * @param timeout_ms 超时时间（毫秒）
  * @return 0 成功，非0 失败或超时
  */
-int agentrt_cond_timedwait(agentrt_cond_t *cond, agentrt_mutex_t *mutex, uint32_t timeout_ms);
+int airy_cond_timedwait(airy_cond_t *cond, airy_mtx_t *mutex, uint32_t timeout_ms);
 
 /**
  * @brief 唤醒一个等待线程
  * @param cond 条件变量指针
  * @return 0 成功，非0 失败
  */
-int agentrt_cond_signal(agentrt_cond_t *cond);
+int airy_cond_signal(airy_cond_t *cond);
 
 /**
  * @brief 唤醒所有等待线程
  * @param cond 条件变量指针
  * @return 0 成功，非0 失败
  */
-int agentrt_cond_broadcast(agentrt_cond_t *cond);
+int airy_cond_broadcast(airy_cond_t *cond);
 
 /**
  * @brief 动态创建条件变量（分配内存并初始化）
  * @return 条件变量指针，失败返回NULL
  */
-agentrt_cond_t *agentrt_cond_create(void);
+airy_cond_t *airy_cond_create(void);
 
 /**
  * @brief 动态销毁条件变量（销毁并释放内存）
  * @param cond 条件变量指针
  */
-void agentrt_cond_free(agentrt_cond_t *cond);
+void airy_cond_free(airy_cond_t *cond);
 
 /* ==================== 线程接口 ==================== */
 
 /**
  * @brief 线程函数类型
  */
-typedef void *(*agentrt_thread_func_t)(void *arg);
+typedef void *(*airy_thread_func_t)(void *arg);
 
 /**
  * @brief 创建线程
@@ -337,7 +337,7 @@ typedef void *(*agentrt_thread_func_t)(void *arg);
  * @param arg 线程参数
  * @return 0 成功，非0 失败
  */
-int agentrt_platform_thread_create(agentrt_thread_t *thread, agentrt_thread_func_t func, void *arg);
+int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg);
 
 /**
  * @brief 等待线程结束
@@ -345,46 +345,46 @@ int agentrt_platform_thread_create(agentrt_thread_t *thread, agentrt_thread_func
  * @param retval 返回值指针（可为NULL）
  * @return 0 成功，非0 失败
  */
-int agentrt_platform_thread_join(agentrt_thread_t thread, void **retval);
+int airy_platform_thread_join(airy_thread_t thread, void **retval);
 
 /**
  * @brief 分离线程（线程结束后自动回收资源）
  * @param thread 线程句柄
  * @return 0 成功，非0 失败
  */
-int agentrt_platform_thread_detach(agentrt_thread_t thread);
+int airy_platform_thread_detach(airy_thread_t thread);
 
-#ifndef AGENTRT_USE_SCHEDULER_THREAD_IMPL
-#define agentrt_thread_create agentrt_platform_thread_create
-#define agentrt_thread_join agentrt_platform_thread_join
-#define agentrt_thread_detach agentrt_platform_thread_detach
+#ifndef AIRY_USE_SCHEDULER_THREAD_IMPL
+#define airy_thread_create airy_platform_thread_create
+#define airy_thread_join airy_platform_thread_join
+#define airy_thread_detach airy_platform_thread_detach
 #endif
 
 /**
  * @brief 获取当前线程ID
  * @return 线程ID
  */
-uint64_t agentrt_thread_id(void);
+uint64_t airy_thread_id(void);
 
 /* ==================== Socket 接口 ==================== */
 
 /**
  * @brief 创建 TCP Socket
- * @return Socket 句柄，失败返回 AGENTRT_INVALID_SOCKET
+ * @return Socket 句柄，失败返回 AIRY_INVALID_SOCKET
  */
-agentrt_socket_t agentrt_socket_tcp(void);
+airy_sock_t airy_sock_tcp(void);
 
 /**
  * @brief 创建 Unix Domain Socket（仅 POSIX）
- * @return Socket 句柄，失败返回 AGENTRT_INVALID_SOCKET
+ * @return Socket 句柄，失败返回 AIRY_INVALID_SOCKET
  */
-agentrt_socket_t agentrt_socket_unix(void);
+airy_sock_t airy_sock_unix(void);
 
 /**
  * @brief 关闭 Socket
  * @param sock Socket 句柄
  */
-void agentrt_socket_close(agentrt_socket_t sock);
+void airy_sock_close(airy_sock_t sock);
 
 /**
  * @brief 设置 Socket 非阻塞模式
@@ -392,7 +392,7 @@ void agentrt_socket_close(agentrt_socket_t sock);
  * @param nonblock 是否非阻塞
  * @return 0 成功，非0 失败
  */
-int agentrt_socket_set_nonblock(agentrt_socket_t sock, int nonblock);
+int airy_sock_set_nonblock(airy_sock_t sock, int nonblock);
 
 /**
  * @brief 设置 Socket 复用地址
@@ -400,7 +400,7 @@ int agentrt_socket_set_nonblock(agentrt_socket_t sock, int nonblock);
  * @param reuse 是否复用
  * @return 0 成功，非0 失败
  */
-int agentrt_socket_set_reuseaddr(agentrt_socket_t sock, int reuse);
+int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse);
 
 /* ==================== 进程接口 ==================== */
 
@@ -408,17 +408,17 @@ int agentrt_socket_set_reuseaddr(agentrt_socket_t sock, int reuse);
  * @brief 进程信息结构
  */
 typedef struct {
-    agentrt_pid_t pid;
+    airy_pid_t pid;
     int stdin_fd;
     int stdout_fd;
     int stderr_fd;
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     /* Windows 子进程句柄，存入结构体以支持多进程并发与线程安全，
      * 替代原先的全局变量（单进程限制）。使用 void* 避免在此处引入 windows.h。 */
     void *process_handle; /* HANDLE to the child process */
     void *thread_handle;  /* HANDLE to the child's primary thread */
 #endif
-} agentrt_process_info_t;
+} airy_process_info_t;
 
 /**
  * @brief 启动进程
@@ -428,8 +428,8 @@ typedef struct {
  * @param proc 输出进程信息
  * @return 0 成功，非0 失败
  */
-int agentrt_process_start(const char *executable, char *const argv[], char *const envp[],
-                          agentrt_process_info_t *proc);
+int airy_process_start(const char *executable, char *const argv[], char *const envp[],
+                          airy_process_info_t *proc);
 
 /**
  * @brief 等待进程结束
@@ -438,20 +438,20 @@ int agentrt_process_start(const char *executable, char *const argv[], char *cons
  * @param exit_code 输出退出码（可为NULL）
  * @return 0 成功，非0 失败或超时
  */
-int agentrt_process_wait(agentrt_process_info_t *proc, uint32_t timeout_ms, int *exit_code);
+int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_code);
 
 /**
  * @brief 终止进程
  * @param proc 进程信息
  * @return 0 成功，非0 失败
  */
-int agentrt_process_kill(agentrt_process_info_t *proc);
+int airy_process_kill(airy_process_info_t *proc);
 
 /**
  * @brief 关闭进程管道
  * @param proc 进程信息
  */
-void agentrt_process_close_pipes(agentrt_process_info_t *proc);
+void airy_process_close_pipes(airy_process_info_t *proc);
 
 /**
  * @brief 运行命令并捕获合并输出（高层便捷接口）
@@ -467,7 +467,7 @@ void agentrt_process_close_pipes(agentrt_process_info_t *proc);
  * @param output_size 输出缓冲区大小（含 '\0'）
  * @return 退出码(0-255)；-1=启动失败；-2=超时
  */
-int agentrt_process_run_capture(const char *executable, char *const argv[],
+int airy_process_run_capture(const char *executable, char *const argv[],
                                 char *const envp[], uint32_t timeout_ms,
                                 char *output, size_t output_size);
 
@@ -477,26 +477,26 @@ int agentrt_process_run_capture(const char *executable, char *const argv[],
  * @brief 获取高精度时间戳（纳秒）
  * @return 时间戳
  */
-uint64_t agentrt_time_ns(void);
+uint64_t airy_time_ns(void);
 
 /**
  * @brief 获取当前时间戳（毫秒）
  * @return 时间戳
  */
-uint64_t agentrt_time_ms(void);
+uint64_t airy_time_ms(void);
 
 /**
  * @brief 睡眠指定毫秒数
  * @param ms 毫秒数
  */
-void agentrt_sleep_ms(uint32_t ms);
+void airy_sleep_ms(uint32_t ms);
 
 /* ==================== 随机数接口 ==================== */
 
 /**
  * @brief 初始化随机数生成器（线程安全）
  */
-void agentrt_random_init(void);
+void airy_random_init(void);
 
 /**
  * @brief 生成随机数（线程安全）
@@ -504,13 +504,13 @@ void agentrt_random_init(void);
  * @param max 最大值
  * @return 随机数
  */
-uint32_t agentrt_random_uint32(uint32_t min, uint32_t max);
+uint32_t airy_random_uint32(uint32_t min, uint32_t max);
 
 /**
  * @brief 生成随机浮点数（线程安全）
  * @return 0.0 到 1.0 之间的随机数
  */
-float agentrt_random_float(void);
+float airy_random_float(void);
 
 /**
  * @brief 生成随机字节（线程安全）
@@ -518,7 +518,7 @@ float agentrt_random_float(void);
  * @param len 长度
  * @return 0 成功，非0 失败
  */
-int agentrt_random_bytes(void *buf, size_t len);
+int airy_random_bytes(void *buf, size_t len);
 
 /* ==================== 文件系统接口 ==================== */
 
@@ -527,21 +527,21 @@ int agentrt_random_bytes(void *buf, size_t len);
  * @param path 文件路径
  * @return 1 存在，0 不存在
  */
-int agentrt_file_exists(const char *path);
+int airy_file_exists(const char *path);
 
 /**
  * @brief 创建目录（递归）
  * @param path 目录路径
  * @return 0 成功，非0 失败
  */
-int agentrt_mkdir_p(const char *path);
+int airy_mkdir_p(const char *path);
 
 /**
  * @brief 获取文件大小
  * @param path 文件路径
  * @return 文件大小，失败返回 -1
  */
-int64_t agentrt_file_size(const char *path);
+int64_t airy_file_size(const char *path);
 
 /* ==================== 网络初始化接口 ==================== */
 
@@ -549,19 +549,19 @@ int64_t agentrt_file_size(const char *path);
  * @brief 初始化网络库（Windows需要）
  * @return 0 成功
  */
-int agentrt_network_init(void);
+int airy_network_init(void);
 
 /**
  * @brief 清理网络库（Windows需要）
  */
-void agentrt_network_cleanup(void);
+void airy_network_cleanup(void);
 
 /* ==================== 信号处理接口 ==================== */
 
 /**
  * @brief 忽略 SIGPIPE 信号
  */
-void agentrt_ignore_sigpipe(void);
+void airy_ignore_sigpipe(void);
 
 /* ==================== 字符串工具 ==================== */
 
@@ -572,7 +572,7 @@ void agentrt_ignore_sigpipe(void);
  * @param dest_size 目标缓冲区大小
  * @return 0成功，非0失败
  */
-int agentrt_strlcpy(char *dest, const char *src, size_t dest_size);
+int airy_strlcpy(char *dest, const char *src, size_t dest_size);
 
 /**
  * @brief 安全的字符串连接
@@ -581,7 +581,7 @@ int agentrt_strlcpy(char *dest, const char *src, size_t dest_size);
  * @param dest_size 目标缓冲区大小
  * @return 0成功，非0失败
  */
-int agentrt_strlcat(char *dest, const char *src, size_t dest_size);
+int airy_strlcat(char *dest, const char *src, size_t dest_size);
 
 /* ==================== 错误处理接口 ==================== */
 
@@ -589,19 +589,19 @@ int agentrt_strlcat(char *dest, const char *src, size_t dest_size);
  * @brief 获取最后错误的错误码
  * @return 错误码
  */
-int agentrt_get_last_error(void);
+int airy_get_last_error(void);
 
 /**
  * @brief 获取错误描述字符串
  * @param error 错误码
  * @return 错误描述字符串
  */
-const char *agentrt_strerror(int error);
+const char *airy_strerror(int error);
 
 /* ==================== 系统信息类型 (UNI-01: 唯一定义) ==================== */
 
-#ifndef AGENTRT_SYSINFO_T_DEFINED
-#define AGENTRT_SYSINFO_T_DEFINED
+#ifndef AIRY_SYSINFO_T_DEFINED
+#define AIRY_SYSINFO_T_DEFINED
 typedef struct {
     char os_name[64];
     char os_version[64];
@@ -609,26 +609,26 @@ typedef struct {
     uint32_t cpu_count;
     uint64_t memory_total;
     uint64_t memory_free;
-} agentrt_sysinfo_t;
+} airy_sysinfo_t;
 #endif
 
-int agentrt_get_sysinfo(agentrt_sysinfo_t *info);
+int airy_get_sysinfo(airy_sysinfo_t *info);
 
 /* ==================== 原子操作类型 (UNI-01: 唯一定义) ==================== */
 
-#ifndef AGENTRT_ATOMIC_INT_T_DEFINED
-#define AGENTRT_ATOMIC_INT_T_DEFINED
+#ifndef AIRY_ATOMIC_INT_T_DEFINED
+#define AIRY_ATOMIC_INT_T_DEFINED
 #include "atomic_compat.h"
-typedef atomic_int agentrt_atomic_int_t;
+typedef atomic_int airy_atomic_int_t;
 #endif
 
-int agentrt_atomic_load(agentrt_atomic_int_t *atomic);
-void agentrt_atomic_store(agentrt_atomic_int_t *atomic, int value);
-int agentrt_atomic_fetch_add(agentrt_atomic_int_t *atomic, int value);
-int agentrt_atomic_fetch_sub(agentrt_atomic_int_t *atomic, int value);
+int airy_atomic_load(airy_atomic_int_t *atomic);
+void airy_atomic_store(airy_atomic_int_t *atomic, int value);
+int airy_atomic_fetch_add(airy_atomic_int_t *atomic, int value);
+int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_PLATFORM_H */
+#endif /* AIRY_RT_PLATFORM_H */

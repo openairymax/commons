@@ -35,9 +35,9 @@
  * @brief 跨平台互斥锁类型
  */
 #ifdef _WIN32
-typedef agentrt_mutex_t budget_ctrl_mutex_t;
+typedef airy_mtx_t budget_ctrl_mutex_t;
 #else
-typedef agentrt_mutex_t budget_ctrl_mutex_t;
+typedef airy_mtx_t budget_ctrl_mutex_t;
 #endif
 
 /**
@@ -46,10 +46,10 @@ typedef agentrt_mutex_t budget_ctrl_mutex_t;
 static int budget_ctrl_mutex_init(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_init(mutex);
+    airy_mtx_init(mutex);
     return 0;
 #else
-    return agentrt_mutex_init(mutex);
+    return airy_mtx_init(mutex);
 #endif
 }
 
@@ -59,9 +59,9 @@ static int budget_ctrl_mutex_init(budget_ctrl_mutex_t *mutex)
 static void budget_ctrl_mutex_destroy(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_destroy(mutex);
+    airy_mtx_destroy(mutex);
 #else
-    agentrt_mutex_destroy(mutex);
+    airy_mtx_destroy(mutex);
 #endif
 }
 
@@ -71,9 +71,9 @@ static void budget_ctrl_mutex_destroy(budget_ctrl_mutex_t *mutex)
 static void budget_ctrl_mutex_lock(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_lock(mutex);
+    airy_mtx_lock(mutex);
 #else
-    agentrt_mutex_lock(mutex);
+    airy_mtx_lock(mutex);
 #endif
 }
 
@@ -83,16 +83,16 @@ static void budget_ctrl_mutex_lock(budget_ctrl_mutex_t *mutex)
 static void budget_ctrl_mutex_unlock(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
-    agentrt_mutex_unlock(mutex);
+    airy_mtx_unlock(mutex);
 #else
-    agentrt_mutex_unlock(mutex);
+    airy_mtx_unlock(mutex);
 #endif
 }
 
 /**
  * @brief 预算控制器内部结?
  */
-struct agentrt_budget_controller {
+struct airy_budget_controller {
     double max_cost_usd;           /**< 最大成本预算（美元?*/
     double warning_threshold;      /**< 警告阈值（百分比） */
     atomic_double consumed_cost;   /**< 已消耗成?*/
@@ -116,10 +116,10 @@ static time_t get_current_time(void)
 /**
  * @brief 检查并重置周期
  */
-static int check_and_reset_period(agentrt_budget_controller_t *controller)
+static int check_and_reset_period(airy_budget_controller_t *controller)
 {
     if (!controller) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     time_t now = get_current_time();
@@ -140,20 +140,20 @@ static int check_and_reset_period(agentrt_budget_controller_t *controller)
     return 0;
 }
 
-agentrt_budget_controller_t *agentrt_budget_controller_create(double max_cost_usd,
+airy_budget_controller_t *airy_budget_controller_create(double max_cost_usd,
                                                               uint32_t period_seconds)
 {
     if (max_cost_usd <= 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    agentrt_budget_controller_t *controller =
-        (agentrt_budget_controller_t *)AGENTRT_MALLOC(sizeof(agentrt_budget_controller_t));
+    airy_budget_controller_t *controller =
+        (airy_budget_controller_t *)AIRY_MALLOC(sizeof(airy_budget_controller_t));
     if (!controller) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    AGENTRT_MEMSET(controller, 0, sizeof(agentrt_budget_controller_t));
+    AIRY_MEMSET(controller, 0, sizeof(airy_budget_controller_t));
 
     controller->max_cost_usd = max_cost_usd;
     controller->warning_threshold = 0.8;
@@ -163,8 +163,8 @@ agentrt_budget_controller_t *agentrt_budget_controller_create(double max_cost_us
     atomic_init(&controller->denied_count, 0);
 
     if (budget_ctrl_mutex_init(&controller->mutex) != 0) {
-        AGENTRT_FREE(controller);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_FREE(controller);
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
     controller->period_start = get_current_time();
@@ -174,20 +174,20 @@ agentrt_budget_controller_t *agentrt_budget_controller_create(double max_cost_us
     return controller;
 }
 
-void agentrt_budget_controller_destroy(agentrt_budget_controller_t *controller)
+void airy_budget_controller_destroy(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return;
     }
 
     budget_ctrl_mutex_destroy(&controller->mutex);
-    AGENTRT_FREE(controller);
+    AIRY_FREE(controller);
 }
 
-int agentrt_budget_controller_consume(agentrt_budget_controller_t *controller, double cost_usd)
+int airy_budget_controller_consume(airy_budget_controller_t *controller, double cost_usd)
 {
     if (!controller || cost_usd < 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_ctrl_mutex_lock(&controller->mutex);
@@ -204,13 +204,13 @@ int agentrt_budget_controller_consume(agentrt_budget_controller_t *controller, d
     if (current_period + cost_usd > controller->max_cost_usd) {
         atomic_fetch_add(&controller->denied_count, 1);
         budget_ctrl_mutex_unlock(&controller->mutex);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (current_total + cost_usd > controller->max_cost_usd * 100) {
         atomic_fetch_add(&controller->denied_count, 1);
         budget_ctrl_mutex_unlock(&controller->mutex);
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     double new_period =
@@ -235,7 +235,7 @@ int agentrt_budget_controller_consume(agentrt_budget_controller_t *controller, d
     return 0;
 }
 
-double agentrt_budget_controller_remaining(agentrt_budget_controller_t *controller)
+double airy_budget_controller_remaining(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -249,7 +249,7 @@ double agentrt_budget_controller_remaining(agentrt_budget_controller_t *controll
     return remaining > 0 ? remaining : 0.0;
 }
 
-double agentrt_budget_controller_consumed(agentrt_budget_controller_t *controller)
+double airy_budget_controller_consumed(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -258,7 +258,7 @@ double agentrt_budget_controller_consumed(agentrt_budget_controller_t *controlle
     return atomic_load(&controller->consumed_cost);
 }
 
-double agentrt_budget_controller_period_consumed(agentrt_budget_controller_t *controller)
+double airy_budget_controller_period_consumed(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -269,7 +269,7 @@ double agentrt_budget_controller_period_consumed(agentrt_budget_controller_t *co
     return atomic_load(&controller->period_cost);
 }
 
-uint64_t agentrt_budget_controller_requests(agentrt_budget_controller_t *controller)
+uint64_t airy_budget_controller_requests(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0;
@@ -278,7 +278,7 @@ uint64_t agentrt_budget_controller_requests(agentrt_budget_controller_t *control
     return atomic_load(&controller->request_count);
 }
 
-uint64_t agentrt_budget_controller_denied(agentrt_budget_controller_t *controller)
+uint64_t airy_budget_controller_denied(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0;
@@ -287,10 +287,10 @@ uint64_t agentrt_budget_controller_denied(agentrt_budget_controller_t *controlle
     return atomic_load(&controller->denied_count);
 }
 
-int agentrt_budget_controller_set_warning(agentrt_budget_controller_t *controller, double threshold)
+int airy_budget_controller_set_warning(airy_budget_controller_t *controller, double threshold)
 {
     if (!controller || threshold <= 0 || threshold > 1.0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_ctrl_mutex_lock(&controller->mutex);
@@ -300,10 +300,10 @@ int agentrt_budget_controller_set_warning(agentrt_budget_controller_t *controlle
     return 0;
 }
 
-int agentrt_budget_controller_reset_period(agentrt_budget_controller_t *controller)
+int airy_budget_controller_reset_period(airy_budget_controller_t *controller)
 {
     if (!controller) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     budget_ctrl_mutex_lock(&controller->mutex);
@@ -314,7 +314,7 @@ int agentrt_budget_controller_reset_period(agentrt_budget_controller_t *controll
     return 0;
 }
 
-double agentrt_budget_controller_average(agentrt_budget_controller_t *controller)
+double airy_budget_controller_average(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -327,10 +327,10 @@ double agentrt_budget_controller_average(agentrt_budget_controller_t *controller
     return avg;
 }
 
-int agentrt_budget_controller_get_status(agentrt_budget_controller_t *controller)
+int airy_budget_controller_get_status(airy_budget_controller_t *controller)
 {
     if (!controller) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     check_and_reset_period(controller);

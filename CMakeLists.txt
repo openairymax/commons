@@ -62,25 +62,25 @@ if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
 endif()
 
-add_library(agentrt_common STATIC ${SOURCES})
+add_library(airy_common STATIC ${SOURCES})
 
 # 验证源文件存在性
-agentrt_print_info("[COMMONS] Verifying source files...")
+airy_print_info("[COMMONS] Verifying source files...")
 set(_missing_count 0)
 foreach(_src ${SOURCES})
     if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_src}")
-        agentrt_print_warn("[COMMONS]   [MISSING] ${_src}")
+        airy_print_warn("[COMMONS]   [MISSING] ${_src}")
         math(EXPR _missing_count "${_missing_count} + 1")
     endif()
 endforeach()
 if(_missing_count EQUAL 0)
-    agentrt_print_info("[COMMONS]   All source files verified OK")
+    airy_print_info("[COMMONS]   All source files verified OK")
 else()
-    agentrt_print_warn("[COMMONS]   ${_missing_count} source file(s) MISSING!")
+    airy_print_warn("[COMMONS]   ${_missing_count} source file(s) MISSING!")
 endif()
 
 # 验证 include 目录存在性
-agentrt_print_info("[COMMONS] Verifying include directories...")
+airy_print_info("[COMMONS] Verifying include directories...")
 set(_inc_dirs
     platform/include
     utils/types/include
@@ -114,14 +114,14 @@ set(_inc_dirs
 set(_inc_missing 0)
 foreach(_inc ${_inc_dirs})
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_inc}")
-        agentrt_print_ok("[COMMONS]   [OK] ${_inc}")
+        airy_print_ok("[COMMONS]   [OK] ${_inc}")
     else()
-        agentrt_print_warn("[COMMONS]   [MISSING] ${_inc}")
+        airy_print_warn("[COMMONS]   [MISSING] ${_inc}")
         math(EXPR _inc_missing "${_inc_missing} + 1")
     endif()
 endforeach()
 if(_inc_missing GREATER 0)
-    agentrt_print_warn("[COMMONS]   ${_inc_missing} include directory(ies) MISSING!")
+    airy_print_warn("[COMMONS]   ${_inc_missing} include directory(ies) MISSING!")
 endif()
 
 set_source_files_properties(
@@ -137,14 +137,14 @@ set_source_files_properties(
     utils/logging/src/logging_compat.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
-    PROPERTIES COMPILE_DEFINITIONS "AGENTRT_COMPLIANCE_IMPL"
+    PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"
 )
 
 if(MSVC)
-    target_compile_options(agentrt_common PRIVATE /std:c11 /utf-8 /W3 /wd4819 /wd4005 /D_ENABLE_ATOMIC_ALIGNMENT_FIX)
+    target_compile_options(airy_common PRIVATE /std:c11 /utf-8 /W3 /wd4819 /wd4005 /D_ENABLE_ATOMIC_ALIGNMENT_FIX)
 endif()
 
-target_include_directories(agentrt_common PUBLIC
+target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/types/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/logging/include
@@ -177,35 +177,35 @@ target_include_directories(agentrt_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson/include
 )
 
-target_compile_definitions(agentrt_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
-if(NOT AGENTRT_HAS_CJSON)
-    target_compile_definitions(agentrt_common PRIVATE AGENTRT_NO_CJSON)
+target_compile_definitions(airy_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
+if(NOT AIRY_HAS_CJSON)
+    target_compile_definitions(airy_common PRIVATE AIRY_NO_CJSON)
 endif()
 
-target_link_libraries(agentrt_common
+target_link_libraries(airy_common
     PUBLIC Threads::Threads
-    PUBLIC agentrt_compile_defs
+    PUBLIC airy_compile_defs
 )
 
-if(AGENTRT_HAS_YAML AND YAML_FOUND)
-    target_link_libraries(agentrt_common PRIVATE ${YAML_LIBRARIES})
-    target_include_directories(agentrt_common PRIVATE ${YAML_INCLUDE_DIRS})
+if(AIRY_HAS_YAML AND YAML_FOUND)
+    target_link_libraries(airy_common PRIVATE ${YAML_LIBRARIES})
+    target_include_directories(airy_common PRIVATE ${YAML_INCLUDE_DIRS})
 endif()
-if(AGENTRT_HAS_CJSON)
+if(AIRY_HAS_CJSON)
     if(cJSON_FOUND)
-        target_link_libraries(agentrt_common PRIVATE cjson)
+        target_link_libraries(airy_common PRIVATE cjson)
         if(cJSON_INCLUDE_DIRS)
-            target_include_directories(agentrt_common PRIVATE ${cJSON_INCLUDE_DIRS})
+            target_include_directories(airy_common PRIVATE ${cJSON_INCLUDE_DIRS})
         endif()
     elseif(CJSON_FOUND)
-        target_link_libraries(agentrt_common PRIVATE ${CJSON_LIBRARIES})
+        target_link_libraries(airy_common PRIVATE ${CJSON_LIBRARIES})
         if(CJSON_INCLUDE_DIRS)
-            target_include_directories(agentrt_common PRIVATE ${CJSON_INCLUDE_DIRS})
+            target_include_directories(airy_common PRIVATE ${CJSON_INCLUDE_DIRS})
         endif()
     endif()
 endif()
 
-install(TARGETS agentrt_common DESTINATION lib)
+install(TARGETS airy_common DESTINATION lib)
 install(DIRECTORY platform/include/ DESTINATION include/agentrt/platform)
 install(DIRECTORY utils/token/include/ DESTINATION include/agentrt/utils/token)
 install(DIRECTORY utils/cost/include/ DESTINATION include/agentrt/utils/cost)

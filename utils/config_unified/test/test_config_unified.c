@@ -77,14 +77,14 @@ static int test_config_source_env(void)
     printf("  测试环境变量配置源...\n");
 
     // 设置测试环境变量
-    _putenv("AGENTRT_TEST_CONFIG_INT=42");
-    _putenv("AGENTRT_TEST_CONFIG_STR=hello");
-    _putenv("AGENTRT_TEST_CONFIG_BOOL=true");
+    _putenv("AIRY_TEST_CONFIG_INT=42");
+    _putenv("AIRY_TEST_CONFIG_STR=hello");
+    _putenv("AIRY_TEST_CONFIG_BOOL=true");
 
     config_context_t *ctx = config_context_create();
     TEST_ASSERT(ctx != NULL, "配置上下文创建失败");
 
-    int result = config_context_add_env_source(ctx, "AGENTRT_TEST_CONFIG_");
+    int result = config_context_add_env_source(ctx, "AIRY_TEST_CONFIG_");
     TEST_ASSERT(result == 0, "环境变量源添加失败");
 
     // 测试获取值
@@ -106,9 +106,9 @@ static int test_config_source_env(void)
     config_context_destroy(ctx);
 
     // 清理环境变量
-    _putenv("AGENTRT_TEST_CONFIG_INT=");
-    _putenv("AGENTRT_TEST_CONFIG_STR=");
-    _putenv("AGENTRT_TEST_CONFIG_BOOL=");
+    _putenv("AIRY_TEST_CONFIG_INT=");
+    _putenv("AIRY_TEST_CONFIG_STR=");
+    _putenv("AIRY_TEST_CONFIG_BOOL=");
 
     printf("  环境变量配置源测试通过\n");
     return 0;
@@ -299,16 +299,16 @@ static int test_config_compat_layer(void)
     printf("  测试配置兼容层...\n");
 
     // 测试兼容宏
-    agentrt_config_t *manager = AGENTRT_CONFIG_CREATE();
+    airy_config_t *manager = AIRY_CONFIG_CREATE();
     TEST_ASSERT(manager != NULL, "兼容配置创建失败");
 
-    AGENTRT_CONFIG_SET_STRING(manager, "test.key", "compat_value");
+    AIRY_CONFIG_SET_STRING(manager, "test.key", "compat_value");
 
-    const char *value = AGENTRT_CONFIG_GET_STRING(manager, "test.key", NULL);
+    const char *value = AIRY_CONFIG_GET_STRING(manager, "test.key", NULL);
     TEST_ASSERT(value != NULL, "兼容配置获取失败");
     TEST_ASSERT(strcmp(value, "compat_value") == 0, "兼容配置值不匹配");
 
-    AGENTRT_CONFIG_FREE(manager);
+    AIRY_CONFIG_FREE(manager);
 
     printf("  配置兼容层测试通过\n");
     return 0;

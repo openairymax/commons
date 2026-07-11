@@ -35,7 +35,7 @@ types/
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `code` | `agentrt_error_t` | 错误码 |
+| `code` | `airy_err_t` | 错误码 |
 | `message` | `const char *` | 错误消息 |
 | `detail` | `const char *` | 详细信息 |
 
@@ -52,7 +52,7 @@ types/
 
 | 类型 | 定义 | 说明 |
 |------|------|------|
-| `agentrt_error_t` | `int32_t` | 错误码类型（负值为错误，0 为成功） |
+| `airy_err_t` | `int32_t` | 错误码类型（负值为错误，0 为成功） |
 | `agentrt_timestamp_t` | `uint64_t` | 时间戳类型（纳秒精度） |
 | `agentrt_millis_t` | `uint64_t` | 毫秒时间类型 |
 | `agentrt_uuid_t` | `char[37]` | 唯一标识符类型 |
@@ -62,28 +62,28 @@ types/
 | 宏 | 值 | 说明 |
 |------|------|------|
 | `AGENTRT_SUCCESS` | 0 | 成功 |
-| `AGENTRT_EINVAL` | -1 | 参数无效 |
-| `AGENTRT_ENOMEM` | -2 | 内存不足 |
-| `AGENTRT_EBUSY` | -3 | 资源忙碌 |
-| `AGENTRT_ENOENT` | -4 | 资源不存在 |
-| `AGENTRT_EPERM` | -5 | 权限不足 |
-| `AGENTRT_ETIMEDOUT` | -6 | 操作超时 |
-| `AGENTRT_EIO` | -7 | I/O 错误 |
-| `AGENTRT_EEXIST` | -8 | 资源已存在 |
-| `AGENTRT_ENOTINIT` | -9 | 引擎未初始化 |
-| `AGENTRT_ECANCELLED` | -10 | 操作已取消 |
-| `AGENTRT_ENOTSUP` | -11 | 操作不支持 |
-| `AGENTRT_EOVERFLOW` | -12 | 溢出错误 |
-| `AGENTRT_EPROTO` | -13 | 协议错误 |
-| `AGENTRT_ENOTCONN` | -14 | 未连接 |
-| `AGENTRT_ECONNRESET` | -15 | 连接重置 |
-| `AGENTRT_ENOSYS` | -16 | 函数未实现 |
-| `AGENTRT_EFAIL` | -17 | 通用失败 |
-| `AGENTRT_ENOTFOUND` | -18 | 资源未找到 |
-| `AGENTRT_EPLATFORM` | -27 | 平台未初始化 |
-| `AGENTRT_EPROTONOSUPPORT` | -28 | 协议/命令不支持 |
-| `AGENTRT_ESERVICE` | -29 | 服务不可用 |
-| `AGENTRT_EUNKNOWN` | -99 | 未知错误 |
+| `AIRY_EINVAL` | -1 | 参数无效 |
+| `AIRY_ENOMEM` | -2 | 内存不足 |
+| `AIRY_EBUSY` | -3 | 资源忙碌 |
+| `AIRY_ENOENT` | -4 | 资源不存在 |
+| `AIRY_EPERM` | -5 | 权限不足 |
+| `AIRY_ETIMEDOUT` | -6 | 操作超时 |
+| `AIRY_EIO` | -7 | I/O 错误 |
+| `AIRY_EEXIST` | -8 | 资源已存在 |
+| `AIRY_ENOTINIT` | -9 | 引擎未初始化 |
+| `AIRY_ECANCELLED` | -10 | 操作已取消 |
+| `AIRY_ENOTSUP` | -11 | 操作不支持 |
+| `AIRY_EOVERFLOW` | -12 | 溢出错误 |
+| `AIRY_EPROTO` | -13 | 协议错误 |
+| `AIRY_ENOTCONN` | -14 | 未连接 |
+| `AIRY_ECONNRESET` | -15 | 连接重置 |
+| `AIRY_ENOSYS` | -16 | 函数未实现 |
+| `AIRY_EFAIL` | -17 | 通用失败 |
+| `AIRY_ENOTFOUND` | -18 | 资源未找到 |
+| `AIRY_EPLATFORM` | -27 | 平台未初始化 |
+| `AIRY_EPROTONOSUPPORT` | -28 | 协议/命令不支持 |
+| `AIRY_ESERVICE` | -29 | 服务不可用 |
+| `AIRY_EUNKNOWN` | -99 | 未知错误 |
 
 ### 任务类型
 
@@ -124,7 +124,7 @@ types/
 | `end_time` | `agentrt_timestamp_t` | 结束时间 |
 | `tokens_used` | `uint32_t` | 消耗的 Token 数 |
 | `cost_usd` | `double` | 成本（美元） |
-| `error_code` | `agentrt_error_t` | 错误码 |
+| `error_code` | `airy_err_t` | 错误码 |
 | `error_message` | `char *` | 错误消息 |
 
 ### 记忆类型
@@ -377,7 +377,7 @@ sanitize_level_t level = SANITIZE_LEVEL_NORMAL;
 
 | 依赖 | 说明 |
 |------|------|
-| `agentrt_types.h` | 上层类型定义（IPC 消息等） |
+| `airy_types.h` | 上层类型定义（IPC 消息等） |
 | `platform.h` | 平台类型定义（socket 句柄等） |
 | `stdbool.h` | 布尔类型支持 |
 | `stddef.h` | `size_t` 等类型 |

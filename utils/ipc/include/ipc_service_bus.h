@@ -20,8 +20,8 @@
  * @see ipc_common.h IPC底层抽象
  */
 
-#ifndef AGENTRT_IPC_SERVICE_BUS_H
-#define AGENTRT_IPC_SERVICE_BUS_H
+#ifndef AIRY_RT_IPC_SERVICE_BUS_H
+#define AIRY_RT_IPC_SERVICE_BUS_H
 
 #include "svc_common.h"
 
@@ -156,28 +156,28 @@ typedef void (*ipc_bus_event_handler_t)(ipc_service_bus_t bus, const char *event
  * @param config 总线配置（NULL使用默认）
  * @return 总线句柄，失败返回NULL
  */
-AGENTRT_API ipc_service_bus_t ipc_service_bus_create(const char *bus_name,
+AIRY_API ipc_service_bus_t ipc_service_bus_create(const char *bus_name,
                                                      const ipc_bus_channel_config_t *config);
 
 /**
  * @brief 销毁服务总线实例
  * @param bus 总线句柄
  */
-AGENTRT_API void ipc_service_bus_destroy(ipc_service_bus_t bus);
+AIRY_API void ipc_service_bus_destroy(ipc_service_bus_t bus);
 
 /**
  * @brief 启动服务总线
  * @param bus 总线句柄
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_start(ipc_service_bus_t bus);
+AIRY_API airy_err_t ipc_service_bus_start(ipc_service_bus_t bus);
 
 /**
  * @brief 停止服务总线
  * @param bus 总线句柄
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_stop(ipc_service_bus_t bus);
+AIRY_API airy_err_t ipc_service_bus_stop(ipc_service_bus_t bus);
 
 /* ==================== 通道管理 ==================== */
 
@@ -187,21 +187,21 @@ AGENTRT_API agentrt_error_t ipc_service_bus_stop(ipc_service_bus_t bus);
  * @param config 通道配置
  * @return 通道句柄，失败返回NULL
  */
-AGENTRT_API ipc_bus_channel_t ipc_bus_channel_create(ipc_service_bus_t bus,
+AIRY_API ipc_bus_channel_t ipc_bus_channel_create(ipc_service_bus_t bus,
                                                      const ipc_bus_channel_config_t *config);
 
 /**
  * @brief 销毁通信通道
  * @param channel 通道句柄
  */
-AGENTRT_API void ipc_bus_channel_destroy(ipc_bus_channel_t channel);
+AIRY_API void ipc_bus_channel_destroy(ipc_bus_channel_t channel);
 
 /**
  * @brief 获取通道名称
  * @param channel 通道句柄
  * @return 通道名称
  */
-AGENTRT_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
+AIRY_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
 
 /* ==================== 消息发送 ==================== */
 
@@ -212,7 +212,7 @@ AGENTRT_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
  * @param message 消息结构
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_send(ipc_service_bus_t bus, const char *target_service,
+AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *target_service,
                                                  const ipc_bus_message_t *message);
 
 /**
@@ -224,7 +224,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_send(ipc_service_bus_t bus, const ch
  * @param timeout_ms 超时时间
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_request(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus,
                                                     const char *target_service,
                                                     const ipc_bus_message_t *request,
                                                     ipc_bus_message_t *response,
@@ -236,7 +236,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_request(ipc_service_bus_t bus,
  * @param message 消息结构
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
                                                       const ipc_bus_message_t *message);
 
 /**
@@ -248,7 +248,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
  * @param protocol 协议类型
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_notify(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus,
                                                    const char *target_service, const void *payload,
                                                    size_t payload_size, ipc_bus_proto_t protocol);
 
@@ -261,7 +261,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_notify(ipc_service_bus_t bus,
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
                                                              ipc_bus_message_handler_t handler,
                                                              void *user_data);
 
@@ -271,7 +271,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_register_handler(ipc_service_bus_t b
  * @param handler 消息处理函数
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
                                                                ipc_bus_message_handler_t handler);
 
 /**
@@ -282,7 +282,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_unregister_handler(ipc_service_bus_t
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus,
                                                                    const char *event_name,
                                                                    ipc_bus_event_handler_t handler,
                                                                    void *user_data);
@@ -295,7 +295,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_register_event_handler(ipc_service_b
  * @param endpoint 端点信息
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
                                                               const ipc_bus_endpoint_t *endpoint);
 
 /**
@@ -304,7 +304,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_register_endpoint(ipc_service_bus_t 
  * @param service_name 服务名称
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
                                                                 const char *service_name);
 
 /**
@@ -317,7 +317,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_unregister_endpoint(ipc_service_bus_
  * @param found_count [out] 实际找到数量
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_discover(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus,
                                                      const char *service_name,
                                                      ipc_bus_proto_t protocol,
                                                      ipc_bus_endpoint_t *endpoints,
@@ -331,7 +331,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_discover(ipc_service_bus_t bus,
  * @param endpoint [out] 选中的端点
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus,
                                                             const char *service_name,
                                                             ipc_bus_proto_t protocol,
                                                             ipc_bus_endpoint_t *endpoint);
@@ -343,7 +343,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_select_endpoint(ipc_service_bus_t bu
  * @param healthy 是否健康
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus,
                                                                    const char *service_name,
                                                                    bool healthy);
 
@@ -357,7 +357,7 @@ AGENTRT_API agentrt_error_t ipc_service_bus_update_endpoint_health(ipc_service_b
  * @param payload_size 负载大小
  * @return 消息结构，失败返回NULL
  */
-AGENTRT_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_type,
+AIRY_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_type,
                                                       ipc_bus_proto_t protocol, const void *payload,
                                                       size_t payload_size);
 
@@ -365,28 +365,28 @@ AGENTRT_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_typ
  * @brief 释放服务总线消息
  * @param message 消息结构
  */
-AGENTRT_API void ipc_bus_message_free(ipc_bus_message_t *message);
+AIRY_API void ipc_bus_message_free(ipc_bus_message_t *message);
 
 /**
  * @brief 复制消息
  * @param message 源消息
  * @return 新消息，失败返回NULL
  */
-AGENTRT_API ipc_bus_message_t *ipc_bus_message_clone(const ipc_bus_message_t *message);
+AIRY_API ipc_bus_message_t *ipc_bus_message_clone(const ipc_bus_message_t *message);
 
 /**
  * @brief 协议类型转字符串
  * @param proto 协议类型
  * @return 协议名称字符串
  */
-AGENTRT_API const char *ipc_bus_proto_to_string(ipc_bus_proto_t proto);
+AIRY_API const char *ipc_bus_proto_to_string(ipc_bus_proto_t proto);
 
 /**
  * @brief 字符串转协议类型
  * @param str 协议名称
  * @return 协议类型
  */
-AGENTRT_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
+AIRY_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
 
 /* ==================== 统计与诊断 ==================== */
 
@@ -396,7 +396,7 @@ AGENTRT_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
  * @param stats [out] 统计信息
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_get_stats(ipc_service_bus_t bus,
+AIRY_API airy_err_t ipc_service_bus_get_stats(ipc_service_bus_t bus,
                                                       ipc_bus_stats_t *stats);
 
 /**
@@ -404,24 +404,24 @@ AGENTRT_API agentrt_error_t ipc_service_bus_get_stats(ipc_service_bus_t bus,
  * @param bus 总线句柄
  * @return 0成功，非0失败
  */
-AGENTRT_API agentrt_error_t ipc_service_bus_reset_stats(ipc_service_bus_t bus);
+AIRY_API airy_err_t ipc_service_bus_reset_stats(ipc_service_bus_t bus);
 
 /**
  * @brief 获取总线名称
  * @param bus 总线句柄
  * @return 总线名称
  */
-AGENTRT_API const char *ipc_service_bus_get_name(ipc_service_bus_t bus);
+AIRY_API const char *ipc_service_bus_get_name(ipc_service_bus_t bus);
 
 /**
  * @brief 检查总线是否运行中
  * @param bus 总线句柄
  * @return true运行中，false未运行
  */
-AGENTRT_API bool ipc_service_bus_is_running(ipc_service_bus_t bus);
+AIRY_API bool ipc_service_bus_is_running(ipc_service_bus_t bus);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_IPC_SERVICE_BUS_H */
+#endif /* AIRY_RT_IPC_SERVICE_BUS_H */

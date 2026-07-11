@@ -97,7 +97,7 @@ int cache_string_compare(const void *a, const void *b)
 void *cache_string_copy(const void *data)
 {
     if (!data) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     return memory_safe_strdup((const char *)data);
 }
@@ -120,20 +120,20 @@ static cache_entry_t *cache_entry_create(const cache_config_t *manager, const vo
 {
     cache_entry_t *entry = memory_safe_alloc(sizeof(cache_entry_t));
     if (!entry) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     entry->key = manager->key_copy_func(key);
     if (!entry->key) {
         memory_safe_free(entry);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     entry->value = manager->value_copy_func(value);
     if (!entry->value) {
         manager->key_free_func(entry->key);
         memory_safe_free(entry);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     entry->timestamp = time(NULL);
@@ -234,7 +234,7 @@ cache_t cache_create(const cache_config_t *manager)
 {
     cache_impl_t *cache = memory_safe_alloc(sizeof(cache_impl_t));
     if (!cache) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     __builtin_memset(cache, 0, sizeof(cache_impl_t));
@@ -292,7 +292,7 @@ void cache_destroy(cache_t cache)
 int cache_get(cache_t cache, const void *key, void **out_value)
 {
     if (!cache || !key || !out_value) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *out_value = NULL;

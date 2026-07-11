@@ -101,7 +101,7 @@ static int network_init_winsock(void)
         WSADATA wsaData;
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
             atomic_store_explicit(&initialized, 0, memory_order_seq_cst);
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         }
     }
 #endif
@@ -230,21 +230,21 @@ network_config_t network_create_default_config(void)
 network_connection_t *network_connection_create(const network_config_t *config)
 {
     if (!config) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     network_connection_t *conn =
-        (network_connection_t *)AGENTRT_CALLOC(1, sizeof(network_connection_t));
+        (network_connection_t *)AIRY_CALLOC(1, sizeof(network_connection_t));
     if (!conn) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     conn->config = *config;
     conn->status = NETWORK_STATUS_DISCONNECTED;
-    AGENTRT_MEMSET(conn->error_msg, 0, sizeof(conn->error_msg));
+    AIRY_MEMSET(conn->error_msg, 0, sizeof(conn->error_msg));
     conn->event_cb = NULL;
     conn->event_user_data = NULL;
-    AGENTRT_MEMSET(&conn->stats, 0, sizeof(network_stats_t));
+    AIRY_MEMSET(&conn->stats, 0, sizeof(network_stats_t));
 
 #ifdef _WIN32
     conn->sock = INVALID_SOCKET;
@@ -252,7 +252,7 @@ network_connection_t *network_connection_create(const network_config_t *config)
     conn->fd = -1;
 #endif
 
-    AGENTRT_MEMSET(&conn->addr, 0, sizeof(conn->addr));
+    AIRY_MEMSET(&conn->addr, 0, sizeof(conn->addr));
 
     return conn;
 }
@@ -272,7 +272,7 @@ void network_connection_destroy(network_connection_t *connection)
         network_disconnect(connection);
     }
 
-    AGENTRT_FREE(connection);
+    AIRY_FREE(connection);
 }
 
 /**
@@ -280,10 +280,10 @@ void network_connection_destroy(network_connection_t *connection)
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_connect(network_connection_t *connection)
+airy_err_t network_connect(network_connection_t *connection)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     network_init_winsock();
@@ -292,7 +292,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
         connection->status != NETWORK_STATUS_ERROR) {
         snprintf(connection->error_msg, sizeof(connection->error_msg),
                  "Connection already in progress or connected");
-        return AGENTRT_EBUSY;
+        return AIRY_EBUSY;
     }
 
     connection->status = NETWORK_STATUS_CONNECTING;
@@ -307,7 +307,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
         snprintf(connection->error_msg, sizeof(connection->error_msg), "socket() failed: %d",
                  WSAGetLastError());
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
     connection->sock = s;
 #else
@@ -316,20 +316,20 @@ agentrt_error_t network_connect(network_connection_t *connection)
         snprintf(connection->error_msg, sizeof(connection->error_msg), "socket() failed: %s",
                  strerror(errno));
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
     connection->fd = fd;
 #endif
 
     /* 设置目标地址 */
-    AGENTRT_MEMSET(&connection->addr, 0, sizeof(connection->addr));
+    AIRY_MEMSET(&connection->addr, 0, sizeof(connection->addr));
     connection->addr.sin_family = AF_INET;
     connection->addr.sin_port = htons((uint16_t)connection->config.port);
 
     /* 尝试直接解析为 IP，否则使用 DNS */
     if (inet_pton(AF_INET, connection->config.host, &connection->addr.sin_addr) <= 0) {
         struct addrinfo hints, *result;
-        AGENTRT_MEMSET(&hints, 0, sizeof(hints));
+        AIRY_MEMSET(&hints, 0, sizeof(hints));
         hints.ai_family = native_af;
         hints.ai_socktype = native_type;
 
@@ -340,7 +340,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
                      gai_strerror(gai_ret));
             network_disconnect(connection);
             connection->status = NETWORK_STATUS_ERROR;
-            return AGENTRT_EIO;
+            return AIRY_EIO;
         }
 
         struct sockaddr_in *addr_in = (struct sockaddr_in *)result->ai_addr;
@@ -370,7 +370,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
         snprintf(connection->error_msg, sizeof(connection->error_msg), "connect() failed: %d", err);
         network_disconnect(connection);
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 #else
     if (connect(connection->fd, (struct sockaddr *)&connection->addr, sizeof(connection->addr)) <
@@ -379,7 +379,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
                  strerror(errno));
         network_disconnect(connection);
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 #endif
 
@@ -392,7 +392,7 @@ agentrt_error_t network_connect(network_connection_t *connection)
                              connection->event_user_data);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -400,16 +400,16 @@ agentrt_error_t network_connect(network_connection_t *connection)
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_disconnect(network_connection_t *connection)
+airy_err_t network_disconnect(network_connection_t *connection)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (connection->status != NETWORK_STATUS_CONNECTED &&
         connection->status != NETWORK_STATUS_CONNECTING &&
         connection->status != NETWORK_STATUS_ERROR) {
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     connection->status = NETWORK_STATUS_DISCONNECTING;
@@ -434,7 +434,7 @@ agentrt_error_t network_disconnect(network_connection_t *connection)
 
     connection->status = NETWORK_STATUS_DISCONNECTED;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -445,16 +445,16 @@ agentrt_error_t network_disconnect(network_connection_t *connection)
  * @param sent [out] 实际发送的字节数
  * @return 错误码
  */
-agentrt_error_t network_send(network_connection_t *connection, const void *data, size_t length,
+airy_err_t network_send(network_connection_t *connection, const void *data, size_t length,
                              size_t *sent)
 {
     if (!connection || !data || length == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (connection->status != NETWORK_STATUS_CONNECTED) {
         snprintf(connection->error_msg, sizeof(connection->error_msg), "Not connected");
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
     }
 
 #ifdef _WIN32
@@ -463,7 +463,7 @@ agentrt_error_t network_send(network_connection_t *connection, const void *data,
         int err = WSAGetLastError();
         snprintf(connection->error_msg, sizeof(connection->error_msg), "send() failed: %d", err);
         connection->stats.error_count++;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 #else
     ssize_t result = write(connection->fd, data, length);
@@ -471,7 +471,7 @@ agentrt_error_t network_send(network_connection_t *connection, const void *data,
         snprintf(connection->error_msg, sizeof(connection->error_msg), "write() failed: %s",
                  strerror(errno));
         connection->stats.error_count++;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 #endif
 
@@ -488,7 +488,7 @@ agentrt_error_t network_send(network_connection_t *connection, const void *data,
                              connection->event_user_data);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -499,15 +499,15 @@ agentrt_error_t network_send(network_connection_t *connection, const void *data,
  * @param received [out] 实际接收的字节数
  * @return 错误码
  */
-agentrt_error_t network_receive(network_connection_t *connection, void *buffer, size_t length,
+airy_err_t network_receive(network_connection_t *connection, void *buffer, size_t length,
                                 size_t *received)
 {
     if (!connection || !buffer || length == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (connection->status != NETWORK_STATUS_CONNECTED) {
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
     }
 
 #ifdef _WIN32
@@ -516,12 +516,12 @@ agentrt_error_t network_receive(network_connection_t *connection, void *buffer, 
         int err = WSAGetLastError();
         snprintf(connection->error_msg, sizeof(connection->error_msg), "recv() failed: %d", err);
         connection->stats.error_count++;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
     if (result == 0) {
         snprintf(connection->error_msg, sizeof(connection->error_msg), "Connection closed");
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_ECONNRESET;
+        return AIRY_ECONNRESET;
     }
 #else
     ssize_t result = read(connection->fd, buffer, length);
@@ -529,12 +529,12 @@ agentrt_error_t network_receive(network_connection_t *connection, void *buffer, 
         snprintf(connection->error_msg, sizeof(connection->error_msg), "read() failed: %s",
                  strerror(errno));
         connection->stats.error_count++;
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
     if (result == 0) {
         snprintf(connection->error_msg, sizeof(connection->error_msg), "Connection closed");
         connection->status = NETWORK_STATUS_ERROR;
-        return AGENTRT_ECONNRESET;
+        return AIRY_ECONNRESET;
     }
 #endif
 
@@ -551,7 +551,7 @@ agentrt_error_t network_receive(network_connection_t *connection, void *buffer, 
                              connection->event_user_data);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -561,10 +561,10 @@ agentrt_error_t network_receive(network_connection_t *connection, void *buffer, 
  * @param length 数据长度
  * @return 错误码
  */
-agentrt_error_t network_send_all(network_connection_t *connection, const void *data, size_t length)
+airy_err_t network_send_all(network_connection_t *connection, const void *data, size_t length)
 {
     if (!connection || !data || length == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     const uint8_t *ptr = (const uint8_t *)data;
@@ -575,8 +575,8 @@ agentrt_error_t network_send_all(network_connection_t *connection, const void *d
 
     while (remaining > 0) {
         size_t sent = 0;
-        agentrt_error_t err = network_send(connection, ptr, remaining, &sent);
-        if (err != AGENTRT_SUCCESS) {
+        airy_err_t err = network_send(connection, ptr, remaining, &sent);
+        if (err != AIRY_SUCCESS) {
             retries++;
             if (retries >= max_retries) {
                 connection->stats.retry_count++;
@@ -590,7 +590,7 @@ agentrt_error_t network_send_all(network_connection_t *connection, const void *d
         retries = 0;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -600,10 +600,10 @@ agentrt_error_t network_send_all(network_connection_t *connection, const void *d
  * @param length 期望接收的长度
  * @return 错误码
  */
-agentrt_error_t network_receive_exact(network_connection_t *connection, void *buffer, size_t length)
+airy_err_t network_receive_exact(network_connection_t *connection, void *buffer, size_t length)
 {
     if (!connection || !buffer || length == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     uint8_t *ptr = (uint8_t *)buffer;
@@ -614,8 +614,8 @@ agentrt_error_t network_receive_exact(network_connection_t *connection, void *bu
 
     while (remaining > 0) {
         size_t received = 0;
-        agentrt_error_t err = network_receive(connection, ptr, remaining, &received);
-        if (err != AGENTRT_SUCCESS) {
+        airy_err_t err = network_receive(connection, ptr, remaining, &received);
+        if (err != AIRY_SUCCESS) {
             retries++;
             if (retries >= max_retries) {
                 connection->stats.retry_count++;
@@ -634,10 +634,10 @@ agentrt_error_t network_receive_exact(network_connection_t *connection, void *bu
     }
 
     if (remaining > 0) {
-        return AGENTRT_ETIMEDOUT;
+        return AIRY_ETIMEDOUT;
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -659,10 +659,10 @@ network_status_t network_get_status(const network_connection_t *connection)
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-agentrt_error_t network_set_timeout(network_connection_t *connection, int timeout_ms)
+airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     connection->config.timeout_ms = timeout_ms;
@@ -677,7 +677,7 @@ agentrt_error_t network_set_timeout(network_connection_t *connection, int timeou
         set_socket_timeout(handle, timeout_ms, 1); /* 接收超时 */
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -687,11 +687,11 @@ agentrt_error_t network_set_timeout(network_connection_t *connection, int timeou
  * @param write_timeout_ms 写入超时
  * @return 错误码
  */
-agentrt_error_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
+airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
                                        int write_timeout_ms)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     connection->config.read_timeout_ms = read_timeout_ms;
@@ -707,7 +707,7 @@ agentrt_error_t network_set_rw_timeout(network_connection_t *connection, int rea
         set_socket_timeout(handle, write_timeout_ms, 0);
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -716,14 +716,14 @@ agentrt_error_t network_set_rw_timeout(network_connection_t *connection, int rea
  * @param stats [out] 统计信息
  * @return 错误码
  */
-agentrt_error_t network_get_stats(const network_connection_t *connection, network_stats_t *stats)
+airy_err_t network_get_stats(const network_connection_t *connection, network_stats_t *stats)
 {
     if (!connection || !stats) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     *stats = connection->stats;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -731,14 +731,14 @@ agentrt_error_t network_get_stats(const network_connection_t *connection, networ
  * @param connection 连接句柄
  * @return 错误码
  */
-agentrt_error_t network_reset_stats(network_connection_t *connection)
+airy_err_t network_reset_stats(network_connection_t *connection)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    AGENTRT_MEMSET(&connection->stats, 0, sizeof(network_stats_t));
-    return AGENTRT_SUCCESS;
+    AIRY_MEMSET(&connection->stats, 0, sizeof(network_stats_t));
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -748,17 +748,17 @@ agentrt_error_t network_reset_stats(network_connection_t *connection)
  * @param user_data 用户数据
  * @return 错误码
  */
-agentrt_error_t network_set_event_callback(network_connection_t *connection,
+airy_err_t network_set_event_callback(network_connection_t *connection,
                                            network_event_callback_t callback, void *user_data)
 {
     if (!connection) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     connection->event_cb = callback;
     connection->event_user_data = user_data;
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -785,19 +785,19 @@ const char *network_get_error_message(const network_connection_t *connection)
  * @param response [out] HTTP 响应
  * @return 错误码
  */
-agentrt_error_t network_http_request(network_connection_t *connection,
+airy_err_t network_http_request(network_connection_t *connection,
                                      const network_http_request_t *request,
                                      network_http_response_t *response)
 {
     if (!connection || !request || !response) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (connection->status != NETWORK_STATUS_CONNECTED) {
-        return AGENTRT_ENOTCONN;
+        return AIRY_ENOTCONN;
     }
 
-    AGENTRT_MEMSET(response, 0, sizeof(network_http_response_t));
+    AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
 
     /* 构建 HTTP 请求行 */
     char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
@@ -840,19 +840,19 @@ agentrt_error_t network_http_request(network_connection_t *connection,
     offset += snprintf(request_buf + offset, sizeof(request_buf) - offset, "\r\n");
 
     /* 发送请求头 */
-    agentrt_error_t err = network_send_all(connection, request_buf, (size_t)offset);
-    if (err != AGENTRT_SUCCESS) {
+    airy_err_t err = network_send_all(connection, request_buf, (size_t)offset);
+    if (err != AIRY_SUCCESS) {
         response->error = err;
-        response->error_message = AGENTRT_STRDUP("Failed to send request headers");
+        response->error_message = AIRY_STRDUP("Failed to send request headers");
         return err;
     }
 
     /* 发送请求体 */
     if (request->body && request->body_len > 0) {
         err = network_send_all(connection, request->body, request->body_len);
-        if (err != AGENTRT_SUCCESS) {
+        if (err != AIRY_SUCCESS) {
             response->error = err;
-            response->error_message = AGENTRT_STRDUP("Failed to send request body");
+            response->error_message = AIRY_STRDUP("Failed to send request body");
             return err;
         }
     }
@@ -867,12 +867,12 @@ agentrt_error_t network_http_request(network_connection_t *connection,
         received = 0;
         err = network_receive(connection, recv_buffer + total_received,
                               sizeof(recv_buffer) - total_received - 1, &received);
-        if (err == AGENTRT_SUCCESS && received > 0) {
+        if (err == AIRY_SUCCESS && received > 0) {
             total_received += received;
             retry_count = 0;
-        } else if (err != AGENTRT_SUCCESS) {
+        } else if (err != AIRY_SUCCESS) {
             retry_count++;
-            if (retry_count > 10 || err == AGENTRT_ECONNRESET) {
+            if (retry_count > 10 || err == AIRY_ECONNRESET) {
                 break;
             }
         }
@@ -897,9 +897,9 @@ agentrt_error_t network_http_request(network_connection_t *connection,
         size_t header_len = body_start - recv_buffer + 4;
 
         /* 提取响应头 */
-        response->headers = (char **)AGENTRT_CALLOC(1, sizeof(char *));
+        response->headers = (char **)AIRY_CALLOC(1, sizeof(char *));
         if (response->headers) {
-            response->headers[0] = (char *)AGENTRT_MALLOC(header_len + 1);
+            response->headers[0] = (char *)AIRY_MALLOC(header_len + 1);
             if (response->headers[0]) {
                 __builtin_memcpy(response->headers[0], recv_buffer, header_len);
                 response->headers[0][header_len] = '\0';
@@ -910,7 +910,7 @@ agentrt_error_t network_http_request(network_connection_t *connection,
         /* 提取响应体 */
         body_start += 4;
         size_t body_len = total_received - (body_start - recv_buffer);
-        response->body = AGENTRT_MALLOC(body_len + 1);
+        response->body = AIRY_MALLOC(body_len + 1);
         if (response->body) {
             __builtin_memcpy(response->body, body_start, body_len);
             ((char *)response->body)[body_len] = '\0';
@@ -918,7 +918,7 @@ agentrt_error_t network_http_request(network_connection_t *connection,
         }
     } else {
         /* 没有找到头部/体分隔符，整个作为响应体 */
-        response->body = AGENTRT_MALLOC(total_received + 1);
+        response->body = AIRY_MALLOC(total_received + 1);
         if (response->body) {
             __builtin_memcpy(response->body, recv_buffer, total_received);
             ((char *)response->body)[total_received] = '\0';
@@ -926,8 +926,8 @@ agentrt_error_t network_http_request(network_connection_t *connection,
         }
     }
 
-    response->error = AGENTRT_SUCCESS;
-    return AGENTRT_SUCCESS;
+    response->error = AIRY_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -937,7 +937,7 @@ agentrt_error_t network_http_request(network_connection_t *connection,
  * @param response [out] HTTP 响应
  * @return 错误码
  */
-agentrt_error_t network_http_get(network_connection_t *connection, const char *path,
+airy_err_t network_http_get(network_connection_t *connection, const char *path,
                                  network_http_response_t *response)
 {
     network_http_request_t request = {0};
@@ -957,7 +957,7 @@ agentrt_error_t network_http_get(network_connection_t *connection, const char *p
  * @param response [out] HTTP 响应
  * @return 错误码
  */
-agentrt_error_t network_http_post(network_connection_t *connection, const char *path,
+airy_err_t network_http_post(network_connection_t *connection, const char *path,
                                   const char *content_type, const void *body, size_t body_len,
                                   network_http_response_t *response)
 {
@@ -982,31 +982,31 @@ void network_http_response_free(network_http_response_t *response)
     }
 
     if (response->body) {
-        AGENTRT_FREE(response->body);
+        AIRY_FREE(response->body);
         response->body = NULL;
     }
 
     if (response->headers) {
         for (size_t i = 0; i < response->header_count; i++) {
             if (response->headers[i]) {
-                AGENTRT_FREE(response->headers[i]);
+                AIRY_FREE(response->headers[i]);
             }
         }
-        AGENTRT_FREE(response->headers);
+        AIRY_FREE(response->headers);
         response->headers = NULL;
     }
 
     if (response->error_message) {
-        AGENTRT_FREE(response->error_message);
+        AIRY_FREE(response->error_message);
         response->error_message = NULL;
     }
 
     if (response->status_text) {
-        AGENTRT_FREE(response->status_text);
+        AIRY_FREE(response->status_text);
         response->status_text = NULL;
     }
 
-    AGENTRT_MEMSET(response, 0, sizeof(network_http_response_t));
+    AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
 }
 
 /* ============================================================================
@@ -1022,23 +1022,23 @@ void network_http_response_free(network_http_response_t *response)
 network_pool_t *network_pool_create(const network_config_t *config, size_t pool_size)
 {
     if (!config || pool_size == 0 || pool_size > NETWORK_MAX_POOL_SIZE) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_OVERFLOW, "limit exceeded");
+        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    network_pool_t *pool = (network_pool_t *)AGENTRT_CALLOC(1, sizeof(network_pool_t));
+    network_pool_t *pool = (network_pool_t *)AIRY_CALLOC(1, sizeof(network_pool_t));
     if (!pool) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     pool->base_config = *config;
     pool->max_size = pool_size;
     pool->current_size = 0;
     pool->connections =
-        (network_connection_t **)AGENTRT_CALLOC(pool_size, sizeof(network_connection_t *));
+        (network_connection_t **)AIRY_CALLOC(pool_size, sizeof(network_connection_t *));
 
     if (!pool->connections) {
-        AGENTRT_FREE(pool);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(pool);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     return pool;
@@ -1060,8 +1060,8 @@ void network_pool_destroy(network_pool_t *pool)
         }
     }
 
-    AGENTRT_FREE(pool->connections);
-    AGENTRT_FREE(pool);
+    AIRY_FREE(pool->connections);
+    AIRY_FREE(pool);
 }
 
 /**
@@ -1073,7 +1073,7 @@ void network_pool_destroy(network_pool_t *pool)
 network_connection_t *network_pool_acquire(network_pool_t *pool, int timeout_ms)
 {
     if (!pool) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
     (void)timeout_ms;
@@ -1090,13 +1090,13 @@ network_connection_t *network_pool_acquire(network_pool_t *pool, int timeout_ms)
     if (pool->current_size < pool->max_size) {
         network_connection_t *conn = network_connection_create(&pool->base_config);
         if (!conn) {
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
-        agentrt_error_t err = network_connect(conn);
-        if (err != AGENTRT_SUCCESS) {
+        airy_err_t err = network_connect(conn);
+        if (err != AIRY_SUCCESS) {
             network_connection_destroy(conn);
-            AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
         }
 
         pool->connections[pool->current_size] = conn;
@@ -1215,23 +1215,23 @@ size_t network_pool_health_check(network_pool_t *pool)
  * @param result [out] 解析结果
  * @return 错误码
  */
-agentrt_error_t network_dns_resolve(const char *hostname, network_af_t af,
+airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
                                     network_dns_result_t *result)
 {
     if (!hostname || !result) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     network_init_winsock();
 
     struct addrinfo hints, *res;
-    AGENTRT_MEMSET(&hints, 0, sizeof(hints));
+    AIRY_MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = af_to_native(af);
     hints.ai_socktype = SOCK_STREAM;
 
     int gai_ret = getaddrinfo(hostname, NULL, &hints, &res);
     if (gai_ret != 0) {
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
 
     /* 统计结果数量 */
@@ -1244,19 +1244,19 @@ agentrt_error_t network_dns_resolve(const char *hostname, network_af_t af,
 
     if (count == 0) {
         freeaddrinfo(res);
-        return AGENTRT_ENOENT;
+        return AIRY_ENOENT;
     }
 
     /* 分配结果内存 */
-    result->addresses = (char **)AGENTRT_CALLOC((size_t)count, sizeof(char *));
-    result->ports = (int *)AGENTRT_CALLOC((size_t)count, sizeof(int));
+    result->addresses = (char **)AIRY_CALLOC((size_t)count, sizeof(char *));
+    result->ports = (int *)AIRY_CALLOC((size_t)count, sizeof(int));
     result->count = (size_t)count;
 
     if (!result->addresses || !result->ports) {
-        AGENTRT_FREE(result->addresses);
-        AGENTRT_FREE(result->ports);
+        AIRY_FREE(result->addresses);
+        AIRY_FREE(result->ports);
         freeaddrinfo(res);
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
     }
 
     /* 提取 IP 地址 */
@@ -1273,17 +1273,17 @@ agentrt_error_t network_dns_resolve(const char *hostname, network_af_t af,
             inet_ntop(AF_INET6, &addr_in6->sin6_addr, ip_str, sizeof(ip_str));
             result->ports[i] = ntohs(addr_in6->sin6_port);
         } else {
-            AGENTRT_STRNCPY_TERM(ip_str, "unknown", INET6_ADDRSTRLEN);
+            AIRY_STRNCPY_TERM(ip_str, "unknown", INET6_ADDRSTRLEN);
             ip_str[INET6_ADDRSTRLEN - 1] = '\0';
             result->ports[i] = 0;
         }
 
-        result->addresses[i] = AGENTRT_STRDUP(ip_str);
+        result->addresses[i] = AIRY_STRDUP(ip_str);
         p = p->ai_next;
     }
 
     freeaddrinfo(res);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -1299,15 +1299,15 @@ void network_dns_result_free(network_dns_result_t *result)
     if (result->addresses) {
         for (size_t i = 0; i < result->count; i++) {
             if (result->addresses[i]) {
-                AGENTRT_FREE(result->addresses[i]);
+                AIRY_FREE(result->addresses[i]);
             }
         }
-        AGENTRT_FREE(result->addresses);
+        AIRY_FREE(result->addresses);
         result->addresses = NULL;
     }
 
     if (result->ports) {
-        AGENTRT_FREE(result->ports);
+        AIRY_FREE(result->ports);
         result->ports = NULL;
     }
 
@@ -1342,8 +1342,8 @@ bool network_is_reachable(const char *host, int timeout_ms)
         return false;
     }
 
-    agentrt_error_t err = network_connect(conn);
-    bool reachable = (err == AGENTRT_SUCCESS);
+    airy_err_t err = network_connect(conn);
+    bool reachable = (err == AIRY_SUCCESS);
 
     if (reachable) {
         network_disconnect(conn);
@@ -1361,10 +1361,10 @@ bool network_is_reachable(const char *host, int timeout_ms)
  * @param buffer_len 缓冲区长度
  * @return 错误码
  */
-agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len)
+airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len)
 {
     if (!buffer || buffer_len == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     network_init_winsock();
@@ -1374,13 +1374,13 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
     gethostname(hostname, sizeof(hostname));
 
     struct addrinfo hints, *res;
-    AGENTRT_MEMSET(&hints, 0, sizeof(hints));
+    AIRY_MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = af_to_native(af);
 
     if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
-        AGENTRT_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
+        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
         buffer[buffer_len - 1] = '\0';
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     if (res->ai_family == AF_INET) {
@@ -1390,7 +1390,7 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
         struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
         inet_ntop(AF_INET6, &addr_in6->sin6_addr, buffer, (socklen_t)buffer_len);
     } else {
-        AGENTRT_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
+        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
         buffer[buffer_len - 1] = '\0';
     }
 
@@ -1400,13 +1400,13 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
     const char *test_host = "8.8.8.8";
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-        AGENTRT_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
+        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
         buffer[buffer_len - 1] = '\0';
-        return AGENTRT_SUCCESS;
+        return AIRY_SUCCESS;
     }
 
     struct sockaddr_in server;
-    AGENTRT_MEMSET(&server, 0, sizeof(server));
+    AIRY_MEMSET(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_port = htons(80);
     inet_pton(AF_INET, test_host, &server.sin_addr);
@@ -1421,7 +1421,7 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
     close(sockfd);
 #endif
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
@@ -1432,11 +1432,11 @@ agentrt_error_t network_get_local_ip(network_af_t af, char *buffer, size_t buffe
  * @param buffer_len 缓冲区长度
  * @return 错误码
  */
-agentrt_error_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
+airy_err_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
                                        size_t buffer_len)
 {
     if (!addr || !buffer || buffer_len == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (af == NETWORK_AF_INET) {
@@ -1446,23 +1446,23 @@ agentrt_error_t network_addr_to_string(network_af_t af, const void *addr, char *
         const struct sockaddr_in6 *addr_in6 = (const struct sockaddr_in6 *)addr;
         inet_ntop(AF_INET6, &addr_in6->sin6_addr, buffer, (socklen_t)buffer_len);
     } else {
-        AGENTRT_STRNCPY_TERM(buffer, "unknown", buffer_len);
+        AIRY_STRNCPY_TERM(buffer, "unknown", buffer_len);
         buffer[buffer_len - 1] = '\0';
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
  * @brief 初始化网络子系统
  * @return 错误码
  */
-agentrt_error_t network_init(void)
+airy_err_t network_init(void)
 {
     if (network_init_winsock() != 0) {
-        return AGENTRT_EIO;
+        return AIRY_EIO;
     }
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**

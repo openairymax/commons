@@ -6,8 +6,8 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "agentrt_memory.h"
-#include "agentrt_types.h"
+#include "airy_memory.h"
+#include "airy_types.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -46,10 +46,10 @@ static int failed_tests = 0;
  */
 static int test_error_codes(void)
 {
-    TEST_ASSERT(AGENTRT_SUCCESS == 0, "AGENTRT_SUCCESS should be 0");
-    TEST_ASSERT(AGENTRT_EUNKNOWN != 0, "AGENTRT_EUNKNOWN should be non-zero");
-    TEST_ASSERT(AGENTRT_EINVAL != 0, "AGENTRT_EINVAL should be non-zero");
-    TEST_ASSERT(AGENTRT_ENOMEM != 0, "AGENTRT_ENOMEM should be non-zero");
+    TEST_ASSERT(AIRY_SUCCESS == 0, "AIRY_SUCCESS should be 0");
+    TEST_ASSERT(AIRY_EUNKNOWN != 0, "AIRY_EUNKNOWN should be non-zero");
+    TEST_ASSERT(AIRY_EINVAL != 0, "AIRY_EINVAL should be non-zero");
+    TEST_ASSERT(AIRY_ENOMEM != 0, "AIRY_ENOMEM should be non-zero");
 
     printf("  Error codes: OK\n");
     return 0;
@@ -62,19 +62,19 @@ static int test_error_strings(void)
 {
     const char *str;
 
-    str = agentrt_strerror(AGENTRT_SUCCESS);
+    str = airy_strerror(AIRY_SUCCESS);
     TEST_ASSERT(str != NULL, "Error string for SUCCESS should not be NULL");
 
-    str = agentrt_strerror(AGENTRT_EUNKNOWN);
+    str = airy_strerror(AIRY_EUNKNOWN);
     TEST_ASSERT(str != NULL, "Error string for EUNKNOWN should not be NULL");
 
-    str = agentrt_strerror(AGENTRT_EINVAL);
+    str = airy_strerror(AIRY_EINVAL);
     TEST_ASSERT(str != NULL, "Error string for EINVAL should not be NULL");
 
-    str = agentrt_strerror(AGENTRT_ENOMEM);
+    str = airy_strerror(AIRY_ENOMEM);
     TEST_ASSERT(str != NULL, "Error string for ENOMEM should not be NULL");
 
-    str = agentrt_strerror(-999);
+    str = airy_strerror(-999);
     TEST_ASSERT(str != NULL, "Error string for unknown code should not be NULL");
 
     printf("  Error strings: OK\n");

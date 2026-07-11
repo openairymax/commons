@@ -43,7 +43,7 @@
  *
  * ## 子进程执行
  *
- * 子进程执行统一使用顶层 platform.h 的 agentrt_process_run_capture()
+ * 子进程执行统一使用顶层 platform.h 的 airy_process_run_capture()
  * （fork+execvp，不经 shell），消除命令注入风险。
  * platform_exec()/platform_free_exec_result() 已移除（BAN-211/235 安全合规）。
  *
@@ -51,8 +51,8 @@
  * @see platform.h (顶层系统抽象层)
  */
 
-#ifndef AGENTRT_PLATFORM_ADAPTER_H
-#define AGENTRT_PLATFORM_ADAPTER_H
+#ifndef AIRY_RT_PLATFORM_ADAPTER_H
+#define AIRY_RT_PLATFORM_ADAPTER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -152,7 +152,7 @@ bool platform_move_file(const char *src, const char *dest);
  * @brief 获取环境变量
  * @param name 环境变量名称
  * @param default_value 默认值
- * @return 环境变量值（需要调用AGENTRT_FREE释放）
+ * @return 环境变量值（需要调用AIRY_FREE释放）
  */
 char *platform_get_env(const char *name, const char *default_value);
 
@@ -166,7 +166,7 @@ bool platform_set_env(const char *name, const char *value);
 
 /**
  * @brief 获取当前工作目录
- * @return 当前工作目录（需要调用AGENTRT_FREE释放）
+ * @return 当前工作目录（需要调用AIRY_FREE释放）
  */
 char *platform_get_cwd(void);
 
@@ -179,14 +179,14 @@ bool platform_chdir(const char *path);
 
 /**
  * @brief 获取临时目录
- * @return 临时目录路径（需要调用AGENTRT_FREE释放）
+ * @return 临时目录路径（需要调用AIRY_FREE释放）
  */
 char *platform_get_temp_dir(void);
 
 /**
  * @brief 生成临时文件路径
  * @param prefix 前缀
- * @return 临时文件路径（需要调用AGENTRT_FREE释放）
+ * @return 临时文件路径（需要调用AIRY_FREE释放）
  */
 char *platform_get_temp_file(const char *prefix);
 
@@ -194,28 +194,28 @@ char *platform_get_temp_file(const char *prefix);
  * @brief 路径连接
  * @param path1 路径1
  * @param path2 路径2
- * @return 连接后的路径（需要调用AGENTRT_FREE释放）
+ * @return 连接后的路径（需要调用AIRY_FREE释放）
  */
 char *platform_path_join(const char *path1, const char *path2);
 
 /**
  * @brief 路径规范化
  * @param path 路径
- * @return 规范化后的路径（需要调用AGENTRT_FREE释放）
+ * @return 规范化后的路径（需要调用AIRY_FREE释放）
  */
 char *platform_path_normalize(const char *path);
 
 /**
  * @brief 获取路径中的文件名部分
  * @param path 路径
- * @return 文件名（需要调用AGENTRT_FREE释放）
+ * @return 文件名（需要调用AIRY_FREE释放）
  */
 char *platform_path_basename(const char *path);
 
 /**
  * @brief 获取路径中的目录部分
  * @param path 路径
- * @return 目录路径（需要调用AGENTRT_FREE释放）
+ * @return 目录路径（需要调用AIRY_FREE释放）
  */
 char *platform_path_dirname(const char *path);
 
@@ -269,4 +269,4 @@ bool platform_adapter_init(void);
  */
 void platform_adapter_cleanup(void);
 
-#endif /* AGENTRT_PLATFORM_ADAPTER_H */
+#endif /* AIRY_RT_PLATFORM_ADAPTER_H */

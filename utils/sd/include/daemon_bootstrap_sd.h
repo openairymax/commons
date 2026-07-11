@@ -31,8 +31,8 @@
  * @see P1.7 C-L08 连接线
  */
 
-#ifndef AGENTRT_DAEMON_BOOTSTRAP_SD_H
-#define AGENTRT_DAEMON_BOOTSTRAP_SD_H
+#ifndef AIRY_RT_DAEMON_BOOTSTRAP_SD_H
+#define AIRY_RT_DAEMON_BOOTSTRAP_SD_H
 
 #include "service_discovery_helper.h"
 
@@ -107,4 +107,4 @@ bool daemon_bootstrap_sd_is_running(daemon_bootstrap_sd_t *bsd);
 }
 #endif
 
-#endif /* AGENTRT_DAEMON_BOOTSTRAP_SD_H */
+#endif /* AIRY_RT_DAEMON_BOOTSTRAP_SD_H */

@@ -101,10 +101,10 @@ resource/
 |------|------|
 | `agentrt_resource_manager_create(quota, resource_id, out_manager)` | 创建资源管理器 |
 | `agentrt_resource_manager_destroy(manager)` | 销毁资源管理器 |
-| `agentrt_resource_check_memory(manager, requested_bytes)` | 检查内存配额是否充足（不足返回 `AGENTRT_ENOMEM`） |
+| `agentrt_resource_check_memory(manager, requested_bytes)` | 检查内存配额是否充足（不足返回 `AIRY_ENOMEM`） |
 | `agentrt_resource_record_allocation(manager, bytes)` | 记录内存分配（更新峰值） |
 | `agentrt_resource_record_free(manager, bytes)` | 记录内存释放 |
-| `agentrt_resource_record_io(manager)` | 记录 I/O 操作（超限返回 `AGENTRT_EBUSY`） |
+| `agentrt_resource_record_io(manager)` | 记录 I/O 操作（超限返回 `AIRY_EBUSY`） |
 | `agentrt_resource_is_exceeded(manager)` | 检查是否有资源超限 |
 | `agentrt_resource_get_usage(manager, out_usage)` | 获取资源使用统计 |
 | `agentrt_resource_get_exceeded_info(manager)` | 获取超限资源类型信息 |

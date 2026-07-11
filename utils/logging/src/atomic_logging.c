@@ -26,7 +26,7 @@
 
 
 
-static AGENTRT_THREAD_LOCAL ThreadLocalBuffer *g_tls_log_buffer = NULL;
+static AIRY_THREAD_LOCAL ThreadLocalBuffer *g_tls_log_buffer = NULL;
 
 /* ==================== 内部常量定义 ==================== */
 
@@ -42,7 +42,7 @@ typedef enum { NODE_STATE_FREE = 0, NODE_STATE_WRITTEN = 1, NODE_STATE_PROCESSED
 
 static void atomic_sleep_ms(uint32_t ms)
 {
-#if AGENTRT_PLATFORM_WINDOWS
+#if AIRY_PLATFORM_WINDOWS
     Sleep(ms);
 #else
     usleep((useconds_t)ms * 1000);
@@ -56,8 +56,8 @@ typedef struct {
     size_t capacity;
     size_t producer_pos;
     size_t consumer_pos;
-    agentrt_mutex_t mutex;
-    agentrt_cond_t not_full;
+    airy_mtx_t mutex;
+    airy_cond_t not_full;
     uint64_t total_submitted;
     uint64_t total_consumed;
     uint64_t total_dropped;
@@ -67,7 +67,7 @@ typedef struct {
     atomic_logging_config_t manager;
     bool initialized;
     ring_buffer_t ring_buffer;
-    agentrt_thread_t flush_thread;
+    airy_thread_t flush_thread;
     bool flush_thread_running;
 } atomic_logging_state_t;
 
@@ -79,17 +79,17 @@ static atomic_logging_state_t g_atomic_state = {.initialized = false,
 static ThreadLocalBuffer *get_thread_local_buffer(void)
 {
     if (!g_tls_log_buffer) {
-        g_tls_log_buffer = (ThreadLocalBuffer *)AGENTRT_CALLOC(1, sizeof(ThreadLocalBuffer));
+        g_tls_log_buffer = (ThreadLocalBuffer *)AIRY_CALLOC(1, sizeof(ThreadLocalBuffer));
         if (g_tls_log_buffer) {
             g_tls_log_buffer->capacity = g_atomic_state.manager.batch_commit_threshold;
             SAFE_MALLOC_ARRAY(g_tls_log_buffer->buffer, g_tls_log_buffer->capacity, sizeof(log_record_t));
             g_tls_log_buffer->position = 0;
-            g_tls_log_buffer->thread_id = (uint64_t)agentrt_thread_id();
+            g_tls_log_buffer->thread_id = (uint64_t)airy_thread_id();
 
             if (!g_tls_log_buffer->buffer) {
-                AGENTRT_FREE(g_tls_log_buffer);
+                AIRY_FREE(g_tls_log_buffer);
                 g_tls_log_buffer = NULL;
-                AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+                AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
             }
         }
     }
@@ -100,25 +100,25 @@ static ThreadLocalBuffer *get_thread_local_buffer(void)
 static void free_thread_local_buffer(ThreadLocalBuffer *buffer)
 {
     if (buffer) {
-        AGENTRT_FREE(buffer->buffer);
-        AGENTRT_FREE(buffer);
+        AIRY_FREE(buffer->buffer);
+        AIRY_FREE(buffer);
     }
 }
 
 static int submit_to_ring_buffer(const log_record_t *record)
 {
     if (!record || !g_atomic_state.initialized) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+    airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
 
     size_t next_producer_pos =
         (g_atomic_state.ring_buffer.producer_pos + 1) % g_atomic_state.ring_buffer.capacity;
     if (next_producer_pos == g_atomic_state.ring_buffer.consumer_pos) {
         g_atomic_state.ring_buffer.total_dropped++;
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
-        return AGENTRT_ERR_OVERFLOW;
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
+        return AIRY_ERR_OVERFLOW;
     }
 
     AtomicLogRecordNode *node =
@@ -131,8 +131,8 @@ static int submit_to_ring_buffer(const log_record_t *record)
     g_atomic_state.ring_buffer.producer_pos = next_producer_pos;
     g_atomic_state.ring_buffer.total_submitted++;
 
-    agentrt_cond_signal(&g_atomic_state.ring_buffer.not_full);
-    agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+    airy_cond_signal(&g_atomic_state.ring_buffer.not_full);
+    airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
     return 0;
 }
@@ -143,10 +143,10 @@ static bool consume_from_ring_buffer(log_record_t *record)
         return false;
     }
 
-    agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+    airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
 
     if (g_atomic_state.ring_buffer.consumer_pos == g_atomic_state.ring_buffer.producer_pos) {
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
         return false;
     }
 
@@ -154,7 +154,7 @@ static bool consume_from_ring_buffer(log_record_t *record)
         &g_atomic_state.ring_buffer.nodes[g_atomic_state.ring_buffer.consumer_pos];
 
     if (node->state != NODE_STATE_WRITTEN) {
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
         return false;
     }
 
@@ -166,8 +166,8 @@ static bool consume_from_ring_buffer(log_record_t *record)
         (g_atomic_state.ring_buffer.consumer_pos + 1) % g_atomic_state.ring_buffer.capacity;
     g_atomic_state.ring_buffer.total_consumed++;
 
-    agentrt_cond_signal(&g_atomic_state.ring_buffer.not_full);
-    agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+    airy_cond_signal(&g_atomic_state.ring_buffer.not_full);
+    airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
     return true;
 }
@@ -179,7 +179,7 @@ static void *flush_thread_func(void *arg __attribute__((unused)))
         log_record_t records[16];
         size_t count = 0;
 
-        agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
 
         while (count < sizeof(records) / sizeof(records[0])) {
             if (g_atomic_state.ring_buffer.consumer_pos ==
@@ -203,8 +203,8 @@ static void *flush_thread_func(void *arg __attribute__((unused)))
             }
         }
 
-        agentrt_cond_signal(&g_atomic_state.ring_buffer.not_full);
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_cond_signal(&g_atomic_state.ring_buffer.not_full);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
         for (size_t i = 0; i < count; i++) {
             service_log_output_record(&records[i]);
@@ -221,7 +221,7 @@ static void *flush_thread_func(void *arg __attribute__((unused)))
 int atomic_logging_init(const atomic_logging_config_t *manager)
 {
     if (g_atomic_state.initialized) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (manager) {
@@ -239,11 +239,11 @@ int atomic_logging_init(const atomic_logging_config_t *manager)
     }
 
     g_atomic_state.ring_buffer.capacity = g_atomic_state.manager.ring_buffer_capacity;
-    g_atomic_state.ring_buffer.nodes = (AtomicLogRecordNode *)AGENTRT_CALLOC(
+    g_atomic_state.ring_buffer.nodes = (AtomicLogRecordNode *)AIRY_CALLOC(
         g_atomic_state.ring_buffer.capacity, sizeof(AtomicLogRecordNode));
 
     if (!g_atomic_state.ring_buffer.nodes) {
-        return AGENTRT_ERR_OVERFLOW;
+        return AIRY_ERR_OVERFLOW;
     }
 
     g_atomic_state.ring_buffer.producer_pos = 0;
@@ -252,23 +252,23 @@ int atomic_logging_init(const atomic_logging_config_t *manager)
     g_atomic_state.ring_buffer.total_consumed = 0;
     g_atomic_state.ring_buffer.total_dropped = 0;
 
-    if (agentrt_mutex_init(&g_atomic_state.ring_buffer.mutex) != 0) {
-        AGENTRT_FREE(g_atomic_state.ring_buffer.nodes);
-        return AGENTRT_ERR_NULL_POINTER;
+    if (airy_mtx_init(&g_atomic_state.ring_buffer.mutex) != 0) {
+        AIRY_FREE(g_atomic_state.ring_buffer.nodes);
+        return AIRY_ERR_NULL_POINTER;
     }
 
-    if (agentrt_cond_init(&g_atomic_state.ring_buffer.not_full) != 0) {
-        agentrt_mutex_destroy(&g_atomic_state.ring_buffer.mutex);
-        AGENTRT_FREE(g_atomic_state.ring_buffer.nodes);
-        return AGENTRT_ERR_OUT_OF_MEMORY;
+    if (airy_cond_init(&g_atomic_state.ring_buffer.not_full) != 0) {
+        airy_mtx_destroy(&g_atomic_state.ring_buffer.mutex);
+        AIRY_FREE(g_atomic_state.ring_buffer.nodes);
+        return AIRY_ERR_OUT_OF_MEMORY;
     }
 
     g_atomic_state.flush_thread_running = true;
-    if (agentrt_thread_create(&g_atomic_state.flush_thread, flush_thread_func, NULL) != 0) {
-        agentrt_cond_destroy(&g_atomic_state.ring_buffer.not_full);
-        agentrt_mutex_destroy(&g_atomic_state.ring_buffer.mutex);
-        AGENTRT_FREE(g_atomic_state.ring_buffer.nodes);
-        return AGENTRT_ERR_OVERFLOW;
+    if (airy_thread_create(&g_atomic_state.flush_thread, flush_thread_func, NULL) != 0) {
+        airy_cond_destroy(&g_atomic_state.ring_buffer.not_full);
+        airy_mtx_destroy(&g_atomic_state.ring_buffer.mutex);
+        AIRY_FREE(g_atomic_state.ring_buffer.nodes);
+        return AIRY_ERR_OVERFLOW;
     }
 
     g_atomic_state.initialized = true;
@@ -279,28 +279,28 @@ int atomic_logging_init(const atomic_logging_config_t *manager)
 int atomic_logging_submit(const log_record_t *record, bool non_blocking)
 {
     if (!g_atomic_state.initialized || !record) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ThreadLocalBuffer *buffer = get_thread_local_buffer();
     if (!buffer) {
-        return AGENTRT_ERR_IO;
+        return AIRY_ERR_IO;
     }
 
     int result = submit_to_ring_buffer(record);
 
     if (result != 0 && !non_blocking) {
-        agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
         int max_retries = 100;
         while (submit_to_ring_buffer(record) != 0 && g_atomic_state.initialized &&
                max_retries-- > 0) {
-            agentrt_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
+            airy_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
                                    &g_atomic_state.ring_buffer.mutex, 10);
         }
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
         if (max_retries <= 0) {
-            return AGENTRT_ERR_NULL_POINTER;
+            return AIRY_ERR_NULL_POINTER;
         }
         return 0;
     }
@@ -316,7 +316,7 @@ int atomic_logging_submit_lockfree(const log_record_t *record, bool non_blocking
 int atomic_logging_flush(void)
 {
     if (!g_atomic_state.initialized) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     ThreadLocalBuffer *buffer = get_thread_local_buffer();
@@ -329,10 +329,10 @@ int atomic_logging_flush(void)
 
     int max_wait = 100;
     while (max_wait-- > 0) {
-        agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
         bool empty =
             (g_atomic_state.ring_buffer.consumer_pos == g_atomic_state.ring_buffer.producer_pos);
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
         if (empty) {
             break;
@@ -347,12 +347,12 @@ int atomic_logging_flush(void)
 int atomic_logging_get_stats(atomic_logging_stats_t *stats)
 {
     if (!g_atomic_state.initialized || !stats) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    AGENTRT_MEMSET(stats, 0, sizeof(atomic_logging_stats_t));
+    AIRY_MEMSET(stats, 0, sizeof(atomic_logging_stats_t));
 
-    agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+    airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
 
     if (g_atomic_state.ring_buffer.producer_pos >= g_atomic_state.ring_buffer.consumer_pos) {
         stats->current_queue_size =
@@ -366,7 +366,7 @@ int atomic_logging_get_stats(atomic_logging_stats_t *stats)
     stats->total_submitted = g_atomic_state.ring_buffer.total_submitted;
     stats->total_acquired = g_atomic_state.ring_buffer.total_consumed;
 
-    agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+    airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
     return 0;
 }
@@ -380,18 +380,18 @@ void atomic_logging_cleanup(void)
     atomic_logging_flush();
 
     g_atomic_state.flush_thread_running = false;
-    agentrt_thread_join(g_atomic_state.flush_thread, NULL);
+    airy_thread_join(g_atomic_state.flush_thread, NULL);
 
     if (g_tls_log_buffer) {
         free_thread_local_buffer(g_tls_log_buffer);
         g_tls_log_buffer = NULL;
     }
 
-    agentrt_cond_destroy(&g_atomic_state.ring_buffer.not_full);
-    agentrt_mutex_destroy(&g_atomic_state.ring_buffer.mutex);
-    AGENTRT_FREE(g_atomic_state.ring_buffer.nodes);
+    airy_cond_destroy(&g_atomic_state.ring_buffer.not_full);
+    airy_mtx_destroy(&g_atomic_state.ring_buffer.mutex);
+    AIRY_FREE(g_atomic_state.ring_buffer.nodes);
 
-    AGENTRT_MEMSET(&g_atomic_state, 0, sizeof(g_atomic_state));
+    AIRY_MEMSET(&g_atomic_state, 0, sizeof(g_atomic_state));
 }
 
 ThreadLocalBuffer *atomic_logging_get_thread_local_buffer(void)
@@ -417,17 +417,17 @@ int atomic_logging_flush_thread_local_buffer(ThreadLocalBuffer *buffer)
 int atomic_logging_submit_mutex(const log_record_t *record)
 {
     if (!record)
-        return AGENTRT_EINVAL;
-    agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+        return AIRY_EINVAL;
+    airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
     int result = submit_to_ring_buffer(record);
-    agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+    airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
     return result;
 }
 
 int atomic_logging_submit_batch(const log_record_t *records, size_t count)
 {
     if (!records || count == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     int submitted = 0;
     for (size_t i = 0; i < count; i++) {
         if (submit_to_ring_buffer(&records[i]) == 0) {
@@ -440,18 +440,18 @@ int atomic_logging_submit_batch(const log_record_t *records, size_t count)
 int atomic_logging_acquire(log_record_t *record, int timeout_ms)
 {
     if (!record)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     if (timeout_ms > 0) {
-        agentrt_mutex_lock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_lock(&g_atomic_state.ring_buffer.mutex);
         int waited = 0;
         while (g_atomic_state.ring_buffer.consumer_pos == g_atomic_state.ring_buffer.producer_pos &&
                waited < timeout_ms) {
-            agentrt_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
+            airy_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
                                    &g_atomic_state.ring_buffer.mutex, 10);
             waited += 10;
         }
-        agentrt_mutex_unlock(&g_atomic_state.ring_buffer.mutex);
+        airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
     }
 
     return consume_from_ring_buffer(record) ? 0 : -1;
@@ -460,7 +460,7 @@ int atomic_logging_acquire(log_record_t *record, int timeout_ms)
 int atomic_logging_acquire_batch(log_record_t *records, size_t max_count, int timeout_ms)
 {
     if (!records || max_count == 0)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t acquired = 0;
     for (size_t i = 0; i < max_count; i++) {

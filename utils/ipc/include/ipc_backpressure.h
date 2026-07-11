@@ -16,8 +16,8 @@
  *   - Queue < 60%: 恢复正常速率
  */
 
-#ifndef AGENTRT_IPC_BACKPRESSURE_H
-#define AGENTRT_IPC_BACKPRESSURE_H
+#ifndef AIRY_RT_IPC_BACKPRESSURE_H
+#define AIRY_RT_IPC_BACKPRESSURE_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -123,4 +123,4 @@ ipc_bp_level_t ipc_bp_get_level(ipc_bp_controller_t *ctrl);
 }
 #endif
 
-#endif /* AGENTRT_IPC_BACKPRESSURE_H */
+#endif /* AIRY_RT_IPC_BACKPRESSURE_H */

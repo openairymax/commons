@@ -18,14 +18,14 @@
  * @see agentrt/daemons/common/include/svc_common.h (daemons 重导出兼容头)
  */
 
-#ifndef AGENTRT_SVC_COMMON_H
-#define AGENTRT_SVC_COMMON_H
+#ifndef AIRY_RT_SVC_COMMON_H
+#define AIRY_RT_SVC_COMMON_H
 
 #include "error.h"
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h> /* time_t (agentrt_config_t.last_modified) */
+#include <time.h> /* time_t (airy_config_t.last_modified) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,17 +37,17 @@ extern "C" {
  * @brief 服务状态枚举
  */
 typedef enum {
-    AGENTRT_SVC_STATE_NONE = 0,     /**< 未初始化 */
-    AGENTRT_SVC_STATE_CREATED,      /**< 已创建 */
-    AGENTRT_SVC_STATE_INITIALIZING, /**< 初始化中 */
-    AGENTRT_SVC_STATE_READY,        /**< 就绪 */
-    AGENTRT_SVC_STATE_RUNNING,      /**< 运行中 */
-    AGENTRT_SVC_STATE_PAUSED,       /**< 已暂停 */
-    AGENTRT_SVC_STATE_STOPPING,     /**< 停止中 */
-    AGENTRT_SVC_STATE_STOPPED,      /**< 已停止 */
-    AGENTRT_SVC_STATE_ZOMBIE,       /**< 僵尸状态（stop超时/部分清理） */
-    AGENTRT_SVC_STATE_ERROR         /**< 错误状态 */
-} agentrt_svc_state_t;
+    AIRY_SVC_STATE_NONE = 0,     /**< 未初始化 */
+    AIRY_SVC_STATE_CREATED,      /**< 已创建 */
+    AIRY_SVC_STATE_INITIALIZING, /**< 初始化中 */
+    AIRY_SVC_STATE_READY,        /**< 就绪 */
+    AIRY_SVC_STATE_RUNNING,      /**< 运行中 */
+    AIRY_SVC_STATE_PAUSED,       /**< 已暂停 */
+    AIRY_SVC_STATE_STOPPING,     /**< 停止中 */
+    AIRY_SVC_STATE_STOPPED,      /**< 已停止 */
+    AIRY_SVC_STATE_ZOMBIE,       /**< 僵尸状态（stop超时/部分清理） */
+    AIRY_SVC_STATE_ERROR         /**< 错误状态 */
+} airy_svc_state_t;
 
 /* ==================== 服务能力标志 ==================== */
 
@@ -55,16 +55,16 @@ typedef enum {
  * @brief 服务能力标志
  */
 typedef enum {
-    AGENTRT_SVC_CAP_NONE = 0,            /**< 无特殊能力 */
-    AGENTRT_SVC_CAP_ASYNC = 1 << 0,      /**< 支持异步操作 */
-    AGENTRT_SVC_CAP_STREAMING = 1 << 1,  /**< 支持流式处理 */
-    AGENTRT_SVC_CAP_CANCELABLE = 1 << 2, /**< 支持取消操作 */
-    AGENTRT_SVC_CAP_PAUSEABLE = 1 << 3,  /**< 支持暂停/恢复 */
-    AGENTRT_SVC_CAP_THROTTLE = 1 << 4,   /**< 支持限流 */
-    AGENTRT_SVC_CAP_BATCH = 1 << 5,      /**< 支持批量处理 */
-    AGENTRT_SVC_CAP_PRIORITY = 1 << 6,   /**< 支持优先级 */
-    AGENTRT_SVC_CAP_TIMEOUT = 1 << 7,    /**< 支持超时控制 */
-} agentrt_svc_capability_t;
+    AIRY_SVC_CAP_NONE = 0,            /**< 无特殊能力 */
+    AIRY_SVC_CAP_ASYNC = 1 << 0,      /**< 支持异步操作 */
+    AIRY_SVC_CAP_STREAMING = 1 << 1,  /**< 支持流式处理 */
+    AIRY_SVC_CAP_CANCELABLE = 1 << 2, /**< 支持取消操作 */
+    AIRY_SVC_CAP_PAUSEABLE = 1 << 3,  /**< 支持暂停/恢复 */
+    AIRY_SVC_CAP_THROTTLE = 1 << 4,   /**< 支持限流 */
+    AIRY_SVC_CAP_BATCH = 1 << 5,      /**< 支持批量处理 */
+    AIRY_SVC_CAP_PRIORITY = 1 << 6,   /**< 支持优先级 */
+    AIRY_SVC_CAP_TIMEOUT = 1 << 7,    /**< 支持超时控制 */
+} airy_svc_capability_t;
 
 /* ==================== 服务配置 ==================== */
 
@@ -81,7 +81,7 @@ typedef struct {
     bool auto_start;         /**< 是否自动启动 */
     bool enable_metrics;     /**< 是否启用指标收集 */
     bool enable_tracing;     /**< 是否启用追踪 */
-} agentrt_svc_config_t;
+} airy_svc_config_t;
 
 /* ==================== 服务统计 ==================== */
 
@@ -98,14 +98,14 @@ typedef struct {
     uint32_t current_concurrent; /**< 当前并发数 */
     uint32_t peak_concurrent;    /**< 峰值并发数 */
     double avg_time_ms;          /**< 平均处理时间 */
-} agentrt_svc_stats_t;
+} airy_svc_stats_t;
 
 /* ==================== 服务句柄类型 ==================== */
 
 /**
  * @brief 服务句柄类型
  */
-typedef struct agentrt_service_s *agentrt_service_t;
+typedef struct airy_svc_s *airy_svc_t;
 
 /* ==================== 服务接口定义 ==================== */
 
@@ -115,15 +115,15 @@ typedef struct agentrt_service_s *agentrt_service_t;
  * @param config [in] 配置参数 (BORROW - not stored, copied internally).
  * @return 0成功，非0失败
  */
-typedef agentrt_error_t (*agentrt_svc_init_fn)(agentrt_service_t service,
-                                               const agentrt_svc_config_t *config);
+typedef airy_err_t (*airy_svc_init_fn)(airy_svc_t service,
+                                               const airy_svc_config_t *config);
 
 /**
  * @brief 服务启动函数类型
  * @param service [in] 服务句柄 (BORROW - caller retains ownership).
  * @return 0成功，非0失败
  */
-typedef agentrt_error_t (*agentrt_svc_start_fn)(agentrt_service_t service);
+typedef airy_err_t (*airy_svc_start_fn)(airy_svc_t service);
 
 /**
  * @brief 服务停止函数类型
@@ -131,20 +131,20 @@ typedef agentrt_error_t (*agentrt_svc_start_fn)(agentrt_service_t service);
  * @param force 是否强制停止
  * @return 0成功，非0失败
  */
-typedef agentrt_error_t (*agentrt_svc_stop_fn)(agentrt_service_t service, bool force);
+typedef airy_err_t (*airy_svc_stop_fn)(airy_svc_t service, bool force);
 
 /**
  * @brief 服务销毁函数类型
  * @param service [in] 服务句柄 (TRANSFER - function takes ownership and frees).
  */
-typedef void (*agentrt_svc_destroy_fn)(agentrt_service_t service);
+typedef void (*airy_svc_destroy_fn)(airy_svc_t service);
 
 /**
  * @brief 服务健康检查函数类型
  * @param service [in] 服务句柄 (BORROW - caller retains ownership).
  * @return 0健康，非0不健康
  */
-typedef agentrt_error_t (*agentrt_svc_healthcheck_fn)(agentrt_service_t service);
+typedef airy_err_t (*airy_svc_healthcheck_fn)(airy_svc_t service);
 
 /**
  * @brief 服务请求处理函数类型
@@ -155,7 +155,7 @@ typedef agentrt_error_t (*agentrt_svc_healthcheck_fn)(agentrt_service_t service)
  * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
  * @return 错误码
  */
-typedef agentrt_error_t (*agentrt_svc_handle_request_fn)(agentrt_service_t service,
+typedef airy_err_t (*airy_svc_handle_request_fn)(airy_svc_t service,
                                                          const char *method,
                                                          const char *params_json,
                                                          char **response_json, void *user_data);
@@ -168,24 +168,24 @@ typedef agentrt_error_t (*agentrt_svc_handle_request_fn)(agentrt_service_t servi
  * @param response_json [in] 响应JSON (TRANSFER - callback takes ownership and must free).
  * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
  */
-typedef void (*agentrt_svc_async_complete_fn)(agentrt_service_t service, const char *method,
-                                              agentrt_error_t error_code, char *response_json,
+typedef void (*airy_svc_async_complete_fn)(airy_svc_t service, const char *method,
+                                              airy_err_t error_code, char *response_json,
                                               void *user_data);
 
 typedef struct {
-    agentrt_svc_init_fn init;
-    agentrt_svc_start_fn start;
-    agentrt_svc_stop_fn stop;
-    agentrt_svc_destroy_fn destroy;
-    agentrt_svc_healthcheck_fn healthcheck;
-    agentrt_svc_handle_request_fn handle_request;
-} agentrt_svc_interface_t;
+    airy_svc_init_fn init;
+    airy_svc_start_fn start;
+    airy_svc_stop_fn stop;
+    airy_svc_destroy_fn destroy;
+    airy_svc_healthcheck_fn healthcheck;
+    airy_svc_handle_request_fn handle_request;
+} airy_svc_interface_t;
 
 /* ==================== 服务生命周期管理 ==================== */
 
 /**
  * @brief 创建服务实例
- * @param service [out] 服务句柄输出 (OWNER - caller must call agentrt_service_destroy).
+ * @param service [out] 服务句柄输出 (OWNER - caller must call airy_svc_destroy).
  * @param name [in] 服务名称 (BORROW - not stored, copied internally).
  * @param iface [in] 服务接口 (BORROW - copied internally, not stored by pointer).
  * @param config [in] 服务配置 (BORROW - not stored, copied internally).
@@ -195,9 +195,9 @@ typedef struct {
  *
  * @ownership service: OWNER, name: BORROW, iface: BORROW, config: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_create(agentrt_service_t *service, const char *name,
-                                                   const agentrt_svc_interface_t *iface,
-                                                   const agentrt_svc_config_t *config);
+AIRY_API airy_err_t airy_svc_create(airy_svc_t *service, const char *name,
+                                                   const airy_svc_interface_t *iface,
+                                                   const airy_svc_config_t *config);
 
 /**
  * @brief 销毁服务实例
@@ -207,7 +207,7 @@ AGENTRT_API agentrt_error_t agentrt_service_create(agentrt_service_t *service, c
  *
  * @ownership service: TRANSFER
  */
-AGENTRT_API void agentrt_service_destroy(agentrt_service_t service);
+AIRY_API void airy_svc_destroy(airy_svc_t service);
 
 /**
  * @brief 初始化服务
@@ -218,7 +218,7 @@ AGENTRT_API void agentrt_service_destroy(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_init(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_init(airy_svc_t service);
 
 /**
  * @brief 启动服务
@@ -229,7 +229,7 @@ AGENTRT_API agentrt_error_t agentrt_service_init(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_start(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_start(airy_svc_t service);
 
 /**
  * @brief 停止服务
@@ -241,7 +241,7 @@ AGENTRT_API agentrt_error_t agentrt_service_start(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_stop(agentrt_service_t service, bool force);
+AIRY_API airy_err_t airy_svc_stop(airy_svc_t service, bool force);
 
 /**
  * @brief Set thread pool for service.
@@ -251,7 +251,7 @@ AGENTRT_API agentrt_error_t agentrt_service_stop(agentrt_service_t service, bool
  *
  * @ownership service: BORROW, pool: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_set_thread_pool(agentrt_service_t service, void *pool);
+AIRY_API airy_err_t airy_svc_set_thread_pool(airy_svc_t service, void *pool);
 
 /**
  * @brief Handle service request asynchronously.
@@ -264,9 +264,9 @@ AGENTRT_API agentrt_error_t agentrt_service_set_thread_pool(agentrt_service_t se
  *
  * @ownership service: BORROW, method: BORROW, params_json: BORROW, on_complete: BORROW, user_data: BORROW
  */
-AGENTRT_API int agentrt_service_handle_request_async(agentrt_service_t service, const char *method,
+AIRY_API int airy_svc_handle_request_async(airy_svc_t service, const char *method,
                                                      const char *params_json,
-                                                     agentrt_svc_async_complete_fn on_complete,
+                                                     airy_svc_async_complete_fn on_complete,
                                                      void *user_data);
 
 /**
@@ -278,7 +278,7 @@ AGENTRT_API int agentrt_service_handle_request_async(agentrt_service_t service, 
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_pause(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_pause(airy_svc_t service);
 
 /**
  * @brief 恢复服务
@@ -289,7 +289,7 @@ AGENTRT_API agentrt_error_t agentrt_service_pause(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_resume(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_resume(airy_svc_t service);
 
 /* ==================== 服务状态查询 ==================== */
 
@@ -302,7 +302,7 @@ AGENTRT_API agentrt_error_t agentrt_service_resume(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_svc_state_t agentrt_service_get_state(agentrt_service_t service);
+AIRY_API airy_svc_state_t airy_svc_get_state(airy_svc_t service);
 
 /**
  * @brief 检查服务是否就绪
@@ -313,7 +313,7 @@ AGENTRT_API agentrt_svc_state_t agentrt_service_get_state(agentrt_service_t serv
  *
  * @ownership service: BORROW
  */
-AGENTRT_API bool agentrt_service_is_ready(agentrt_service_t service);
+AIRY_API bool airy_svc_is_ready(airy_svc_t service);
 
 /**
  * @brief 检查服务是否运行中
@@ -324,7 +324,7 @@ AGENTRT_API bool agentrt_service_is_ready(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API bool agentrt_service_is_running(agentrt_service_t service);
+AIRY_API bool airy_svc_is_running(airy_svc_t service);
 
 /**
  * @brief 获取服务名称
@@ -335,7 +335,7 @@ AGENTRT_API bool agentrt_service_is_running(agentrt_service_t service);
  *
  * @ownership service: BORROW, return: BORROW
  */
-AGENTRT_API const char *agentrt_service_get_name(agentrt_service_t service);
+AIRY_API const char *airy_svc_get_name(airy_svc_t service);
 
 /**
  * @brief 获取服务版本
@@ -346,7 +346,7 @@ AGENTRT_API const char *agentrt_service_get_name(agentrt_service_t service);
  *
  * @ownership service: BORROW, return: BORROW
  */
-AGENTRT_API const char *agentrt_service_get_version(agentrt_service_t service);
+AIRY_API const char *airy_svc_get_version(airy_svc_t service);
 
 /* ==================== 服务统计 ==================== */
 
@@ -360,8 +360,8 @@ AGENTRT_API const char *agentrt_service_get_version(agentrt_service_t service);
  *
  * @ownership service: BORROW, stats: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_get_stats(agentrt_service_t service,
-                                                      agentrt_svc_stats_t *stats);
+AIRY_API airy_err_t airy_svc_get_stats(airy_svc_t service,
+                                                      airy_svc_stats_t *stats);
 
 /**
  * @brief 重置服务统计信息
@@ -371,7 +371,7 @@ AGENTRT_API agentrt_error_t agentrt_service_get_stats(agentrt_service_t service,
  *
  * @ownership service: BORROW
  */
-AGENTRT_API void agentrt_service_reset_stats(agentrt_service_t service);
+AIRY_API void airy_svc_reset_stats(airy_svc_t service);
 
 /* ==================== 服务健康检查 ==================== */
 
@@ -384,7 +384,7 @@ AGENTRT_API void agentrt_service_reset_stats(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_healthcheck(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_healthcheck(airy_svc_t service);
 
 /* ==================== 服务能力查询 ==================== */
 
@@ -398,8 +398,8 @@ AGENTRT_API agentrt_error_t agentrt_service_healthcheck(agentrt_service_t servic
  *
  * @ownership service: BORROW
  */
-AGENTRT_API bool agentrt_service_has_capability(agentrt_service_t service,
-                                                agentrt_svc_capability_t capability);
+AIRY_API bool airy_svc_has_capability(airy_svc_t service,
+                                                airy_svc_capability_t capability);
 
 /* ==================== 服务状态字符串转换 ==================== */
 
@@ -412,7 +412,7 @@ AGENTRT_API bool agentrt_service_has_capability(agentrt_service_t service,
  *
  * @ownership return: BORROW
  */
-AGENTRT_API const char *agentrt_svc_state_to_string(agentrt_svc_state_t state);
+AIRY_API const char *airy_svc_state_to_string(airy_svc_state_t state);
 
 /**
  * @brief 字符串转服务状态
@@ -423,7 +423,7 @@ AGENTRT_API const char *agentrt_svc_state_to_string(agentrt_svc_state_t state);
  *
  * @ownership str: BORROW
  */
-AGENTRT_API agentrt_svc_state_t agentrt_svc_state_from_string(const char *str);
+AIRY_API airy_svc_state_t airy_svc_state_from_string(const char *str);
 
 /* ==================== 服务注册表 ==================== */
 
@@ -436,7 +436,7 @@ AGENTRT_API agentrt_svc_state_t agentrt_svc_state_from_string(const char *str);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_register(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_register(airy_svc_t service);
 
 /**
  * @brief 注销服务
@@ -447,7 +447,7 @@ AGENTRT_API agentrt_error_t agentrt_service_register(agentrt_service_t service);
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_unregister(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_unregister(airy_svc_t service);
 
 /**
  * @brief 根据名称查找服务
@@ -458,7 +458,7 @@ AGENTRT_API agentrt_error_t agentrt_service_unregister(agentrt_service_t service
  *
  * @ownership name: BORROW, return: BORROW
  */
-AGENTRT_API agentrt_service_t agentrt_service_find(const char *name);
+AIRY_API airy_svc_t airy_svc_find(const char *name);
 
 /**
  * @brief 获取所有服务数量
@@ -466,7 +466,7 @@ AGENTRT_API agentrt_service_t agentrt_service_find(const char *name);
  * @threadsafe 是
  * @reentrant 是
  */
-AGENTRT_API uint32_t agentrt_service_count(void);
+AIRY_API uint32_t airy_svc_count(void);
 
 /**
  * @brief 遍历所有服务
@@ -477,8 +477,8 @@ AGENTRT_API uint32_t agentrt_service_count(void);
  *
  * @ownership callback: BORROW, user_data: BORROW
  */
-typedef void (*agentrt_service_enum_fn)(agentrt_service_t service, void *user_data);
-AGENTRT_API void agentrt_service_foreach(agentrt_service_enum_fn callback, void *user_data);
+typedef void (*airy_svc_enum_fn)(airy_svc_t service, void *user_data);
+AIRY_API void airy_svc_foreach(airy_svc_enum_fn callback, void *user_data);
 
 /**
  * @brief 设置服务用户数据
@@ -490,7 +490,7 @@ AGENTRT_API void agentrt_service_foreach(agentrt_service_enum_fn callback, void 
  *
  * @ownership service: BORROW, user_data: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_set_user_data(agentrt_service_t service,
+AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service,
                                                           void *user_data);
 
 /**
@@ -502,13 +502,13 @@ AGENTRT_API agentrt_error_t agentrt_service_set_user_data(agentrt_service_t serv
  *
  * @ownership service: BORROW, return: BORROW
  */
-AGENTRT_API void *agentrt_service_get_user_data(agentrt_service_t service);
+AIRY_API void *airy_svc_get_user_data(airy_svc_t service);
 
 /* ==================== 服务元数据（Phase 3.2） ==================== */
 
-#define AGENTRT_MAX_ENDPOINT_LEN 256
-#define AGENTRT_MAX_SERVICE_TYPE_LEN 32
-#define AGENTRT_MAX_TAGS_LEN 256
+#define AIRY_MAX_ENDPOINT_LEN 256
+#define AIRY_MAX_SERVICE_TYPE_LEN 32
+#define AIRY_MAX_TAGS_LEN 256
 
 /**
  * @brief 服务元数据结构
@@ -519,16 +519,16 @@ AGENTRT_API void *agentrt_service_get_user_data(agentrt_service_t service);
 typedef struct {
     char name[64];
     char version[32];
-    char endpoint[AGENTRT_MAX_ENDPOINT_LEN];
-    char service_type[AGENTRT_MAX_SERVICE_TYPE_LEN];
-    char tags[AGENTRT_MAX_TAGS_LEN];
-    agentrt_svc_state_t state;
+    char endpoint[AIRY_MAX_ENDPOINT_LEN];
+    char service_type[AIRY_MAX_SERVICE_TYPE_LEN];
+    char tags[AIRY_MAX_TAGS_LEN];
+    airy_svc_state_t state;
     uint32_t capabilities;
     uint32_t current_load;
     uint64_t last_heartbeat;
     bool healthy;
     uint32_t instance_id;
-} agentrt_service_metadata_t;
+} airy_svc_metadata_t;
 
 /* ==================== 跨进程服务注册中心（Phase 3.2） ==================== */
 
@@ -540,7 +540,7 @@ typedef struct {
  *
  * @ownership registry_url: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_cross_registry_init(const char *registry_url);
+AIRY_API airy_err_t airy_cross_registry_init(const char *registry_url);
 
 /**
  * @brief 向注册中心注册服务
@@ -551,8 +551,8 @@ AGENTRT_API agentrt_error_t agentrt_cross_registry_init(const char *registry_url
  *
  * @ownership service: BORROW, metadata: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_registry_register(agentrt_service_t service,
-                                                      const agentrt_service_metadata_t *metadata);
+AIRY_API airy_err_t airy_registry_register(airy_svc_t service,
+                                                      const airy_svc_metadata_t *metadata);
 
 /**
  * @brief 从注册中心注销服务
@@ -562,20 +562,20 @@ AGENTRT_API agentrt_error_t agentrt_registry_register(agentrt_service_t service,
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_registry_deregister(agentrt_service_t service);
+AIRY_API airy_err_t airy_registry_deregister(airy_svc_t service);
 
 /**
  * @brief 从注册中心发现服务
  * @param service_type [in] 服务类型（如 "llm"、"tool"），NULL表示所有类型 (BORROW - not stored, copied internally).
  * @param filter_tags [in] 过滤标签（逗号分隔），NULL表示不过滤 (BORROW - not stored, copied internally).
  * @param result_count [out] 发现的服务数量 (BORROW - caller-owned buffer, function writes to it).
- * @return 服务元数据数组 (OWNER - caller must call agentrt_registry_discover_free).
+ * @return 服务元数据数组 (OWNER - caller must call airy_registry_discover_free).
  * @threadsafe 是
  *
  * @ownership service_type: BORROW, filter_tags: BORROW, result_count: BORROW, return: OWNER
  */
-AGENTRT_API agentrt_service_metadata_t *
-agentrt_registry_discover(const char *service_type, const char *filter_tags, size_t *result_count);
+AIRY_API airy_svc_metadata_t *
+airy_registry_discover(const char *service_type, const char *filter_tags, size_t *result_count);
 
 /**
  * @brief 释放服务发现结果
@@ -583,7 +583,7 @@ agentrt_registry_discover(const char *service_type, const char *filter_tags, siz
  *
  * @ownership results: TRANSFER
  */
-AGENTRT_API void agentrt_registry_discover_free(agentrt_service_metadata_t *results);
+AIRY_API void airy_registry_discover_free(airy_svc_metadata_t *results);
 
 /**
  * @brief 发送心跳到注册中心
@@ -593,16 +593,16 @@ AGENTRT_API void agentrt_registry_discover_free(agentrt_service_metadata_t *resu
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_registry_heartbeat(agentrt_service_t service);
+AIRY_API airy_err_t airy_registry_heartbeat(airy_svc_t service);
 
 /**
  * @brief 清理注册中心客户端资源
  */
-AGENTRT_API void agentrt_registry_cleanup(void);
+AIRY_API void airy_registry_cleanup(void);
 
 /* ==================== 配置管理（Phase 3.2） ==================== */
 
-#define AGENTRT_CONFIG_CHECKSUM_LEN 65
+#define AIRY_CONFIG_CHECKSUM_LEN 65
 
 /**
  * @brief 配置数据结构
@@ -612,8 +612,8 @@ typedef struct {
     size_t config_size;
     uint64_t version;
     time_t last_modified;
-    char checksum[AGENTRT_CONFIG_CHECKSUM_LEN];
-} agentrt_config_t;
+    char checksum[AIRY_CONFIG_CHECKSUM_LEN];
+} airy_config_t;
 
 /**
  * @brief 配置变更回调函数类型
@@ -624,22 +624,22 @@ typedef struct {
  *
  * @ownership service_name: BORROW, old_config: BORROW, new_config: BORROW, user_data: BORROW
  */
-typedef void (*agentrt_config_change_callback_t)(const char *service_name,
-                                                 const agentrt_config_t *old_config,
-                                                 const agentrt_config_t *new_config,
+typedef void (*airy_config_change_callback_t)(const char *service_name,
+                                                 const airy_config_t *old_config,
+                                                 const airy_config_t *new_config,
                                                  void *user_data);
 
 /**
  * @brief 加载服务配置
  * @param service_name [in] 服务名称 (BORROW - not stored, copied internally).
- * @param config [out] 配置输出 (OWNER - caller must call agentrt_config_free).
+ * @param config [out] 配置输出 (OWNER - caller must call airy_config_free).
  * @return 0成功，非0失败
  * @threadsafe 是
  *
  * @ownership service_name: BORROW, config: OWNER
  */
-AGENTRT_API agentrt_error_t agentrt_config_load(const char *service_name,
-                                                agentrt_config_t **config);
+AIRY_API airy_err_t airy_config_load(const char *service_name,
+                                                airy_config_t **config);
 
 /**
  * @brief 监视配置变更
@@ -651,8 +651,8 @@ AGENTRT_API agentrt_error_t agentrt_config_load(const char *service_name,
  *
  * @ownership service_name: BORROW, callback: BORROW, user_data: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_config_watch(const char *service_name,
-                                                 agentrt_config_change_callback_t callback,
+AIRY_API airy_err_t airy_config_watch(const char *service_name,
+                                                 airy_config_change_callback_t callback,
                                                  void *user_data);
 
 /**
@@ -664,8 +664,8 @@ AGENTRT_API agentrt_error_t agentrt_config_watch(const char *service_name,
  *
  * @ownership service_name: BORROW, callback: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_config_unwatch(const char *service_name,
-                                                   agentrt_config_change_callback_t callback);
+AIRY_API airy_err_t airy_config_unwatch(const char *service_name,
+                                                   airy_config_change_callback_t callback);
 
 /**
  * @brief 释放配置资源
@@ -673,7 +673,7 @@ AGENTRT_API agentrt_error_t agentrt_config_unwatch(const char *service_name,
  *
  * @ownership config: TRANSFER
  */
-AGENTRT_API void agentrt_config_free(agentrt_config_t *config);
+AIRY_API void airy_config_free(airy_config_t *config);
 
 /* ==================== 故障恢复（Phase 3.3） ==================== */
 
@@ -688,7 +688,7 @@ typedef struct {
     uint32_t degradation_threshold;
     bool auto_restart;
     bool enable_degradation;
-} agentrt_monitor_config_t;
+} airy_monitor_config_t;
 
 /**
  * @brief 降级处理函数类型
@@ -699,7 +699,7 @@ typedef struct {
  *
  * @ownership service: BORROW, reason: BORROW, user_data: BORROW
  */
-typedef agentrt_error_t (*agentrt_degradation_handler_t)(agentrt_service_t service,
+typedef airy_err_t (*airy_degradation_handler_t)(airy_svc_t service,
                                                          const char *reason, void *user_data);
 
 /**
@@ -711,8 +711,8 @@ typedef agentrt_error_t (*agentrt_degradation_handler_t)(agentrt_service_t servi
  *
  * @ownership service: BORROW, config: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_monitor_start(agentrt_service_t service,
-                                                          const agentrt_monitor_config_t *config);
+AIRY_API airy_err_t airy_svc_monitor_start(airy_svc_t service,
+                                                          const airy_monitor_config_t *config);
 
 /**
  * @brief 停止服务监控
@@ -722,7 +722,7 @@ AGENTRT_API agentrt_error_t agentrt_service_monitor_start(agentrt_service_t serv
  *
  * @ownership service: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_monitor_stop(agentrt_service_t service);
+AIRY_API airy_err_t airy_svc_monitor_stop(airy_svc_t service);
 
 /**
  * @brief 设置服务降级处理函数
@@ -734,8 +734,8 @@ AGENTRT_API agentrt_error_t agentrt_service_monitor_stop(agentrt_service_t servi
  *
  * @ownership service: BORROW, handler: BORROW, user_data: BORROW
  */
-AGENTRT_API agentrt_error_t agentrt_service_set_degradation_handler(
-    agentrt_service_t service, agentrt_degradation_handler_t handler, void *user_data);
+AIRY_API airy_err_t airy_svc_set_degradation_handler(
+    airy_svc_t service, airy_degradation_handler_t handler, void *user_data);
 
 /* ==================== 服务间通信客户端（Phase 3.2） ==================== */
 
@@ -748,18 +748,18 @@ AGENTRT_API agentrt_error_t agentrt_service_set_degradation_handler(
  *
  * @ownership data: BORROW, user_data: BORROW
  */
-typedef int (*agentrt_stream_callback_t)(const char *data, size_t data_size, void *user_data);
+typedef int (*airy_stream_callback_t)(const char *data, size_t data_size, void *user_data);
 
 /**
  * @brief 通信协议类型（daemon服务层专用）
- * @note 使用 SVC_ 前缀避免与 commons/types.h 的 AGENTRT_PROTO_* 冲突
+ * @note 使用 SVC_ 前缀避免与 commons/types.h 的 AIRY_PROTO_* 冲突
  */
 typedef enum {
     SVC_PROTO_HTTP = 0,
     SVC_PROTO_GRPC,
     SVC_PROTO_IPC,
     SVC_PROTO_MEMORY
-} agentrt_svc_protocol_type_t;
+} airy_svc_protocol_type_t;
 
 /**
  * @brief 服务通信客户端接口
@@ -768,25 +768,25 @@ typedef enum {
  * @ownership stream: service_name BORROW, method BORROW, params_json BORROW, callback BORROW, user_data BORROW.
  */
 typedef struct {
-    agentrt_error_t (*call)(const char *service_name, const char *method, const char *params_json,
+    airy_err_t (*call)(const char *service_name, const char *method, const char *params_json,
                             char **response_json, uint32_t timeout_ms);
-    agentrt_error_t (*stream)(const char *service_name, const char *method, const char *params_json,
-                              agentrt_stream_callback_t callback, void *user_data);
+    airy_err_t (*stream)(const char *service_name, const char *method, const char *params_json,
+                              airy_stream_callback_t callback, void *user_data);
     void *internal;
-} agentrt_service_client_t;
+} airy_svc_client_t;
 
 /**
  * @brief 创建服务通信客户端
  * @param protocol [in] 通信协议
  * @param config [in] 客户端配置（JSON格式字符串），NULL使用默认 (BORROW - not stored, copied internally).
- * @param client [out] 客户端输出 (OWNER - caller must call agentrt_service_client_destroy).
+ * @param client [out] 客户端输出 (OWNER - caller must call airy_svc_client_destroy).
  * @return 0成功，非0失败
  *
  * @ownership config: BORROW, client: OWNER
  */
-AGENTRT_API agentrt_error_t agentrt_service_client_create(agentrt_svc_protocol_type_t protocol,
+AIRY_API airy_err_t airy_svc_client_create(airy_svc_protocol_type_t protocol,
                                                           const char *config,
-                                                          agentrt_service_client_t **client);
+                                                          airy_svc_client_t **client);
 
 /**
  * @brief 销毁服务通信客户端
@@ -794,10 +794,10 @@ AGENTRT_API agentrt_error_t agentrt_service_client_create(agentrt_svc_protocol_t
  *
  * @ownership client: TRANSFER
  */
-AGENTRT_API void agentrt_service_client_destroy(agentrt_service_client_t *client);
+AIRY_API void airy_svc_client_destroy(airy_svc_client_t *client);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_SVC_COMMON_H */
+#endif /* AIRY_RT_SVC_COMMON_H */

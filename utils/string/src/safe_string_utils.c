@@ -8,13 +8,13 @@
  * SP05 解耦：本文件从 daemons/common/src/ 迁移至 commons/utils/string/src/，
  * 消除 protocols 对 daemons 层的物理依赖（ACC-SP03 解耦点 #4）。
  * 迁移时删除了多余的 #include "svc_logger.h"（本文件未使用 SVC_LOG_* 宏，
- * 实际日志通过 AGENTRT_ERROR/AGENTRT_ERROR_NULL 来自 commons/utils/error）。
+ * 实际日志通过 AIRY_ERROR/AIRY_ERROR_NULL 来自 commons/utils/error）。
  */
 
 #include "safe_string_utils.h"
 
-#include "error.h"         /* AGENTRT_ERROR / AGENTRT_ERROR_NULL */
-#include "memory_compat.h" /* AGENTRT_MALLOC / AGENTRT_CALLOC / AGENTRT_REALLOC / AGENTRT_FREE */
+#include "error.h"         /* AIRY_ERROR / AIRY_ERROR_NULL */
+#include "memory_compat.h" /* AIRY_MALLOC / AIRY_CALLOC / AIRY_REALLOC / AIRY_FREE */
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -23,14 +23,14 @@
 int safe_strcpy(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || !src || dest_size == 0) {
-        AGENTRT_ERROR(AGENTRT_ERR_INVALID_PARAM, "safe_strcpy: null parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strcpy: null parameter");
     }
 
     size_t src_len = strlen(src);
     if (src_len >= dest_size) {
         __builtin_memcpy(dest, src, dest_size - 1);
         dest[dest_size - 1] = '\0';
-        AGENTRT_ERROR(AGENTRT_ERR_OVERFLOW, "safe_strcpy: buffer overflow");
+        AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strcpy: buffer overflow");
     }
 
     __builtin_memcpy(dest, src, src_len + 1);
@@ -40,7 +40,7 @@ int safe_strcpy(char *dest, const char *src, size_t dest_size)
 int safe_strcat(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || !src || dest_size == 0) {
-        AGENTRT_ERROR(AGENTRT_ERR_INVALID_PARAM, "safe_strncpy: null parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strncpy: null parameter");
     }
 
     size_t dest_len = strlen(dest);
@@ -50,7 +50,7 @@ int safe_strcat(char *dest, const char *src, size_t dest_size)
         size_t remaining = dest_size - dest_len - 1;
         __builtin_memcpy(dest + dest_len, src, remaining);
         dest[dest_len + remaining] = '\0';
-        AGENTRT_ERROR(AGENTRT_ERR_OVERFLOW, "safe_strncpy: buffer overflow");
+        AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strncpy: buffer overflow");
     }
 
     __builtin_memcpy(dest + dest_len, src, src_len + 1);
@@ -60,7 +60,7 @@ int safe_strcat(char *dest, const char *src, size_t dest_size)
 int safe_sprintf(char *dest, size_t dest_size, const char *fmt, ...)
 {
     if (!dest || !fmt || dest_size == 0) {
-        AGENTRT_ERROR(AGENTRT_ERR_INVALID_PARAM, "safe_strcat: null parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strcat: null parameter");
     }
 
     va_list args;
@@ -72,7 +72,7 @@ int safe_sprintf(char *dest, size_t dest_size, const char *fmt, ...)
 
     if (written < 0 || (size_t)written >= dest_size) {
         dest[dest_size - 1] = '\0';
-        AGENTRT_ERROR(AGENTRT_ERR_PARSE_ERROR, "safe_strcat: buffer overflow");
+        AIRY_ERROR(AIRY_ERR_PARSE_ERROR, "safe_strcat: buffer overflow");
     }
 
     return written;
@@ -94,7 +94,7 @@ int safe_strcmp(const char *str1, const char *str2, size_t max_len)
     if (!str1 && !str2)
         return 0;
     if (!str1) {
-        AGENTRT_ERROR(AGENTRT_ERR_INVALID_PARAM, "safe_strcmp: null str1");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strcmp: null str1");
     }
     if (!str2)
         return 1;
@@ -103,7 +103,7 @@ int safe_strcmp(const char *str1, const char *str2, size_t max_len)
         if (str1[i] == '\0' && str2[i] == '\0')
             return 0;
         if (str1[i] == '\0') {
-            AGENTRT_ERROR(AGENTRT_ERR_PARSE_ERROR, "safe_strcmp: premature end of str1");
+            AIRY_ERROR(AIRY_ERR_PARSE_ERROR, "safe_strcmp: premature end of str1");
         }
         if (str2[i] == '\0')
             return 1;
@@ -117,16 +117,16 @@ int safe_strcmp(const char *str1, const char *str2, size_t max_len)
 char *safe_strdup_with_limit(const char *str, size_t max_copy_len)
 {
     if (!str) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     size_t len = strlen(str);
     if (max_copy_len > 0 && len > max_copy_len)
         len = max_copy_len;
 
-    char *copy = (char *)AGENTRT_MALLOC(len + 1);
+    char *copy = (char *)AIRY_MALLOC(len + 1);
     if (!copy) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_UNKNOWN, "validation failed");
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
     }
 
     __builtin_memcpy(copy, str, len);
@@ -197,9 +197,9 @@ void *safe_malloc(size_t size, const char *purpose)
     if (purpose && !purpose[0]) { /* 目的字符串有效性 */
     }
     if (size == 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
-    void *ptr = AGENTRT_MALLOC(size);
+    void *ptr = AIRY_MALLOC(size);
     return ptr;
 }
 
@@ -209,12 +209,12 @@ void *safe_calloc(size_t count, size_t size, const char *purpose)
     if (purpose && !purpose[0]) { /* 目的字符串有效性 */
     }
     if (count == 0 || size == 0) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     if (count > SIZE_MAX / size) {
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
-    void *ptr = AGENTRT_CALLOC(count, size);
+    void *ptr = AIRY_CALLOC(count, size);
     return ptr;
 }
 
@@ -224,9 +224,9 @@ void *safe_realloc(void *ptr, size_t new_size, const char *purpose)
     if (purpose && !purpose[0]) { /* 目的字符串有效性 */
     }
     if (new_size == 0) {
-        AGENTRT_FREE(ptr);
-        AGENTRT_ERROR_NULL(AGENTRT_ERR_INVALID_PARAM, "null parameter");
+        AIRY_FREE(ptr);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
-    void *new_ptr = AGENTRT_REALLOC(ptr, new_size);
+    void *new_ptr = AIRY_REALLOC(ptr, new_size);
     return new_ptr;
 }

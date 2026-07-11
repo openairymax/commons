@@ -30,8 +30,8 @@
  *   @ownership TRANSFER — 所有权转移给被调用者
  */
 
-#ifndef AGENTRT_REFCOUNT_H
-#define AGENTRT_REFCOUNT_H
+#ifndef AIRY_RT_REFCOUNT_H
+#define AIRY_RT_REFCOUNT_H
 
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -154,4 +154,4 @@ void refcount_get_global_stats(uint64_t *out_total_allocs,
 }
 #endif
 
-#endif /* AGENTRT_REFCOUNT_H */
+#endif /* AIRY_RT_REFCOUNT_H */

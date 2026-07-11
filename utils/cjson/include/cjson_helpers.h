@@ -15,7 +15,7 @@
  * 设计目标（ACC-P0182）：
  *   1. 不改变 cJSON 自身语义，仅消除样板
  *   2. 失败路径由调用方通过 on_fail 块控制（goto/return/log）
- *   3. 与现有 AGENTRT_MALLOC / AUTO_FREE 风格保持一致
+ *   3. 与现有 AIRY_MALLOC / AUTO_FREE 风格保持一致
  *   4. MSVC 回退到手动释放（CJSON_AUTO_FREE 为空宏）
  *   5. 线程安全：宏仅操作局部变量，无共享状态
  *
@@ -25,12 +25,12 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_CJSON_HELPERS_H
-#define AGENTRT_CJSON_HELPERS_H
+#ifndef AIRY_RT_CJSON_HELPERS_H
+#define AIRY_RT_CJSON_HELPERS_H
 
 /* 仅当 cJSON 可用时启用本头文件的全部内容；不可用时仅提供空回退，
  * 避免在未链接 cJSON 的目标中引入未解析符号。 */
-#ifdef AGENTRT_HAS_CJSON
+#ifdef AIRY_HAS_CJSON
 
 #include <cjson/cJSON.h>
 
@@ -44,13 +44,13 @@
  * @code
  *   cJSON *req = cJSON_Parse(buffer);
  *   if (!req) {
- *       AGENTRT_LOG_ERROR("parse failed");
- *       return AGENTRT_ERR_PARSE_ERROR;
+ *       AIRY_LOG_ERROR("parse failed");
+ *       return AIRY_ERR_PARSE_ERROR;
  *   }
  *   cJSON *jsonrpc = cJSON_GetObjectItem(req, "jsonrpc");
  *   if (!jsonrpc) {
  *       cJSON_Delete(req);
- *       return AGENTRT_ERR_NOT_FOUND;
+ *       return AIRY_ERR_NOT_FOUND;
  *   }
  *   // ... 使用 ...
  *   cJSON_Delete(req);
@@ -59,11 +59,11 @@
  * 修复后：
  * @code
  *   CJSON_AUTO_FREE cJSON *req = cJSON_Parse(buffer);
- *   if (!req) { AGENTRT_LOG_ERROR("parse failed"); return AGENTRT_ERR_PARSE_ERROR; }
+ *   if (!req) { AIRY_LOG_ERROR("parse failed"); return AIRY_ERR_PARSE_ERROR; }
  *
  *   CJSON_GET_REQUIRED(jsonrpc, req, "jsonrpc", {
- *       AGENTRT_LOG_ERROR("missing jsonrpc");
- *       return AGENTRT_ERR_NOT_FOUND;
+ *       AIRY_LOG_ERROR("missing jsonrpc");
+ *       return AIRY_ERR_NOT_FOUND;
  *   });
  *   // ... 使用 ...
  *   // 函数返回时 cJSON_Delete(req) 自动调用
@@ -131,7 +131,7 @@
  * @param node 待拷贝的 cJSON 节点（可为 NULL，返回 NULL）
  * @return cJSON* 新的独立 cJSON 对象（调用方负责释放），node 为 NULL 时返回 NULL
  */
-static inline cJSON *agentrt_cjson_deep_copy_impl(const cJSON *node)
+static inline cJSON *airy_cjson_deep_copy_impl(const cJSON *node)
 {
     if (!node)
         return NULL;
@@ -140,13 +140,13 @@ static inline cJSON *agentrt_cjson_deep_copy_impl(const cJSON *node)
         return NULL;
     cJSON *copy = cJSON_Parse(str);
     /* P0.18.2: str 由 cJSON_PrintUnformatted 分配，须走 cJSON 分配器释放
-     * (cJSON_free)；同时规避 AGENTRT_COMPLIANCE_STRICT 下裸 free 被
+     * (cJSON_free)；同时规避 AIRY_COMPLIANCE_STRICT 下裸 free 被
      * #pragma GCC poison 的问题——cJSON_free 不受该毒化影响 */
     cJSON_free(str);
     return copy;
 }
 
-#define CJSON_DEEP_COPY(node) agentrt_cjson_deep_copy_impl((node))
+#define CJSON_DEEP_COPY(node) airy_cjson_deep_copy_impl((node))
 
 /**
  * @def CJSON_GET_REQUIRED(out, parent, key, on_fail)
@@ -235,7 +235,7 @@ static inline cJSON *agentrt_cjson_deep_copy_impl(const cJSON *node)
  *
  * @param p 指向 cJSON* 变量的指针（双重解引用）
  */
-static inline void agentrt_cjson_auto_free_impl(void *p)
+static inline void airy_cjson_auto_free_impl(void *p)
 {
     cJSON **pp = (cJSON **)p;
     if (*pp) {
@@ -244,7 +244,7 @@ static inline void agentrt_cjson_auto_free_impl(void *p)
     }
 }
 
-#define CJSON_AUTO_FREE __attribute__((cleanup(agentrt_cjson_auto_free_impl)))
+#define CJSON_AUTO_FREE __attribute__((cleanup(airy_cjson_auto_free_impl)))
 
 #elif defined(_MSC_VER)
 
@@ -267,14 +267,14 @@ static inline void agentrt_cjson_auto_free_impl(void *p)
 
 /** @} */  // end of cjson_helpers
 
-#else  /* !AGENTRT_HAS_CJSON */
+#else  /* !AIRY_HAS_CJSON */
 
 /* cJSON 不可用时：CJSON_AUTO_FREE 为空宏，其他宏未定义。
  * 调用方应在 cJSON 不可用的目标中不引用本头文件，
- * 或通过 #ifdef AGENTRT_HAS_CJSON 保护相关代码。 */
+ * 或通过 #ifdef AIRY_HAS_CJSON 保护相关代码。 */
 
-#define CJSON_AUTO_FREE /* AGENTRT_HAS_CJSON not defined: cJSON unavailable */
+#define CJSON_AUTO_FREE /* AIRY_HAS_CJSON not defined: cJSON unavailable */
 
-#endif /* AGENTRT_HAS_CJSON */
+#endif /* AIRY_HAS_CJSON */
 
-#endif /* AGENTRT_CJSON_HELPERS_H */
+#endif /* AIRY_RT_CJSON_HELPERS_H */

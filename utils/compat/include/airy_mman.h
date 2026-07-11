@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
-#ifndef AGENTRT_COMPAT_MMAN_H
-#define AGENTRT_COMPAT_MMAN_H
+#ifndef AIRY_RT_COMPAT_MMAN_H
+#define AIRY_RT_COMPAT_MMAN_H
 
 #ifdef _WIN32
 
@@ -25,7 +25,7 @@
  * 本文件为 Windows 平台 POSIX <sys/mman.h> 兼容层。
  * munmap/mprotect/shm_open/shm_unlink 等函数必须返回 -1（并设置 errno）
  * 以匹配 POSIX API 契约，调用方依赖 `if (fn() == -1)` 判断失败。
- * 此处 return -1 不是 AGENTRT_ERR_* 错误码，属合法 POSIX 语义保留。
+ * 此处 return -1 不是 AIRY_ERR_* 错误码，属合法 POSIX 语义保留。
  */
 
 static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)

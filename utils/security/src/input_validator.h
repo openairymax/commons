@@ -25,8 +25,8 @@
  * @see C_Cpp_secure_coding_standard.md 安全编码指南
  */
 
-#ifndef AGENTRT_INPUT_VALIDATOR_H
-#define AGENTRT_INPUT_VALIDATOR_H
+#ifndef AIRY_RT_INPUT_VALIDATOR_H
+#define AIRY_RT_INPUT_VALIDATOR_H
 
 #include "../error/include/error.h"
 
@@ -47,7 +47,7 @@ typedef struct {
     const char *error_message; /**< 错误消息 */
     int error_code;            /**< 错误码 */
     const char *error_field;   /**< 错误字段 */
-} agentrt_validation_result_t;
+} airy_validation_result_t;
 
 /* ==================== 字符串验证 ==================== */
 
@@ -58,8 +58,8 @@ typedef struct {
  * @param max_len 最大长度
  * @param result [out] 验证结果
  */
-void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_len,
-                                    agentrt_validation_result_t *result);
+void airy_validate_string_length(const char *str, size_t min_len, size_t max_len,
+                                    airy_validation_result_t *result);
 
 /**
  * @brief 验证字符串是否只包含安全字符
@@ -67,8 +67,8 @@ void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_
  * @param allowed_chars [in] 允许的字符集（白名单）
  * @param result [out] 验证结果
  */
-void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
-                                     agentrt_validation_result_t *result);
+void airy_validate_string_charset(const char *str, const char *allowed_chars,
+                                     airy_validation_result_t *result);
 
 /**
  * @brief 验证标识符（字母、数字、下划线）
@@ -76,8 +76,8 @@ void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
  * @param max_len 最大长度
  * @param result [out] 验证结果
  */
-void agentrt_validate_identifier(const char *str, size_t max_len,
-                                 agentrt_validation_result_t *result);
+void airy_validate_identifier(const char *str, size_t max_len,
+                                 airy_validation_result_t *result);
 
 /**
  * @brief 验证JSON字符串
@@ -85,8 +85,8 @@ void agentrt_validate_identifier(const char *str, size_t max_len,
  * @param max_len 最大长度
  * @param result [out] 验证结果
  */
-void agentrt_validate_json_string(const char *str, size_t max_len,
-                                  agentrt_validation_result_t *result);
+void airy_validate_json_string(const char *str, size_t max_len,
+                                  airy_validation_result_t *result);
 
 /* ==================== 路径验证 ==================== */
 
@@ -103,17 +103,17 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
  * - 符号链接攻击
  * - 绝对路径限制
  */
-void agentrt_validate_file_path(const char *path, const char *allowed_root,
-                                agentrt_validation_result_t *result);
+void airy_validate_file_path(const char *path, const char *allowed_root,
+                                airy_validation_result_t *result);
 
 /**
  * @brief 规范化路径
  * @param path [in] 输入路径
  * @param out_normalized [out] 输出规范化路径（调用者负责释放）
  * @param out_len 输出长度
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_normalize_path(const char *path, char **out_normalized, size_t *out_len);
+airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *out_len);
 
 /* ==================== 命令验证 ==================== */
 
@@ -129,16 +129,16 @@ agentrt_error_t agentrt_normalize_path(const char *path, char **out_normalized, 
  * - 危险命令（rm -rf, dd, mkfs等）
  * - 环境变量注入
  */
-void agentrt_validate_shell_command(const char *cmd, const char **allowed_commands,
-                                    agentrt_validation_result_t *result);
+void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
+                                    airy_validation_result_t *result);
 
 /**
  * @brief 净化Shell参数
  * @param param [in] 输入参数
  * @param out_sanitized [out] 输出净化后的参数（调用者负责释放）
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_sanitize_shell_param(const char *param, char **out_sanitized);
+airy_err_t airy_sanitize_shell_param(const char *param, char **out_sanitized);
 
 /* ==================== SQL验证 ==================== */
 
@@ -153,15 +153,15 @@ agentrt_error_t agentrt_sanitize_shell_param(const char *param, char **out_sanit
  * - 危险操作（DROP, TRUNCATE, ALTER等）
  * - 多语句执行
  */
-void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *result);
+void airy_validate_sql_query(const char *sql, airy_validation_result_t *result);
 
 /**
  * @brief 净化SQL标识符（表名、列名等）
  * @param identifier [in] 输入标识符
  * @param out_sanitized [out] 输出净化后的标识符（调用者负责释放）
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_sanitize_sql_identifier(const char *identifier, char **out_sanitized);
+airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanitized);
 
 /* ==================== URL验证 ==================== */
 
@@ -177,8 +177,8 @@ agentrt_error_t agentrt_sanitize_sql_identifier(const char *identifier, char **o
  * - SSRF攻击（内网IP、localhost等）
  * - 凭据泄露
  */
-void agentrt_validate_url(const char *url, const char **allowed_schemes,
-                          agentrt_validation_result_t *result);
+void airy_validate_url(const char *url, const char **allowed_schemes,
+                          airy_validation_result_t *result);
 
 /**
  * @brief 解析URL组件
@@ -187,9 +187,9 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
  * @param out_host [out] 输出主机名（调用者负责释放）
  * @param out_port [out] 输出端口
  * @param out_path [out] 输出路径（调用者负责释放）
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out_host,
+airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
                                   uint16_t *out_port, char **out_path);
 
 /* ==================== 数值验证 ==================== */
@@ -201,8 +201,8 @@ agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out
  * @param max_val 最大值
  * @param result [out] 验证结果
  */
-void agentrt_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
-                                agentrt_validation_result_t *result);
+void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
+                                airy_validation_result_t *result);
 
 /**
  * @brief 验证浮点数范围
@@ -211,8 +211,8 @@ void agentrt_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
  * @param max_val 最大值
  * @param result [out] 验证结果
  */
-void agentrt_validate_float_range(double value, double min_val, double max_val,
-                                  agentrt_validation_result_t *result);
+void airy_validate_float_range(double value, double min_val, double max_val,
+                                  airy_validation_result_t *result);
 
 /* ==================== 缓冲区验证 ==================== */
 
@@ -222,34 +222,34 @@ void agentrt_validate_float_range(double value, double min_val, double max_val,
  * @param dest_size 目标缓冲区大小
  * @param src [in] 源数据
  * @param src_size 源数据大小
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size);
+airy_err_t airy_safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size);
 
 /**
  * @brief 安全字符串复制
  * @param dest [out] 目标缓冲区
  * @param dest_size 目标缓冲区大小
  * @param src [in] 源字符串
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_safe_strcpy(char *dest, size_t dest_size, const char *src);
+airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src);
 
 /**
  * @brief 安全字符串拼接
  * @param dest [in,out] 目标缓冲区
  * @param dest_size 目标缓冲区大小
  * @param src [in] 源字符串
- * @return agentrt_error_t 错误码
+ * @return airy_err_t 错误码
  */
-agentrt_error_t agentrt_safe_strcat(char *dest, size_t dest_size, const char *src);
+airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src);
 
 /* ==================== 便捷宏定义 ==================== */
 
 /**
  * @brief 验证并返回错误
  */
-#define AGENTRT_VALIDATE_OR_RETURN(result, error_code) \
+#define AIRY_VALIDATE_OR_RETURN(result, error_code) \
     do {                                               \
         if (!(result).is_valid) {                      \
             return error_code;                         \
@@ -259,7 +259,7 @@ agentrt_error_t agentrt_safe_strcat(char *dest, size_t dest_size, const char *sr
 /**
  * @brief 验证并跳转到错误处理
  */
-#define AGENTRT_VALIDATE_OR_GOTO(result, label, error_code) \
+#define AIRY_VALIDATE_OR_GOTO(result, label, error_code) \
     do {                                                    \
         if (!(result).is_valid) {                           \
             err = error_code;                               \
@@ -270,15 +270,15 @@ agentrt_error_t agentrt_safe_strcat(char *dest, size_t dest_size, const char *sr
 /**
  * @brief 安全字符串复制宏
  */
-#define AGENTRT_SAFE_STRCPY(dest, src) agentrt_safe_strcpy(dest, sizeof(dest), src)
+#define AIRY_SAFE_STRCPY(dest, src) airy_safe_strcpy(dest, sizeof(dest), src)
 
 /**
  * @brief 安全字符串拼接宏
  */
-#define AGENTRT_SAFE_STRCAT(dest, src) agentrt_safe_strcat(dest, sizeof(dest), src)
+#define AIRY_SAFE_STRCAT(dest, src) airy_safe_strcat(dest, sizeof(dest), src)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_INPUT_VALIDATOR_H */
+#endif /* AIRY_RT_INPUT_VALIDATOR_H */

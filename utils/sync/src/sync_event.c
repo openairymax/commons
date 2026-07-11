@@ -23,7 +23,7 @@ sync_result_t sync_event_create(sync_event_t *event, bool manual_reset, bool ini
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_event *e = (struct sync_event *)AGENTRT_CALLOC(1, sizeof(struct sync_event));
+    struct sync_event *e = (struct sync_event *)AIRY_CALLOC(1, sizeof(struct sync_event));
     if (e == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -34,27 +34,27 @@ sync_result_t sync_event_create(sync_event_t *event, bool manual_reset, bool ini
     if (attr != NULL && attr->name != NULL) {
         e->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&e->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&e->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     e->event = CreateEvent(NULL, (BOOL)manual_reset, (BOOL)initial_state, NULL);
     if (e->event == NULL) {
-        AGENTRT_FREE(e->name);
-        AGENTRT_FREE(e);
+        AIRY_FREE(e->name);
+        AIRY_FREE(e);
         return SYNC_ERROR_UNKNOWN;
     }
 #else
     int result1 = pthread_mutex_init(&e->event.mutex, NULL);
     if (result1 != 0) {
-        AGENTRT_FREE(e->name);
-        AGENTRT_FREE(e);
+        AIRY_FREE(e->name);
+        AIRY_FREE(e);
         return sync_internal_posix_error_to_result(result1);
     }
     int result2 = pthread_cond_init(&e->event.cond, NULL);
     if (result2 != 0) {
         pthread_mutex_destroy(&e->event.mutex);
-        AGENTRT_FREE(e->name);
-        AGENTRT_FREE(e);
+        AIRY_FREE(e->name);
+        AIRY_FREE(e);
         return sync_internal_posix_error_to_result(result2);
     }
 #endif
@@ -71,8 +71,8 @@ sync_result_t sync_event_free(sync_event_t event)
     }
 
     if (!event->initialized) {
-        AGENTRT_FREE(event->name);
-        AGENTRT_FREE(event);
+        AIRY_FREE(event->name);
+        AIRY_FREE(event);
         return SYNC_SUCCESS;
     }
 
@@ -83,8 +83,8 @@ sync_result_t sync_event_free(sync_event_t event)
     pthread_mutex_destroy(&event->event.mutex);
 #endif
 
-    AGENTRT_FREE(event->name);
-    AGENTRT_FREE(event);
+    AIRY_FREE(event->name);
+    AIRY_FREE(event);
     return SYNC_SUCCESS;
 }
 

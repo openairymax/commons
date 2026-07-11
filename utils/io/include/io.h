@@ -6,8 +6,8 @@
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#ifndef AGENTRT_UTILS_IO_H
-#define AGENTRT_UTILS_IO_H
+#ifndef AIRY_RT_UTILS_IO_H
+#define AIRY_RT_UTILS_IO_H
 
 #include <stddef.h>
 
@@ -21,7 +21,7 @@ extern "C" {
  * @param out_len 输出内容长度（可选）
  * @return 分配的内存，需调用者 free，失败返回 NULL
  */
-char *agentrt_io_read_file(const char *path, size_t *out_len);
+char *airy_io_read_file(const char *path, size_t *out_len);
 
 /**
  * @brief 写入文件
@@ -31,14 +31,14 @@ char *agentrt_io_read_file(const char *path, size_t *out_len);
  * @param len 数据长度（若为 -1 则自动计算字符串长度）
  * @return 0 成功，-1 失败
  */
-int agentrt_io_write_file(const char *path, const void *data, size_t len);
+int airy_io_write_file(const char *path, const void *data, size_t len);
 
 /**
  * @brief 确保目录存在（如果不存在则创建）
  * @param path 目录路径
  * @return 0 成功，-1 失败
  */
-int agentrt_io_ensure_dir(const char *path);
+int airy_io_ensure_dir(const char *path);
 
 /**
  * @brief 递归创建目录（跨平台）
@@ -46,24 +46,24 @@ int agentrt_io_ensure_dir(const char *path);
  * @param mode 目录权限（Unix风格，Windows忽略）
  * @return 0成功，-1失败
  */
-int agentrt_io_mkdir_p(const char *path, int mode);
+int airy_io_mkdir_p(const char *path, int mode);
 
 /**
  * @brief 列出目录下所有文件（不包含子目录）
  * @param path 目录路径
- * @param out_files 输出文件名数组（需调用 agentrt_io_free_list 释放）
+ * @param out_files 输出文件名数组（需调用 airy_io_free_list 释放）
  * @param out_count 输出数量
  * @return 0 成功，-1 失败
  */
-int agentrt_io_list_files(const char *path, char ***out_files, size_t *out_count);
+int airy_io_list_files(const char *path, char ***out_files, size_t *out_count);
 
 /**
  * @brief 释放文件列表
  */
-void agentrt_io_free_list(char **files, size_t count);
+void airy_io_free_list(char **files, size_t count);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* AGENTRT_UTILS_IO_H */
+#endif /* AIRY_RT_UTILS_IO_H */

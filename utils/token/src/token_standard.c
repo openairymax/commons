@@ -40,9 +40,9 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
                                   size_t *bytes_consumed)
 {
     if (!text || !code_point || !bytes_consumed)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (i >= length)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     unsigned char c = (unsigned char)text[i];
 
@@ -53,7 +53,7 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
     } else if (c >= 0xC2 && c <= 0xDF && i + 1 < length) {
         unsigned char n1 = (unsigned char)text[i + 1];
         if ((n1 & 0xC0) != 0x80)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         *code_point = ((uint32_t)(c & 0x1F) << 6) | (uint32_t)(n1 & 0x3F);
         *bytes_consumed = 2;
         return 0;
@@ -61,11 +61,11 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
         unsigned char n1 = (unsigned char)text[i + 1];
         unsigned char n2 = (unsigned char)text[i + 2];
         if ((n1 & 0xC0) != 0x80 || (n2 & 0xC0) != 0x80)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (c == 0xE0 && n1 < 0xA0)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (c == 0xED && n1 > 0x9F)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         *code_point =
             ((uint32_t)(c & 0x0F) << 12) | ((uint32_t)(n1 & 0x3F) << 6) | (uint32_t)(n2 & 0x3F);
         *bytes_consumed = 3;
@@ -75,18 +75,18 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
         unsigned char n2 = (unsigned char)text[i + 2];
         unsigned char n3 = (unsigned char)text[i + 3];
         if ((n1 & 0xC0) != 0x80 || (n2 & 0xC0) != 0x80 || (n3 & 0xC0) != 0x80)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (c == 0xF0 && n1 < 0x90)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         if (c == 0xF4 && n1 > 0x8F)
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         *code_point = ((uint32_t)(c & 0x07) << 18) | ((uint32_t)(n1 & 0x3F) << 12) |
                       ((uint32_t)(n2 & 0x3F) << 6) | (uint32_t)(n3 & 0x3F);
         *bytes_consumed = 4;
         return 0;
     }
 
-    return AGENTRT_EINVAL;
+    return AIRY_EINVAL;
 }
 
 /**
@@ -153,11 +153,11 @@ static int is_cjk_code_point(uint32_t code_point)
 /**
  * @brief 分析文本语言特征
  */
-int agentrt_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
+int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
                                size_t *out_alpha_chars, size_t *out_total_chars)
 {
     if (!text || !out_cjk_chars || !out_alpha_chars || !out_total_chars) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     size_t cjk_chars = 0;
@@ -192,19 +192,19 @@ int agentrt_token_analyze_text(const char *text, size_t length, size_t *out_cjk_
 /**
  * @brief 标准化 Token 计算函数
  */
-size_t agentrt_token_standard_count(const char *text, size_t length,
-                                    const agentrt_token_config_t *config)
+size_t airy_token_standard_count(const char *text, size_t length,
+                                    const airy_token_config_t *config)
 {
     if (!text) {
         return (size_t)-1;
     }
 
     // 使用默认配置如果未提供
-    agentrt_token_config_t default_config = AGENTRT_TOKEN_CONFIG_DEFAULT;
-    const agentrt_token_config_t *cfg = config ? config : &default_config;
+    airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
+    const airy_token_config_t *cfg = config ? config : &default_config;
 
     // 验证配置
-    if (agentrt_token_validate_config(cfg) != 0) {
+    if (airy_token_validate_config(cfg) != 0) {
         return (size_t)-1;
     }
 
@@ -216,28 +216,28 @@ size_t agentrt_token_standard_count(const char *text, size_t length,
 
     // 分析文本特征
     size_t cjk_chars = 0, alpha_chars = 0, total_chars = 0;
-    if (agentrt_token_analyze_text(text, text_len, &cjk_chars, &alpha_chars, &total_chars) != 0) {
+    if (airy_token_analyze_text(text, text_len, &cjk_chars, &alpha_chars, &total_chars) != 0) {
         return (size_t)-1;
     }
 
     // 根据配置选择计算策略
     size_t token_count = 0;
 
-    if (cfg->flags & AGENTRT_TOKEN_FLAG_ACCURATE) {
+    if (cfg->flags & AIRY_TOKEN_FLAG_ACCURATE) {
         // 高精度模式：根据模型类型使用不同算法
         switch (cfg->model_type) {
-        case AGENTRT_TOKEN_MODEL_GPT4:
-        case AGENTRT_TOKEN_MODEL_GPT35:
+        case AIRY_TOKEN_MODEL_GPT4:
+        case AIRY_TOKEN_MODEL_GPT35:
             // GPT 系列：中文字符 1.5 字符/Token，英文 4 字符/Token
             token_count = (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f);
             break;
 
-        case AGENTRT_TOKEN_MODEL_CLAUDE:
+        case AIRY_TOKEN_MODEL_CLAUDE:
             // Claude 系列：统一 3.5 字符/Token
             token_count = (size_t)(total_chars / 3.5f);
             break;
 
-        case AGENTRT_TOKEN_MODEL_LLAMA:
+        case AIRY_TOKEN_MODEL_LLAMA:
             // LLaMA 系列：中文字符 2 字符/Token，英文 4 字符/Token
             token_count = (size_t)(cjk_chars / 2.0f + (total_chars - cjk_chars) / 4.0f);
             break;
@@ -281,20 +281,20 @@ size_t agentrt_token_standard_count(const char *text, size_t length,
 /**
  * @brief 批量 Token 计算
  */
-int agentrt_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
-                                       size_t *out_counts, const agentrt_token_config_t *config)
+int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
+                                       size_t *out_counts, const airy_token_config_t *config)
 {
     if (!texts || !out_counts || count == 0) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 使用默认配置如果未提供
-    agentrt_token_config_t default_config = AGENTRT_TOKEN_CONFIG_DEFAULT;
-    const agentrt_token_config_t *cfg = config ? config : &default_config;
+    airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
+    const airy_token_config_t *cfg = config ? config : &default_config;
 
     // 验证配置
-    if (agentrt_token_validate_config(cfg) != 0) {
-        return AGENTRT_EINVAL;
+    if (airy_token_validate_config(cfg) != 0) {
+        return AIRY_EINVAL;
     }
 
     // 逐个计算 Token 数量
@@ -305,11 +305,11 @@ int agentrt_token_standard_count_batch(const char **texts, const size_t *lengths
         }
 
         size_t length = lengths ? lengths[i] : 0;
-        out_counts[i] = agentrt_token_standard_count(texts[i], length, cfg);
+        out_counts[i] = airy_token_standard_count(texts[i], length, cfg);
 
         // 检查错误
         if (out_counts[i] == (size_t)-1) {
-            return AGENTRT_EINVAL;
+            return AIRY_EINVAL;
         }
     }
 
@@ -319,7 +319,7 @@ int agentrt_token_standard_count_batch(const char **texts, const size_t *lengths
 /**
  * @brief 获取 Token 计算算法信息
  */
-const char *agentrt_token_get_algorithm_info(void)
+const char *airy_token_get_algorithm_info(void)
 {
     return ALGORITHM_INFO;
 }
@@ -327,32 +327,32 @@ const char *agentrt_token_get_algorithm_info(void)
 /**
  * @brief 验证 Token 计算配置
  */
-int agentrt_token_validate_config(const agentrt_token_config_t *config)
+int airy_token_validate_config(const airy_token_config_t *config)
 {
     if (!config) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 检查模型类型有效性
-    if (config->model_type < AGENTRT_TOKEN_MODEL_GENERIC ||
-        config->model_type > AGENTRT_TOKEN_MODEL_CUSTOM) {
-        return AGENTRT_EINVAL;
+    if (config->model_type < AIRY_TOKEN_MODEL_GENERIC ||
+        config->model_type > AIRY_TOKEN_MODEL_CUSTOM) {
+        return AIRY_EINVAL;
     }
 
     // 检查比例阈值有效性
     if (config->cjk_ratio <= 0.0f || config->cjk_ratio >= 1.0f) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (config->alpha_ratio <= 0.0f || config->alpha_ratio >= 1.0f) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     // 检查标志位有效性
-    if ((config->flags & AGENTRT_TOKEN_FLAG_ACCURATE) &&
-        (config->flags & AGENTRT_TOKEN_FLAG_ESTIMATE)) {
+    if ((config->flags & AIRY_TOKEN_FLAG_ACCURATE) &&
+        (config->flags & AIRY_TOKEN_FLAG_ESTIMATE)) {
         // 不能同时设置准确和估算标志
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     return 0;
@@ -361,33 +361,33 @@ int agentrt_token_validate_config(const agentrt_token_config_t *config)
 /**
  * @brief 设置 Token 计算精度
  */
-int agentrt_token_set_precision(agentrt_token_precision_t precision, agentrt_token_config_t *config)
+int airy_token_set_precision(airy_token_precision_t precision, airy_token_config_t *config)
 {
     if (!config) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     switch (precision) {
-    case AGENTRT_TOKEN_PRECISION_LOW:
-        config->flags = AGENTRT_TOKEN_FLAG_ESTIMATE;
+    case AIRY_TOKEN_PRECISION_LOW:
+        config->flags = AIRY_TOKEN_FLAG_ESTIMATE;
         config->cjk_ratio = 0.3f;
         config->alpha_ratio = 0.5f;
         break;
 
-    case AGENTRT_TOKEN_PRECISION_MEDIUM:
-        config->flags = AGENTRT_TOKEN_FLAG_ESTIMATE;
+    case AIRY_TOKEN_PRECISION_MEDIUM:
+        config->flags = AIRY_TOKEN_FLAG_ESTIMATE;
         config->cjk_ratio = 0.2f;
         config->alpha_ratio = 0.4f;
         break;
 
-    case AGENTRT_TOKEN_PRECISION_HIGH:
-        config->flags = AGENTRT_TOKEN_FLAG_ACCURATE;
+    case AIRY_TOKEN_PRECISION_HIGH:
+        config->flags = AIRY_TOKEN_FLAG_ACCURATE;
         config->cjk_ratio = 0.1f;
         config->alpha_ratio = 0.3f;
         break;
 
     default:
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     return 0;
@@ -396,11 +396,11 @@ int agentrt_token_set_precision(agentrt_token_precision_t precision, agentrt_tok
 /**
  * @brief 检查资源配额是否足够
  */
-int agentrt_token_check_quota(const agentrt_token_quota_t *quota, size_t requested_tokens,
-                              const agentrt_token_usage_t *current_usage)
+int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
+                              const airy_token_usage_t *current_usage)
 {
     if (!quota) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
     if (quota->max_tokens_per_request > 0 && requested_tokens > quota->max_tokens_per_request) {

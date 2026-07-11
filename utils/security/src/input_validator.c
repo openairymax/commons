@@ -101,8 +101,8 @@ static int contains_case(const char *str, const char *substr)
 /**
  * @brief 验证字符串长?
  */
-void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_len,
-                                    agentrt_validation_result_t *result)
+void airy_validate_string_length(const char *str, size_t min_len, size_t max_len,
+                                    airy_validation_result_t *result)
 {
 
     if (!result)
@@ -110,12 +110,12 @@ void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!str) {
         result->error_message = "String is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -124,14 +124,14 @@ void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_
 
     if (len < min_len) {
         result->error_message = "String too short";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
 
     if (len > max_len) {
         result->error_message = "String too long";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -142,8 +142,8 @@ void agentrt_validate_string_length(const char *str, size_t min_len, size_t max_
 /**
  * @brief 验证字符串是否只包含安全字符
  */
-void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
-                                     agentrt_validation_result_t *result)
+void airy_validate_string_charset(const char *str, const char *allowed_chars,
+                                     airy_validation_result_t *result)
 {
 
     if (!result)
@@ -151,19 +151,19 @@ void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!str) {
         result->error_message = "String is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
 
     if (!allowed_chars) {
         result->error_message = "Allowed chars is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "allowed_chars";
         return;
     }
@@ -171,7 +171,7 @@ void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
     for (const char *p = str; *p; p++) {
         if (!strchr(allowed_chars, *p)) {
             result->error_message = "String contains disallowed character";
-            result->error_code = AGENTRT_ESANITIZE;
+            result->error_code = AIRY_ESANITIZE;
             result->error_field = "str";
             return;
         }
@@ -183,8 +183,8 @@ void agentrt_validate_string_charset(const char *str, const char *allowed_chars,
 /**
  * @brief 验证标识?
  */
-void agentrt_validate_identifier(const char *str, size_t max_len,
-                                 agentrt_validation_result_t *result)
+void airy_validate_identifier(const char *str, size_t max_len,
+                                 airy_validation_result_t *result)
 {
 
     if (!result)
@@ -192,12 +192,12 @@ void agentrt_validate_identifier(const char *str, size_t max_len,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!str) {
         result->error_message = "Identifier is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -206,21 +206,21 @@ void agentrt_validate_identifier(const char *str, size_t max_len,
 
     if (len == 0) {
         result->error_message = "Identifier is empty";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
 
     if (len > max_len) {
         result->error_message = "Identifier too long";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
 
     if (!isalpha(str[0]) && str[0] != '_') {
         result->error_message = "Identifier must start with letter or underscore";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -228,7 +228,7 @@ void agentrt_validate_identifier(const char *str, size_t max_len,
     for (size_t i = 1; i < len; i++) {
         if (!isalnum(str[i]) && str[i] != '_') {
             result->error_message = "Identifier contains invalid character";
-            result->error_code = AGENTRT_ESANITIZE;
+            result->error_code = AIRY_ESANITIZE;
             result->error_field = "str";
             return;
         }
@@ -240,8 +240,8 @@ void agentrt_validate_identifier(const char *str, size_t max_len,
 /**
  * @brief 验证JSON字符?
  */
-void agentrt_validate_json_string(const char *str, size_t max_len,
-                                  agentrt_validation_result_t *result)
+void airy_validate_json_string(const char *str, size_t max_len,
+                                  airy_validation_result_t *result)
 {
 
     if (!result)
@@ -249,12 +249,12 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!str) {
         result->error_message = "JSON string is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -263,7 +263,7 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
 
     if (len > max_len) {
         result->error_message = "JSON string too long";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "str";
         return;
     }
@@ -303,7 +303,7 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
 
             if (brace_count < 0 || bracket_count < 0) {
                 result->error_message = "JSON has unbalanced brackets";
-                result->error_code = AGENTRT_ESANITIZE;
+                result->error_code = AIRY_ESANITIZE;
                 result->error_field = "str";
                 return;
             }
@@ -312,14 +312,14 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
 
     if (in_string) {
         result->error_message = "JSON has unclosed string";
-        result->error_code = AGENTRT_ESANITIZE;
+        result->error_code = AIRY_ESANITIZE;
         result->error_field = "str";
         return;
     }
 
     if (brace_count != 0 || bracket_count != 0) {
         result->error_message = "JSON has unbalanced brackets";
-        result->error_code = AGENTRT_ESANITIZE;
+        result->error_code = AIRY_ESANITIZE;
         result->error_field = "str";
         return;
     }
@@ -332,8 +332,8 @@ void agentrt_validate_json_string(const char *str, size_t max_len,
 /**
  * @brief 验证文件路径安全?
  */
-void agentrt_validate_file_path(const char *path, const char *allowed_root,
-                                agentrt_validation_result_t *result)
+void airy_validate_file_path(const char *path, const char *allowed_root,
+                                airy_validation_result_t *result)
 {
 
     if (!result)
@@ -341,12 +341,12 @@ void agentrt_validate_file_path(const char *path, const char *allowed_root,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!path) {
         result->error_message = "Path is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "path";
         return;
     }
@@ -355,35 +355,35 @@ void agentrt_validate_file_path(const char *path, const char *allowed_root,
 
     if (len == 0) {
         result->error_message = "Path is empty";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "path";
         return;
     }
 
     if (len > 4096) {
         result->error_message = "Path too long";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "path";
         return;
     }
 
     if (strchr(path, '\0') != path + len) {
         result->error_message = "Path contains null byte";
-        result->error_code = AGENTRT_ESECURITY;
+        result->error_code = AIRY_ESECURITY;
         result->error_field = "path";
         return;
     }
 
     if (strstr(path, "..") || strstr(path, "../") || strstr(path, "..\\")) {
         result->error_message = "Path contains directory traversal";
-        result->error_code = AGENTRT_ESECURITY;
+        result->error_code = AIRY_ESECURITY;
         result->error_field = "path";
         return;
     }
 
     if (allowed_root && !starts_with_case(path, allowed_root)) {
         result->error_message = "Path outside allowed root";
-        result->error_code = AGENTRT_ESECURITY;
+        result->error_code = AIRY_ESECURITY;
         result->error_field = "path";
         return;
     }
@@ -394,35 +394,35 @@ void agentrt_validate_file_path(const char *path, const char *allowed_root,
 /**
  * @brief 规范化路?
  */
-agentrt_error_t agentrt_normalize_path(const char *path, char **out_normalized, size_t *out_len)
+airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *out_len)
 {
 
     if (!path || !out_normalized)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
 #ifdef _WIN32
     char buffer[MAX_PATH];
     DWORD len = GetFullPathNameA(path, MAX_PATH, buffer, NULL);
     if (len == 0 || len >= MAX_PATH) {
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     }
 
-    *out_normalized = AGENTRT_STRDUP(buffer);
+    *out_normalized = AIRY_STRDUP(buffer);
     if (!*out_normalized)
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
 
     if (out_len)
         *out_len = strlen(*out_normalized);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 #else
     char *resolved = realpath(path, NULL);
     if (!resolved)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     *out_normalized = resolved;
     if (out_len)
         *out_len = strlen(resolved);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 #endif
 }
 
@@ -431,8 +431,8 @@ agentrt_error_t agentrt_normalize_path(const char *path, char **out_normalized, 
 /**
  * @brief 验证Shell命令安全?
  */
-void agentrt_validate_shell_command(const char *cmd, const char **allowed_commands,
-                                    agentrt_validation_result_t *result)
+void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
+                                    airy_validation_result_t *result)
 {
 
     if (!result)
@@ -440,12 +440,12 @@ void agentrt_validate_shell_command(const char *cmd, const char **allowed_comman
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!cmd) {
         result->error_message = "Command is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "cmd";
         return;
     }
@@ -453,7 +453,7 @@ void agentrt_validate_shell_command(const char *cmd, const char **allowed_comman
     if (strchr(cmd, ';') || strchr(cmd, '|') || strchr(cmd, '&') || strchr(cmd, '$') ||
         strchr(cmd, '`') || strchr(cmd, '\n')) {
         result->error_message = "Command contains dangerous characters";
-        result->error_code = AGENTRT_ESECURITY;
+        result->error_code = AIRY_ESECURITY;
         result->error_field = "cmd";
         return;
     }
@@ -461,7 +461,7 @@ void agentrt_validate_shell_command(const char *cmd, const char **allowed_comman
     for (int i = 0; DANGEROUS_COMMANDS[i]; i++) {
         if (contains_case(cmd, DANGEROUS_COMMANDS[i])) {
             result->error_message = "Command contains dangerous operation";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "cmd";
             return;
         }
@@ -477,7 +477,7 @@ void agentrt_validate_shell_command(const char *cmd, const char **allowed_comman
         }
         if (!found) {
             result->error_message = "Command not in allowed list";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "cmd";
             return;
         }
@@ -489,20 +489,20 @@ void agentrt_validate_shell_command(const char *cmd, const char **allowed_comman
 /**
  * @brief 净化Shell参数
  */
-agentrt_error_t agentrt_sanitize_shell_param(const char *param, char **out_sanitized)
+airy_err_t airy_sanitize_shell_param(const char *param, char **out_sanitized)
 {
 
     if (!param || !out_sanitized)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t len = strlen(param);
     if (len > SIZE_MAX / 4 - 3)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
     size_t buf_size = len * 4 + 3;
 
-    char *sanitized = (char *)AGENTRT_MALLOC(buf_size);
+    char *sanitized = (char *)AIRY_MALLOC(buf_size);
     if (!sanitized)
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
 
     size_t j = 0;
     sanitized[j++] = '\'';
@@ -523,7 +523,7 @@ agentrt_error_t agentrt_sanitize_shell_param(const char *param, char **out_sanit
     sanitized[j] = '\0';
 
     *out_sanitized = sanitized;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ==================== SQL验证实现 ==================== */
@@ -531,7 +531,7 @@ agentrt_error_t agentrt_sanitize_shell_param(const char *param, char **out_sanit
 /**
  * @brief 验证SQL查询安全?
  */
-void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *result)
+void airy_validate_sql_query(const char *sql, airy_validation_result_t *result)
 {
 
     if (!result)
@@ -539,12 +539,12 @@ void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *re
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!sql) {
         result->error_message = "SQL is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "sql";
         return;
     }
@@ -552,7 +552,7 @@ void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *re
     for (int i = 0; SQL_DANGEROUS_KEYWORDS[i]; i++) {
         if (contains_case(sql, SQL_DANGEROUS_KEYWORDS[i])) {
             result->error_message = "SQL contains dangerous keyword";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "sql";
             return;
         }
@@ -566,7 +566,7 @@ void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *re
 
     if (quote_count % 2 != 0) {
         result->error_message = "SQL has unbalanced quotes";
-        result->error_code = AGENTRT_ESANITIZE;
+        result->error_code = AIRY_ESANITIZE;
         result->error_field = "sql";
         return;
     }
@@ -577,23 +577,23 @@ void agentrt_validate_sql_query(const char *sql, agentrt_validation_result_t *re
 /**
  * @brief 净化SQL标识?
  */
-agentrt_error_t agentrt_sanitize_sql_identifier(const char *identifier, char **out_sanitized)
+airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanitized)
 {
 
     if (!identifier || !out_sanitized)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
-    agentrt_validation_result_t result;
-    agentrt_validate_identifier(identifier, 128, &result);
+    airy_validation_result_t result;
+    airy_validate_identifier(identifier, 128, &result);
 
     if (!result.is_valid) {
-        return AGENTRT_ESANITIZE;
+        return AIRY_ESANITIZE;
     }
 
     size_t len = strlen(identifier);
-    char *sanitized = (char *)AGENTRT_MALLOC(len + 3);
+    char *sanitized = (char *)AIRY_MALLOC(len + 3);
     if (!sanitized)
-        return AGENTRT_ENOMEM;
+        return AIRY_ENOMEM;
 
     sanitized[0] = '"';
     __builtin_memcpy(sanitized + 1, identifier, len);
@@ -601,7 +601,7 @@ agentrt_error_t agentrt_sanitize_sql_identifier(const char *identifier, char **o
     sanitized[len + 2] = '\0';
 
     *out_sanitized = sanitized;
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ==================== URL验证实现 ==================== */
@@ -609,8 +609,8 @@ agentrt_error_t agentrt_sanitize_sql_identifier(const char *identifier, char **o
 /**
  * @brief 验证URL安全?
  */
-void agentrt_validate_url(const char *url, const char **allowed_schemes,
-                          agentrt_validation_result_t *result)
+void airy_validate_url(const char *url, const char **allowed_schemes,
+                          airy_validation_result_t *result)
 {
 
     if (!result)
@@ -618,12 +618,12 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (!url) {
         result->error_message = "URL is NULL";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "url";
         return;
     }
@@ -631,7 +631,7 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
     for (int i = 0; DANGEROUS_URL_SCHEMES[i]; i++) {
         if (starts_with_case(url, DANGEROUS_URL_SCHEMES[i])) {
             result->error_message = "URL uses dangerous scheme";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "url";
             return;
         }
@@ -647,7 +647,7 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
         }
         if (!found) {
             result->error_message = "URL scheme not allowed";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "url";
             return;
         }
@@ -656,7 +656,7 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
     for (int i = 0; PRIVATE_IP_PREFIXES[i]; i++) {
         if (contains_case(url, PRIVATE_IP_PREFIXES[i])) {
             result->error_message = "URL points to private IP";
-            result->error_code = AGENTRT_ESECURITY;
+            result->error_code = AIRY_ESECURITY;
             result->error_field = "url";
             return;
         }
@@ -664,7 +664,7 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
 
     if (contains_case(url, "localhost") || contains_case(url, "127.0.0.1")) {
         result->error_message = "URL points to localhost";
-        result->error_code = AGENTRT_ESECURITY;
+        result->error_code = AIRY_ESECURITY;
         result->error_field = "url";
         return;
     }
@@ -675,22 +675,22 @@ void agentrt_validate_url(const char *url, const char **allowed_schemes,
 /**
  * @brief 解析URL组件
  */
-agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out_host,
+airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
                                   uint16_t *out_port, char **out_path)
 {
 
     if (!url)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     const char *scheme_end = strstr(url, "://");
     if (!scheme_end)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
 
     size_t scheme_len = scheme_end - url;
     if (out_scheme) {
-        *out_scheme = (char *)AGENTRT_MALLOC(scheme_len + 1);
+        *out_scheme = (char *)AIRY_MALLOC(scheme_len + 1);
         if (!*out_scheme)
-            return AGENTRT_ENOMEM;
+            return AIRY_ENOMEM;
         __builtin_memcpy(*out_scheme, url, scheme_len);
         (*out_scheme)[scheme_len] = '\0';
     }
@@ -713,11 +713,11 @@ agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out
     }
 
     if (out_host) {
-        *out_host = (char *)AGENTRT_MALLOC(host_len + 1);
+        *out_host = (char *)AIRY_MALLOC(host_len + 1);
         if (!*out_host) {
             if (out_scheme && *out_scheme)
-                AGENTRT_FREE(*out_scheme);
-            return AGENTRT_ENOMEM;
+                AIRY_FREE(*out_scheme);
+            return AIRY_ENOMEM;
         }
         __builtin_memcpy(*out_host, host_start, host_len);
         (*out_host)[host_len] = '\0';
@@ -728,19 +728,19 @@ agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out
 
     if (out_path) {
         size_t path_len = strlen(path_start);
-        *out_path = (char *)AGENTRT_MALLOC(path_len + 1);
+        *out_path = (char *)AIRY_MALLOC(path_len + 1);
         if (!*out_path) {
             if (out_scheme && *out_scheme)
-                AGENTRT_FREE(*out_scheme);
+                AIRY_FREE(*out_scheme);
             if (out_host && *out_host)
-                AGENTRT_FREE(*out_host);
-            return AGENTRT_ENOMEM;
+                AIRY_FREE(*out_host);
+            return AIRY_ENOMEM;
         }
         __builtin_memcpy(*out_path, path_start, path_len);
         (*out_path)[path_len] = '\0';
     }
 
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /* ==================== 数值验证实?==================== */
@@ -748,8 +748,8 @@ agentrt_error_t agentrt_parse_url(const char *url, char **out_scheme, char **out
 /**
  * @brief 验证整数范围
  */
-void agentrt_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
-                                agentrt_validation_result_t *result)
+void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
+                                airy_validation_result_t *result)
 {
 
     if (!result)
@@ -757,19 +757,19 @@ void agentrt_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (value < min_val) {
         result->error_message = "Value below minimum";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "value";
         return;
     }
 
     if (value > max_val) {
         result->error_message = "Value above maximum";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "value";
         return;
     }
@@ -780,8 +780,8 @@ void agentrt_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
 /**
  * @brief 验证浮点数范?
  */
-void agentrt_validate_float_range(double value, double min_val, double max_val,
-                                  agentrt_validation_result_t *result)
+void airy_validate_float_range(double value, double min_val, double max_val,
+                                  airy_validation_result_t *result)
 {
 
     if (!result)
@@ -789,19 +789,19 @@ void agentrt_validate_float_range(double value, double min_val, double max_val,
 
     result->is_valid = 0;
     result->error_message = NULL;
-    result->error_code = AGENTRT_SUCCESS;
+    result->error_code = AIRY_SUCCESS;
     result->error_field = NULL;
 
     if (value < min_val) {
         result->error_message = "Value below minimum";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "value";
         return;
     }
 
     if (value > max_val) {
         result->error_message = "Value above maximum";
-        result->error_code = AGENTRT_EINVAL;
+        result->error_code = AIRY_EINVAL;
         result->error_field = "value";
         return;
     }
@@ -814,54 +814,54 @@ void agentrt_validate_float_range(double value, double min_val, double max_val,
 /**
  * @brief 安全内存复制
  */
-agentrt_error_t agentrt_safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size)
+airy_err_t airy_safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size)
 {
 
     if (!dest || !src)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (src_size > dest_size)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     __builtin_memcpy(dest, src, src_size);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
  * @brief 安全字符串复?
  */
-agentrt_error_t agentrt_safe_strcpy(char *dest, size_t dest_size, const char *src)
+airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src)
 {
 
     if (!dest || !src)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (dest_size == 0)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     size_t src_len = strlen(src);
     if (src_len >= dest_size)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     __builtin_memcpy(dest, src, src_len + 1);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 /**
  * @brief 安全字符串拼?
  */
-agentrt_error_t agentrt_safe_strcat(char *dest, size_t dest_size, const char *src)
+airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src)
 {
 
     if (!dest || !src)
-        return AGENTRT_EINVAL;
+        return AIRY_EINVAL;
     if (dest_size == 0)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     size_t dest_len = strlen(dest);
     size_t src_len = strlen(src);
 
     if (dest_len + src_len >= dest_size)
-        return AGENTRT_EOVERFLOW;
+        return AIRY_EOVERFLOW;
 
     __builtin_memcpy(dest + dest_len, src, src_len + 1);
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }

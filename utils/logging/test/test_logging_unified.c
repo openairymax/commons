@@ -241,21 +241,21 @@ static int test_logging_compat_layer(void)
     printf("  测试日志兼容层...\n");
 
     // 测试兼容宏
-    AGENTRT_LOG_INIT();
+    AIRY_LOG_INIT();
 
-    AGENTRT_LOG_ERROR("兼容层错误消息");
-    AGENTRT_LOG_WARN("兼容层警告消息");
-    AGENTRT_LOG_INFO("兼容层信息消息");
-    AGENTRT_LOG_DEBUG("兼容层调试消息");
+    AIRY_LOG_ERROR("兼容层错误消息");
+    AIRY_LOG_WARN("兼容层警告消息");
+    AIRY_LOG_INFO("兼容层信息消息");
+    AIRY_LOG_DEBUG("兼容层调试消息");
 
-    AGENTRT_LOG_ERROR_FMT("兼容层格式化错误: %s", "测试");
-    AGENTRT_LOG_INFO_FMT("兼容层格式化信息: %d", 42);
+    AIRY_LOG_ERROR_FMT("兼容层格式化错误: %s", "测试");
+    AIRY_LOG_INFO_FMT("兼容层格式化信息: %d", 42);
 
     // 测试兼容层级别设置
-    AGENTRT_LOG_SET_LEVEL("DEBUG");
+    AIRY_LOG_SET_LEVEL("DEBUG");
 
     // 测试兼容层清理
-    AGENTRT_LOG_CLEANUP();
+    AIRY_LOG_CLEANUP();
 
     printf("  日志兼容层测试通过\n");
     return 0;

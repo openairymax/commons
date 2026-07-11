@@ -23,7 +23,7 @@ sync_result_t sync_semaphore_create(sync_semaphore_t *semaphore, unsigned int in
     CHECK_NULL_RET(semaphore, SYNC_ERROR_INVALID);
 
     struct sync_semaphore *s =
-        (struct sync_semaphore *)AGENTRT_CALLOC(1, sizeof(struct sync_semaphore));
+        (struct sync_semaphore *)AIRY_CALLOC(1, sizeof(struct sync_semaphore));
     CHECK_NULL_RET(s, SYNC_ERROR_MEMORY);
 
     s->type = SYNC_TYPE_SEMAPHORE;
@@ -31,20 +31,20 @@ sync_result_t sync_semaphore_create(sync_semaphore_t *semaphore, unsigned int in
     if (attr != NULL && attr->name != NULL) {
         s->name = sync_internal_strdup(attr->name);
     }
-    AGENTRT_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
+    AIRY_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
 
 #ifdef _WIN32
     s->semaphore = CreateSemaphore(NULL, initial_value, max_value, NULL);
     if (s->semaphore == NULL) {
-        AGENTRT_FREE(s->name);
-        AGENTRT_FREE(s);
+        AIRY_FREE(s->name);
+        AIRY_FREE(s);
         return SYNC_ERROR_UNKNOWN;
     }
 #else
     int result = sem_init(&s->semaphore, 0, initial_value);
     if (result != 0) {
-        AGENTRT_FREE(s->name);
-        AGENTRT_FREE(s);
+        AIRY_FREE(s->name);
+        AIRY_FREE(s);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
@@ -61,8 +61,8 @@ sync_result_t sync_semaphore_free(sync_semaphore_t semaphore)
     }
 
     if (!semaphore->initialized) {
-        AGENTRT_FREE(semaphore->name);
-        AGENTRT_FREE(semaphore);
+        AIRY_FREE(semaphore->name);
+        AIRY_FREE(semaphore);
         return SYNC_SUCCESS;
     }
 
@@ -72,8 +72,8 @@ sync_result_t sync_semaphore_free(sync_semaphore_t semaphore)
     sem_destroy(&semaphore->semaphore);
 #endif
 
-    AGENTRT_FREE(semaphore->name);
-    AGENTRT_FREE(semaphore);
+    AIRY_FREE(semaphore->name);
+    AIRY_FREE(semaphore);
     return SYNC_SUCCESS;
 }
 

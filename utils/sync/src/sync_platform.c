@@ -29,9 +29,6 @@
 
 #include "error.h"
 
-#define SYNC_RET_ERR(c) \
-    do { agentrt_error_push_ex((c), __FILE__, __LINE__, __func__, "%s", \
-         agentrt_error_str(c)); return (c); } while(0)
 
 
 
@@ -492,7 +489,7 @@ int platform_event_wait(platform_event_t *event, uint64_t timeout_ms)
     while (!event->signaled) {
         if (timeout_ms == 0) {
             pthread_mutex_unlock(&event->mutex);
-            SYNC_RET_ERR(AGENTRT_EINVAL);
+            AIRY_RET_ERR(AIRY_EINVAL);
         }
         if (timeout_ms == (uint64_t)-1) {
             pthread_cond_wait(&event->cond, &event->mutex);
@@ -508,7 +505,7 @@ int platform_event_wait(platform_event_t *event, uint64_t timeout_ms)
             int ret = pthread_cond_timedwait(&event->cond, &event->mutex, &ts);
             if (ret == ETIMEDOUT) {
                 pthread_mutex_unlock(&event->mutex);
-                SYNC_RET_ERR(AGENTRT_EINVAL);
+                AIRY_RET_ERR(AIRY_EINVAL);
             }
         }
     }
