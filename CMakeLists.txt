@@ -110,6 +110,8 @@ set(_inc_dirs
     utils/uuid/include
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson/include
+    # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
+    include
 )
 set(_inc_missing 0)
 foreach(_inc ${_inc_dirs})
@@ -175,6 +177,8 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print/include
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson/include
+    # P0-01: [SC] 共享契约层头文件（IRON-9 v2，6 核心 + 1 补充 + uapi_compat）
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_compile_definitions(airy_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
@@ -231,6 +235,8 @@ install(DIRECTORY utils/cognition/include/ DESTINATION include/agentrt/utils/cog
 install(DIRECTORY utils/strategy/include/ DESTINATION include/agentrt/utils/strategy)
 # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
 install(DIRECTORY utils/cjson/include/ DESTINATION include/agentrt/utils/cjson)
+# P0-01: [SC] 共享契约层头文件（IRON-9 v2）
+install(DIRECTORY include/airymax/ DESTINATION include/airymax)
 
 option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)

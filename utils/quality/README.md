@@ -1,7 +1,7 @@
 # Quality — 质量保障模块
 
 **模块路径**: `agentrt/commons/utils/quality/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -19,7 +19,7 @@ Quality 模块是 AgentRT 的代码质量保证框架，以 header-only 方式�
 
 ```
 quality/
-├── agentrt_quality.h           # Header-only 质量保障框架（宏和内联函数）
+├── airy_quality.h           # Header-only 质量保障框架（宏和内联函数）
 └── README.md                   # 本文档
 ```
 
@@ -29,46 +29,46 @@ quality/
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_CHECK_NULL(ptr, error_code)` | 检查指针是否为 NULL，是则返回错误码 |
-| `AGENTRT_CHECK_NULL_GOTO(ptr, label, error_code)` | 检查指针是否为 NULL，是则跳转到清理标签 |
-| `AGENTRT_CHECK_CONDITION(cond, error_code)` | 检查条件是否成立，不成立则返回错误码 |
-| `AGENTRT_CHECK_CONDITION_GOTO(cond, label, error_code)` | 检查条件是否成立，不成立则跳转 |
-| `AGENTRT_CHECK_RANGE(value, min, max, error_code)` | 检查值是否在 `[min, max]` 范围内 |
-| `AGENTRT_CHECK_MIN(value, min, error_code)` | 检查值是否 >= 最小值 |
-| `AGENTRT_CHECK_MAX(value, max, error_code)` | 检查值是否 <= 最大值 |
-| `AGENTRT_CHECK_STR_LEN(str, max_len, error_code)` | 检查字符串长度是否在允许范围内 |
-| `AGENTRT_CHECK_ARRAY_INDEX(index, size, error_code)` | 检查数组索引是否有效 |
-| `AGENTRT_CHECK_EMPTY(str, error_code)` | 检查字符串是否为空或 NULL |
-| `AGENTRT_CHECK_BOUNDS(idx, size, error_code)` | 数组越界检查（兼容别名） |
+| `AIRY_CHECK_NULL(ptr, error_code)` | 检查指针是否为 NULL，是则返回错误码 |
+| `AIRY_CHECK_NULL_GOTO(ptr, label, error_code)` | 检查指针是否为 NULL，是则跳转到清理标签 |
+| `AIRY_CHECK_CONDITION(cond, error_code)` | 检查条件是否成立，不成立则返回错误码 |
+| `AIRY_CHECK_CONDITION_GOTO(cond, label, error_code)` | 检查条件是否成立，不成立则跳转 |
+| `AIRY_CHECK_RANGE(value, min, max, error_code)` | 检查值是否在 `[min, max]` 范围内 |
+| `AIRY_CHECK_MIN(value, min, error_code)` | 检查值是否 >= 最小值 |
+| `AIRY_CHECK_MAX(value, max, error_code)` | 检查值是否 <= 最大值 |
+| `AIRY_CHECK_STR_LEN(str, max_len, error_code)` | 检查字符串长度是否在允许范围内 |
+| `AIRY_CHECK_ARRAY_INDEX(index, size, error_code)` | 检查数组索引是否有效 |
+| `AIRY_CHECK_EMPTY(str, error_code)` | 检查字符串是否为空或 NULL |
+| `AIRY_CHECK_BOUNDS(idx, size, error_code)` | 数组越界检查（兼容别名） |
 
 ### 错误处理宏
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_SAFE_EXEC(expr, cleanup_label, error_var)` | 安全执行操作，失败时跳转到清理标签 |
-| `AGENTRT_SAFE_ALLOC(var, size, cleanup_label, error_var)` | 安全分配内存，失败时跳转到清理标签 |
-| `AGENTRT_SAFE_CALLOC(var, size, cleanup_label, error_var)` | 安全分配并清零内存，失败时跳转 |
-| `AGENTRT_LOG_ERROR_AND_RETURN(error_code, fmt, ...)` | 记录错误并返回 |
+| `AIRY_SAFE_EXEC(expr, cleanup_label, error_var)` | 安全执行操作，失败时跳转到清理标签 |
+| `AIRY_SAFE_ALLOC(var, size, cleanup_label, error_var)` | 安全分配内存，失败时跳转到清理标签 |
+| `AIRY_SAFE_CALLOC(var, size, cleanup_label, error_var)` | 安全分配并清零内存，失败时跳转 |
+| `AIRY_LOG_ERROR_AND_RETURN(error_code, fmt, ...)` | 记录错误并返回 |
 
 ### 资源管理宏
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_RESOURCE_GUARD_SCOPE_BEGIN()` | RAII 风格作用域开始 |
-| `AGENTRT_RESOURCE_GUARD_SCOPE_END()` | RAII 风格作用域结束 |
-| `AGENTRT_AUTO_FREE(ptr)` | 自动释放内存（使用 GCC `cleanup` 属性） |
-| `AGENTRT_AUTO_CLOSE(fd)` | 自动关闭文件描述符（使用 GCC `cleanup` 属性） |
-| `AGENTRT_SAFE_FREE(ptr)` | 安全释放内存并置为 NULL |
+| `AIRY_RESOURCE_GUARD_SCOPE_BEGIN()` | RAII 风格作用域开始 |
+| `AIRY_RESOURCE_GUARD_SCOPE_END()` | RAII 风格作用域结束 |
+| `AIRY_AUTO_FREE(ptr)` | 自动释放内存（使用 GCC `cleanup` 属性） |
+| `AIRY_AUTO_CLOSE(fd)` | 自动关闭文件描述符（使用 GCC `cleanup` 属性） |
+| `AIRY_SAFE_FREE(ptr)` | 安全释放内存并置为 NULL |
 
 ### 数值验证函数
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_validate_non_negative(value)` | 验证数值是否非负 |
-| `agentrt_validate_positive(value)` | 验证数值是否为正数 |
-| `agentrt_validate_percentage(value)` | 验证是否为有效百分比 [0, 100] |
-| `agentrt_validate_probability(value)` | 验证是否为有效概率 [0, 1] |
-| `agentrt_validate_priority(priority, min, max)` | 验证优先级是否在有效范围内 |
+| `airy_validate_non_negative(value)` | 验证数值是否非负 |
+| `airy_validate_positive(value)` | 验证数值是否为正数 |
+| `airy_validate_percentage(value)` | 验证是否为有效百分比 [0, 100] |
+| `airy_validate_probability(value)` | 验证是否为有效概率 [0, 1] |
+| `airy_validate_priority(priority, min, max)` | 验证优先级是否在有效范围内 |
 
 ### 边界检查函数
 
@@ -104,44 +104,44 @@ quality/
 ## 使用示例
 
 ```c
-#include "agentrt_quality.h"
+#include "airy_quality.h"
 
 // ===== 输入验证 =====
 airy_err_t process_data(const char *name, int *values, size_t count) {
     // 检查指针非空
-    AGENTRT_CHECK_NULL(name, AIRY_EINVAL);
-    AGENTRT_CHECK_NULL(values, AIRY_EINVAL);
+    AIRY_CHECK_NULL(name, AIRY_EINVAL);
+    AIRY_CHECK_NULL(values, AIRY_EINVAL);
 
     // 检查字符串非空
-    AGENTRT_CHECK_EMPTY(name, AIRY_EINVAL);
+    AIRY_CHECK_EMPTY(name, AIRY_EINVAL);
 
     // 检查字符串长度
-    AGENTRT_CHECK_STR_LEN(name, 256, AIRY_EINVAL);
+    AIRY_CHECK_STR_LEN(name, 256, AIRY_EINVAL);
 
     // 检查范围
-    AGENTRT_CHECK_RANGE(count, 1, 1024, AIRY_EINVAL);
+    AIRY_CHECK_RANGE(count, 1, 1024, AIRY_EINVAL);
 
     // 处理数据...
-    return AGENTRT_SUCCESS;
+    return AIRY_SUCCESS;
 }
 
 // ===== 错误处理 + goto 清理模式 =====
 airy_err_t allocate_and_process(const char *path) {
-    int err = AGENTRT_SUCCESS;
+    int err = AIRY_SUCCESS;
     char *buffer = NULL;
     FILE *file = NULL;
 
-    AGENTRT_SAFE_ALLOC(buffer, 4096, cleanup, err);
+    AIRY_SAFE_ALLOC(buffer, 4096, cleanup, err);
 
     file = fopen(path, "r");
-    AGENTRT_CHECK_NULL_GOTO(file, cleanup, AIRY_EIO);
+    AIRY_CHECK_NULL_GOTO(file, cleanup, AIRY_EIO);
 
     // 处理文件...
     fread(buffer, 1, 4096, file);
 
 cleanup:
     if (file) fclose(file);
-    AGENTRT_SAFE_FREE(buffer);
+    AIRY_SAFE_FREE(buffer);
     return err;
 }
 
@@ -161,12 +161,12 @@ if (safe_strcpy(dest, sizeof(dest), user_input) == 0) {
 
 // ===== RAII 自动释放 =====
 {
-    AGENTRT_RESOURCE_GUARD_SCOPE_BEGIN();
+    AIRY_RESOURCE_GUARD_SCOPE_BEGIN();
     char *data = malloc(1024);
-    AGENTRT_AUTO_FREE(data);
+    AIRY_AUTO_FREE(data);
     // ... 使用 data ...
     // 作用域结束时 data 自动释放
-    AGENTRT_RESOURCE_GUARD_SCOPE_END();
+    AIRY_RESOURCE_GUARD_SCOPE_END();
 }
 ```
 
@@ -184,14 +184,14 @@ if (safe_strcpy(dest, sizeof(dest), user_input) == 0) {
 
 | 别名 | 目标 |
 |------|------|
-| `agentrt_safe_strcpy(dest, dest_size, src)` | `safe_strcpy(dest, dest_size, src)` |
-| `agentrt_safe_strcat(dest, dest_size, src)` | `safe_strcat(dest, dest_size, src)` |
+| `airy_safe_strcpy(dest, dest_size, src)` | `safe_strcpy(dest, dest_size, src)` |
+| `airy_safe_strcat(dest, dest_size, src)` | `safe_strcat(dest, dest_size, src)` |
 
 ## 依赖关系
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 统一错误码定义（`AGENTRT_SUCCESS`、`AIRY_EINVAL` 等） |
+| `error.h` | 统一错误码定义（`AIRY_SUCCESS`、`AIRY_EINVAL` 等） |
 | `<stddef.h>` | `size_t` 类型定义 |
 | `<stdint.h>` | 定长整数类型 |
 

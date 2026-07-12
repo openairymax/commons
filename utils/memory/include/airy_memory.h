@@ -75,6 +75,7 @@ typedef struct {
 typedef struct memory_debug_info {
     void *address;                  /**< 内存地址 */
     size_t size;                    /**< 分配大小 */
+    size_t alignment;               /**< 分配时的对齐要求（Windows _aligned_* 系列必需） */
     const char *tag;                /**< 分配标签 */
     const char *file;               /**< 分配位置文件 */
     int line;                       /**< 分配位置行号 */

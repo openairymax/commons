@@ -1,7 +1,7 @@
 # Cognition — 认知管理
 
 **模块路径**: `agentrt/commons/utils/cognition/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 

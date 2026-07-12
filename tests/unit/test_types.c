@@ -24,6 +24,7 @@
 
 #include "../tests/utils/test_framework.h"
 #include "types.h"
+#include <airymax/ipc.h> /* AIRY_IPC_MAGIC (P0-05 convergence) */
 
 #include <cmocka.h>
 #include <setjmp.h>
@@ -294,13 +295,13 @@ static void test_ipc_header_structure(void **state)
 
     airy_ipc_header_t header = {0};
 
-    header.magic = 0x49504300;
+    header.magic = AIRY_IPC_MAGIC; /* P0-05: 收敛至 SSoT */
     header.version = 1;
     header.type = AIRY_IPC_PIPE;
     header.payload_len = 1024;
     header.message_id = 12345;
 
-    assert_int_equal(header.magic, 0x49504300);
+    assert_int_equal(header.magic, AIRY_IPC_MAGIC);
     assert_int_equal(header.version, 1);
     assert_int_equal(header.type, AIRY_IPC_PIPE);
     assert_int_equal(header.payload_len, 1024);

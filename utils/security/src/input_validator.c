@@ -367,12 +367,15 @@ void airy_validate_file_path(const char *path, const char *allowed_root,
         return;
     }
 
-    if (strchr(path, '\0') != path + len) {
-        result->error_message = "Path contains null byte";
-        result->error_code = AIRY_ESECURITY;
-        result->error_field = "path";
-        return;
-    }
+    /*
+     * Note: A C string (NUL-terminated) cannot contain an embedded null byte
+     * by definition — strlen() and strchr(..., '\0') both stop at the first
+     * terminator, so the former `strchr(path, '\0') != path + len` check was a
+     * tautology (always false) and has been removed. Detecting embedded nulls
+     * requires a (pointer, length) API; this function only accepts
+     * `const char *path`. Callers passing untrusted buffers should use a
+     * length-aware variant (e.g. airy_validate_file_path_n) instead.
+     */
 
     if (strstr(path, "..") || strstr(path, "../") || strstr(path, "..\\")) {
         result->error_message = "Path contains directory traversal";

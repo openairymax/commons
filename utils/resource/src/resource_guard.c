@@ -165,25 +165,45 @@ int airy_resource_track_report(char **out_report)
         char *buf = (char *)memory_alloc(buf_size, "resource_report_buffer");
         if (buf) {
             size_t offset = 0;
-            offset += snprintf(buf + offset, buf_size - offset, "Resource leak report:\n");
-            offset += snprintf(buf + offset, buf_size - offset, "===================\n");
-            offset += snprintf(buf + offset, buf_size - offset, "Total leaks: %d\n\n", count);
+            int n;
+
+            /*
+             * snprintf 返回"将要写入"的字符数（不含 NUL），可能 >= 剩余空间。
+             * size_t 是无符号类型：offset >= buf_size 时 buf_size - offset 会下溢为
+             * 巨大值，使 snprintf 写入越界。每次写入前必须检查剩余空间，并正确处理
+             * 截断情况。
+             */
+#define AIRY_REPORT_APPEND(fmt, ...)                                            \
+    do {                                                                        \
+        if (offset >= buf_size)                                                 \
+            break;                                                              \
+        n = snprintf(buf + offset, buf_size - offset, fmt, ##__VA_ARGS__);      \
+        if (n < 0)                                                              \
+            break;                                                              \
+        if ((size_t)n >= buf_size - offset)                                     \
+            offset = buf_size;  /* 已截断，标记缓冲区已满 */                       \
+        else                                                                    \
+            offset += (size_t)n;                                                 \
+    } while (0)
+
+            AIRY_REPORT_APPEND("Resource leak report:\n");
+            AIRY_REPORT_APPEND("===================\n");
+            AIRY_REPORT_APPEND("Total leaks: %d\n\n", count);
 
             curr = g_resource_head;
             int i = 0;
             while (curr && i < 100) {
-                offset += snprintf(buf + offset, buf_size - offset,
-                                   "[%d] Type: %s, Ptr: %p, File: %s:%d, Time: %lu ns\n", i + 1,
-                                   curr->type, curr->resource, curr->file, curr->line,
+                AIRY_REPORT_APPEND("[%d] Type: %s, Ptr: %p, File: %s:%d, Time: %lu ns\n",
+                                   i + 1, curr->type, curr->resource, curr->file, curr->line,
                                    curr->timestamp_ns);
                 curr = curr->next;
                 i++;
             }
 
             if (count > 100) {
-                offset +=
-                    snprintf(buf + offset, buf_size - offset, "... and %d more\n", count - 100);
+                AIRY_REPORT_APPEND("... and %d more\n", count - 100);
             }
+#undef AIRY_REPORT_APPEND
 
             *out_report = buf;
         }

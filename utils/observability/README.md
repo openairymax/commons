@@ -1,7 +1,7 @@
 # Observability — 可观测性模块
 
 **模块路径**: `agentrt/commons/utils/observability/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -38,11 +38,11 @@ observability/
 
 | 常量 | 值 | 说明 |
 |------|-----|------|
-| `AGENTRT_LOG_LEVEL_DEBUG` | 0 | 调试信息 |
-| `AGENTRT_LOG_LEVEL_INFO` | 1 | 一般信息 |
-| `AGENTRT_LOG_LEVEL_WARN` | 2 | 警告信息 |
-| `AGENTRT_LOG_LEVEL_ERROR` | 3 | 错误信息 |
-| `AGENTRT_LOG_LEVEL_FATAL` | 4 | 致命错误（记录后调用 abort） |
+| `AIRY_LOG_LEVEL_DEBUG` | 0 | 调试信息 |
+| `AIRY_LOG_LEVEL_INFO` | 1 | 一般信息 |
+| `AIRY_LOG_LEVEL_WARN` | 2 | 警告信息 |
+| `AIRY_LOG_LEVEL_ERROR` | 3 | 错误信息 |
+| `AIRY_LOG_LEVEL_FATAL` | 4 | 致命错误（记录后调用 abort） |
 
 ### 指标类型
 
@@ -52,7 +52,7 @@ observability/
 | Gauge | `metric_gauge_t`（name + value 链表） | 可增可减的瞬时值，如内存使用量 |
 | Timing | `metric_timing_t`（name + sum + count 链表） | 耗时统计，记录总和与次数，可计算平均值 |
 
-### agentrt_trace_span_t — 追踪跨度
+### airy_trace_span_t — 追踪跨度
 
 Span 是不透明句柄，内部包含：
 
@@ -72,48 +72,48 @@ Span 是不透明句柄，内部包含：
 
 | 函数/宏 | 说明 |
 |------|------|
-| `agentrt_log_set_trace_id(trace_id)` | 设置当前追踪 ID（NULL 则自动生成） |
-| `agentrt_log_get_trace_id()` | 获取当前追踪 ID |
-| `agentrt_log_write(level, file, line, fmt, ...)` | 底层日志写入函数 |
-| `AGENTRT_LOG_DEBUG(fmt, ...)` | 调试日志宏（Release 模式下编译为空） |
-| `AGENTRT_LOG_INFO(fmt, ...)` | 信息日志宏 |
-| `AGENTRT_LOG_WARN(fmt, ...)` | 警告日志宏 |
-| `AGENTRT_LOG_ERROR(fmt, ...)` | 错误日志宏 |
-| `AGENTRT_LOG_FATAL(fmt, ...)` | 致命日志宏（记录后调用 abort） |
+| `airy_log_set_trace_id(trace_id)` | 设置当前追踪 ID（NULL 则自动生成） |
+| `airy_log_get_trace_id()` | 获取当前追踪 ID |
+| `airy_log_write(level, file, line, fmt, ...)` | 底层日志写入函数 |
+| `AIRY_LOG_DEBUG(fmt, ...)` | 调试日志宏（Release 模式下编译为空） |
+| `AIRY_LOG_INFO(fmt, ...)` | 信息日志宏 |
+| `AIRY_LOG_WARN(fmt, ...)` | 警告日志宏 |
+| `AIRY_LOG_ERROR(fmt, ...)` | 错误日志宏 |
+| `AIRY_LOG_FATAL(fmt, ...)` | 致命日志宏（记录后调用 abort） |
 
 ### 指标 API
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_metrics_create()` | 创建指标收集器，返回句柄 |
-| `agentrt_metrics_destroy(metrics)` | 销毁指标收集器，释放所有指标 |
-| `agentrt_metrics_increment(metrics, name, value)` | 增加计数器（如不存在则自动创建） |
-| `agentrt_metrics_gauge(metrics, name, value)` | 设置仪表值（如不存在则自动创建） |
-| `agentrt_metrics_timing(metrics, name, duration_ms)` | 记录耗时（自动累加 sum 和 count） |
-| `agentrt_metrics_export(metrics)` | 导出所有指标为 JSON 字符串（需手动释放） |
-| `agentrt_metrics_export_prometheus(metrics)` | 导出为 Prometheus 格式字符串 |
-| `agentrt_metrics_export_prometheus_filtered(metrics, prefix)` | 按前缀过滤导出 Prometheus 格式 |
+| `airy_metrics_create()` | 创建指标收集器，返回句柄 |
+| `airy_metrics_destroy(metrics)` | 销毁指标收集器，释放所有指标 |
+| `airy_metrics_increment(metrics, name, value)` | 增加计数器（如不存在则自动创建） |
+| `airy_metrics_gauge(metrics, name, value)` | 设置仪表值（如不存在则自动创建） |
+| `airy_metrics_timing(metrics, name, duration_ms)` | 记录耗时（自动累加 sum 和 count） |
+| `airy_metrics_export(metrics)` | 导出所有指标为 JSON 字符串（需手动释放） |
+| `airy_metrics_export_prometheus(metrics)` | 导出为 Prometheus 格式字符串 |
+| `airy_metrics_export_prometheus_filtered(metrics, prefix)` | 按前缀过滤导出 Prometheus 格式 |
 
 ### 追踪 API
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_trace_begin(name, parent_id)` | 开始一个追踪 Span，返回句柄 |
-| `agentrt_trace_end(span)` | 结束一个 Span（记录结束时间，状态设为完成） |
-| `agentrt_trace_add_event(span, name, attributes)` | 向 Span 添加事件（最多 64 个） |
-| `agentrt_trace_export()` | 导出所有 Span 为 JSON 字符串（需手动释放） |
-| `agentrt_trace_cleanup()` | 清理所有追踪数据 |
-| `agentrt_trace_get_span_count()` | 获取当前活跃 Span 数量 |
+| `airy_trace_begin(name, parent_id)` | 开始一个追踪 Span，返回句柄 |
+| `airy_trace_end(span)` | 结束一个 Span（记录结束时间，状态设为完成） |
+| `airy_trace_add_event(span, name, attributes)` | 向 Span 添加事件（最多 64 个） |
+| `airy_trace_export()` | 导出所有 Span 为 JSON 字符串（需手动释放） |
+| `airy_trace_cleanup()` | 清理所有追踪数据 |
+| `airy_trace_get_span_count()` | 获取当前活跃 Span 数量 |
 
 ### 兼容层 API（observability_compat.h）
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_observability_create()` | 映射到 `agentrt_metrics_create()` |
-| `agentrt_observability_destroy(obs)` | 映射到 `agentrt_metrics_destroy()` |
-| `agentrt_observability_register_metric(obs, name, type, desc)` | 注册指标（新 API 自动注册，直接忽略） |
-| `agentrt_observability_increment_counter(obs, label, value)` | 映射到 `agentrt_metrics_increment()` |
-| `agentrt_observability_record_histogram(obs, name, value)` | 映射到 `agentrt_metrics_timing()` |
+| `airy_observability_create()` | 映射到 `airy_metrics_create()` |
+| `airy_observability_destroy(obs)` | 映射到 `airy_metrics_destroy()` |
+| `airy_observability_register_metric(obs, name, type, desc)` | 注册指标（新 API 自动注册，直接忽略） |
+| `airy_observability_increment_counter(obs, label, value)` | 映射到 `airy_metrics_increment()` |
+| `airy_observability_record_histogram(obs, name, value)` | 映射到 `airy_metrics_timing()` |
 | `airy_time_mono_ns()` | 获取单调时钟纳秒时间戳 |
 
 ## 使用示例
@@ -125,74 +125,74 @@ Span 是不透明句柄，内部包含：
 #include "trace.h"
 
 // ===== 日志 =====
-agentrt_log_set_trace_id(NULL);  // 自动生成追踪 ID
-AGENTRT_LOG_INFO("Agent initialization started");
-AGENTRT_LOG_DEBUG("Config loaded from %s", config_path);
-AGENTRT_LOG_WARN("Retry count exceeded threshold: %d", retries);
-AGENTRT_LOG_ERROR("Failed to connect to database: %s", db_error);
+airy_log_set_trace_id(NULL);  // 自动生成追踪 ID
+AIRY_LOG_INFO("Agent initialization started");
+AIRY_LOG_DEBUG("Config loaded from %s", config_path);
+AIRY_LOG_WARN("Retry count exceeded threshold: %d", retries);
+AIRY_LOG_ERROR("Failed to connect to database: %s", db_error);
 
 // ===== 指标 =====
-agentrt_metrics_t *metrics = agentrt_metrics_create();
+airy_metrics_t *metrics = airy_metrics_create();
 
-agentrt_metrics_increment(metrics, "requests_total", 1);
-agentrt_metrics_gauge(metrics, "memory_usage_mb", 128.5);
-agentrt_metrics_timing(metrics, "request_duration_ms", 42.3);
+airy_metrics_increment(metrics, "requests_total", 1);
+airy_metrics_gauge(metrics, "memory_usage_mb", 128.5);
+airy_metrics_timing(metrics, "request_duration_ms", 42.3);
 
 // 导出 JSON
-char *json = agentrt_metrics_export(metrics);
+char *json = airy_metrics_export(metrics);
 printf("Metrics JSON: %s\n", json);
-agentrt_free(json);
+airy_free(json);
 
 // 导出 Prometheus 格式
-char *prom = agentrt_metrics_export_prometheus(metrics);
+char *prom = airy_metrics_export_prometheus(metrics);
 printf("Prometheus:\n%s\n", prom);
-agentrt_free(prom);
+airy_free(prom);
 
-agentrt_metrics_destroy(metrics);
+airy_metrics_destroy(metrics);
 
 // ===== 追踪 =====
-agentrt_trace_span_t *root = agentrt_trace_begin("handle_request", NULL);
-agentrt_trace_add_event(root, "request_received", "{\"method\":\"GET\"}");
+airy_trace_span_t *root = airy_trace_begin("handle_request", NULL);
+airy_trace_add_event(root, "request_received", "{\"method\":\"GET\"}");
 
-agentrt_trace_span_t *child = agentrt_trace_begin("db_query", /*parent_id*/ NULL);
-agentrt_trace_add_event(child, "query_started", "{\"sql\":\"SELECT ...\"}");
+airy_trace_span_t *child = airy_trace_begin("db_query", /*parent_id*/ NULL);
+airy_trace_add_event(child, "query_started", "{\"sql\":\"SELECT ...\"}");
 // ... 执行数据库查询 ...
-agentrt_trace_add_event(child, "query_completed", "{\"rows\":42}");
-agentrt_trace_end(child);
+airy_trace_add_event(child, "query_completed", "{\"rows\":42}");
+airy_trace_end(child);
 
-agentrt_trace_add_event(root, "response_sent", "{\"status\":200}");
-agentrt_trace_end(root);
+airy_trace_add_event(root, "response_sent", "{\"status\":200}");
+airy_trace_end(root);
 
 // 导出追踪数据
-char *trace_json = agentrt_trace_export();
+char *trace_json = airy_trace_export();
 printf("Trace JSON: %s\n", trace_json);
-agentrt_free(trace_json);
+airy_free(trace_json);
 
-agentrt_trace_cleanup();
+airy_trace_cleanup();
 ```
 
 ## 日志级别过滤
 
-可通过编译时宏 `AGENTRT_LOG_LEVEL` 控制最低日志输出级别：
+可通过编译时宏 `AIRY_LOG_LEVEL` 控制最低日志输出级别：
 
 ```c
-// 编译时指定：-DAGENTRT_LOG_LEVEL=AGENTRT_LOG_LEVEL_WARN
+// 编译时指定：-DAIRY_LOG_LEVEL=AIRY_LOG_LEVEL_WARN
 // 则 DEBUG 和 INFO 级别日志不会输出
 
-// Release 模式下，AGENTRT_LOG_DEBUG 自动编译为空操作
-#ifndef AGENTRT_LOG_DEBUG
-#ifdef AGENTRT_DEBUG
-#define AGENTRT_LOG_DEBUG(fmt, ...) \
-    agentrt_log_write(AGENTRT_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+// Release 模式下，AIRY_LOG_DEBUG 自动编译为空操作
+#ifndef AIRY_LOG_DEBUG
+#ifdef AIRY_DEBUG
+#define AIRY_LOG_DEBUG(fmt, ...) \
+    airy_log_write(AIRY_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #else
-#define AGENTRT_LOG_DEBUG(fmt, ...) ((void)0)
+#define AIRY_LOG_DEBUG(fmt, ...) ((void)0)
 #endif
 #endif
 ```
 
 ## Prometheus 导出格式
 
-`agentrt_metrics_export_prometheus()` 输出符合 Prometheus exposition format：
+`airy_metrics_export_prometheus()` 输出符合 Prometheus exposition format：
 
 ```
 # TYPE requests_total counter
@@ -243,7 +243,7 @@ request_duration_ms_count 1
 | `atomic_compat.h` | 跨平台原子操作（追踪模块使用） |
 | `platform.h` | 跨平台时间戳获取 |
 | `error.h` | 统一错误码定义 |
-| `cjson/cJSON.h` | JSON 序列化（可选，通过 `AGENTRT_NO_CJSON` 禁用） |
+| `cjson/cJSON.h` | JSON 序列化（可选，通过 `AIRY_NO_CJSON` 禁用） |
 
 ---
 

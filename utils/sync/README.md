@@ -1,7 +1,7 @@
 # Sync — 同步原语模块
 
 **模块路径**: `agentrt/commons/utils/sync/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -277,7 +277,7 @@ sync/
 
 ### POSIX 兼容层（sync_compat.h）
 
-兼容层提供 `AGENTRT_MUTEX_*`、`AGENTRT_COND_*`、`AGENTRT_RWLOCK_*`、`AGENTRT_SEM_*` 系列宏，可直接替换 `pthread_mutex_*`、`pthread_cond_*`、`sem_*` 等标准 API。
+兼容层提供 `AIRY_MUTEX_*`、`AIRY_COND_*`、`AIRY_RWLOCK_*`、`AIRY_SEM_*` 系列宏，可直接替换 `pthread_mutex_*`、`pthread_cond_*`、`sem_*` 等标准 API。
 
 ## 使用示例
 

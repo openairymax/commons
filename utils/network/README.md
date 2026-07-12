@@ -1,7 +1,7 @@
 # Network — 网络工具模块
 
 **模块路径**: `agentrt/commons/utils/network/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -185,11 +185,11 @@ if (!conn) {
 }
 
 airy_err_t err = network_connect(conn);
-if (err == AGENTRT_SUCCESS) {
+if (err == AIRY_SUCCESS) {
     // 发送 HTTP GET 请求
     network_http_response_t response;
     err = network_http_get(conn, "/api/v1/status", &response);
-    if (err == AGENTRT_SUCCESS && response.status_code == 200) {
+    if (err == AIRY_SUCCESS && response.status_code == 200) {
         printf("Response: %.*s\n", (int)response.body_len, (char *)response.body);
     }
     network_http_response_free(&response);

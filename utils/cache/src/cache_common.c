@@ -310,25 +310,55 @@ int cache_get(cache_t cache, const void *key, void **out_value)
         entry = entry->hnext;
     }
 
-    sync_mutex_unlock(&impl->buckets[idx].lock);
-
     if (!entry) {
+        sync_mutex_unlock(&impl->buckets[idx].lock);
         return 0;
     }
 
-    // 检查过期时间
+    /*
+     * 检查过期时间：必须持有 bucket lock，否则 entry 可能在释放锁后被其他线程释放，
+     * 导致后续访问 use-after-free。不能调用 cache_delete()，因为它内部调用 cache_put()
+     * 会尝试重新获取 bucket lock 造成自死锁；改为直接从哈希桶链表摘除。
+     */
     if (impl->ttl_sec > 0 && (time(NULL) - entry->timestamp) > impl->ttl_sec) {
-        cache_delete(cache, key);
+        cache_entry_t **p = &impl->buckets[idx].head;
+        while (*p) {
+            if (*p == entry) {
+                *p = entry->hnext;
+                break;
+            }
+            p = &(*p)->hnext;
+        }
+
+        sync_mutex_unlock(&impl->buckets[idx].lock);
+
+        sync_mutex_lock(&impl->lru_lock);
+        lru_remove(impl, entry);
+        impl->size--;
+        sync_mutex_unlock(&impl->lru_lock);
+
+        cache_entry_free(&impl->manager, entry);
         return 0;
     }
 
-    // 更新 LRU 位置
-    sync_mutex_lock(&impl->lru_lock);
-    lru_move_to_head(impl, entry);
-    sync_mutex_unlock(&impl->lru_lock);
-
-    // 复制值
+    /*
+     * 复制值：在持有 bucket lock 的前提下完成，确保 entry 在此期间不会被驱逐。
+     * value_copy_func 可能分配内存，但不会获取 bucket lock，故不会自死锁。
+     */
     *out_value = impl->manager.value_copy_func(entry->value);
+
+    /*
+     * 更新 LRU 位置：使用 trylock 而非阻塞锁。evict_lru()（由 cache_put 调用）的
+     * 锁顺序为 lru_lock → bucket_lock；若此处阻塞等待 lru_lock，而持有 lru_lock 的
+     * 线程又等待 bucket_lock，将形成 AB-BA 死锁。LRU 仅是访问热度优化，trylock 失败
+     * 时跳过不影响正确性。
+     */
+    if (sync_mutex_trylock(&impl->lru_lock) == 0) {
+        lru_move_to_head(impl, entry);
+        sync_mutex_unlock(&impl->lru_lock);
+    }
+
+    sync_mutex_unlock(&impl->buckets[idx].lock);
     return 1;
 }
 

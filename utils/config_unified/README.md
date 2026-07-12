@@ -1,7 +1,7 @@
 # Config Unified — 统一配置管理
 
 **模块路径**: `agentrt/commons/utils/config_unified/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -70,7 +70,7 @@ config_unified/
 |----------|--------|--------|------|
 | `CONFIG_SOURCE_DEFAULT` | 6 | 最低 | Schema 中声明的默认值 |
 | `CONFIG_SOURCE_FILE` | 0 | 中 | JSON / YAML / TOML / INI 格式 |
-| `CONFIG_SOURCE_ENV` | 1 | 高 | `AGENTRT_` 前缀的环境变量 |
+| `CONFIG_SOURCE_ENV` | 1 | 高 | `AIRY_` 前缀的环境变量 |
 | `CONFIG_SOURCE_ARGS` | 2 | 高 | 命令行参数 |
 | `CONFIG_SOURCE_MEMORY` | 3 | 最高 | 运行时通过 API 设置 |
 | `CONFIG_SOURCE_NETWORK` | 4 | 高 | 远程配置中心 |
