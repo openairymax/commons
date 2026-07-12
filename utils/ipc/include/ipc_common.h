@@ -39,6 +39,7 @@
 
 #include <error.h>
 #include <types.h>
+#include <airymax/ipc.h> /* [SC] SSoT: AIRY_IPC_MAGIC (P0-05 convergence) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,8 +71,8 @@ extern "C" {
  * 常量定义
  * ============================================================================ */
 
-/** @brief IPC 魔数 */
-#define IPC_MAGIC 0x49504300 /* "IPC\0" */
+/** @brief IPC 魔数（P0-05: 收敛至 [SC] SSoT，值 = AIRY_IPC_MAGIC = 0x41524531 'ARE1'） */
+#define IPC_MAGIC AIRY_IPC_MAGIC
 
 /** @brief 默认超时时间（毫秒） */
 #define IPC_DEFAULT_TIMEOUT_MS 5000

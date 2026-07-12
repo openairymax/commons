@@ -21,7 +21,7 @@
 
 As the project's authoritative source for type definitions (`airy_types.h`) and the unified error-code contract (`airy_err_t`), commons guarantees type consistency across modules and eliminates cross-module type conflicts. Its design goals are: zero-dependency abstraction (platform-agnostic type system and interface definitions keep the kernel decoupled from peripheral code), a unified error contract, high-performance infrastructure (memory pools, lock-free queues, zero-copy pipelines), built-in observability (standardized capture interfaces for logs/metrics/traces), and safe-by-default I/O paths (parameter validation, boundary checks, resource limits).
 
-commons builds a single static library `agentrt_common` aggregating 24+ utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
+commons builds a single static library `airy_common` aggregating 24+ utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
 
 ## Module Classification
 
@@ -33,7 +33,7 @@ commons is the absolute lowest leaf repository in agentrt. It has zero intra-age
 
 ```
 commons/
-├── CMakeLists.txt               # CMake build configuration (single static lib agentrt_common)
+├── CMakeLists.txt               # CMake build configuration (single static lib airy_common)
 ├── README.md                    # This file (English)
 ├── README_zh.md                 # Chinese version
 ├── LICENSE                      # Dual license texts (AGPL-3.0 + Apache-2.0)
@@ -93,8 +93,8 @@ The single authoritative source of type definitions for the entire project:
 | `airy_err_t` | Unified error code type (`int32_t`; negative = error, 0 = success) |
 | `airy_ipc_hdr_t` | Application-level IPC message header (magic/version/type/flags/msg_id) |
 | `airy_ipc_msg_t` | Application-level IPC message struct (header + payload) |
-| `agentrt_task_id_t` | Task ID type (`uint64_t`) |
-| `agentrt_message_id_t` | Message ID type (`uint64_t`) |
+| `airy_task_id_t` | Task ID type (`uint64_t`) |
+| `airy_message_id_t` | Message ID type (`uint64_t`) |
 
 The unified error code system (`AIRY_E*`) covers 29 standard errors including invalid argument, out of memory, permission denied, timeout, I/O error, protocol error, quota exceeded, etc.
 
@@ -174,7 +174,7 @@ Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_in
 │            Operating System / Hardware        │
 └──────────────────────────────────────────────┘
 
-  agentrt_common (single static lib)
+  airy_common (single static lib)
   ┌────────────────────────────────────────────┐
   │  airy_types.h  (authoritative types)    │
   │  platform/        (OS abstraction)         │
@@ -199,11 +199,11 @@ Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_in
 | C11 compiler | Yes | `<stdatomic.h>` support, atomic compat layer |
 | pthreads / Win32 threads | Yes | Thread and sync primitives |
 | libyaml | No | Full YAML support (falls back to `yaml_minimal.c`) |
-| cJSON | No | JSON config parsing (gated by `AGENTRT_HAS_CJSON`) |
+| cJSON | No | JSON config parsing (gated by `AIRY_HAS_CJSON`) |
 
-> **BAN-12**: External dependencies are detected centrally by the umbrella `CMakeLists.txt`; sub-modules MUST NOT call `find_package` independently. Detection results propagate through CMake cache variables such as `AGENTRT_HAS_CJSON`, `AGENTRT_HAS_YAML`.
+> **BAN-12**: External dependencies are detected centrally by the umbrella `CMakeLists.txt`; sub-modules MUST NOT call `find_package` independently. Detection results propagate through CMake cache variables such as `AIRY_HAS_CJSON`, `AIRY_HAS_YAML`.
 
-When cJSON/YAML are unavailable, commons degrades gracefully: `AGENTRT_NO_CJSON` is defined and the JSON/YAML parsers fall back to minimal built-in implementations.
+When cJSON/YAML are unavailable, commons degrades gracefully: `AIRY_NO_CJSON` is defined and the JSON/YAML parsers fall back to minimal built-in implementations.
 
 ## Downstream Consumers
 
@@ -221,7 +221,7 @@ When cJSON/YAML are unavailable, commons degrades gracefully: `AGENTRT_NO_CJSON`
 
 ## Build
 
-commons builds a single static library `agentrt_common` aggregating all utility modules. Include paths are exported PUBLIC so consumers see every sub-module header through a single target link.
+commons builds a single static library `airy_common` aggregating all utility modules. Include paths are exported PUBLIC so consumers see every sub-module header through a single target link.
 
 ```bash
 # Standard build (out-of-source, enforced by BAN-33)
@@ -241,12 +241,12 @@ cmake --install /tmp/commons-build --prefix /opt/airymax
 | Option | Default | Description |
 |--------|---------|-------------|
 | `BUILD_TESTS` | `ON` | Build unit and integration tests |
-| `AGENTRT_HAS_CJSON` | auto | Auto-detected by umbrella CMake; gates cJSON-dependent code paths |
-| `AGENTRT_HAS_YAML` | auto | Auto-detected by umbrella CMake; gates libyaml-dependent code paths |
+| `AIRY_HAS_CJSON` | auto | Auto-detected by umbrella CMake; gates cJSON-dependent code paths |
+| `AIRY_HAS_YAML` | auto | Auto-detected by umbrella CMake; gates libyaml-dependent code paths |
 
 **Build artifacts:**
 
-- `agentrt_common` — static library containing all utility modules
+- `airy_common` — static library containing all utility modules
 - Public headers installed under `include/agentrt/{platform,utils/*}`
 
 ## API

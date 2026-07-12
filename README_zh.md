@@ -21,7 +21,7 @@
 
 作为项目类型定义（`airy_types.h`）和统一错误码契约（`airy_err_t`）的权威来源，commons 保证跨模块类型一致性，消除跨模块类型冲突。其设计目标是：零依赖抽象（平台无关的类型系统和接口定义使内核与外围代码解耦）、统一错误契约、高性能基础设施（内存池、无锁队列、零拷贝流水线）、内置可观测性（标准化的日志/指标/追踪捕获接口）、默认安全的 I/O 路径（参数校验、边界检查、资源限制）。
 
-commons 构建单一静态库 `agentrt_common`，聚合 24+ 工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
+commons 构建单一静态库 `airy_common`，聚合 24+ 工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
 
 ## 模块分类
 
@@ -33,7 +33,7 @@ commons 是 agentrt 中绝对最底层的叶子仓，零 intra-agentrt 上游依
 
 ```
 commons/
-├── CMakeLists.txt               # CMake 构建配置（单一静态库 agentrt_common）
+├── CMakeLists.txt               # CMake 构建配置（单一静态库 airy_common）
 ├── README.md                    # 英文版
 ├── README_zh.md                 # 本文件（中文）
 ├── LICENSE                      # 双许可证文本（AGPL-3.0 + Apache-2.0）
@@ -93,8 +93,8 @@ commons/
 | `airy_err_t` | 统一错误码类型（`int32_t`；负数 = 错误，0 = 成功） |
 | `airy_ipc_hdr_t` | 应用层 IPC 消息头（magic/version/type/flags/msg_id） |
 | `airy_ipc_msg_t` | 应用层 IPC 消息结构（header + payload） |
-| `agentrt_task_id_t` | 任务 ID 类型（`uint64_t`） |
-| `agentrt_message_id_t` | 消息 ID 类型（`uint64_t`） |
+| `airy_task_id_t` | 任务 ID 类型（`uint64_t`） |
+| `airy_message_id_t` | 消息 ID 类型（`uint64_t`） |
 
 统一错误码系统（`AIRY_E*`）覆盖 29 个标准错误，包括无效参数、内存不足、权限拒绝、超时、I/O 错误、协议错误、配额超限等。
 
@@ -174,7 +174,7 @@ commons/
 │            Operating System / Hardware        │
 └──────────────────────────────────────────────┘
 
-  agentrt_common（单一静态库）
+  airy_common（单一静态库）
   ┌────────────────────────────────────────────┐
   │  airy_types.h  （权威类型）              │
   │  platform/        （OS 抽象）               │
@@ -199,11 +199,11 @@ commons/
 | C11 编译器 | 是 | `<stdatomic.h>` 支持、原子兼容层 |
 | pthreads / Win32 threads | 是 | 线程与同步原语 |
 | libyaml | 否 | 完整 YAML 支持（回退到 `yaml_minimal.c`） |
-| cJSON | 否 | JSON 配置解析（由 `AGENTRT_HAS_CJSON` 门控） |
+| cJSON | 否 | JSON 配置解析（由 `AIRY_HAS_CJSON` 门控） |
 
-> **BAN-12**：外部依赖由伞仓 `CMakeLists.txt` 集中探测；子模块**禁止**独立调用 `find_package`。探测结果通过 CMake 缓存变量（如 `AGENTRT_HAS_CJSON`、`AGENTRT_HAS_YAML`）传播。
+> **BAN-12**：外部依赖由伞仓 `CMakeLists.txt` 集中探测；子模块**禁止**独立调用 `find_package`。探测结果通过 CMake 缓存变量（如 `AIRY_HAS_CJSON`、`AIRY_HAS_YAML`）传播。
 
-当 cJSON/YAML 不可用时，commons 优雅降级：定义 `AGENTRT_NO_CJSON`，JSON/YAML 解析器回退到最小内置实现。
+当 cJSON/YAML 不可用时，commons 优雅降级：定义 `AIRY_NO_CJSON`，JSON/YAML 解析器回退到最小内置实现。
 
 ## 下游消费者
 
@@ -221,7 +221,7 @@ commons/
 
 ## 构建
 
-commons 构建单一静态库 `agentrt_common`，聚合所有工具模块。include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。
+commons 构建单一静态库 `airy_common`，聚合所有工具模块。include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。
 
 ```bash
 # 标准构建（源外构建，BAN-33 强制要求）
@@ -241,12 +241,12 @@ cmake --install /tmp/commons-build --prefix /opt/airymax
 | 选项 | 默认值 | 说明 |
 |------|--------|------|
 | `BUILD_TESTS` | `ON` | 构建单元与集成测试 |
-| `AGENTRT_HAS_CJSON` | 自动 | 由伞仓 CMake 自动探测；门控依赖 cJSON 的代码路径 |
-| `AGENTRT_HAS_YAML` | 自动 | 由伞仓 CMake 自动探测；门控依赖 libyaml 的代码路径 |
+| `AIRY_HAS_CJSON` | 自动 | 由伞仓 CMake 自动探测；门控依赖 cJSON 的代码路径 |
+| `AIRY_HAS_YAML` | 自动 | 由伞仓 CMake 自动探测；门控依赖 libyaml 的代码路径 |
 
 **构建产物：**
 
-- `agentrt_common` —— 包含所有工具模块的静态库
+- `airy_common` —— 包含所有工具模块的静态库
 - 公共头文件安装到 `include/agentrt/{platform,utils/*}`
 
 ## API

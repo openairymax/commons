@@ -5,7 +5,7 @@
 
 ## 概述
 
-Platform 是 AgentRT 的跨平台抽象层，屏蔽 Linux、Windows、macOS 三大操作系统的底层差异，为上层模块提供统一的系统调用 API。该模块是 Commons 基础库的底层基石，所有涉及文件 I/O、线程同步、网络通信、动态库加载的模块均通过此抽象层访问操作系统能力。
+Platform 是 Airymax AgentRT 的跨平台抽象层，屏蔽 Linux、Windows、macOS 三大操作系统的底层差异，为上层模块提供统一的系统调用 API。该模块是 Commons 基础库的底层基石，所有涉及文件 I/O、线程同步、网络通信的模块均通过此抽象层访问操作系统能力。
 
 ## 设计目标
 
@@ -36,10 +36,10 @@ platform/
 
 | 宏 | 平台 |
 |-----|------|
-| `AGENTRT_PLATFORM_LINUX` | Linux |
-| `AGENTRT_PLATFORM_WINDOWS` | Windows (Win32/Win64) |
-| `AGENTRT_PLATFORM_MACOS` | macOS (Darwin) |
-| `AGENTRT_PLATFORM_POSIX` | 任意 POSIX 兼容系统 |
+| `AIRY_PLATFORM_LINUX` | Linux |
+| `AIRY_PLATFORM_WINDOWS` | Windows (Win32/Win64) |
+| `AIRY_PLATFORM_MACOS` | macOS (Darwin) |
+| `AIRY_PLATFORM_POSIX` | 任意 POSIX 兼容系统 |
 
 ### 2. 线程与同步原语
 
@@ -48,21 +48,26 @@ platform/
 | `airy_thread_t` | 跨平台线程句柄，封装 `pthread_t` / `HANDLE` |
 | `airy_mtx_t` | 跨平台互斥锁，封装 `pthread_mutex_t` / `CRITICAL_SECTION` |
 | `airy_cond_t` | 跨平台条件变量，封装 `pthread_cond_t` / `CONDITION_VARIABLE` |
-| `agentrt_rwlock_t` | 跨平台读写锁，封装 `pthread_rwlock_t` / `SRWLOCK` |
+
+> **注**：读写锁（`sync_rwlock_t`）定义在 Commons 的 sync 模块中，不在 platform 层。
 
 ### 3. 平台抽象实现 (`platform.c`)
 
 提供统一的跨平台实现：
 
 - **线程管理**：`airy_thread_create` / `airy_thread_join` / `airy_thread_detach`
-- **互斥锁**：`agentrt_mutex_init` / `agentrt_mutex_lock` / `agentrt_mutex_unlock` / `agentrt_mutex_destroy`
-- **条件变量**：`agentrt_cond_init` / `agentrt_cond_wait` / `agentrt_cond_signal` / `agentrt_cond_broadcast` / `agentrt_cond_destroy`
-- **Socket 网络**：`agentrt_socket_create` / `agentrt_socket_bind` / `agentrt_socket_listen` / `agentrt_socket_accept` / `agentrt_socket_connect` / `agentrt_socket_send` / `agentrt_socket_recv` / `agentrt_socket_close`
-- **进程管理**：`agentrt_process_spawn` / `agentrt_process_wait` / `agentrt_process_kill`
-- **时间与休眠**：`airy_sleep_ms` / `airy_time_ms` / `airy_time_mono`
-- **文件系统**：`agentrt_file_exists` / `agentrt_mkdir` / `agentrt_path_join` / `agentrt_get_temp_dir`
-- **随机数**：`agentrt_random_bytes`（Windows 使用 `BCryptGenRandom`，POSIX 使用 `/dev/urandom`）
-- **动态库加载**：`agentrt_dlopen` / `agentrt_dlsym` / `agentrt_dlclose`
+- **互斥锁**：`airy_mtx_init` / `airy_mtx_lock` / `airy_mtx_trylock` / `airy_mtx_unlock` / `airy_mtx_destroy`
+- **条件变量**：`airy_cond_init` / `airy_cond_wait` / `airy_cond_timedwait` / `airy_cond_signal` / `airy_cond_broadcast` / `airy_cond_destroy`
+- **Socket 网络**：`airy_sock_tcp` / `airy_sock_unix` / `airy_sock_close` / `airy_sock_set_nonblock` / `airy_sock_set_reuseaddr` / `airy_network_init` / `airy_network_cleanup`
+- **进程管理**：`airy_process_start` / `airy_process_wait` / `airy_process_kill` / `airy_process_close_pipes` / `airy_process_run_capture`
+- **时间与休眠**：`airy_sleep_ms` / `airy_time_ms`
+- **文件系统**：`airy_file_exists` / `airy_mkdir_p` / `airy_file_size`
+- **随机数**：`airy_random_init` / `airy_random_uint32` / `airy_random_float` / `airy_random_bytes`（Windows 使用 `BCryptGenRandom`，POSIX 使用 `/dev/urandom`）
+- **信号处理**：`airy_ignore_sigpipe`
+- **安全字符串**：`airy_strlcpy` / `airy_strlcat`
+- **错误诊断**：`airy_get_last_error`
+- **系统信息**：`airy_get_sysinfo`
+- **原子操作**：`airy_atomic_load` / `airy_atomic_store` / `airy_atomic_fetch_add` / `airy_atomic_fetch_sub`
 
 ### 4. 符号导出控制 (`export.h`)
 
@@ -70,9 +75,7 @@ platform/
 
 | 宏 | 说明 |
 |-----|------|
-| `AIRY_EXPORT` | 导出符号（`__declspec(dllexport)` / `__attribute__((visibility("default")))`） |
-| `AGENTRT_IMPORT` | 导入符号（`__declspec(dllimport)`） |
-| `AGENTRT_LOCAL` | 隐藏符号（`__attribute__((visibility("hidden")))`） |
+| `AIRY_API` | 导出符号（`__declspec(dllexport)` / `__attribute__((visibility("default")))`） |
 
 ### 5. 兼容头文件 (`compat/`)
 
@@ -94,18 +97,18 @@ airy_thread_create(&thread, my_thread_func, my_arg);
 
 /* 互斥锁 */
 airy_mtx_t mutex;
-agentrt_mutex_init(&mutex);
-agentrt_mutex_lock(&mutex);
+airy_mtx_init(&mutex);
+airy_mtx_lock(&mutex);
 /* ... 临界区 ... */
-agentrt_mutex_unlock(&mutex);
-agentrt_mutex_destroy(&mutex);
+airy_mtx_unlock(&mutex);
+airy_mtx_destroy(&mutex);
 
 /* 休眠 */
 airy_sleep_ms(100);
 
 /* 文件系统 */
-if (!agentrt_file_exists("/tmp/myapp")) {
-    agentrt_mkdir("/tmp/myapp");
+if (!airy_file_exists("/tmp/myapp")) {
+    airy_mkdir_p("/tmp/myapp");
 }
 
 /* 等待线程完成 */
@@ -119,7 +122,6 @@ airy_thread_join(thread, NULL);
 | 线程 API | pthread | Win32 Thread | pthread |
 | 互斥锁 | pthread_mutex_t | CRITICAL_SECTION | pthread_mutex_t |
 | Socket | BSD socket | Winsock2 | BSD socket |
-| 动态库 | dlopen | LoadLibrary | dlopen |
 | 路径分隔符 | `/` | `\\` | `/` |
 | 随机数 | /dev/urandom | BCryptGenRandom | /dev/urandom |
 
@@ -131,7 +133,7 @@ airy_thread_join(thread, NULL);
 | POSIX 线程（Linux/macOS） | `libpthread` |
 | Win32 API（Windows） | `kernel32.lib`、`ws2_32.lib` |
 
-> Platform 模块不依赖任何 AgentRT 内部模块，是 Commons 的零依赖基础层。
+> Platform 模块不依赖任何 Airymax 内部模块，是 Commons 的零依赖基础层。
 
 ---
 

@@ -25,6 +25,7 @@
 
 #include "svc_common.h"
 
+#include <airymax/ipc.h> /* [SC] SSoT: AIRY_IPC_MAGIC (P0-05 convergence) */
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -83,7 +84,8 @@ typedef struct {
     uint8_t reserved[16];
 } ipc_bus_message_header_t;
 
-#define IPC_BUS_MESSAGE_MAGIC 0x49534200
+/* P0-05: 收敛至 [SC] SSoT，值 = AIRY_IPC_MAGIC = 0x41524531 'ARE1' */
+#define IPC_BUS_MESSAGE_MAGIC AIRY_IPC_MAGIC
 #define IPC_BUS_MESSAGE_VERSION 1
 
 /* ==================== 服务总线消息 ==================== */

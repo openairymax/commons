@@ -1,7 +1,7 @@
 # Token — 令牌管理模块
 
 **模块路径**: `agentrt/commons/utils/token/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -30,36 +30,36 @@ token/
 
 ## 核心数据结构
 
-### agentrt_token_model_t — Token 计算模型类型
+### airy_token_model_t — Token 计算模型类型
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_TOKEN_MODEL_GENERIC` | 通用模型（默认） |
-| `AGENTRT_TOKEN_MODEL_GPT4` | GPT-4 系列模型 |
-| `AGENTRT_TOKEN_MODEL_GPT35` | GPT-3.5 系列模型 |
-| `AGENTRT_TOKEN_MODEL_CLAUDE` | Claude 系列模型 |
-| `AGENTRT_TOKEN_MODEL_LLAMA` | LLaMA 系列模型 |
-| `AGENTRT_TOKEN_MODEL_CUSTOM` | 自定义模型 |
+| `AIRY_TOKEN_MODEL_GENERIC` | 通用模型（默认） |
+| `AIRY_TOKEN_MODEL_GPT4` | GPT-4 系列模型 |
+| `AIRY_TOKEN_MODEL_GPT35` | GPT-3.5 系列模型 |
+| `AIRY_TOKEN_MODEL_CLAUDE` | Claude 系列模型 |
+| `AIRY_TOKEN_MODEL_LLAMA` | LLaMA 系列模型 |
+| `AIRY_TOKEN_MODEL_CUSTOM` | 自定义模型 |
 
-### agentrt_token_config_t — Token 计算配置
+### airy_token_config_t — Token 计算配置
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `model_type` | `agentrt_token_model_t` | 模型类型 |
+| `model_type` | `airy_token_model_t` | 模型类型 |
 | `model_name` | `const char *` | 模型名称（可选） |
 | `cjk_ratio` | `float` | 中日韩字符比例阈值（默认 0.3） |
 | `alpha_ratio` | `float` | 字母字符比例阈值（默认 0.5） |
 | `flags` | `uint32_t` | 计算标志位 |
 
-### agentrt_token_precision_t — Token 计算精度级别
+### airy_token_precision_t — Token 计算精度级别
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_TOKEN_PRECISION_LOW` | 低精度（快速估算） |
-| `AGENTRT_TOKEN_PRECISION_MEDIUM` | 中等精度 |
-| `AGENTRT_TOKEN_PRECISION_HIGH` | 高精度（准确但较慢） |
+| `AIRY_TOKEN_PRECISION_LOW` | 低精度（快速估算） |
+| `AIRY_TOKEN_PRECISION_MEDIUM` | 中等精度 |
+| `AIRY_TOKEN_PRECISION_HIGH` | 高精度（准确但较慢） |
 
-### agentrt_token_quota_t — 资源配额限制
+### airy_token_quota_t — 资源配额限制
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -71,7 +71,7 @@ token/
 | `max_requests_per_hour` | `size_t` | 3600 | 每小时最大请求数 |
 | `max_requests_per_day` | `size_t` | 10000 | 每天最大请求数 |
 
-### agentrt_token_usage_t — 资源使用情况
+### airy_token_usage_t — 资源使用情况
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -88,40 +88,40 @@ token/
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_token_counter_create(model_name)` | 创建 Token 计数器 |
-| `agentrt_token_counter_destroy(counter)` | 销毁计数器 |
-| `agentrt_token_counter_count(counter, text)` | 计算文本的 Token 数量 |
-| `agentrt_token_counter_count_batch(counter, texts, count, out_counts)` | 批量计算多个文本的 Token 数量 |
-| `agentrt_token_counter_truncate(counter, text, max_tokens, side)` | 截断文本到指定 Token 数 |
+| `airy_token_counter_create(model_name)` | 创建 Token 计数器 |
+| `airy_token_counter_destroy(counter)` | 销毁计数器 |
+| `airy_token_counter_count(counter, text)` | 计算文本的 Token 数量 |
+| `airy_token_counter_count_batch(counter, texts, count, out_counts)` | 批量计算多个文本的 Token 数量 |
+| `airy_token_counter_truncate(counter, text, max_tokens, side)` | 截断文本到指定 Token 数 |
 
 ### Token 预算管理（token.h）
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_token_budget_create(max_tokens)` | 创建 Token 预算 |
-| `agentrt_token_budget_destroy(budget)` | 销毁预算 |
-| `agentrt_token_budget_add(budget, input_tokens, output_tokens)` | 添加 Token 消耗（返回 0 成功，-1 超出预算） |
-| `agentrt_token_budget_remaining(budget)` | 获取剩余 Token 数 |
-| `agentrt_token_budget_reset(budget)` | 重置预算 |
-| `agentrt_token_budget_used(budget)` | 获取已使用 Token 数 |
-| `agentrt_token_budget_input(budget)` | 获取输入 Token 数 |
-| `agentrt_token_budget_output(budget)` | 获取输出 Token 数 |
-| `agentrt_token_budget_requests(budget)` | 获取请求计数 |
-| `agentrt_token_budget_denied(budget)` | 获取拒绝计数 |
-| `agentrt_token_budget_set_window(budget, window_seconds)` | 设置时间窗口 |
-| `agentrt_token_budget_check_window(budget)` | 检查并重置时间窗口 |
+| `airy_token_budget_create(max_tokens)` | 创建 Token 预算 |
+| `airy_token_budget_destroy(budget)` | 销毁预算 |
+| `airy_token_budget_add(budget, input_tokens, output_tokens)` | 添加 Token 消耗（返回 0 成功，-1 超出预算） |
+| `airy_token_budget_remaining(budget)` | 获取剩余 Token 数 |
+| `airy_token_budget_reset(budget)` | 重置预算 |
+| `airy_token_budget_used(budget)` | 获取已使用 Token 数 |
+| `airy_token_budget_input(budget)` | 获取输入 Token 数 |
+| `airy_token_budget_output(budget)` | 获取输出 Token 数 |
+| `airy_token_budget_requests(budget)` | 获取请求计数 |
+| `airy_token_budget_denied(budget)` | 获取拒绝计数 |
+| `airy_token_budget_set_window(budget, window_seconds)` | 设置时间窗口 |
+| `airy_token_budget_check_window(budget)` | 检查并重置时间窗口 |
 
 ### 标准化 Token 计算（token_standard.h）
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_token_standard_count(text, length, config)` | 标准化 Token 计算 |
-| `agentrt_token_standard_count_batch(texts, lengths, count, out_counts, config)` | 批量 Token 计算 |
-| `agentrt_token_analyze_text(text, length, out_cjk, out_alpha, out_total)` | 检测文本语言特征 |
-| `agentrt_token_get_algorithm_info()` | 获取 Token 计算算法信息 |
-| `agentrt_token_validate_config(config)` | 验证 Token 计算配置 |
-| `agentrt_token_set_precision(precision, config)` | 设置 Token 计算精度 |
-| `agentrt_token_check_quota(quota, requested_tokens, current_usage)` | 检查资源配额是否足够 |
+| `airy_token_standard_count(text, length, config)` | 标准化 Token 计算 |
+| `airy_token_standard_count_batch(texts, lengths, count, out_counts, config)` | 批量 Token 计算 |
+| `airy_token_analyze_text(text, length, out_cjk, out_alpha, out_total)` | 检测文本语言特征 |
+| `airy_token_get_algorithm_info()` | 获取 Token 计算算法信息 |
+| `airy_token_validate_config(config)` | 验证 Token 计算配置 |
+| `airy_token_set_precision(precision, config)` | 设置 Token 计算精度 |
+| `airy_token_check_quota(quota, requested_tokens, current_usage)` | 检查资源配额是否足够 |
 
 ## 使用示例
 
@@ -130,65 +130,65 @@ token/
 #include "token_standard.h"
 
 /* === Token 计数器 === */
-agentrt_token_counter_t *counter = agentrt_token_counter_create("gpt-4");
+airy_token_counter_t *counter = airy_token_counter_create("gpt-4");
 
-size_t token_count = agentrt_token_counter_count(counter, "Hello, world!");
+size_t token_count = airy_token_counter_count(counter, "Hello, world!");
 printf("Token count: %zu\n", token_count);
 
 // 批量计数
 const char *texts[] = {"Hello", "World", "How are you?"};
 size_t counts[3];
-agentrt_token_counter_count_batch(counter, texts, 3, counts);
+airy_token_counter_count_batch(counter, texts, 3, counts);
 
 // 截断文本
-char *truncated = agentrt_token_counter_truncate(counter,
+char *truncated = airy_token_counter_truncate(counter,
     "This is a very long text that needs to be truncated",
     5, "right");
 printf("Truncated: %s\n", truncated);
 free(truncated);
 
-agentrt_token_counter_destroy(counter);
+airy_token_counter_destroy(counter);
 
 /* === Token 预算管理 === */
-agentrt_token_budget_t *budget = agentrt_token_budget_create(100000);
+airy_token_budget_t *budget = airy_token_budget_create(100000);
 
 // 设置 1 小时的时间窗口
-agentrt_token_budget_set_window(budget, 3600);
+airy_token_budget_set_window(budget, 3600);
 
 // 消耗 Token
-if (agentrt_token_budget_add(budget, 500, 200) == 0) {
-    printf("Remaining: %zu\n", agentrt_token_budget_remaining(budget));
+if (airy_token_budget_add(budget, 500, 200) == 0) {
+    printf("Remaining: %zu\n", airy_token_budget_remaining(budget));
 } else {
     printf("Budget exceeded!\n");
 }
 
 printf("Used: %zu, Input: %zu, Output: %zu, Requests: %u, Denied: %u\n",
-       agentrt_token_budget_used(budget),
-       agentrt_token_budget_input(budget),
-       agentrt_token_budget_output(budget),
-       agentrt_token_budget_requests(budget),
-       agentrt_token_budget_denied(budget));
+       airy_token_budget_used(budget),
+       airy_token_budget_input(budget),
+       airy_token_budget_output(budget),
+       airy_token_budget_requests(budget),
+       airy_token_budget_denied(budget));
 
-agentrt_token_budget_destroy(budget);
+airy_token_budget_destroy(budget);
 
 /* === 标准化 Token 计算 === */
-agentrt_token_config_t config = AGENTRT_TOKEN_CONFIG_DEFAULT;
-config.model_type = AGENTRT_TOKEN_MODEL_GPT4;
-config.flags = AGENTRT_TOKEN_FLAG_ACCURATE;
+airy_token_config_t config = AIRY_TOKEN_CONFIG_DEFAULT;
+config.model_type = AIRY_TOKEN_MODEL_GPT4;
+config.flags = AIRY_TOKEN_FLAG_ACCURATE;
 
-size_t std_count = agentrt_token_standard_count("Hello, 世界!", 0, &config);
+size_t std_count = airy_token_standard_count("Hello, 世界!", 0, &config);
 printf("Standard token count: %zu\n", std_count);
 
 // 语言特征分析
 size_t cjk_chars, alpha_chars, total_chars;
-agentrt_token_analyze_text("Hello, 世界!", 0, &cjk_chars, &alpha_chars, &total_chars);
+airy_token_analyze_text("Hello, 世界!", 0, &cjk_chars, &alpha_chars, &total_chars);
 printf("CJK: %zu, Alpha: %zu, Total: %zu\n", cjk_chars, alpha_chars, total_chars);
 
 /* === 资源配额检查 === */
-agentrt_token_quota_t quota = AGENTRT_TOKEN_QUOTA_DEFAULT;
-agentrt_token_usage_t usage = {0};
+airy_token_quota_t quota = AIRY_TOKEN_QUOTA_DEFAULT;
+airy_token_usage_t usage = {0};
 
-int quota_result = agentrt_token_check_quota(&quota, 4000, &usage);
+int quota_result = airy_token_check_quota(&quota, 4000, &usage);
 if (quota_result == 0) {
     printf("Quota OK\n");
 } else {
@@ -213,9 +213,9 @@ if (quota_result == 0) {
 
 | 标志 | 说明 |
 |------|------|
-| `AGENTRT_TOKEN_FLAG_ACCURATE` | 高精度模式（较慢，更准确） |
-| `AGENTRT_TOKEN_FLAG_ESTIMATE` | 估算模式（较快，近似值） |
-| `AGENTRT_TOKEN_FLAG_INCLUDE_BOM` | 包含 BOM 字符 |
+| `AIRY_TOKEN_FLAG_ACCURATE` | 高精度模式（较慢，更准确） |
+| `AIRY_TOKEN_FLAG_ESTIMATE` | 估算模式（较快，近似值） |
+| `AIRY_TOKEN_FLAG_INCLUDE_BOM` | 包含 BOM 字符 |
 
 ## 依赖关系
 

@@ -145,8 +145,8 @@ static void memory_handle_fail(size_t size, const char *tag)
  * @param[in] tag 分配标签
  * @param[in] file 源文? * @param[in] line 行号
  * @param[in] function 函数? */
-static void memory_add_debug_info(void *addr, size_t size, const char *tag, const char *file,
-                                  int line, const char *function)
+static void memory_add_debug_info(void *addr, size_t size, size_t alignment, const char *tag,
+                                  const char *file, int line, const char *function)
 {
     if (!g_state.debug_enabled || addr == NULL) {
         return;
@@ -159,6 +159,7 @@ static void memory_add_debug_info(void *addr, size_t size, const char *tag, cons
 
     info->address = addr;
     info->size = size;
+    info->alignment = alignment;
     info->tag = tag ? strdup(tag) : NULL;
     info->file = file ? strdup(file) : NULL;
     info->line = line;
@@ -269,19 +270,25 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
 
     void *ptr = NULL;
 
-    if (alignment > 0) {
-        // 对齐分配
+    /*
+     * Windows 上统一使用 _aligned_malloc：alignment=0 时采用 sizeof(void*) 默认对齐，
+     * 确保所有分配都走 _aligned_free/_aligned_realloc 释放路径，消除 free() 释放
+     * _aligned_malloc 内存的不匹配缺陷（C-5）。POSIX 上 posix_memalign 分配的内存
+     * 可用 free() 释放，保持原逻辑。
+     */
 #ifdef _WIN32
-        ptr = _aligned_malloc(size, alignment);
+    size_t effective_alignment = (alignment > 0) ? alignment : sizeof(void *);
+    ptr = _aligned_malloc(size, effective_alignment);
 #else
+    if (alignment > 0) {
         // POSIX系统使用posix_memalign
         if (posix_memalign(&ptr, alignment, size) != 0) {
             ptr = NULL;
         }
-#endif
     } else {
         ptr = malloc(size);
     }
+#endif
 
     if (ptr == NULL) {
         memory_handle_fail(size, tag);
@@ -296,9 +303,13 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
     // 更新统计信息
     memory_update_stats_alloc(size);
 
-    // 记录调试信息
+    // 记录调试信息（Windows 存储 effective_alignment 供 _aligned_realloc 使用）
     if (g_state.debug_enabled) {
-        memory_add_debug_info(ptr, size, tag, __FILE__, __LINE__, __func__);
+#ifdef _WIN32
+        memory_add_debug_info(ptr, size, effective_alignment, tag, __FILE__, __LINE__, __func__);
+#else
+        memory_add_debug_info(ptr, size, alignment, tag, __FILE__, __LINE__, __func__);
+#endif
     }
 
     return ptr;
@@ -398,7 +409,12 @@ void *memory_alloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
         // 如果模块未初始化，使用系统默认分配
+        // Windows 上统一使用 _aligned_malloc，与 memory_free 的 _aligned_free 配对（C-5）
+#ifdef _WIN32
+        void *ptr = _aligned_malloc(size, sizeof(void *));
+#else
         void *ptr = malloc(size);
+#endif
         if (ptr != NULL) {
             __builtin_memset(ptr, 0, size);
         }
@@ -416,7 +432,16 @@ void *memory_calloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
         // 如果模块未初始化，使用系统默认分配
+        // Windows 上统一使用 _aligned_malloc + memset，与 memory_free 的 _aligned_free 配对（C-5）
+#ifdef _WIN32
+        void *ptr = _aligned_malloc(size, sizeof(void *));
+        if (ptr != NULL) {
+            __builtin_memset(ptr, 0, size);
+        }
+        return ptr;
+#else
         return calloc(1, size);
+#endif
     }
 
     memory_lock();
@@ -467,13 +492,20 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     }
 
     if (!g_state.initialized) {
+        // Windows 上统一使用 _aligned_realloc，与 _aligned_malloc/_aligned_free 配对（C-5）
+#ifdef _WIN32
+        return _aligned_realloc(ptr, new_size, sizeof(void *));
+#else
         return realloc(ptr, new_size);
+#endif
     }
 
     memory_lock();
 
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t old_size = debug_info ? debug_info->size : 0;
+    /* 保存原始 alignment 供 _aligned_realloc 使用；无 debug_info 时默认 sizeof(void*) */
+    size_t saved_alignment = debug_info ? debug_info->alignment : sizeof(void *);
 
     void *old_ptr = ptr;
     bool debug_info_saved = false;
@@ -490,14 +522,19 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
         if (debug_info->function)
             AIRY_STRNCPY_TERM(saved_func, debug_info->function, sizeof(saved_func));
         saved_line = debug_info->line;
+        saved_alignment = debug_info->alignment;
         memory_remove_debug_info(old_ptr);
     }
 
+#ifdef _WIN32
+    void *new_ptr = _aligned_realloc(ptr, new_size, saved_alignment);
+#else
     void *new_ptr = realloc(ptr, new_size);
+#endif
     if (new_ptr == NULL) {
         /* realloc 失败，原始 ptr 仍有效，恢复 debug info */
         if (debug_info_saved && g_state.debug_enabled) {
-            memory_add_debug_info(old_ptr, old_size,
+            memory_add_debug_info(old_ptr, old_size, saved_alignment,
                                   saved_tag[0] ? saved_tag : tag,
                                   saved_file[0] ? saved_file : __FILE__,
                                   saved_line > 0 ? saved_line : __LINE__,
@@ -516,12 +553,14 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 
         if (g_state.debug_enabled) {
             if (debug_info_saved) {
-                memory_add_debug_info(new_ptr, new_size, saved_tag[0] ? saved_tag : tag,
+                memory_add_debug_info(new_ptr, new_size, saved_alignment,
+                                      saved_tag[0] ? saved_tag : tag,
                                       saved_file[0] ? saved_file : __FILE__,
                                       saved_line > 0 ? saved_line : __LINE__,
                                       saved_func[0] ? saved_func : __func__);
             } else {
-                memory_add_debug_info(new_ptr, new_size, tag, __FILE__, __LINE__, __func__);
+                memory_add_debug_info(new_ptr, new_size, sizeof(void *), tag, __FILE__, __LINE__,
+                                      __func__);
             }
         }
     } else {
@@ -533,12 +572,14 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 
         if (g_state.debug_enabled) {
             if (debug_info_saved) {
-                memory_add_debug_info(new_ptr, new_size, saved_tag[0] ? saved_tag : tag,
+                memory_add_debug_info(new_ptr, new_size, saved_alignment,
+                                      saved_tag[0] ? saved_tag : tag,
                                       saved_file[0] ? saved_file : __FILE__,
                                       saved_line > 0 ? saved_line : __LINE__,
                                       saved_func[0] ? saved_func : __func__);
             } else {
-                memory_add_debug_info(new_ptr, new_size, tag, __FILE__, __LINE__, __func__);
+                memory_add_debug_info(new_ptr, new_size, sizeof(void *), tag, __FILE__, __LINE__,
+                                      __func__);
             }
         }
     }
@@ -556,7 +597,12 @@ void memory_free(void *ptr)
 
     if (!g_state.initialized) {
         // 如果模块未初始化，使用系统默认释放
+        // Windows 上统一使用 _aligned_free，与 _aligned_malloc 配对（C-5）
+#ifdef _WIN32
+        _aligned_free(ptr);
+#else
         free(ptr);
+#endif
         return;
     }
 
@@ -566,16 +612,16 @@ void memory_free(void *ptr)
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t size = debug_info ? debug_info->size : 0;
 
-    // 释放内存
-    if (debug_info && debug_info->address == ptr) {
+    /*
+     * 释放内存：Windows 上所有分配（包括 alignment=0 的常规分配）都通过
+     * _aligned_malloc 完成，因此统一使用 _aligned_free 释放（C-5）。
+     * POSIX 上 posix_memalign/malloc 分配的内存均可用 free() 释放。
+     */
 #ifdef _WIN32
-        _aligned_free(ptr);
+    _aligned_free(ptr);
 #else
-        free(ptr);
+    free(ptr);
 #endif
-    } else {
-        free(ptr);
-    }
 
     // 更新统计信息
     if (size > 0) {

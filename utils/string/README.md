@@ -1,11 +1,11 @@
 # String — 字符串工具模块
 
 **模块路径**: `agentrt/commons/utils/string/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
-String 模块提供安全、高效、统一的字符串处理接口，为 AgentRT 系统提供字符串操作的基础设施。该模块包含两套 API 层：核心层（`agentrt_string.h`）提供完整的字符串缓冲区、视图、列表、编码转换等高级功能，公共层（`string_common.h`）提供常用的字符串复制、连接、比较、查找、转换等基础操作。所有接口均设计为线程安全，避免缓冲区溢出等常见安全问题。
+String 模块提供安全、高效、统一的字符串处理接口，为 AgentRT 系统提供字符串操作的基础设施。该模块包含两套 API 层：核心层（`airy_string.h`）提供完整的字符串缓冲区、视图、列表、编码转换等高级功能，公共层（`string_common.h`）提供常用的字符串复制、连接、比较、查找、转换等基础操作。所有接口均设计为线程安全，避免缓冲区溢出等常见安全问题。
 
 ## 设计目标
 
@@ -19,7 +19,7 @@ String 模块提供安全、高效、统一的字符串处理接口，为 AgentR
 ```
 string/
 ├── include/
-│   ├── agentrt_string.h       # 核心层字符串处理 API（缓冲区、视图、列表、编码转换）
+│   ├── airy_string.h       # 核心层字符串处理 API（缓冲区、视图、列表、编码转换）
 │   ├── string_common.h        # 公共层字符串基础操作 API
 │   └── string_compat.h        # 跨平台兼容性定义（ssize_t、snprintf 等）
 ├── src/
@@ -82,7 +82,7 @@ string/
 
 ## 接口说明
 
-### 核心层 API（agentrt_string.h）
+### 核心层 API（airy_string.h）
 
 #### 安全字符串操作
 
@@ -224,7 +224,7 @@ string/
 ## 使用示例
 
 ```c
-#include "agentrt_string.h"
+#include "airy_string.h"
 
 /* === 安全字符串复制 === */
 char dest[64];
@@ -261,7 +261,7 @@ printf("%s\n", formatted);
 free(formatted);
 
 /* === 前缀/后缀检查 === */
-if (string_starts_with("agentrt_task_001", "agentrt_", STRING_COMPARE_CASE_SENSITIVE)) {
+if (string_starts_with("airy_task_001", "airy_", STRING_COMPARE_CASE_SENSITIVE)) {
     printf("Valid task ID prefix\n");
 }
 ```

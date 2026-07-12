@@ -1,7 +1,7 @@
 # Resource — 资源管理模块
 
 **模块路径**: `agentrt/commons/utils/resource/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -11,7 +11,7 @@ Resource 模块提供资源作用域守卫（RAII 模式）和资源配额管理
 
 - **资源作用域守卫**：RAII 模式自动释放资源，支持自定义释放函数，适用于文件句柄、内存、锁、网络连接等
 - **资源配额管理**：对内存、CPU 时间、I/O 操作数、网络字节数进行配额限制和实时监控
-- **资源追踪**：可选的资源分配追踪（通过 `AGENTRT_RESOURCE_TRACKING` 编译选项启用），检测内存泄漏
+- **资源追踪**：可选的资源分配追踪（通过 `AIRY_RESOURCE_TRACKING` 编译选项启用），检测内存泄漏
 - **可观测性**：配额超限日志告警、资源使用统计、超限类型查询
 
 ## 目录结构
@@ -28,18 +28,18 @@ resource/
 
 ## 核心数据结构
 
-### agentrt_resource_guard_t — 资源守卫
+### airy_resource_guard_t — 资源守卫
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `resource` | `void *` | 资源指针 |
-| `cleanup` | `agentrt_resource_cleanup_t` | 清理函数指针 |
+| `cleanup` | `airy_resource_cleanup_t` | 清理函数指针 |
 | `file` | `const char *` | 分配所在的文件名 |
 | `line` | `int` | 分配所在的行号 |
 | `name` | `const char *` | 资源名称 |
 | `active` | `int` | 是否激活（1=活跃，0=已取消） |
 
-### agentrt_resource_quota_t — 资源配额
+### airy_resource_quota_t — 资源配额
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -49,7 +49,7 @@ resource/
 | `max_network_bytes` | `size_t` | 最大网络传输字节数 |
 | `timeout_ms` | `uint64_t` | 超时时间（毫秒） |
 
-### agentrt_resource_usage_t — 资源使用统计
+### airy_resource_usage_t — 资源使用统计
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -62,7 +62,7 @@ resource/
 | `last_update` | `time_t` | 最后更新时间 |
 | `operation_count` | `uint64_t` | 操作计数 |
 
-### agentrt_resource_manager_t — 资源管理器
+### airy_resource_manager_t — 资源管理器
 
 管理器是不透明结构体，内部包含配额配置、使用统计、资源 ID 和超限标志位。
 
@@ -72,42 +72,42 @@ resource/
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_resource_guard_init(guard, resource, cleanup, file, line, name)` | 初始化资源守卫 |
-| `agentrt_resource_guard_cleanup(guard)` | 执行资源清理（调用 cleanup 函数） |
-| `agentrt_resource_guard_dismiss(guard)` | 取消资源清理（转移所有权，不再自动释放） |
+| `airy_resource_guard_init(guard, resource, cleanup, file, line, name)` | 初始化资源守卫 |
+| `airy_resource_guard_cleanup(guard)` | 执行资源清理（调用 cleanup 函数） |
+| `airy_resource_guard_dismiss(guard)` | 取消资源清理（转移所有权，不再自动释放） |
 
 ### 资源守卫宏
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_SCOPE_GUARD(resource, cleanup)` | 创建作用域守卫（自动生成变量名，作用域结束时自动清理） |
-| `AGENTRT_SCOPE_EXIT(resource, cleanup)` | 创建作用域退出守卫（同 `SCOPE_GUARD` 的别名） |
-| `AGENTRT_SCOPE_DISMISS(resource)` | 取消作用域守卫（转移所有权） |
+| `AIRY_SCOPE_GUARD(resource, cleanup)` | 创建作用域守卫（自动生成变量名，作用域结束时自动清理） |
+| `AIRY_SCOPE_EXIT(resource, cleanup)` | 创建作用域退出守卫（同 `SCOPE_GUARD` 的别名） |
+| `AIRY_SCOPE_DISMISS(resource)` | 取消作用域守卫（转移所有权） |
 
-### 资源追踪 API（需 `AGENTRT_RESOURCE_TRACKING`）
+### 资源追踪 API（需 `AIRY_RESOURCE_TRACKING`）
 
 | 函数/宏 | 说明 |
 |------|------|
-| `agentrt_resource_track_alloc(resource, type, file, line)` | 注册资源分配 |
-| `agentrt_resource_track_free(resource)` | 注销资源分配 |
-| `agentrt_resource_track_report(out_report)` | 获取资源追踪报告（未释放资源列表） |
-| `agentrt_resource_track_clear()` | 清空资源追踪记录 |
-| `AGENTRT_TRACKED_MALLOC(size)` | 追踪的内存分配 |
-| `AGENTRT_TRACKED_FREE(ptr)` | 追踪的内存释放 |
+| `airy_resource_track_alloc(resource, type, file, line)` | 注册资源分配 |
+| `airy_resource_track_free(resource)` | 注销资源分配 |
+| `airy_resource_track_report(out_report)` | 获取资源追踪报告（未释放资源列表） |
+| `airy_resource_track_clear()` | 清空资源追踪记录 |
+| `AIRY_TRACKED_MALLOC(size)` | 追踪的内存分配 |
+| `AIRY_TRACKED_FREE(ptr)` | 追踪的内存释放 |
 
 ### 资源配额 API
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_resource_manager_create(quota, resource_id, out_manager)` | 创建资源管理器 |
-| `agentrt_resource_manager_destroy(manager)` | 销毁资源管理器 |
-| `agentrt_resource_check_memory(manager, requested_bytes)` | 检查内存配额是否充足（不足返回 `AIRY_ENOMEM`） |
-| `agentrt_resource_record_allocation(manager, bytes)` | 记录内存分配（更新峰值） |
-| `agentrt_resource_record_free(manager, bytes)` | 记录内存释放 |
-| `agentrt_resource_record_io(manager)` | 记录 I/O 操作（超限返回 `AIRY_EBUSY`） |
-| `agentrt_resource_is_exceeded(manager)` | 检查是否有资源超限 |
-| `agentrt_resource_get_usage(manager, out_usage)` | 获取资源使用统计 |
-| `agentrt_resource_get_exceeded_info(manager)` | 获取超限资源类型信息 |
+| `airy_resource_manager_create(quota, resource_id, out_manager)` | 创建资源管理器 |
+| `airy_resource_manager_destroy(manager)` | 销毁资源管理器 |
+| `airy_resource_check_memory(manager, requested_bytes)` | 检查内存配额是否充足（不足返回 `AIRY_ENOMEM`） |
+| `airy_resource_record_allocation(manager, bytes)` | 记录内存分配（更新峰值） |
+| `airy_resource_record_free(manager, bytes)` | 记录内存释放 |
+| `airy_resource_record_io(manager)` | 记录 I/O 操作（超限返回 `AIRY_EBUSY`） |
+| `airy_resource_is_exceeded(manager)` | 检查是否有资源超限 |
+| `airy_resource_get_usage(manager, out_usage)` | 获取资源使用统计 |
+| `airy_resource_get_exceeded_info(manager)` | 获取超限资源类型信息 |
 
 ## 使用示例
 
@@ -121,7 +121,7 @@ void process_file(const char *path) {
     if (!file) return;
 
     // 作用域结束时自动调用 fclose(file)
-    AGENTRT_SCOPE_EXIT(file, (agentrt_resource_cleanup_t)fclose);
+    AIRY_SCOPE_EXIT(file, (airy_resource_cleanup_t)fclose);
 
     char buffer[1024];
     while (fgets(buffer, sizeof(buffer), file)) {
@@ -135,12 +135,12 @@ void allocate_buffer(void) {
     if (!buffer) return;
 
     // 作用域结束时自动调用 free(buffer)
-    AGENTRT_SCOPE_GUARD(buffer, free);
+    AIRY_SCOPE_GUARD(buffer, free);
 
     // 使用 buffer...
-    // 如果需要在某个条件分支转移所有权，调用 AGENTRT_SCOPE_DISMISS
+    // 如果需要在某个条件分支转移所有权，调用 AIRY_SCOPE_DISMISS
     if (success) {
-        AGENTRT_SCOPE_DISMISS(buffer);
+        AIRY_SCOPE_DISMISS(buffer);
         return buffer;  // 所有权转移给调用者
     }
     // 否则 buffer 自动释放
@@ -148,7 +148,7 @@ void allocate_buffer(void) {
 
 // ===== 资源配额管理 =====
 void run_with_quota(void) {
-    agentrt_resource_quota_t quota = {
+    airy_resource_quota_t quota = {
         .max_memory_bytes = 100 * 1024 * 1024,  // 100 MB
         .max_cpu_time_ms = 5000,                 // 5 秒
         .max_io_ops = 1000,                      // 1000 次 I/O
@@ -156,44 +156,44 @@ void run_with_quota(void) {
         .timeout_ms = 10000                       // 10 秒超时
     };
 
-    agentrt_resource_manager_t *manager = NULL;
-    agentrt_resource_manager_create(&quota, "task-001", &manager);
+    airy_resource_manager_t *manager = NULL;
+    airy_resource_manager_create(&quota, "task-001", &manager);
 
     // 分配内存前检查配额
     size_t request = 50 * 1024 * 1024;  // 50 MB
-    if (agentrt_resource_check_memory(manager, request) == AGENTRT_SUCCESS) {
+    if (airy_resource_check_memory(manager, request) == AIRY_SUCCESS) {
         void *buffer = malloc(request);
-        agentrt_resource_record_allocation(manager, request);
+        airy_resource_record_allocation(manager, request);
         // 使用 buffer...
         free(buffer);
-        agentrt_resource_record_free(manager, request);
+        airy_resource_record_free(manager, request);
     } else {
-        AGENTRT_LOG_WARN("Memory quota exceeded for task-001");
+        AIRY_LOG_WARN("Memory quota exceeded for task-001");
     }
 
     // 执行 I/O 操作
     for (int i = 0; i < 100; i++) {
-        if (agentrt_resource_record_io(manager) != AGENTRT_SUCCESS) {
-            AGENTRT_LOG_WARN("I/O quota exceeded");
+        if (airy_resource_record_io(manager) != AIRY_SUCCESS) {
+            AIRY_LOG_WARN("I/O quota exceeded");
             break;
         }
         // 执行 I/O...
     }
 
     // 检查资源状态
-    if (agentrt_resource_is_exceeded(manager)) {
+    if (airy_resource_is_exceeded(manager)) {
         printf("Resource exceeded: %s\n",
-               agentrt_resource_get_exceeded_info(manager));
+               airy_resource_get_exceeded_info(manager));
     }
 
     // 获取使用统计
-    agentrt_resource_usage_t usage;
-    agentrt_resource_get_usage(manager, &usage);
+    airy_resource_usage_t usage;
+    airy_resource_get_usage(manager, &usage);
     printf("Memory: %zu / %zu (peak: %zu)\n",
            usage.current_memory_bytes, quota.max_memory_bytes,
            usage.peak_usage);
 
-    agentrt_resource_manager_destroy(manager);
+    airy_resource_manager_destroy(manager);
 }
 ```
 
@@ -208,7 +208,7 @@ void run_with_quota(void) {
 
 ## 资源追踪报告格式
 
-启用 `AGENTRT_RESOURCE_TRACKING` 后，`agentrt_resource_track_report()` 输出格式：
+启用 `AIRY_RESOURCE_TRACKING` 后，`airy_resource_track_report()` 输出格式：
 
 ```
 Resource leak report:
@@ -224,15 +224,15 @@ Total leaks: 3
 
 | 参数 | 说明 |
 |------|------|
-| `AGENTRT_RESOURCE_TRACKING` | 编译时定义以启用资源追踪功能（默认关闭） |
+| `AIRY_RESOURCE_TRACKING` | 编译时定义以启用资源追踪功能（默认关闭） |
 
 ## 依赖关系
 
 | 依赖 | 说明 |
 |------|------|
 | `memory_compat.h` | 统一内存管理宏 |
-| `agentrt_memory.h` | 内存分配/释放函数 |
-| `agentrt_string.h` | 字符串操作 |
+| `airy_memory.h` | 内存分配/释放函数 |
+| `airy_string.h` | 字符串操作 |
 | `sync.h` | 互斥锁（资源追踪使用） |
 | `atomic_compat.h` | 跨平台原子操作 |
 | `platform.h` | 时间戳获取 |

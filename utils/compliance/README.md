@@ -1,16 +1,16 @@
 # Compliance — 合规性校验与策略执行
 
 **模块路径**: `agentrt/commons/utils/compliance/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
-Compliance 是 AgentRT 的代码合规性实施模块，通过禁止危险函数、强制安全 API 替代、以及合规性策略校验，确保所有 AgentRT 代码满足安全编码标准。该模块是 Commons 安全基础设施的核心，与根 CMakeLists.txt 的 `AGENTRT_COMPLIANCE_STRICT` 选项联动，在编译期强制执行安全编码规范。
+Compliance 是 Airymax AgentRT 的代码合规性实施模块，通过禁止危险函数、强制安全 API 替代、以及合规性策略校验，确保所有 Airymax 代码满足安全编码标准。该模块是 Commons 安全基础设施的核心，与根 CMakeLists.txt 的 `AIRY_COMPLIANCE_STRICT` 选项联动，在编译期强制执行安全编码规范。
 
 ## 设计目标
 
 - **编译期安全强制**：通过 `#pragma GCC poison` 在编译期禁止危险函数的使用
-- **安全 API 替代**：提供 `AIRY_MALLOC`、`AIRY_FREE`、`AIRY_STRCPY` 等安全替代宏
+- **安全 API 替代**：提供 `AIRY_MALLOC`、`AIRY_FREE`、`AIRY_STRDUP` 等安全替代宏
 - **分级合规**：支持 Strict 模式（编译期阻断）和 Standard 模式（编译期警告）
 - **可豁免**：提供 `compliance_exempt.h` 豁免机制，允许特定文件在审查后使用受限函数
 
@@ -26,17 +26,17 @@ compliance/
 
 ## 合规模式
 
-### Strict 模式（`AGENTRT_COMPLIANCE_STRICT=ON`）
+### Strict 模式（`AIRY_COMPLIANCE_STRICT=ON`）
 
 通过 `#pragma GCC poison` 在编译期直接禁止以下函数，任何使用都会导致编译错误：
 
 | 类别 | 被禁止的函数 | 安全替代 |
 |------|-------------|----------|
 | **内存分配** | `malloc`、`free`、`calloc`、`realloc` | `AIRY_MALLOC`、`AIRY_FREE`、`AIRY_CALLOC`、`AIRY_REALLOC` |
-| **字符串复制** | `strcpy`、`strcat`、`strncpy`、`strdup`、`strndup` | `AIRY_STRCPY`、`AGENTRT_STRCAT`、`AGENTRT_STRDUP`、`AGENTRT_STRNDUP` |
-| **格式化输出** | `sprintf`、`vsprintf`、`fprintf`、`asprintf`、`vasprintf` | `snprintf`、`AGENTRT_SNPRINTF` |
+| **字符串复制** | `strcpy`、`strcat`、`strncpy`、`strdup`、`strndup` | `airy_strlcpy`、`airy_strlcat`、`AIRY_STRDUP`、`AIRY_STRNDUP` |
+| **格式化输出** | `sprintf`、`vsprintf`、`fprintf`、`asprintf`、`vasprintf` | `snprintf`、`vsnprintf` |
 | **输入扫描** | `scanf`、`fscanf`、`sscanf`、`gets` | 结构化解析 API |
-| **内存操作** | `memcpy`、`memmove`、`memset` | `AGENTRT_MEMCPY_SAFE`、`AGENTRT_MEMSET_SAFE` |
+| **内存操作** | `memcpy`、`memmove`、`memset` | `AIRY_MEMCPY_SAFE`、`AIRY_MEMCPY`、`AIRY_MEMMOVE`、`AIRY_MEMSET` |
 | **时间** | `localtime`、`gmtime` | `localtime_r`、`gmtime_r` |
 | **临时文件** | `tmpnam`、`mktemp` | `mkstemp` |
 | **字符串解析** | `strtok` | `strtok_r` |
@@ -51,7 +51,7 @@ compliance/
 
 ```c
 /* 在文件开头包含豁免声明 */
-#define AGENTRT_COMPLIANCE_IMPL
+#define AIRY_COMPLIANCE_IMPL
 #include "compliance_exempt.h"
 
 /* 此文件可以使用 malloc/free 等受限函数 */
@@ -69,7 +69,7 @@ void *ptr = malloc(1024);  /* 通过豁免，允许使用 */
 
 ```bash
 # 构建时启用严格合规模式
-cmake -B build -DAGENTRT_COMPLIANCE_STRICT=ON
+cmake -B build -DAIRY_COMPLIANCE_STRICT=ON
 cmake --build build
 ```
 
@@ -80,19 +80,19 @@ cmake --build build
 char *buf = malloc(1024);
 strcpy(buf, src);
 
-/* 安全 — 使用 AgentRT 替代 API */
+/* 安全 — 使用 Airymax 替代 API */
 char *buf = AIRY_MALLOC(1024);
-AIRY_STRCPY(buf, sizeof(buf), src);
+airy_strlcpy(buf, src, sizeof(buf));
 ```
 
 ### 豁免示例
 
 ```c
 /* 仅限 memory_compat.h 的实现文件使用 */
-#define AGENTRT_COMPLIANCE_IMPL
+#define AIRY_COMPLIANCE_IMPL
 #include "compliance_exempt.h"
 
-void *agentrt_malloc_impl(size_t size) {
+void *airy_malloc_impl(size_t size) {
     return malloc(size);  /* 豁免允许 */
 }
 ```
@@ -112,8 +112,8 @@ Compliance 模块在 CI 流水线中通过以下检查强制执行：
 | 依赖 | 说明 |
 |------|------|
 | 根 `CMakeLists.txt` | 通过 `-include` 编译选项注入 `banned_functions.h` |
-| `memory_compat.h` | 提供 `AIRY_MALLOC`/`AIRY_FREE` 等安全替代宏 |
-| `string_compat.h` | 提供 `AIRY_STRCPY`/`AGENTRT_STRDUP` 等安全字符串宏 |
+| `memory_compat.h` | 提供 `AIRY_MALLOC`/`AIRY_FREE`/`AIRY_MEMCPY_SAFE` 等安全替代宏 |
+| `platform.h` | 提供 `airy_strlcpy`/`airy_strlcat` 安全字符串函数 |
 | GCC/Clang 编译器 | `#pragma GCC poison` 依赖 GCC/Clang 扩展 |
 
 ---

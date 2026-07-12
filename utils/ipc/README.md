@@ -1,7 +1,7 @@
 # IPC — 进程间通信模块
 
 **模块路径**: `agentrt/commons/utils/ipc/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -70,7 +70,7 @@ ipc/
 | `target` | `char[64]` | 目标标识 |
 | `payload_len` | `uint64_t` | 负载长度 |
 | `checksum` | `uint32_t` | CRC32 校验和 |
-| `timestamp` | `agentrt_timestamp_t` | 时间戳 |
+| `timestamp` | `airy_timestamp_t` | 时间戳 |
 
 ### ipc_message_t — 消息结构
 
@@ -237,7 +237,7 @@ ipc_channel_t *client_chan = ipc_server_accept(server, 5000);
 if (client_chan != NULL) {
     ipc_message_t msg;
     airy_err_t err = ipc_receive(client_chan, &msg, 5000);
-    if (err == AGENTRT_OK) {
+    if (err == AIRY_OK) {
         printf("Received: %.*s\n", (int)msg.payload_size, (char *)msg.payload);
         ipc_send(client_chan, &msg);  // echo back
     }
@@ -281,7 +281,7 @@ ipc_cleanup();
 | 依赖 | 说明 |
 |------|------|
 | `error.h` | 错误码定义（`airy_err_t`） |
-| `types.h` | 基础类型定义（`agentrt_timestamp_t`、`agentrt_ipc_type_t`） |
+| `types.h` | 基础类型定义（`airy_timestamp_t`、`airy_ipc_type_t`） |
 
 ---
 

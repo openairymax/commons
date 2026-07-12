@@ -146,8 +146,8 @@ cd build/agentrt/commons/tests
 
 | 依赖 | 说明 |
 |------|------|
-| `agentrt_common` | Commons 聚合库，所有测试的链接目标 |
-| `agentrt_core` | 核心库，提供基础功能 |
+| `airy_common` | Commons 聚合库，所有测试的链接目标 |
+| `airy_core` | 核心库，提供基础功能 |
 | CMake 3.20+ | 构建系统 |
 | CTest | 测试执行框架 |
 

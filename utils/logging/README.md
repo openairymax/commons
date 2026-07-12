@@ -1,7 +1,7 @@
 # Logging — 日志系统
 
 **模块路径**: `agentrt/commons/utils/logging/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -22,7 +22,7 @@ Logging 模块是 AgentRT 的统一分层日志系统，采用三层架构设计
 logging/
 ├── include/
 │   ├── logging.h                # Core 层：日志核心 API（含文件输出与轮转）
-│   ├── logging_compat.h         # 日志兼容层（SVC_LOG_* / AGENTRT_LOG_* 宏）
+│   ├── logging_compat.h         # 日志兼容层（SVC_LOG_* / AIRY_LOG_* 宏）
 │   ├── atomic_logging.h         # Atomic 层：无锁队列与批量写入
 │   └── service_logging.h        # Service 层：轮转/过滤/传输/监控
 ├── src/
@@ -191,31 +191,31 @@ log_cleanup();
 
 | 变量 | 取值 | 说明 |
 |------|------|------|
-| `AGENTRT_LOG_COLOR` | `0` / `1` | 强制禁用/启用 ANSI 色彩输出。未设置时自动检测：终端启用，管道/文件禁用 |
+| `AIRY_LOG_COLOR` | `0` / `1` | 强制禁用/启用 ANSI 色彩输出。未设置时自动检测：终端启用，管道/文件禁用 |
 
 **示例**：
 
 ```bash
 # 强制启用色彩（即使输出到管道）
-AGENTRT_LOG_COLOR=1 ./build/agentrt/daemons/gateway_d/src/gateway_d | cat
+AIRY_LOG_COLOR=1 ./build/agentrt/daemons/gateway_d/src/gateway_d | cat
 
 # 强制禁用色彩（即使输出到终端）
-AGENTRT_LOG_COLOR=0 ./build/agentrt/daemons/gateway_d/src/gateway_d
+AIRY_LOG_COLOR=0 ./build/agentrt/daemons/gateway_d/src/gateway_d
 ```
 
 ## 时间源
 
 日志时间戳使用 **`CLOCK_REALTIME`**（墙钟时间），与网络北京时间或宿主机系统时间对齐，格式为 `[YYYY-MM-DD HH:MM:SS.sss]`。
 
-> **重要**：项目内**严禁**使用 `agentrt_time_monotonic_ns()` / `agentrt_time_monotonic_ms()`（基于 `CLOCK_MONOTONIC`，系统启动时间）作为日志时间戳。`CLOCK_MONOTONIC` 仅用于超时计算、调度、性能基准等子系统内部场景。
+> **重要**：项目内**严禁**使用 `airy_time_monotonic_ns()` / `airy_time_monotonic_ms()`（基于 `CLOCK_MONOTONIC`，系统启动时间）作为日志时间戳。`CLOCK_MONOTONIC` 仅用于超时计算、调度、性能基准等子系统内部场景。
 
 时间源分离原则：
 
 | 用途 | 时钟 | API |
 |------|------|-----|
 | 日志时间戳 | `CLOCK_REALTIME` | `log_write()` 内部 `clock_gettime(CLOCK_REALTIME, ...)` |
-| 超时/调度 | `CLOCK_MONOTONIC` | `agentrt_time_monotonic_ns()` / `agentrt_time_monotonic_ms()` |
-| 墙钟时间查询 | `CLOCK_REALTIME` | `agentrt_time_realtime_ns()` |
+| 超时/调度 | `CLOCK_MONOTONIC` | `airy_time_monotonic_ns()` / `airy_time_monotonic_ms()` |
+| 墙钟时间查询 | `CLOCK_REALTIME` | `airy_time_realtime_ns()` |
 
 ## 性能特性
 

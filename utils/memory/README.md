@@ -1,7 +1,7 @@
 # Memory — 内存管理模块
 
 **模块路径**: `agentrt/commons/utils/memory/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -21,7 +21,7 @@ Memory 模块提供 AgentRT 统一的内存管理框架，包括安全内存分�
 ```
 memory/
 ├── include/
-│   ├── agentrt_memory.h          # 核心层 API（内存分配/释放/统计）
+│   ├── airy_memory.h          # 核心层 API（内存分配/释放/统计）
 │   ├── memory_common.h           # 内存池与安全分配接口
 │   ├── memory_pool.h             # 内存池管理（创建/分配/释放/统计）
 │   ├── memory_debug.h            # 内存调试（泄漏检测/边界检查/堆栈跟踪）
@@ -107,7 +107,7 @@ memory/
 
 ## 接口说明
 
-### 核心层 API（agentrt_memory.h）
+### 核心层 API（airy_memory.h）
 
 | 函数 | 说明 |
 |------|------|
@@ -179,11 +179,11 @@ memory/
 | `AIRY_CALLOC(num, size)` | 安全内存分配并清零（兼容 `calloc`） |
 | `AIRY_REALLOC(ptr, new_size)` | 安全内存重分配（兼容 `realloc`） |
 | `AIRY_FREE(ptr)` | 安全内存释放（兼容 `free`） |
-| `AGENTRT_STRDUP(str)` | 安全字符串复制（兼容 `strdup`） |
-| `AGENTRT_STRNDUP(str, n)` | 安全字符串复制（带长度限制） |
-| `AGENTRT_STRNCPY_TERM(dst, src, size)` | 安全字符串复制（保证 null 终止） |
-| `AGENTRT_MEMCPY_SAFE(dst, src, size, dst_capacity)` | 带边界检查的 `memcpy` |
-| `AGENTRT_MEMSET(ptr, value, size)` | 带零大小保护的 `memset` |
+| `AIRY_STRDUP(str)` | 安全字符串复制（兼容 `strdup`） |
+| `AIRY_STRNDUP(str, n)` | 安全字符串复制（带长度限制） |
+| `AIRY_STRNCPY_TERM(dst, src, size)` | 安全字符串复制（保证 null 终止） |
+| `AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)` | 带边界检查的 `memcpy` |
+| `AIRY_MEMSET(ptr, value, size)` | 带零大小保护的 `memset` |
 | `SAFE_MALLOC(ptr, size)` | 安全分配（失败返回 NULL） |
 | `SAFE_CALLOC(ptr, num, size)` | 安全清零分配（失败返回 NULL） |
 | `SAFE_MALLOC_ARRAY(ptr, count, element_size)` | 安全数组分配（带溢出检查） |
@@ -194,19 +194,19 @@ memory/
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_memory_stats_extended_init(ext_stats, capacity)` | 初始化扩展统计跟踪器 |
-| `agentrt_memory_track_alloc(ext_stats, ptr, size, category, file, line)` | 记录一次分配 |
-| `agentrt_memory_track_free(ext_stats, ptr)` | 记录一次释放 |
-| `agentrt_check_leaks_scheduled(ext_stats, max_age_ms)` | 定期检测疑似泄漏 |
-| `agentrt_memory_calc_watermark(ext_stats)` | 计算当前内存水位级别 |
-| `agentrt_register_watermark_callback(ext_stats, callback, context)` | 注册水位变化回调 |
-| `agentrt_memory_stats_report(ext_stats, tag)` | 内存统计定期上报 |
-| `agentrt_memory_stats_extended_destroy(ext_stats)` | 销毁扩展统计跟踪器 |
+| `airy_memory_stats_extended_init(ext_stats, capacity)` | 初始化扩展统计跟踪器 |
+| `airy_memory_track_alloc(ext_stats, ptr, size, category, file, line)` | 记录一次分配 |
+| `airy_memory_track_free(ext_stats, ptr)` | 记录一次释放 |
+| `airy_check_leaks_scheduled(ext_stats, max_age_ms)` | 定期检测疑似泄漏 |
+| `airy_memory_calc_watermark(ext_stats)` | 计算当前内存水位级别 |
+| `airy_register_watermark_callback(ext_stats, callback, context)` | 注册水位变化回调 |
+| `airy_memory_stats_report(ext_stats, tag)` | 内存统计定期上报 |
+| `airy_memory_stats_extended_destroy(ext_stats)` | 销毁扩展统计跟踪器 |
 
 ## 使用示例
 
 ```c
-#include "agentrt_memory.h"
+#include "airy_memory.h"
 #include "memory_pool.h"
 #include "memory_debug.h"
 

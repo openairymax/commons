@@ -1,7 +1,7 @@
 # Cost — 成本估算与控制
 
 **模块路径**: `agentrt/commons/utils/cost/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -28,7 +28,7 @@ cost/
 
 ## 核心数据结构
 
-### agentrt_cost_estimator_t — 成本预估器
+### airy_cost_estimator_t — 成本预估器
 
 管理模型定价表，提供基于 Token 数量的成本计算。
 
@@ -47,7 +47,7 @@ models:
     output_price_per_1k: 0.015
 ```
 
-### agentrt_budget_controller_t — 预算控制器
+### airy_budget_controller_t — 预算控制器
 
 管理时间窗口内的预算分配和消耗追踪。
 
@@ -64,19 +64,19 @@ models:
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_cost_estimator_create(config_path)` | 创建成本预估器（可传入 YAML 定价配置文件） |
-| `agentrt_cost_estimator_destroy(estimator)` | 销毁预估器，释放资源 |
-| `agentrt_cost_estimator_estimate(estimator, model_name, input_tokens, output_tokens)` | 根据模型和 Token 数计算成本（美元），失败返回 -1.0 |
+| `airy_cost_estimator_create(config_path)` | 创建成本预估器（可传入 YAML 定价配置文件） |
+| `airy_cost_estimator_destroy(estimator)` | 销毁预估器，释放资源 |
+| `airy_cost_estimator_estimate(estimator, model_name, input_tokens, output_tokens)` | 根据模型和 Token 数计算成本（美元），失败返回 -1.0 |
 
 ### 预算控制器 API
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_budget_controller_create(max_cost_usd, period_seconds)` | 创建预算控制器，指定周期内最大成本和周期时长 |
-| `agentrt_budget_controller_destroy(controller)` | 销毁控制器，释放资源 |
-| `agentrt_budget_controller_consume(controller, cost_usd)` | 消耗指定成本，返回 0 成功，-1 超出预算 |
-| `agentrt_budget_controller_remaining(controller)` | 获取当前周期剩余预算（美元） |
-| `agentrt_budget_controller_consumed(controller)` | 获取当前周期已消耗成本（美元） |
+| `airy_budget_controller_create(max_cost_usd, period_seconds)` | 创建预算控制器，指定周期内最大成本和周期时长 |
+| `airy_budget_controller_destroy(controller)` | 销毁控制器，释放资源 |
+| `airy_budget_controller_consume(controller, cost_usd)` | 消耗指定成本，返回 0 成功，-1 超出预算 |
+| `airy_budget_controller_remaining(controller)` | 获取当前周期剩余预算（美元） |
+| `airy_budget_controller_consumed(controller)` | 获取当前周期已消耗成本（美元） |
 
 ## 使用示例
 
@@ -84,14 +84,14 @@ models:
 #include "cost.h"
 
 /* 创建成本预估器 */
-agentrt_cost_estimator_t *estimator = agentrt_cost_estimator_create("models.yaml");
+airy_cost_estimator_t *estimator = airy_cost_estimator_create("models.yaml");
 if (!estimator) {
     /* 失败则使用内置默认定价表 */
-    estimator = agentrt_cost_estimator_create(NULL);
+    estimator = airy_cost_estimator_create(NULL);
 }
 
 /* 预估 GPT-4o 的一次调用成本 */
-double cost = agentrt_cost_estimator_estimate(
+double cost = airy_cost_estimator_estimate(
     estimator,
     "gpt-4o",
     500,   /* 500 input tokens */
@@ -101,21 +101,21 @@ printf("Estimated cost: $%.6f\n", cost);
 /* $0.005 * 500/1000 + $0.015 * 200/1000 = $0.0025 + $0.003 = $0.0055 */
 
 /* 创建预算控制器：每天 $10 预算 */
-agentrt_budget_controller_t *budget = agentrt_budget_controller_create(10.0, 86400);
+airy_budget_controller_t *budget = airy_budget_controller_create(10.0, 86400);
 
 /* 消耗成本 */
-int rc = agentrt_budget_controller_consume(budget, cost);
+int rc = airy_budget_controller_consume(budget, cost);
 if (rc != 0) {
     printf("Budget exceeded! Remaining: $%.4f\n",
-           agentrt_budget_controller_remaining(budget));
+           airy_budget_controller_remaining(budget));
 } else {
     printf("Cost consumed: $%.6f, Remaining: $%.4f\n",
-           cost, agentrt_budget_controller_remaining(budget));
+           cost, airy_budget_controller_remaining(budget));
 }
 
 /* 清理 */
-agentrt_budget_controller_destroy(budget);
-agentrt_cost_estimator_destroy(estimator);
+airy_budget_controller_destroy(budget);
+airy_cost_estimator_destroy(estimator);
 ```
 
 ## 内置定价表

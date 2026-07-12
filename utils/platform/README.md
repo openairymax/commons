@@ -1,11 +1,11 @@
 # Platform — 平台抽象模块
 
 **模块路径**: `agentrt/commons/utils/platform/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
-Platform 模块提供面向应用层的高级跨平台工具集，封装了操作系统差异，为上层业务模块提供统一的文件系统操作、环境变量管理、路径操作和时间工具。该模块位于 `utils/platform/`，与顶层 `platform/` 模块（系统层低级抽象）形成互补，专注于业务逻辑代码所需的跨平台能力。子进程执行统一使用顶层 `platform.h` 的 `agentrt_process_run_capture()`（fork+execvp，不经 shell），消除命令注入风险。
+Platform 模块提供面向应用层的高级跨平台工具集，封装了操作系统差异，为上层业务模块提供统一的文件系统操作、环境变量管理、路径操作和时间工具。该模块位于 `utils/platform/`，与顶层 `platform/` 模块（系统层低级抽象）形成互补，专注于业务逻辑代码所需的跨平台能力。子进程执行统一使用顶层 `platform.h` 的 `airy_process_run_capture()`（fork+execvp，不经 shell），消除命令注入风险。
 
 ## 设计目标
 
@@ -120,17 +120,17 @@ platform_adapter_init();
 printf("Platform: %s\n", platform_get_name());
 
 // 文件系统操作
-if (!platform_path_exists("/tmp/agentrt_data")) {
-    platform_mkdir_recursive("/tmp/agentrt_data");
+if (!platform_path_exists("/tmp/airy_data")) {
+    platform_mkdir_recursive("/tmp/airy_data");
 }
 
-platform_file_info_t info = platform_get_file_info("/tmp/agentrt_data/config.json");
+platform_file_info_t info = platform_get_file_info("/tmp/airy_data/config.json");
 if (info.exists && !info.is_directory) {
     printf("Config size: %zu bytes, modified: %ld\n", info.size, info.mtime);
 }
 
 // 路径操作
-char *joined = platform_path_join("/tmp/agentrt_data", "output.log");
+char *joined = platform_path_join("/tmp/airy_data", "output.log");
 char *basename = platform_path_basename(joined);
 printf("Basename: %s\n", basename);
 AIRY_FREE(basename);

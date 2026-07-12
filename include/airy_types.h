@@ -20,6 +20,9 @@
 /* ==================== 平台检测和基础定义 ==================== */
 #include "../platform/include/platform.h"
 
+/* ==================== [SC] 共享契约层（P0-05 magic SSoT） ==================== */
+#include <airymax/ipc.h> /* AIRY_IPC_MAGIC (0x41524531 'ARE1') */
+
 /* ==================== 统一的基础类型定义 ==================== */
 #include <stdbool.h>
 #include <stddef.h>
@@ -135,7 +138,7 @@ typedef int32_t airy_err_t;
  * @brief IPC消息头结构（权威定义）
  */
 typedef struct {
-    uint32_t magic;          /**< 魔数 (0x414F5350 = "AOSP") */
+    uint32_t magic;          /**< 魔数 (AIRY_IPC_MAGIC = 0x41524531 'ARE1', P0-05 收敛) */
     uint32_t version;        /**< 协议版本 */
     uint32_t type;           /**< 消息类型 */
     uint32_t flags;          /**< 消息标志 */

@@ -1,7 +1,7 @@
 # Types — 类型定义模块
 
 **模块路径**: `agentrt/commons/utils/types/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -31,7 +31,7 @@ types/
 
 ### 基础类型
 
-#### agentrt_result_t — 通用结果类型
+#### airy_result_t — 通用结果类型
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -39,29 +39,29 @@ types/
 | `message` | `const char *` | 错误消息 |
 | `detail` | `const char *` | 详细信息 |
 
-#### agentrt_priority_t — 优先级枚举
+#### airy_priority_t — 优先级枚举
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_PRIORITY_LOW` | 低优先级 |
-| `AGENTRT_PRIORITY_NORMAL` | 普通优先级 |
-| `AGENTRT_PRIORITY_HIGH` | 高优先级 |
-| `AGENTRT_PRIORITY_CRITICAL` | 关键优先级 |
+| `AIRY_PRIORITY_LOW` | 低优先级 |
+| `AIRY_PRIORITY_NORMAL` | 普通优先级 |
+| `AIRY_PRIORITY_HIGH` | 高优先级 |
+| `AIRY_PRIORITY_CRITICAL` | 关键优先级 |
 
 #### 基础类型别名
 
 | 类型 | 定义 | 说明 |
 |------|------|------|
 | `airy_err_t` | `int32_t` | 错误码类型（负值为错误，0 为成功） |
-| `agentrt_timestamp_t` | `uint64_t` | 时间戳类型（纳秒精度） |
-| `agentrt_millis_t` | `uint64_t` | 毫秒时间类型 |
-| `agentrt_uuid_t` | `char[37]` | 唯一标识符类型 |
+| `airy_timestamp_t` | `uint64_t` | 时间戳类型（纳秒精度） |
+| `airy_millis_t` | `uint64_t` | 毫秒时间类型 |
+| `airy_uuid_t` | `char[37]` | 唯一标识符类型 |
 
 #### 通用错误码
 
 | 宏 | 值 | 说明 |
 |------|------|------|
-| `AGENTRT_SUCCESS` | 0 | 成功 |
+| `AIRY_SUCCESS` | 0 | 成功 |
 | `AIRY_EINVAL` | -1 | 参数无效 |
 | `AIRY_ENOMEM` | -2 | 内存不足 |
 | `AIRY_EBUSY` | -3 | 资源忙碌 |
@@ -87,41 +87,41 @@ types/
 
 ### 任务类型
 
-#### agentrt_task_status_t — 任务状态
+#### airy_task_status_t — 任务状态
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_TASK_PENDING` | 等待中 |
-| `AGENTRT_TASK_RUNNING` | 运行中 |
-| `AGENTRT_TASK_SUCCEEDED` | 已成功 |
-| `AGENTRT_TASK_FAILED` | 已失败 |
-| `AGENTRT_TASK_CANCELLED` | 已取消 |
-| `AGENTRT_TASK_TIMEOUT` | 已超时 |
-| `AGENTRT_TASK_RETRYING` | 重试中 |
+| `AIRY_TASK_PENDING` | 等待中 |
+| `AIRY_TASK_RUNNING` | 运行中 |
+| `AIRY_TASK_SUCCEEDED` | 已成功 |
+| `AIRY_TASK_FAILED` | 已失败 |
+| `AIRY_TASK_CANCELLED` | 已取消 |
+| `AIRY_TASK_TIMEOUT` | 已超时 |
+| `AIRY_TASK_RETRYING` | 重试中 |
 
-#### agentrt_task_config_t — 任务配置
+#### airy_task_config_t — 任务配置
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `input` | `const char *` | 任务输入（自然语言描述） |
 | `input_len` | `size_t` | 输入长度 |
 | `timeout_ms` | `uint32_t` | 超时时间（毫秒） |
-| `priority` | `agentrt_priority_t` | 任务优先级 |
-| `type` | `agentrt_task_type_t` | 任务类型 |
+| `priority` | `airy_priority_t` | 任务优先级 |
+| `type` | `airy_task_type_t` | 任务类型 |
 | `agent_id` | `const char *` | 指定执行的 Agent ID（可选） |
 | `session_id` | `const char *` | 关联的会话 ID（可选） |
 | `parent_task_id` | `const char *` | 父任务 ID（用于子任务） |
 
-#### agentrt_task_result_t — 任务结果
+#### airy_task_result_t — 任务结果
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `task_id` | `char *` | 任务 ID |
-| `status` | `agentrt_task_status_t` | 任务状态 |
+| `status` | `airy_task_status_t` | 任务状态 |
 | `output` | `char *` | 输出结果（JSON 字符串） |
 | `output_len` | `size_t` | 输出长度 |
-| `start_time` | `agentrt_timestamp_t` | 开始时间 |
-| `end_time` | `agentrt_timestamp_t` | 结束时间 |
+| `start_time` | `airy_timestamp_t` | 开始时间 |
+| `end_time` | `airy_timestamp_t` | 结束时间 |
 | `tokens_used` | `uint32_t` | 消耗的 Token 数 |
 | `cost_usd` | `double` | 成本（美元） |
 | `error_code` | `airy_err_t` | 错误码 |
@@ -129,22 +129,22 @@ types/
 
 ### 记忆类型
 
-#### agentrt_memory_layer_t — 记忆层级（四层记忆卷载结构）
+#### airy_memory_layer_t — 记忆层级（四层记忆卷载结构）
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_MEM_LAYER1_RAW` | Layer1: 原始记忆 |
-| `AGENTRT_MEM_LAYER2_WORKING` | Layer2: 工作记忆 |
-| `AGENTRT_MEM_LAYER3_EPISODIC` | Layer3: 情景记忆 |
-| `AGENTRT_MEM_LAYER4_SEMANTIC` | Layer4: 语义记忆 |
+| `AIRY_MEM_LAYER1_RAW` | Layer1: 原始记忆 |
+| `AIRY_MEM_LAYER2_WORKING` | Layer2: 工作记忆 |
+| `AIRY_MEM_LAYER3_EPISODIC` | Layer3: 情景记忆 |
+| `AIRY_MEM_LAYER4_SEMANTIC` | Layer4: 语义记忆 |
 
-#### agentrt_memory_entry_t — 记忆条目
+#### airy_memory_entry_t — 记忆条目
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `memory_id` | `char *` | 记忆 ID |
-| `layer` | `agentrt_memory_layer_t` | 记忆层级 |
-| `type` | `agentrt_memory_type_t` | 记忆类型 |
+| `layer` | `airy_memory_layer_t` | 记忆层级 |
+| `type` | `airy_memory_type_t` | 记忆类型 |
 | `content` | `char *` | 记忆内容 |
 | `content_len` | `size_t` | 内容长度 |
 | `embedding` | `float *` | 向量嵌入（可选） |
@@ -152,8 +152,8 @@ types/
 | `importance` | `float` | 重要性分数（0-1） |
 | `decay_rate` | `float` | 衰减率 |
 | `access_count` | `uint32_t` | 访问次数 |
-| `created_at` | `agentrt_timestamp_t` | 创建时间 |
-| `last_access` | `agentrt_timestamp_t` | 最后访问时间 |
+| `created_at` | `airy_timestamp_t` | 创建时间 |
+| `last_access` | `airy_timestamp_t` | 最后访问时间 |
 | `session_id` | `char *` | 关联会话 ID |
 | `task_id` | `char *` | 关联任务 ID |
 | `tags` | `char **` | 标签列表 |
@@ -161,16 +161,16 @@ types/
 
 ### 会话类型
 
-#### agentrt_session_status_t — 会话状态
+#### airy_session_status_t — 会话状态
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_SESSION_ACTIVE` | 活跃状态 |
-| `AGENTRT_SESSION_IDLE` | 空闲状态 |
-| `AGENTRT_SESSION_CLOSED` | 已关闭 |
-| `AGENTRT_SESSION_EXPIRED` | 已过期 |
+| `AIRY_SESSION_ACTIVE` | 活跃状态 |
+| `AIRY_SESSION_IDLE` | 空闲状态 |
+| `AIRY_SESSION_CLOSED` | 已关闭 |
+| `AIRY_SESSION_EXPIRED` | 已过期 |
 
-#### agentrt_context_t — 执行上下文
+#### airy_context_t — 执行上下文
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -178,15 +178,15 @@ types/
 | `session_id` | `char *` | 会话 ID |
 | `trace_id` | `char *` | 追踪 ID |
 | `parent_span_id` | `char *` | 父 Span ID |
-| `timestamp` | `agentrt_timestamp_t` | 时间戳 |
-| `priority` | `agentrt_priority_t` | 优先级 |
+| `timestamp` | `airy_timestamp_t` | 时间戳 |
+| `priority` | `airy_priority_t` | 优先级 |
 | `user_id` | `char *` | 用户 ID |
 | `project_id` | `char *` | 项目 ID |
 | `user_data` | `void *` | 用户自定义数据 |
 
 ### Agent 类型
 
-#### agentrt_agent_contract_t — Agent 契约（完整元数据）
+#### airy_agent_contract_t — Agent 契约（完整元数据）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -196,31 +196,31 @@ types/
 | `version` | `char *` | Agent 版本 |
 | `role` | `char *` | 角色分类 |
 | `description` | `char *` | 描述 |
-| `capabilities` | `agentrt_capability_t *` | 能力列表 |
+| `capabilities` | `airy_capability_t *` | 能力列表 |
 | `capability_count` | `size_t` | 能力数量 |
-| `models` | `agentrt_models_t` | 模型配置 |
+| `models` | `airy_models_t` | 模型配置 |
 | `required_permissions` | `char **` | 所需权限 |
 | `permission_count` | `size_t` | 权限数量 |
-| `cost` | `agentrt_cost_profile_t` | 成本概览 |
-| `trust` | `agentrt_trust_metrics_t` | 信任指标 |
+| `cost` | `airy_cost_profile_t` | 成本概览 |
+| `trust` | `airy_trust_metrics_t` | 信任指标 |
 | `extensions` | `char *` | 扩展字段（JSON） |
 
 ### 可观测性类型
 
-#### agentrt_metric_t — 指标数据
+#### airy_metric_t — 指标数据
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `name` | `char *` | 指标名称 |
-| `type` | `agentrt_metric_type_t` | 指标类型 |
+| `type` | `airy_metric_type_t` | 指标类型 |
 | `description` | `char *` | 描述 |
 | `unit` | `char *` | 单位 |
 | `value` | `double` | 当前值 |
 | `labels` | `char **` | 标签键值对 |
 | `label_count` | `size_t` | 标签数量 |
-| `timestamp` | `agentrt_timestamp_t` | 时间戳 |
+| `timestamp` | `airy_timestamp_t` | 时间戳 |
 
-#### agentrt_span_t — Span 数据
+#### airy_span_t — Span 数据
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -228,10 +228,10 @@ types/
 | `span_id` | `char *` | Span ID |
 | `parent_span_id` | `char *` | 父 Span ID |
 | `name` | `char *` | Span 名称 |
-| `kind` | `agentrt_span_kind_t` | Span 类型 |
-| `start_time` | `agentrt_timestamp_t` | 开始时间 |
-| `end_time` | `agentrt_timestamp_t` | 结束时间 |
-| `status` | `agentrt_span_status_t` | Span 状态 |
+| `kind` | `airy_span_kind_t` | Span 类型 |
+| `start_time` | `airy_timestamp_t` | 开始时间 |
+| `end_time` | `airy_timestamp_t` | 结束时间 |
+| `status` | `airy_span_status_t` | Span 状态 |
 | `status_message` | `char *` | 状态消息 |
 | `attributes` | `char **` | 属性键值对 |
 | `attribute_count` | `size_t` | 属性数量 |
@@ -239,36 +239,36 @@ types/
 
 ### IPC 类型
 
-#### agentrt_ipc_type_t — IPC 通道类型
+#### airy_ipc_type_t — IPC 通道类型
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_IPC_PIPE` | 管道 |
-| `AGENTRT_IPC_SOCKET` | Unix Socket / Named Pipe |
-| `AGENTRT_IPC_SHM` | 共享内存 |
-| `AGENTRT_IPC_MQ` | 消息队列 |
-| `AGENTRT_IPC_RPC` | RPC 调用 |
+| `AIRY_IPC_PIPE` | 管道 |
+| `AIRY_IPC_SOCKET` | Unix Socket / Named Pipe |
+| `AIRY_IPC_SHM` | 共享内存 |
+| `AIRY_IPC_MQ` | 消息队列 |
+| `AIRY_IPC_RPC` | RPC 调用 |
 
 ### 网络类型
 
-#### agentrt_protocol_t — 协议类型
+#### airy_protocol_t — 协议类型
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_PROTO_TCP` | TCP 协议 |
-| `AGENTRT_PROTO_UDP` | UDP 协议 |
-| `AGENTRT_PROTO_HTTP` | HTTP 协议 |
-| `AGENTRT_PROTO_HTTPS` | HTTPS 协议 |
-| `AGENTRT_PROTO_WS` | WebSocket 协议 |
-| `AGENTRT_PROTO_WSS` | WebSocket Secure 协议 |
+| `AIRY_PROTO_TCP` | TCP 协议 |
+| `AIRY_PROTO_UDP` | UDP 协议 |
+| `AIRY_PROTO_HTTP` | HTTP 协议 |
+| `AIRY_PROTO_HTTPS` | HTTPS 协议 |
+| `AIRY_PROTO_WS` | WebSocket 协议 |
+| `AIRY_PROTO_WSS` | WebSocket Secure 协议 |
 
-#### agentrt_endpoint_t — 连接端点
+#### airy_endpoint_t — 连接端点
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `host` | `char *` | 主机名或 IP |
 | `port` | `uint16_t` | 端口号 |
-| `protocol` | `agentrt_protocol_t` | 协议类型 |
+| `protocol` | `airy_protocol_t` | 协议类型 |
 | `path` | `char *` | 路径（用于 HTTP/WebSocket） |
 
 ### 跨模块规范类型
@@ -312,20 +312,20 @@ types/
 
 | 宏 | 说明 |
 |------|------|
-| `AGENTRT_ARRAY_SIZE(arr)` | 数组元素数量计算 |
-| `AGENTRT_MIN(a, b)` | 取最小值 |
-| `AGENTRT_MAX(a, b)` | 取最大值 |
-| `AGENTRT_ALIGN_UP(x, align)` | 向上对齐 |
-| `AGENTRT_STRINGIFY(x)` | 字符串化 |
-| `AGENTRT_TOSTRING(x)` | 转换为字符串 |
-| `AGENTRT_CONCAT(a, b)` | 符号连接 |
-| `AGENTRT_MAKE_VERSION(maj, min, pat)` | 版本号打包 |
-| `AGENTRT_VERSION_MAJOR(v)` | 提取主版本号 |
-| `AGENTRT_VERSION_MINOR(v)` | 提取次版本号 |
-| `AGENTRT_VERSION_PATCH(v)` | 提取补丁版本号 |
-| `AGENTRT_MS_TO_NS(ms)` | 毫秒转纳秒 |
-| `AGENTRT_SEC_TO_MS(s)` | 秒转毫秒 |
-| `AGENTRT_SEC_TO_NS(s)` | 秒转纳秒 |
+| `AIRY_ARRAY_SIZE(arr)` | 数组元素数量计算 |
+| `AIRY_MIN(a, b)` | 取最小值 |
+| `AIRY_MAX(a, b)` | 取最大值 |
+| `AIRY_ALIGN_UP(x, align)` | 向上对齐 |
+| `AIRY_STRINGIFY(x)` | 字符串化 |
+| `AIRY_TOSTRING(x)` | 转换为字符串 |
+| `AIRY_CONCAT(a, b)` | 符号连接 |
+| `AIRY_MAKE_VERSION(maj, min, pat)` | 版本号打包 |
+| `AIRY_VERSION_MAJOR(v)` | 提取主版本号 |
+| `AIRY_VERSION_MINOR(v)` | 提取次版本号 |
+| `AIRY_VERSION_PATCH(v)` | 提取补丁版本号 |
+| `AIRY_MS_TO_NS(ms)` | 毫秒转纳秒 |
+| `AIRY_SEC_TO_MS(s)` | 秒转毫秒 |
+| `AIRY_SEC_TO_NS(s)` | 秒转纳秒 |
 
 ## 使用示例
 
@@ -333,40 +333,40 @@ types/
 #include "types.h"
 
 /* === 使用通用结果类型 === */
-agentrt_result_t result = { .code = AGENTRT_SUCCESS, .message = "OK" };
-if (result.code == AGENTRT_SUCCESS) {
+airy_result_t result = { .code = AIRY_SUCCESS, .message = "OK" };
+if (result.code == AIRY_SUCCESS) {
     printf("Operation succeeded: %s\n", result.message);
 }
 
 /* === 定义任务配置 === */
-agentrt_task_config_t config = {
+airy_task_config_t config = {
     .input = "Analyze the codebase",
     .input_len = 20,
     .timeout_ms = 30000,
-    .priority = AGENTRT_PRIORITY_HIGH,
-    .type = AGENTRT_TASKTYPE_ONESHOT,
+    .priority = AIRY_PRIORITY_HIGH,
+    .type = AIRY_TASKTYPE_ONESHOT,
     .agent_id = NULL,  // 自动选择
 };
 
 /* === 使用执行上下文 === */
-agentrt_context_t ctx = {
+airy_context_t ctx = {
     .agent_id = "agent-001",
     .session_id = "session-abc",
     .trace_id = "trace-xyz",
-    .priority = AGENTRT_PRIORITY_NORMAL,
+    .priority = AIRY_PRIORITY_NORMAL,
 };
 
 /* === 使用辅助宏 === */
 #define BUFFER_SIZE 256
 char buffer[BUFFER_SIZE];
 int items[] = {1, 2, 3, 4, 5};
-size_t count = AGENTRT_ARRAY_SIZE(items);  // 5
+size_t count = AIRY_ARRAY_SIZE(items);  // 5
 
-uint32_t version = AGENTRT_MAKE_VERSION(1, 2, 3);
+uint32_t version = AIRY_MAKE_VERSION(1, 2, 3);
 printf("v%d.%d.%d\n",
-       AGENTRT_VERSION_MAJOR(version),
-       AGENTRT_VERSION_MINOR(version),
-       AGENTRT_VERSION_PATCH(version));
+       AIRY_VERSION_MAJOR(version),
+       AIRY_VERSION_MINOR(version),
+       AIRY_VERSION_PATCH(version));
 
 /* === 使用规范类型 === */
 #include "sanitize_level.h"

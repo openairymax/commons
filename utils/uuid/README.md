@@ -1,7 +1,7 @@
 # UUID — UUID 生成模块
 
 **模块路径**: `agentrt/commons/utils/uuid/`
-**版本**: v0.1.0
+**版本**: v0.1.1
 
 ## 概述
 
@@ -28,33 +28,33 @@ uuid/
 
 ## 核心数据结构
 
-### agentrt_uuid_error_t — UUID 生成错误码
+### airy_uuid_error_t — UUID 生成错误码
 
 | 枚举值 | 说明 |
 |------|------|
-| `AGENTRT_UUID_SUCCESS` | 操作成功 |
-| `AGENTRT_UUID_EINVALID` | 无效参数 |
-| `AGENTRT_UUID_ENOMEM` | 内存不足 |
-| `AGENTRT_UUID_EUNAVAIL` | UUID 生成器不可用 |
+| `AIRY_UUID_SUCCESS` | 操作成功 |
+| `AIRY_UUID_EINVALID` | 无效参数 |
+| `AIRY_UUID_ENOMEM` | 内存不足 |
+| `AIRY_UUID_EUNAVAIL` | UUID 生成器不可用 |
 
 ### 常量定义
 
 | 宏 | 值 | 说明 |
 |------|------|------|
-| `AGENTRT_UUID_STR_LEN` | 37 | 标准 UUID 字符串长度（含空字符） |
-| `AGENTRT_UUID_PREFIXED_STR_LEN` | 64 | 带前缀 UUID 字符串最大长度（含空字符） |
+| `AIRY_UUID_STR_LEN` | 37 | 标准 UUID 字符串长度（含空字符） |
+| `AIRY_UUID_PREFIXED_STR_LEN` | 64 | 带前缀 UUID 字符串最大长度（含空字符） |
 
 ## 接口说明
 
 | 函数 | 说明 |
 |------|------|
-| `agentrt_uuid_init()` | 初始化 UUID 生成器（随机数种子等） |
-| `agentrt_uuid_cleanup()` | 清理 UUID 生成器资源 |
-| `agentrt_uuid_v4(out_buf, buf_len)` | 生成标准 UUID v4 字符串（格式：`xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`） |
-| `agentrt_uuid_with_prefix(prefix, out_buf, buf_len)` | 生成带前缀的 UUID（格式：`prefix_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`） |
-| `agentrt_uuid_is_valid(uuid)` | 验证 UUID 格式是否有效，有效返回 1，无效返回 0 |
-| `agentrt_uuid_bin_to_str(uuid_bin, out_buf, buf_len)` | 将 16 字节原始 UUID 二进制转换为字符串 |
-| `agentrt_uuid_str_to_bin(uuid_str, out_bin)` | 将 UUID 字符串转换为 16 字节原始二进制 |
+| `airy_uuid_init()` | 初始化 UUID 生成器（随机数种子等） |
+| `airy_uuid_cleanup()` | 清理 UUID 生成器资源 |
+| `airy_uuid_v4(out_buf, buf_len)` | 生成标准 UUID v4 字符串（格式：`xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`） |
+| `airy_uuid_with_prefix(prefix, out_buf, buf_len)` | 生成带前缀的 UUID（格式：`prefix_xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`） |
+| `airy_uuid_is_valid(uuid)` | 验证 UUID 格式是否有效，有效返回 1，无效返回 0 |
+| `airy_uuid_bin_to_str(uuid_bin, out_buf, buf_len)` | 将 16 字节原始 UUID 二进制转换为字符串 |
+| `airy_uuid_str_to_bin(uuid_str, out_bin)` | 将 UUID 字符串转换为 16 字节原始二进制 |
 
 ## 使用示例
 
@@ -63,53 +63,53 @@ uuid/
 #include <stdio.h>
 
 /* === 初始化 UUID 生成器 === */
-if (agentrt_uuid_init() != AGENTRT_UUID_SUCCESS) {
+if (airy_uuid_init() != AIRY_UUID_SUCCESS) {
     fprintf(stderr, "Failed to initialize UUID generator\n");
     return -1;
 }
 
 /* === 生成标准 UUID v4 === */
-char uuid_str[AGENTRT_UUID_STR_LEN];
-if (agentrt_uuid_v4(uuid_str, sizeof(uuid_str)) == AGENTRT_UUID_SUCCESS) {
+char uuid_str[AIRY_UUID_STR_LEN];
+if (airy_uuid_v4(uuid_str, sizeof(uuid_str)) == AIRY_UUID_SUCCESS) {
     printf("UUID v4: %s\n", uuid_str);
     // 输出示例: "550e8400-e29b-41d4-a716-446655440000"
 }
 
 /* === 生成带前缀的 UUID === */
-char mem_uuid[AGENTRT_UUID_PREFIXED_STR_LEN];
-if (agentrt_uuid_with_prefix("mem", mem_uuid, sizeof(mem_uuid)) == AGENTRT_UUID_SUCCESS) {
+char mem_uuid[AIRY_UUID_PREFIXED_STR_LEN];
+if (airy_uuid_with_prefix("mem", mem_uuid, sizeof(mem_uuid)) == AIRY_UUID_SUCCESS) {
     printf("Memory UUID: %s\n", mem_uuid);
     // 输出示例: "mem_550e8400-e29b-41d4-a716-446655440000"
 }
 
-char task_uuid[AGENTRT_UUID_PREFIXED_STR_LEN];
-if (agentrt_uuid_with_prefix("task", task_uuid, sizeof(task_uuid)) == AGENTRT_UUID_SUCCESS) {
+char task_uuid[AIRY_UUID_PREFIXED_STR_LEN];
+if (airy_uuid_with_prefix("task", task_uuid, sizeof(task_uuid)) == AIRY_UUID_SUCCESS) {
     printf("Task UUID: %s\n", task_uuid);
     // 输出示例: "task_660e8400-e29b-41d4-a716-446655440001"
 }
 
-char session_uuid[AGENTRT_UUID_PREFIXED_STR_LEN];
-if (agentrt_uuid_with_prefix("session", session_uuid, sizeof(session_uuid)) == AGENTRT_UUID_SUCCESS) {
+char session_uuid[AIRY_UUID_PREFIXED_STR_LEN];
+if (airy_uuid_with_prefix("session", session_uuid, sizeof(session_uuid)) == AIRY_UUID_SUCCESS) {
     printf("Session UUID: %s\n", session_uuid);
     // 输出示例: "session_770e8400-e29b-41d4-a716-446655440002"
 }
 
 /* === 验证 UUID 格式 === */
-if (agentrt_uuid_is_valid(uuid_str)) {
+if (airy_uuid_is_valid(uuid_str)) {
     printf("Valid UUID format\n");
 } else {
     printf("Invalid UUID format\n");
 }
 
 // 非法 UUID 示例
-if (!agentrt_uuid_is_valid("not-a-valid-uuid")) {
+if (!airy_uuid_is_valid("not-a-valid-uuid")) {
     printf("Correctly rejected invalid UUID\n");
 }
 
 /* === 二进制与字符串互转 === */
 // 字符串 -> 二进制
 uint8_t uuid_bin[16];
-if (agentrt_uuid_str_to_bin(uuid_str, uuid_bin) == AGENTRT_UUID_SUCCESS) {
+if (airy_uuid_str_to_bin(uuid_str, uuid_bin) == AIRY_UUID_SUCCESS) {
     printf("Converted to binary: ");
     for (int i = 0; i < 16; i++) {
         printf("%02x", uuid_bin[i]);
@@ -118,13 +118,13 @@ if (agentrt_uuid_str_to_bin(uuid_str, uuid_bin) == AGENTRT_UUID_SUCCESS) {
 }
 
 // 二进制 -> 字符串
-char reconverted[AGENTRT_UUID_STR_LEN];
-if (agentrt_uuid_bin_to_str(uuid_bin, reconverted, sizeof(reconverted)) == AGENTRT_UUID_SUCCESS) {
+char reconverted[AIRY_UUID_STR_LEN];
+if (airy_uuid_bin_to_str(uuid_bin, reconverted, sizeof(reconverted)) == AIRY_UUID_SUCCESS) {
     printf("Reconverted string: %s\n", reconverted);
 }
 
 /* === 清理 UUID 生成器 === */
-agentrt_uuid_cleanup();
+airy_uuid_cleanup();
 ```
 
 ## UUID 格式说明
