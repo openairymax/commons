@@ -108,15 +108,24 @@ static inline void *refcount_retain(void *obj)
     if (!obj) return NULL;
 
     refcounted_t *rc = (refcounted_t *)obj;
-    uint32_t old = atomic_fetch_add_explicit(&rc->refcount, 1, memory_order_relaxed);
-
-    /* 防止 use-after-free: 如果引用计数从 0 增加，说明对象已被销毁 */
-    if (old == 0) {
-        atomic_store_explicit(&rc->refcount, 0, memory_order_release);
-        return NULL;
+    /* V4.0 修复：使用 CAS 循环替代 fetch_add(relaxed) + 事后 old==0 检查。
+     *
+     * 原实现在 refcount 已归零（对象已销毁）后仍执行 fetch_add 写入已释放内存，
+     * 造成 use-after-free；relaxed 序更无法保证与 release 线程 deleter 调用同步。
+     *
+     * 修正：以 acquire 载入当前值，仅当 > 0 时通过 CAS 递增。
+     * - 若 refcount==0（对象已销毁或正在销毁），CAS 不执行，直接返回 NULL。
+     * - acq_rel 序确保递增与 release 线程的 fetch_sub 正确同步。
+     * - compare_exchange_weak 在循环中可用（spurious failure 仅导致重载重试）。 */
+    uint32_t cur = atomic_load_explicit(&rc->refcount, memory_order_acquire);
+    while (cur != 0) {
+        if (atomic_compare_exchange_weak_explicit(&rc->refcount, &cur, cur + 1,
+                                                   memory_order_acq_rel,
+                                                   memory_order_acquire)) {
+            return obj;
+        }
     }
-
-    return obj;
+    return NULL;
 }
 
 /**

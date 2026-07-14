@@ -31,45 +31,71 @@ extern "C" {
 
 #ifndef AIRY_RT_PLATFORM_H  /* 避免与 platform.h 中的 airy_mtx_init 等冲突 */
 
+#include "error.h"  /* N6 修复：airy_err_t 错误码映射所需 */
+
+/**
+ * @brief 将 sync_result_t 错误码映射为 airy_err_t（N6 修复：错误码透明化）
+ *
+ * 原 sync_compat 层将所有底层 sync_* API 错误码压缩为 0/-1，丢失了
+ * TIMEOUT/DEADLOCK/INVALID/MEMORY/PERMISSION/BUSY/UNSUPPORTED 等关键
+ * 语义信息。本函数将 sync_result_t 完整映射到 airy_err_t 体系，
+ * 对齐 P0-1 错误码统一原则。调用方可据此做差异化错误处理（重试/报警/回退）。
+ */
+static inline airy_err_t airy_sync_map_err(sync_result_t r)
+{
+    switch (r) {
+    case SYNC_SUCCESS:           return AIRY_OK;
+    case SYNC_ERROR_TIMEOUT:     return AIRY_ERR_TIMEOUT;
+    case SYNC_ERROR_DEADLOCK:    return AIRY_ERR_SYS_DEADLOCK;
+    case SYNC_ERROR_INVALID:     return AIRY_ERR_INVALID_PARAM;
+    case SYNC_ERROR_MEMORY:      return AIRY_ERR_OUT_OF_MEMORY;
+    case SYNC_ERROR_PERMISSION:  return AIRY_ERR_PERMISSION_DENIED;
+    case SYNC_ERROR_BUSY:        return AIRY_ERR_BUSY;
+    case SYNC_ERROR_UNSUPPORTED: return AIRY_ERR_NOT_SUPPORTED;
+    case SYNC_ERROR_UNKNOWN:
+    default:                     return AIRY_ERR_UNKNOWN;
+    }
+}
+
 /**
  * @brief 创建互斥锁（兼容pthread_mutex_init）
  */
-static inline int airy_mtx_init(sync_mutex_t *mutex, const void *attrs)
+static inline airy_err_t airy_mtx_init(sync_mutex_t *mutex, const void *attrs)
 {
     (void)attrs;
-    return sync_mutex_create(mutex, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_mutex_create(mutex, NULL));
 }
 
 /**
  * @brief 销毁互斥锁（兼容pthread_mutex_destroy）
  */
-static inline int airy_mtx_destroy(sync_mutex_t *mutex)
+static inline airy_err_t airy_mtx_destroy(sync_mutex_t *mutex)
 {
-    return sync_mutex_free(*mutex) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_mutex_free(*mutex));
 }
 
 /**
  * @brief 锁定互斥锁（兼容pthread_mutex_lock）
  */
-static inline int airy_mtx_lock(sync_mutex_t *mutex)
+static inline airy_err_t airy_mtx_lock(sync_mutex_t *mutex)
 {
-    return sync_mutex_lock_ex(*mutex, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_mutex_lock_ex(*mutex, NULL));
 }
 
 /**
  * @brief 尝试锁定互斥锁（兼容pthread_mutex_trylock）
  */
-static inline int airy_mtx_trylock(sync_mutex_t *mutex)
+static inline airy_err_t airy_mtx_trylock(sync_mutex_t *mutex)
 {
-    return sync_mutex_try_lock(*mutex) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_mutex_try_lock(*mutex));
 }
 
 /**
  * @brief 解锁互斥锁（兼容pthread_mutex_unlock）
  */
-static inline int airy_mtx_unlock(sync_mutex_t *mutex)
+static inline airy_err_t airy_mtx_unlock(sync_mutex_t *mutex)
 {
-    return sync_mutex_unlock_ex(*mutex) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_mutex_unlock_ex(*mutex));
 }
 
 /* ==================== 条件变量兼容API ==================== */
@@ -77,53 +103,53 @@ static inline int airy_mtx_unlock(sync_mutex_t *mutex)
 /**
  * @brief 创建条件变量（兼容pthread_cond_init）
  */
-static inline int airy_cond_init(sync_condition_t *cond, const void *attrs)
+static inline airy_err_t airy_cond_init(sync_condition_t *cond, const void *attrs)
 {
     (void)attrs;
-    return sync_condition_create(cond, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_create(cond, NULL));
 }
 
 /**
  * @brief 销毁条件变量（兼容pthread_cond_destroy）
  */
-static inline int airy_cond_destroy(sync_condition_t *cond)
+static inline airy_err_t airy_cond_destroy(sync_condition_t *cond)
 {
-    return sync_condition_free(*cond) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_free(*cond));
 }
 
 /**
  * @brief 等待条件变量（兼容pthread_cond_wait）
  */
-static inline int airy_cond_wait(sync_condition_t *cond, sync_mutex_t *mutex)
+static inline airy_err_t airy_cond_wait(sync_condition_t *cond, sync_mutex_t *mutex)
 {
-    return sync_condition_wait_ex(*cond, *mutex, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_wait_ex(*cond, *mutex, NULL));
 }
 
 /**
  * @brief 限时等待条件变量（兼容pthread_cond_timedwait）
  */
-static inline int airy_cond_timedwait(sync_condition_t *cond, sync_mutex_t *mutex, int timeout_ms)
+static inline airy_err_t airy_cond_timedwait(sync_condition_t *cond, sync_mutex_t *mutex, int timeout_ms)
 {
     sync_timeout_t timeout;
     timeout.absolute = false;
     timeout.timeout_ms = (uint64_t)timeout_ms;
-    return sync_condition_wait_ex(*cond, *mutex, &timeout) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_wait_ex(*cond, *mutex, &timeout));
 }
 
 /**
  * @brief 通知一个等待线程（兼容pthread_cond_signal）
  */
-static inline int airy_cond_signal(sync_condition_t *cond)
+static inline airy_err_t airy_cond_signal(sync_condition_t *cond)
 {
-    return sync_condition_signal_ex(*cond) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_signal_ex(*cond));
 }
 
 /**
  * @brief 通知所有等待线程（兼容pthread_cond_broadcast）
  */
-static inline int airy_cond_broadcast(sync_condition_t *cond)
+static inline airy_err_t airy_cond_broadcast(sync_condition_t *cond)
 {
-    return sync_condition_broadcast_ex(*cond) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_condition_broadcast_ex(*cond));
 }
 
 /* ==================== 读写锁兼容API ==================== */
@@ -131,58 +157,58 @@ static inline int airy_cond_broadcast(sync_condition_t *cond)
 /**
  * @brief 创建读写锁（兼容pthread_rwlock_init）
  */
-static inline int airy_rwlock_init(sync_rwlock_t *rwlock, const void *attrs)
+static inline airy_err_t airy_rwlock_init(sync_rwlock_t *rwlock, const void *attrs)
 {
     (void)attrs;
-    return sync_rwlock_create(rwlock, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_create(rwlock, NULL));
 }
 
 /**
  * @brief 销毁读写锁（兼容pthread_rwlock_destroy）
  */
-static inline int airy_rwlock_destroy(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_destroy(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_free(*rwlock) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_free(*rwlock));
 }
 
 /**
  * @brief 获取读锁（兼容pthread_rwlock_rdlock）
  */
-static inline int airy_rwlock_rdlock(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_rdlock(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_read_lock_ex(*rwlock, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_read_lock_ex(*rwlock, NULL));
 }
 
 /**
  * @brief 尝试获取读锁（兼容pthread_rwlock_tryrdlock）
  */
-static inline int airy_rwlock_tryrdlock(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_tryrdlock(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_try_read_lock(*rwlock) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_try_read_lock(*rwlock));
 }
 
 /**
  * @brief 获取写锁（兼容pthread_rwlock_wrlock）
  */
-static inline int airy_rwlock_wrlock(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_wrlock(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_write_lock_ex(*rwlock, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_write_lock_ex(*rwlock, NULL));
 }
 
 /**
  * @brief 尝试获取写锁（兼容pthread_rwlock_trywrlock）
  */
-static inline int airy_rwlock_trywrlock(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_trywrlock(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_try_write_lock(*rwlock) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_try_write_lock(*rwlock));
 }
 
 /**
  * @brief 解锁读写锁（兼容pthread_rwlock_unlock）
  */
-static inline int airy_rwlock_unlock(sync_rwlock_t *rwlock)
+static inline airy_err_t airy_rwlock_unlock(sync_rwlock_t *rwlock)
 {
-    return sync_rwlock_unlock_ex(*rwlock) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_rwlock_unlock_ex(*rwlock));
 }
 
 /* ==================== 信号量兼容API ==================== */
@@ -190,64 +216,64 @@ static inline int airy_rwlock_unlock(sync_rwlock_t *rwlock)
 /**
  * @brief 创建信号量（兼容sem_init）
  */
-static inline int airy_sem_init(sync_semaphore_t *sem, int pshared, unsigned int value)
+static inline airy_err_t airy_sem_init(sync_semaphore_t *sem, int pshared, unsigned int value)
 {
     (void)pshared;
-    return sync_semaphore_create(sem, value, UINT_MAX, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_create(sem, value, UINT_MAX, NULL));
 }
 
 /**
  * @brief 销毁信号量（兼容sem_destroy）
  */
-static inline int airy_sem_destroy(sync_semaphore_t *sem)
+static inline airy_err_t airy_sem_destroy(sync_semaphore_t *sem)
 {
-    return sync_semaphore_free(*sem) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_free(*sem));
 }
 
 /**
  * @brief 等待信号量（兼容sem_wait）
  */
-static inline int airy_sem_wait(sync_semaphore_t *sem)
+static inline airy_err_t airy_sem_wait(sync_semaphore_t *sem)
 {
-    return sync_semaphore_wait_ex(*sem, NULL) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_wait_ex(*sem, NULL));
 }
 
 /**
  * @brief 尝试等待信号量（兼容sem_trywait）
  */
-static inline int airy_sem_trywait(sync_semaphore_t *sem)
+static inline airy_err_t airy_sem_trywait(sync_semaphore_t *sem)
 {
-    return sync_semaphore_try_wait(*sem) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_try_wait(*sem));
 }
 
 /**
  * @brief 限时等待信号量（兼容sem_timedwait）
  */
-static inline int airy_sem_timedwait(sync_semaphore_t *sem, int timeout_ms)
+static inline airy_err_t airy_sem_timedwait(sync_semaphore_t *sem, int timeout_ms)
 {
     sync_timeout_t timeout;
     timeout.absolute = false;
     timeout.timeout_ms = (uint64_t)timeout_ms;
-    return sync_semaphore_wait_ex(*sem, &timeout) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_wait_ex(*sem, &timeout));
 }
 
 /**
  * @brief 发布信号量（兼容sem_post）
  */
-static inline int airy_sem_post(sync_semaphore_t *sem)
+static inline airy_err_t airy_sem_post(sync_semaphore_t *sem)
 {
-    return sync_semaphore_post_ex(*sem) == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(sync_semaphore_post_ex(*sem));
 }
 
 /**
  * @brief 获取信号量值（兼容sem_getvalue）
  */
-static inline int airy_sem_getvalue(sync_semaphore_t *sem, int *value)
+static inline airy_err_t airy_sem_getvalue(sync_semaphore_t *sem, int *value)
 {
     unsigned int uval = 0;
     sync_result_t r = sync_semaphore_get_value(*sem, &uval);
     if (value) *value = (int)uval;
-    return r == SYNC_SUCCESS ? 0 : -1;
+    return airy_sync_map_err(r);
 }
 
 /* ==================== 兼容性宏定义 ==================== */

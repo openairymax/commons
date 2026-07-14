@@ -35,48 +35,59 @@ extern "C" {
 /* ==================== 统一的错误码定义（权威源） ==================== */
 /**
  * @brief 错误码类型
- * @details 所有错误码为负值，成功为0
+ * @details 所有错误码为负值，成功为0。SSoT 方案 A（POSIX errno 负值）。
+ *          详见 docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.5。
  */
 typedef int32_t airy_err_t;
 
 /**
  * @brief 成功返回值
+ * @note AIRY_EOK 与 AIRY_SUCCESS 等价，均为 0。推荐使用 AIRY_EOK（与 POSIX E* 命名风格一致）。
  */
 #define AIRY_SUCCESS 0
+#define AIRY_EOK 0
 
 /**
- * @brief 通用错误码定义（权威定义）
+ * @brief 通用错误码定义（权威定义，方案 A：POSIX errno 负值）
+ * @details 有对应 POSIX errno 的错误码使用 POSIX errno 负值（参考 Linux errno.h）；
+ *          无对应 POSIX errno 的保留自定义负值（如 AIRY_ENOTINIT、AIRY_ECANCELLED 等）。
+ *          跨平台兼容：数值固定（不依赖目标平台 errno.h），仅与 Linux errno 值对齐作为命名参考。
  */
-#define AIRY_EINVAL (-1)           /**< 参数无效 */
-#define AIRY_ENOMEM (-2)           /**< 内存不足 */
-#define AIRY_EBUSY (-3)            /**< 资源忙碌 */
-#define AIRY_ENOENT (-4)           /**< 资源不存在 */
-#define AIRY_EPERM (-5)            /**< 权限不足 */
-#define AIRY_ETIMEDOUT (-6)        /**< 操作超时 */
-#define AIRY_EIO (-7)              /**< I/O 错误 */
-#define AIRY_EEXIST (-8)           /**< 资源已存在 */
-#define AIRY_ENOTINIT (-9)         /**< 引擎未初始化 */
-#define AIRY_ECANCELLED (-10)      /**< 操作已取消 */
-#define AIRY_ENOTSUP (-11)         /**< 操作不支持 */
-#define AIRY_EOVERFLOW (-12)       /**< 溢出错误 */
-#define AIRY_EPROTO (-13)          /**< 协议错误 */
-#define AIRY_ENOTCONN (-14)        /**< 未连接 */
-#define AIRY_ECONNRESET (-15)      /**< 连接重置 */
-#define AIRY_EACCES (-16)          /**< 权限不足 */
-#define AIRY_ECONNREFUSED (-17)    /**< 连接被拒绝 */
-#define AIRY_EMSGSIZE (-18)        /**< 消息过长 */
-#define AIRY_ENOSPC (-19)          /**< 空间不足 */
-#define AIRY_ERANGE (-20)          /**< 数值范围错误 */
-#define AIRY_EDEADLK (-21)         /**< 死锁 */
-#define AIRY_EAGAIN (-22)          /**< 资源暂时不可用 */
-#define AIRY_E2BIG (-23)           /**< 参数过长 */
-#define AIRY_EALREADY (-24)        /**< 操作已在进行 */
-#define AIRY_EUNAVAILABLE (-25)    /**< 服务不可用 */
-#define AIRY_EQUOTA (-26)          /**< 配额超限 */
-#define AIRY_EPLATFORM (-27)       /**< 平台未初始化 */
-#define AIRY_EPROTONOSUPPORT (-28) /**< 协议/命令不支持 */
-#define AIRY_ESERVICE (-29)        /**< 服务不可用 */
-#define AIRY_EUNKNOWN (-99)        /**< 未知错误 */
+#define AIRY_EPERM (-1)            /**< 权限不足（POSIX EPERM=1） */
+#define AIRY_ENOENT (-2)           /**< 资源不存在（POSIX ENOENT=2） */
+#define AIRY_EINTR (-4)            /**< 被中断（POSIX EINTR=4） */
+#define AIRY_EIO (-5)              /**< I/O 错误（POSIX EIO=5） */
+#define AIRY_E2BIG (-7)            /**< 参数过长（POSIX E2BIG=7） */
+#define AIRY_EAGAIN (-11)          /**< 资源暂时不可用（POSIX EAGAIN=11） */
+#define AIRY_ENOMEM (-12)          /**< 内存不足（POSIX ENOMEM=12） */
+#define AIRY_EACCES (-13)          /**< 权限不足（POSIX EACCES=13） */
+#define AIRY_EFAULT (-14)          /**< 地址错误（POSIX EFAULT=14） */
+#define AIRY_EBUSY (-16)           /**< 资源忙碌（POSIX EBUSY=16） */
+#define AIRY_EEXIST (-17)          /**< 资源已存在（POSIX EEXIST=17） */
+#define AIRY_EINVAL (-22)          /**< 参数无效（POSIX EINVAL=22） */
+#define AIRY_ENOSPC (-28)          /**< 空间不足（POSIX ENOSPC=28） */
+#define AIRY_ERANGE (-34)          /**< 数值范围错误（POSIX ERANGE=34） */
+#define AIRY_EDEADLK (-35)         /**< 死锁（POSIX EDEADLK=35） */
+#define AIRY_ENOSYS (-38)          /**< 函数未实现（POSIX ENOSYS=38） */
+#define AIRY_EPROTO (-71)          /**< 协议错误（POSIX EPROTO=71） */
+#define AIRY_EOVERFLOW (-75)       /**< 溢出错误（POSIX EOVERFLOW=75） */
+#define AIRY_EMSGSIZE (-90)        /**< 消息过长（POSIX EMSGSIZE=90） */
+#define AIRY_EPROTONOSUPPORT (-93) /**< 协议/命令不支持（POSIX EPROTONOSUPPORT=93） */
+#define AIRY_ENOTSUP (-95)         /**< 操作不支持（POSIX ENOTSUP=95） */
+#define AIRY_ECONNRESET (-104)     /**< 连接重置（POSIX ECONNRESET=104） */
+#define AIRY_ENOTCONN (-107)       /**< 未连接（POSIX ENOTCONN=107） */
+#define AIRY_ETIMEDOUT (-110)      /**< 操作超时（POSIX ETIMEDOUT=110） */
+#define AIRY_ECONNREFUSED (-111)   /**< 连接被拒绝（POSIX ECONNREFUSED=111） */
+#define AIRY_EALREADY (-114)       /**< 操作已在进行（POSIX EALREADY=114） */
+/* 以下错误码无对应 POSIX errno，保留自定义负值 */
+#define AIRY_ENOTINIT (-9)         /**< 引擎未初始化（自定义，无 POSIX 对应） */
+#define AIRY_ECANCELLED (-10)      /**< 操作已取消（自定义，无 POSIX 对应） */
+#define AIRY_EUNAVAILABLE (-25)    /**< 服务不可用（自定义，无 POSIX 对应） */
+#define AIRY_EQUOTA (-26)          /**< 配额超限（自定义，无 POSIX 对应） */
+#define AIRY_EPLATFORM (-27)       /**< 平台未初始化（自定义，无 POSIX 对应） */
+#define AIRY_ESERVICE (-29)        /**< 服务不可用（自定义，无 POSIX 对应） */
+#define AIRY_EFAIL (-31)           /**< 通用失败（自定义，无 POSIX 对应；与 error.h AIRY_ERR_FAIL 同值） */
+#define AIRY_EUNKNOWN (-99)        /**< 未知错误（自定义，无 POSIX 对应） */
 
 /* ==================== 统一的同步原语类型（来自platform.h） ==================== */
 /*
