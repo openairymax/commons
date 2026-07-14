@@ -68,29 +68,79 @@ typedef int32_t airy_err_t;
 
 /**
  * @brief 通用错误码定义
+ *
+ * v4.0 SSoT 修复：所有与 airy_types.h 重复的宏均以 #ifndef 保护，确保
+ * airy_types.h（本文件 line 36 已先行 include）的 POSIX 权威值优先生效。
+ * types.h 原先的无条件 #define 覆盖了 airy_types.h 的 POSIX 值（如将
+ * AIRY_EINVAL 从 -22 覆盖为 -1），破坏 v3.0 SSoT 统一收敛。现通过 #ifndef
+ * 让权威源生效；仅 AIRY_ENOTFOUND 为 airy_types.h 未定义的补充宏。
  */
-#define AIRY_EINVAL (-1) /**< 参数无效 */
-#define AIRY_ENOMEM (-2) /**< 内存不足 */
-#define AIRY_EBUSY (-3)  /**< 资源忙碌 */
-#define AIRY_ENOENT (-4) /**< 资源不存在 */
-#define AIRY_EPERM (-5) /**< 权限不足 */
-#define AIRY_ETIMEDOUT (-6)   /**< 操作超时 */
-#define AIRY_EIO (-7)         /**< I/O 错误 */
-#define AIRY_EEXIST (-8)      /**< 资源已存在 */
+#ifndef AIRY_EINVAL
+#define AIRY_EINVAL (-1) /**< @deprecated 兼容值，airy_types.h 权威值为 -22 */
+#endif
+#ifndef AIRY_ENOMEM
+#define AIRY_ENOMEM (-2) /**< @deprecated 兼容值，airy_types.h 权威值为 -12 */
+#endif
+#ifndef AIRY_EBUSY
+#define AIRY_EBUSY (-3)  /**< @deprecated 兼容值，airy_types.h 权威值为 -16 */
+#endif
+#ifndef AIRY_ENOENT
+#define AIRY_ENOENT (-4) /**< @deprecated 兼容值，airy_types.h 权威值为 -2 */
+#endif
+#ifndef AIRY_EPERM
+#define AIRY_EPERM (-5) /**< @deprecated 兼容值，airy_types.h 权威值为 -1 */
+#endif
+#ifndef AIRY_ETIMEDOUT
+#define AIRY_ETIMEDOUT (-6)   /**< @deprecated 兼容值，airy_types.h 权威值为 -110 */
+#endif
+#ifndef AIRY_EIO
+#define AIRY_EIO (-7)         /**< @deprecated 兼容值，airy_types.h 权威值为 -5 */
+#endif
+#ifndef AIRY_EEXIST
+#define AIRY_EEXIST (-8)      /**< @deprecated 兼容值，airy_types.h 权威值为 -17 */
+#endif
+#ifndef AIRY_ENOTINIT
 #define AIRY_ENOTINIT (-9)    /**< 引擎未初始化 */
+#endif
+#ifndef AIRY_ECANCELLED
 #define AIRY_ECANCELLED (-10) /**< 操作已取消 */
-#define AIRY_ENOTSUP (-11)    /**< 操作不支持 */
-#define AIRY_EOVERFLOW (-12)  /**< 溢出错误 */
-#define AIRY_EPROTO (-13)     /**< 协议错误 */
-#define AIRY_ENOTCONN (-14)   /**< 未连接 */
-#define AIRY_ECONNRESET (-15) /**< 连接重置 */
-#define AIRY_ENOSYS (-16) /**< 函数未实现 */
-#define AIRY_EFAIL (-17) /**< 通用失败 */
-#define AIRY_ENOTFOUND (-18) /**< 资源未找到 */
+#endif
+#ifndef AIRY_ENOTSUP
+#define AIRY_ENOTSUP (-11)    /**< @deprecated 兼容值，airy_types.h 权威值为 -95 */
+#endif
+#ifndef AIRY_EOVERFLOW
+#define AIRY_EOVERFLOW (-12)  /**< @deprecated 兼容值，airy_types.h 权威值为 -75 */
+#endif
+#ifndef AIRY_EPROTO
+#define AIRY_EPROTO (-13)     /**< @deprecated 兼容值，airy_types.h 权威值为 -71 */
+#endif
+#ifndef AIRY_ENOTCONN
+#define AIRY_ENOTCONN (-14)   /**< @deprecated 兼容值，airy_types.h 权威值为 -107 */
+#endif
+#ifndef AIRY_ECONNRESET
+#define AIRY_ECONNRESET (-15) /**< @deprecated 兼容值，airy_types.h 权威值为 -104 */
+#endif
+#ifndef AIRY_ENOSYS
+#define AIRY_ENOSYS (-16) /**< @deprecated 兼容值，airy_types.h 权威值为 -38 */
+#endif
+#ifndef AIRY_EFAIL
+#define AIRY_EFAIL (-17) /**< @deprecated 兼容值，airy_types.h 权威值为 -31 */
+#endif
+#ifndef AIRY_ENOTFOUND
+#define AIRY_ENOTFOUND (-18) /**< 资源未找到（airy_types.h 无对应宏，建议使用 AIRY_ENOENT） */
+#endif
+#ifndef AIRY_EPLATFORM
 #define AIRY_EPLATFORM (-27) /**< 平台未初始化 */
-#define AIRY_EPROTONOSUPPORT (-28) /**< 协议/命令不支持 */
+#endif
+#ifndef AIRY_EPROTONOSUPPORT
+#define AIRY_EPROTONOSUPPORT (-28) /**< @deprecated 兼容值，airy_types.h 权威值为 -93 */
+#endif
+#ifndef AIRY_ESERVICE
 #define AIRY_ESERVICE (-29) /**< 服务不可用 */
+#endif
+#ifndef AIRY_EUNKNOWN
 #define AIRY_EUNKNOWN (-99) /**< 未知错误 */
+#endif
 
 /**
  * @brief 时间戳类型（纳秒）
