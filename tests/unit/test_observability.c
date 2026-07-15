@@ -9,7 +9,7 @@
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
-#include "../../agentrt/commons/utils/observability/include/observability_compat.h"
+#include "../../utils/observability/include/observability.h"
 #include "../utils/test_framework.h"
 
 #include <stdbool.h>

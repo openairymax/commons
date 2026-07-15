@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -147,6 +148,19 @@ void airy_trace_add_event(airy_trace_span_t *span, const char *name, const char 
  * @return JSON字符串（需调用者释放），失败返回NULL
  */
 char *airy_trace_export(void);
+
+/* ==================== 时间工具 ==================== */
+
+/**
+ * @brief 获取单调时钟时间（纳秒）
+ * @return 单调时钟纳秒时间戳
+ */
+static inline uint64_t airy_get_monotonic_time_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+}
 
 #ifdef __cplusplus
 }

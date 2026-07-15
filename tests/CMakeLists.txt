@@ -48,7 +48,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/network/include
         ${COMMONS_ROOT}/utils/memory/include
         ${COMMONS_ROOT}/utils/print/include
-        ${AIRY_ROOT}/atoms/corekern/include
+        ${COMMONS_ROOT}/../atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
@@ -77,7 +77,7 @@ foreach(test_source ${INTEGRATION_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/string/include
         ${COMMONS_ROOT}/utils/observability/include
         ${COMMONS_ROOT}/utils/types/include
-        ${AIRY_ROOT}/atoms/corekern/include
+        ${COMMONS_ROOT}/../atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
