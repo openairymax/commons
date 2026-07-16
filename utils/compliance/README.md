@@ -59,7 +59,7 @@ void *ptr = malloc(1024);  /* 通过豁免，允许使用 */
 ```
 
 **豁免原则**：
-- 仅在实现安全包装函数本身时使用（如 `memory_compat.h` 的实现）
+- 仅在实现安全包装函数本身时使用（如 `airy_memory.h` 的实现）
 - 仅在第三方代码集成时使用
 - 每次豁免需要代码审查批准
 
@@ -88,7 +88,7 @@ airy_strlcpy(buf, src, sizeof(buf));
 ### 豁免示例
 
 ```c
-/* 仅限 memory_compat.h 的实现文件使用 */
+/* 仅限 airy_memory.h 的实现文件使用 */
 #define AIRY_COMPLIANCE_IMPL
 #include "compliance_exempt.h"
 
@@ -112,7 +112,7 @@ Compliance 模块在 CI 流水线中通过以下检查强制执行：
 | 依赖 | 说明 |
 |------|------|
 | 根 `CMakeLists.txt` | 通过 `-include` 编译选项注入 `banned_functions.h` |
-| `memory_compat.h` | 提供 `AIRY_MALLOC`/`AIRY_FREE`/`AIRY_MEMCPY_SAFE` 等安全替代宏 |
+| `airy_memory.h` | 提供 `AIRY_MALLOC`/`AIRY_FREE`/`AIRY_MEMCPY_SAFE` 等安全替代宏 |
 | `platform.h` | 提供 `airy_strlcpy`/`airy_strlcat` 安全字符串函数 |
 | GCC/Clang 编译器 | `#pragma GCC poison` 依赖 GCC/Clang 扩展 |
 

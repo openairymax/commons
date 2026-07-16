@@ -26,7 +26,7 @@
 #pragma comment(lib, "ws2_32.lib")
 #endif
 
-#include "../../memory/include/memory_compat.h"
+#include "../../memory/include/airy_memory.h"
 #include "network_common.h"
 
 #include <stdio.h>

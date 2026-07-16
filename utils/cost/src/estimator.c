@@ -21,7 +21,7 @@
 #include <string.h>
 
 /* Unified base library compatibility layer */
-#include <memory_compat.h>
+#include <airy_memory.h>
 #include <string_compat.h>
 #include "error.h"
 

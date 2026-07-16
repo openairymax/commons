@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 #include "memory_common.h"
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 #include <stdio.h>
 #include <stdlib.h>

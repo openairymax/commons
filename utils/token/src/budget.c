@@ -13,7 +13,7 @@
  */
 
 #include "error.h"
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "platform.h"
 #include "string_compat.h"
 #include "token.h"

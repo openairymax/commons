@@ -45,6 +45,7 @@
 #endif
 
 #include "sync_platform.h"
+#include "logging.h"  /* d9: sync_debug() 改用 LOG_DEBUG（原 AIRY_LOG_DEBUG 在 logging_compat.h 中未定义） */
 
 /**
  * @brief 全局同步模块状态结构体
@@ -341,50 +342,34 @@ sync_result_t sync_debug(void *lock)
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
 
-    fputs("\n[SYNC DEBUG] ====================\n", stderr);
-    {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Lock at: %p\n", (void *)lock);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Type: %d\n", base->type);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Initialized: %s\n",
-                 base->initialized ? "true" : "false");
-        fputs(buf, stderr);
-    }
+    LOG_DEBUG("[SYNC DEBUG] ====================");
+    LOG_DEBUG("[SYNC DEBUG] Lock at: %p", (void *)lock);
+    LOG_DEBUG("[SYNC DEBUG] Type: %d", base->type);
+    LOG_DEBUG("[SYNC DEBUG] Initialized: %s",
+                   base->initialized ? "true" : "false");
 
     const char *name = sync_get_name(lock);
     if (name != NULL) {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Name: %s\n", name);
-        fputs(buf, stderr);
+        LOG_DEBUG("[SYNC DEBUG] Name: %s", name);
     } else {
-        fputs("[SYNC DEBUG] Name: (unnamed)\n", stderr);
+        LOG_DEBUG("[SYNC DEBUG] Name: (unnamed)");
     }
 
     sync_stats_t stats;
     if (sync_get_stats(lock, &stats) == SYNC_SUCCESS) {
-        char buf[256];
-        fputs("[SYNC DEBUG] --- Statistics ---\n", stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Lock count: %zu\n", stats.lock_count);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Unlock count: %zu\n", stats.unlock_count);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Wait count: %zu\n", stats.wait_count);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Timeout count: %zu\n", stats.timeout_count);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Deadlock count: %zu\n", stats.deadlock_count);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Total wait time: %lu ms\n",
-                (unsigned long)stats.total_wait_time_ms);
-        fputs(buf, stderr);
-        snprintf(buf, sizeof(buf), "[SYNC DEBUG] Max wait time: %lu ms\n",
-                (unsigned long)stats.max_wait_time_ms);
-        fputs(buf, stderr);
+        LOG_DEBUG("[SYNC DEBUG] --- Statistics ---");
+        LOG_DEBUG("[SYNC DEBUG] Lock count: %zu", stats.lock_count);
+        LOG_DEBUG("[SYNC DEBUG] Unlock count: %zu", stats.unlock_count);
+        LOG_DEBUG("[SYNC DEBUG] Wait count: %zu", stats.wait_count);
+        LOG_DEBUG("[SYNC DEBUG] Timeout count: %zu", stats.timeout_count);
+        LOG_DEBUG("[SYNC DEBUG] Deadlock count: %zu", stats.deadlock_count);
+        LOG_DEBUG("[SYNC DEBUG] Total wait time: %lu ms",
+                       (unsigned long)stats.total_wait_time_ms);
+        LOG_DEBUG("[SYNC DEBUG] Max wait time: %lu ms",
+                       (unsigned long)stats.max_wait_time_ms);
     }
 
-    fputs("[SYNC DEBUG] ====================\n\n", stderr);
+    LOG_DEBUG("[SYNC DEBUG] ====================");
 
     return SYNC_SUCCESS;
 }

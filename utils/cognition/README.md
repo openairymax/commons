@@ -153,7 +153,7 @@ for (int i = 0; i < 3; i++) agent_info_cleanup(&agents[i]);
 | 依赖 | 说明 |
 |------|------|
 | `strategy_common.h` | 加权评分算法用于 Agent 选择 |
-| `memory_compat.h` | 统一内存管理宏 |
+| `airy_memory.h` | 统一内存管理宏 |
 | `string_compat.h` | 字符串操作兼容层 |
 
 ## 配置选项

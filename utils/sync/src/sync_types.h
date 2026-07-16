@@ -16,7 +16,7 @@
 #ifndef AIRY_RT_SYNC_TYPES_H
 #define AIRY_RT_SYNC_TYPES_H
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "sync.h"
 #include "sync_platform.h"
 

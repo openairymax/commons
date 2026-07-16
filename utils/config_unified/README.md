@@ -186,7 +186,7 @@ config_context_destroy(ctx);
 | 依赖 | 说明 |
 |------|------|
 | `atomic_compat.h` | 原子操作（热更新状态管理） |
-| `memory_compat.h` | 统一内存管理 |
+| `airy_memory.h` | 统一内存管理 |
 | libyaml | YAML 格式支持（可选） |
 | cJSON | JSON 格式支持（可选） |
 

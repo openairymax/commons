@@ -627,6 +627,108 @@ void airy_atomic_store(airy_atomic_int_t *atomic, int value);
 int airy_atomic_fetch_add(airy_atomic_int_t *atomic, int value);
 int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
 
+/* ==================== P0.18.3: AIRY_MUTEX_LOCK_GUARD RAII 自动解锁 ==================== */
+/* d8 清理：从 sync_compat.h 迁移到 platform.h（RAII 守卫依赖 airy_mtx_lock/unlock，
+ * 逻辑上属于 platform.h API 的辅助工具）。消除 sync_compat.h 的兼容层定位。 */
+
+/**
+ * @defgroup mutex_guard RAII 互斥锁守卫（P0.18.3）
+ * @{
+ *
+ * AIRY_MUTEX_LOCK_GUARD 将 mutex 加锁 + 作用域退出自动解锁二合一，
+ * 消除手工 lock/unlock 配对样板。
+ *
+ * 基于 GCC/Clang 的 __attribute__((cleanup)) 实现 RAII 语义。
+ * guard 跟踪锁状态，仅当加锁成功时才在 cleanup 中解锁，避免对未锁定的
+ * 互斥锁调用 unlock。MSVC 回退到仅加锁（需手动解锁）。
+ *
+ * 用法：
+ *   AIRY_MUTEX_LOCK_GUARD(m);   // 加锁，函数返回时自动解锁
+ *   // 临界区操作...
+ *
+ * 注意：宏不检查加锁是否成功。若加锁可能失败（如死锁检测），请使用
+ * airy_mtx_lock + 手动 if 检查 + airy_mtx_unlock。
+ */
+
+#if defined(__GNUC__) || defined(__clang__)
+
+/**
+ * @brief 互斥锁守卫类型 — 跟踪锁状态
+ *
+ * 保存互斥锁指针和加锁状态，用于 cleanup 时判断是否需要解锁。
+ */
+typedef struct {
+    airy_mtx_t *mutex;      /**< 指向 airy_mtx_t 变量 */
+    bool        acquired;   /**< 是否已成功获取锁 */
+} airy_mtx_guard_t;
+
+/**
+ * @brief 互斥锁守卫 cleanup 函数（由 cleanup 属性自动调用）
+ *
+ * 当 AIRY_MUTEX_LOCK_GUARD 标记的变量离开作用域时自动调用。
+ * 仅当 acquired 为 true 且 mutex 非空时才解锁，避免对未锁定的互斥锁调用 unlock。
+ *
+ * @param g 指向 guard 变量的指针
+ */
+static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
+{
+    if (g->acquired && g->mutex) {
+        airy_mtx_unlock(g->mutex);
+        g->acquired = false;
+        g->mutex = NULL;
+    }
+}
+
+/**
+ * @def AIRY_MUTEX_LOCK_GUARD(m)
+ * @brief RAII 互斥锁守卫：加锁 + 作用域退出自动解锁
+ *
+ * @param m 互斥锁变量（airy_mtx_t 类型，宏内部取地址 &m）
+ *
+ * 使用示例：
+ *   static airy_mtx_t my_lock;
+ *   airy_mtx_init(&my_lock);
+ *   {
+ *       AIRY_MUTEX_LOCK_GUARD(my_lock);
+ *       // 临界区操作...
+ *   }  // 离开作用域时自动 airy_mtx_unlock(&my_lock)
+ *
+ * @note 使用 __COUNTER__ 生成唯一变量名，同一作用域可多次使用
+ * @note 加锁失败时 acquired=false，cleanup 不会解锁；后续代码在未加锁状态下执行
+ */
+#define AIRY_MUTEX_LOCK_GUARD_(m, counter) \
+    airy_mtx_guard_t __attribute__((cleanup(airy_mtx_guard_cleanup))) \
+    __guard_##counter = { .mutex = &(m), .acquired = (airy_mtx_lock(&(m)) == 0) }
+
+/* 两层间接：强制 __COUNTER__ 在 ## 拼接前展开为数字，避免变量名冲突。
+ * 直接 AIRY_MUTEX_LOCK_GUARD_(m, __COUNTER__) 会拼接成 __guard___COUNTER__
+ * （字面值，不展开），导致同作用域多次使用时变量名冲突。 */
+#define AIRY_MUTEX_LOCK_GUARD_EXPAND(m, counter) AIRY_MUTEX_LOCK_GUARD_(m, counter)
+#define AIRY_MUTEX_LOCK_GUARD(m) AIRY_MUTEX_LOCK_GUARD_EXPAND(m, __COUNTER__)
+
+#elif defined(_MSC_VER)
+
+/**
+ * @def AIRY_MUTEX_LOCK_GUARD(m)
+ * @brief RAII 互斥锁守卫（MSVC — 回退到仅加锁，需手动解锁）
+ *
+ * MSVC 不支持 __attribute__((cleanup))，此宏仅执行加锁。
+ * 使用 MSVC 时需在函数返回前手动调用 airy_mtx_unlock。
+ */
+#define AIRY_MUTEX_LOCK_GUARD(m) ((void)airy_mtx_lock(&(m)))
+
+#else
+
+/**
+ * @def AIRY_MUTEX_LOCK_GUARD(m)
+ * @brief RAII 互斥锁守卫（未知编译器 — 回退到仅加锁，需手动解锁）
+ */
+#define AIRY_MUTEX_LOCK_GUARD(m) ((void)airy_mtx_lock(&(m)))
+
+#endif
+
+/** @} */  // end of mutex_guard
+
 #ifdef __cplusplus
 }
 #endif

@@ -7,10 +7,16 @@
  * 实现安全、高效、统一的内存管理功能，支持内存分配、释放、调试和统计功能
  *
  * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
+ *
+ * @note AIRY_COMPLIANCE_IMPL: memory subsystem
+ * 本文件是内存管理子系统的核心实现，直接使用 C 标准库 malloc/free/realloc
+ * 是设计要求（AIRY_MALLOC/AIRY_FREE 宏最终调用本文件的 memory_alloc/memory_free，
+ * 使用宏会形成循环依赖）。fprintf(stderr) 用于内存泄漏报告和调试转储，
+ * 在程序退出阶段输出，此时日志系统可能已关闭，直接写 stderr 是最安全的选择。
  */
 
-#include "../include/memory_compat.h"
-#include "logging_compat.h"
+#include "../include/airy_memory.h"
+#include "logging.h"
 #include "platform.h"
 
 #include <stdio.h>
@@ -121,7 +127,7 @@ static void memory_handle_fail(size_t size, const char *tag)
     // 根据策略处理
     switch (g_state.options.fail_strategy) {
     case MEMORY_FAIL_STRATEGY_ABORT:
-        AIRY_LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
+        LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
         abort();
         break;
 
@@ -321,7 +327,7 @@ bool memory_init(const memory_options_t *options)
         return true;
     }
 
-    AIRY_LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
+    LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
                      options && options->zero_memory ? "true" : "false",
                      options ? options->alignment : 0);
 
@@ -356,7 +362,7 @@ void memory_cleanup(void)
         return;
     }
 
-    AIRY_LOG_INFO("memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
+    LOG_INFO("memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
                      g_state.stats.total_allocated, g_state.stats.current_allocated,
                      g_state.stats.peak_allocated, g_state.stats.allocation_count,
                      g_state.stats.free_count);
@@ -365,7 +371,7 @@ void memory_cleanup(void)
 
     // 检查内存泄漏
     if (g_state.debug_enabled && g_state.debug_list_head != NULL) {
-        AIRY_LOG_WARN("警告：内存清理时发现未释放的内存块");
+        LOG_WARN("警告：内存清理时发现未释放的内存块");
 
         struct memory_debug_info *current = g_state.debug_list_head;
         size_t leak_count = 0;
@@ -374,7 +380,7 @@ void memory_cleanup(void)
         while (current != NULL) {
             leak_count++;
             leak_size += current->size;
-            AIRY_LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
+            LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
                     current->tag ? current->tag : "(null)");
 
             // 释放泄漏的内存（可选）
@@ -393,7 +399,7 @@ void memory_cleanup(void)
             current = next;
         }
 
-        AIRY_LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
+        LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
         g_state.debug_list_head = NULL;
     }
 
@@ -683,7 +689,7 @@ bool memory_debug_enable(bool enable)
         return false;
     }
 
-    AIRY_LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)",
+    LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)",
                      enable ? "true" : "false",
                      g_state.debug_enabled ? "true" : "false");
 

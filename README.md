@@ -147,7 +147,7 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 
 Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_int64_t`, `atomic_uint64_t`, `atomic_size_t`.
 
-### Unified memory management (`memory_compat.h`)
+### Unified memory management (`airy_memory.h`)
 
 | Macro | Replaces | Description |
 |-------|----------|-------------|

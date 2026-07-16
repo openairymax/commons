@@ -20,17 +20,15 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "include/memory_compat.h"
+#include "include/airy_memory.h"
 #include "string_compat.h"
 
 /* 包含统一日志模块头文件 */
 #include "../../utils/logging/include/atomic_logging.h"
 #include "../../utils/logging/include/logging.h"
-#include "../../utils/logging/include/logging_compat.h"
 #include "../../utils/logging/include/service_logging.h"
 
 /* 包含统一配置模块头文件 */
-#include "../../utils/config_unified/include/config_compat.h"
 #include "../../utils/config_unified/include/config_service.h"
 #include "../../utils/config_unified/include/config_source.h"
 #include "../../utils/config_unified/include/core_config.h"
@@ -71,11 +69,8 @@ int main(void)
     /* 向后兼容层验证 */
     printf("\n3. 验证向后兼容层：\n");
 
-    /* 日志兼容层 */
-    printf("   日志兼容层：logging_compat.h\n");
-
-    /* 配置兼容层 */
-    printf("   配置兼容层：config_compat.h\n");
+    /* 日志模块（d6 清理：logging_compat.h 兼容层已删除，airy_log_* 实现迁移到 observability/src/logger.c） */
+    printf("   日志模块：observability/logger.h + observability/src/logger.c\n");
 
     /* 简单功能测试 */
     printf("\n4. 简单功能测试：\n");

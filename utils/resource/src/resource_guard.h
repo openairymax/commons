@@ -25,7 +25,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../memory/include/memory_compat.h"
+#include "../memory/include/airy_memory.h"
 
 #ifdef __cplusplus
 extern "C" {

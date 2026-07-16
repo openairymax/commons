@@ -18,7 +18,8 @@ extern "C" {
 #endif
 
 /* 统一日志级别常量 — 值越大越严重
- * 每个宏独立 #ifndef 保护，避免与 logging_compat.h 交叉包含时重定义 */
+ * 每个宏独立 #ifndef 保护，避免与 observability.h 交叉包含时重定义
+ * （d6 清理：logging_compat.h 兼容层已删除，airy_log_* 实现迁移到本目录的 src/logger.c） */
 #ifndef AIRY_LOG_LEVEL_DEBUG
 #define AIRY_LOG_LEVEL_DEBUG 0
 #endif

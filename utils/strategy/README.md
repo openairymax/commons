@@ -141,7 +141,7 @@ strategy_select_best_agent(nodes, 3, &lb_config, &lb_result);
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`/`AIRY_FREE`） |
+| `airy_memory.h` | 统一内存管理宏（`AIRY_MALLOC`/`AIRY_FREE`） |
 | `string_compat.h` | 字符串操作兼容层 |
 | `<string.h>` | 字符串操作 |
 

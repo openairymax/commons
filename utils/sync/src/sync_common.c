@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 int sync_mutex_init(sync_mutex_t *mutex)
 {

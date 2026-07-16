@@ -14,7 +14,7 @@
 
 /* Unified base library compatibility layer */
 #include "../../include/sync.h"
-#include "include/memory_compat.h"
+#include "include/airy_memory.h"
 #include "string_compat.h"
 
 #include <assert.h>

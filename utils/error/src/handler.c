@@ -15,8 +15,7 @@
 /* 使用明确的相对路径确保包含commons的error.h */
 #include "atomic_compat.h"
 #include "error.h"
-#include "error_compat.h"
-#include "logging_compat.h"
+#include "logging.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -24,7 +23,7 @@
 #include <string.h>
 
 /* Unified base library compatibility layer */
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "string_compat.h"
 
 #include <time.h>
@@ -523,15 +522,15 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
 void airy_err_print_chain(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
-        AIRY_LOG_DEBUG("Error chain is NULL");
+        LOG_DEBUG("Error chain is NULL");
         return;
     }
 
-    AIRY_LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
+    LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
     for (int i = 0; i < chain->depth; i++) {
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
         (void)ctx;
-        AIRY_LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
+        LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
                            ctx->line, ctx->function ? ctx->function : "(unknown)", ctx->error_code,
                            ctx->message ? ctx->message : "");
     }
@@ -887,24 +886,7 @@ void airy_err_stats_shutdown(void)
     if (g_error_stats_initialized) {
         airy_mtx_destroy(&g_error_stats_mutex);
         g_error_stats_initialized = 0;
-        AIRY_LOG_INFO("Error stats: mutex destroyed");
+        LOG_INFO("Error stats: mutex destroyed");
     }
 #endif
-}
-
-/* ==================== G2.5 兼容层全局回调定义 ==================== */
-/* 原 error_compat.h 中的 static 全局变量导致 per-TU 独立副本，跨翻译单元不可见。
- * 现集中定义于本文件（handler.c 为 error 模块唯一编译单元），通过 extern
- * 声明供所有包含 error_compat.h 的翻译单元共享，确保全局回调机制生效。 */
-airy_compat_error_handler_t g_compat_error_handler = NULL;
-airy_compat_error_info_handler_t g_compat_error_info_handler = NULL;
-
-void airy_compat_error_set_handler(airy_compat_error_handler_t handler)
-{
-    g_compat_error_handler = handler;
-}
-
-void airy_compat_error_set_info_handler(airy_compat_error_info_handler_t handler)
-{
-    g_compat_error_info_handler = handler;
 }

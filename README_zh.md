@@ -147,7 +147,7 @@ commons/
 
 覆盖 11 种类型，包括 `atomic_bool`、`atomic_int`、`atomic_uint`、`atomic_int64_t`、`atomic_uint64_t`、`atomic_size_t`。
 
-### 统一内存管理（`memory_compat.h`）
+### 统一内存管理（`airy_memory.h`）
 
 | 宏 | 替换 | 说明 |
 |------|------|------|

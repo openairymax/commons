@@ -24,7 +24,7 @@
 
 /* Unified base library compatibility layer */
 #include "atomic_compat.h"
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "platform.h"
 #include "string_compat.h"
 

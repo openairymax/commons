@@ -2,66 +2,104 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
 /**
  * @file logger.c
- * @brief 日志实现（基于统一分层日志系统? * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief airy_log_* API 实现（基于统一分层日志系统 logging.h）
+ * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
- * 本模块是统一分层日志系统的适配器实现，将现有日志API映射到新架构? *
- * 使用向后兼容层，确保现有代码无需修改即可继续工作? * 架构变化? * 1. 消除Windows/POSIX平台代码重复
- * 2. 使用高性能无锁原子? * 3. 支持高级日志功能（轮转、过滤、传输、监控）
- * 4. 统一配置管理
+ * d6 清理（IRON-8 兼容层清理）：本文件从 logging_compat.c 迁移 airy_log_* 实现，
+ * 消除兼容层包装。logging_compat.h/.c 已删除。
  *
- * 注意：本文件现在是一个轻量级包装器，实际功能由统一日志系统提供? *
- * 函数实现在commons/utils/logging/src/logging_compat.c中? */
+ * 设计要点：
+ *   1. AIRY_LOG_LEVEL_* 与 LOG_LEVEL_* 值完全对齐（DEBUG=0/INFO=1/WARN=2/ERROR=3/FATAL=4），
+ *      无需级别转换函数（原 logging_compat.c 的 convert_old_level_to_new 存在级别映射 bug，
+ *      把 AIRY_LOG_LEVEL_ERROR=3 错误映射为 LOG_LEVEL_DEBUG，已随迁移自动修复）。
+ *   2. log_set_trace_id 在 logging.c 中已使用 AIRY_THREAD_LOCAL g_tls_trace_id，
+ *      与原 logging_compat.c 的 _Thread_local g_thread_trace_id 语义等价，直接委托即可。
+ *   3. 自动初始化使用 atomic_compare_exchange_strong 确保线程安全。
+ */
 
 #include "logger.h"
 
-#include "../../logging/include/logging_compat.h"
+#include "logging.h"
 
+#include <stdatomic.h>
 #include <stdint.h>
+#include <stdarg.h>
 
-/* ==================== 模块初始?==================== */
+/* ==================== 模块自动初始化 ==================== */
 
 /**
- * @brief 日志模块初始化函数（自动调用? *
- * 在第一次使用日志功能时自动初始化统一日志系统? * 使用静态初始化确保线程安全? */
-static void logging_module_auto_init(void)
+ * @brief 日志模块一次性初始化
+ *
+ * 使用原子 CAS 确保多线程下 log_init 只调用一次。
+ * 替代原 logging_compat.c 的 ensure_compat_initialized + logging_compat_init 双层调用。
+ */
+static void ensure_log_initialized(void)
 {
-    static int initialized = 0;
-
-    if (!initialized) {
-        /* 使用默认配置初始化兼容层 */
-        logging_compat_config_t manager = {.strict_compatibility = true,
-                                           .enable_perf_optimization = true,
-                                           .enable_migration_detection = true,
-                                           .enable_api_mapping_log = false,
-                                           .behavior = {.emulate_old_timestamp = true,
-                                                        .emulate_old_escaping = true,
-                                                        .emulate_old_format = true,
-                                                        .emulate_old_trace_id = true}};
-
-        /* 初始化兼容层 */
-        logging_compat_init(&manager);
-
-        initialized = 1;
+    static atomic_int initialized = 0;
+    int expected = 0;
+    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1,
+                                                 memory_order_seq_cst,
+                                                 memory_order_seq_cst)) {
+        log_init(NULL);
     }
 }
 
-/* ==================== 编译时初始化 ==================== */
+/* ==================== airy_log_* API 实现 ==================== */
 
-/* 使用GCC/Clang的constructor属性在程序启动时自动初始化 */
+const char *airy_log_set_trace_id(const char *trace_id)
+{
+    ensure_log_initialized();
+    /* log_set_trace_id 内部使用 AIRY_THREAD_LOCAL g_tls_trace_id，语义等价于
+     * 原 logging_compat.c 的 _Thread_local g_thread_trace_id 缓存（且自动同步）。 */
+    return log_set_trace_id(trace_id);
+}
+
+const char *airy_log_get_trace_id(void)
+{
+    ensure_log_initialized();
+    return log_get_trace_id();
+}
+
+void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
+{
+    ensure_log_initialized();
+
+    /* AIRY_LOG_LEVEL_* 与 LOG_LEVEL_* 值完全对齐，直接传递。
+     * 修复原 logging_compat.c convert_old_level_to_new 的级别映射 bug
+     * （原实现把 0→ERROR/1→WARN/2→INFO/3→DEBUG 反向映射，与 logger.h 定义的
+     *   DEBUG=0/INFO=1/WARN=2/ERROR=3 矛盾，导致 AIRY_LOG_ERROR 实际写入 DEBUG）。 */
+    log_level_t new_level = (log_level_t)level;
+
+    va_list args;
+    va_start(args, fmt);
+    log_write_va(new_level, file, line, fmt, args);
+    va_end(args);
+}
+
+void airy_log_write_va(int level, const char *file, int line, const char *fmt, va_list args)
+{
+    ensure_log_initialized();
+    log_level_t new_level = (log_level_t)level;
+    log_write_va(new_level, file, line, fmt, args);
+}
+
+/* ==================== 编译时自动初始化 ==================== */
+
+/* 使用 GCC/Clang 的 constructor 属性在程序启动时自动初始化 */
 #if defined(__GNUC__) || defined(__clang__)
 static void __attribute__((constructor)) logging_module_constructor(void)
 {
-    logging_module_auto_init();
+    ensure_log_initialized();
 }
 #endif
 
-/* 使用MSVC的初始化段在程序启动时自动初始化 */
+/* 使用 MSVC 的初始化段在程序启动时自动初始化 */
 #if defined(_MSC_VER)
 #pragma section(".CRT$XCU", read)
 static void __cdecl logging_module_constructor(void)
 {
-    logging_module_auto_init();
+    ensure_log_initialized();
 }
 __declspec(allocate(".CRT$XCU")) void(__cdecl *logging_module_constructor_ptr)(void) =
     logging_module_constructor;

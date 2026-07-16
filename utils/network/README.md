@@ -260,7 +260,7 @@ network_pool_destroy(pool);
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
+| `airy_memory.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
 | `error.h` | 统一错误码定义 |
 | `types.h` | 基础类型定义 |
 | `atomic_compat.h` | 跨平台原子操作 |

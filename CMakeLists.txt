@@ -18,7 +18,6 @@ set(SOURCES
     utils/resource/src/resource_guard.c
     utils/resource/src/resource_quota.c
     utils/logging/src/logging.c
-    utils/logging/src/logging_compat.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
     utils/memory/src/memory.c
@@ -54,7 +53,6 @@ set(SOURCES
     utils/config_unified/src/config_service.c
     utils/config_unified/src/core_config.c
     utils/config_unified/src/config_source.c
-    utils/config_unified/src/config_compat.c
     utils/config_unified/src/yaml_minimal.c
     utils/execution/src/checkpoint.c
 )
@@ -136,7 +134,6 @@ set_source_files_properties(
     utils/memory/src/arena.c
     utils/memory/src/tcache.c
     utils/logging/src/logging.c
-    utils/logging/src/logging_compat.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
     PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"

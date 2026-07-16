@@ -38,7 +38,7 @@
 #endif
 
 #include "atomic_compat.h"
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 #define CHECKPOINT_DIRECTORY "checkpoints"
 #define CHECKPOINT_FILE_PREFIX "checkpoint_"
