@@ -13,12 +13,11 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "../include/config_compat.h"
 #include "../include/config_service.h"
 #include "../include/config_source.h"
 #include "../include/config_unified.h"
 #include "../include/core_config.h"
-#include "include/memory_compat.h"
+#include "include/airy_memory.h"
 #include "string_compat.h"
 
 #include <assert.h>
@@ -291,29 +290,6 @@ static int test_config_error_handling(void)
     return 0;
 }
 
-/**
- * @brief 测试配置兼容层
- */
-static int test_config_compat_layer(void)
-{
-    printf("  测试配置兼容层...\n");
-
-    // 测试兼容宏
-    airy_config_t *manager = AIRY_CONFIG_CREATE();
-    TEST_ASSERT(manager != NULL, "兼容配置创建失败");
-
-    AIRY_CONFIG_SET_STRING(manager, "test.key", "compat_value");
-
-    const char *value = AIRY_CONFIG_GET_STRING(manager, "test.key", NULL);
-    TEST_ASSERT(value != NULL, "兼容配置获取失败");
-    TEST_ASSERT(strcmp(value, "compat_value") == 0, "兼容配置值不匹配");
-
-    AIRY_CONFIG_FREE(manager);
-
-    printf("  配置兼容层测试通过\n");
-    return 0;
-}
-
 /* ==================== 主测试函数 ==================== */
 
 int main(void)
@@ -330,7 +306,6 @@ int main(void)
     TEST_RUN(test_config_value_conversion);
     TEST_RUN(test_config_source_priority);
     TEST_RUN(test_config_error_handling);
-    TEST_RUN(test_config_compat_layer);
 
     printf("\n");
     printf("========================================\n");

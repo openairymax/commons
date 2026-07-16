@@ -5,7 +5,7 @@
 
 #ifdef _WIN32
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>

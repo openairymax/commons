@@ -11,6 +11,7 @@
  * ? */
 
 #include "config_source.h"
+#include "logging_compat.h"  /* LOG-06: AIRY_LOG_* 宏唯一定义源 */
 
 #include "core_config.h"
 #include "observability.h"
@@ -29,7 +30,7 @@
 #endif
 
 /* Unified base library compatibility layer */
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "string_compat.h"
 #include "error.h"
 

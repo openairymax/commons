@@ -13,8 +13,8 @@
 
 #include "airy_memory.h"
 #include "arena.h"
-#include "logging_compat.h"
-#include "memory_compat.h"
+#include "logging.h"
+#include "airy_memory.h"
 #include "memory_pool.h"
 #include "tcache.h"
 

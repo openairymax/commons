@@ -11,7 +11,7 @@
 
 /* Unified base library compatibility layer */
 #include "../../utils/error/include/error.h"
-#include "include/memory_compat.h"
+#include "include/airy_memory.h"
 #include "mem.h"
 #include "platform.h"
 #include "string_compat.h"

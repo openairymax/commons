@@ -230,7 +230,7 @@ AIRY_LOG_COLOR=0 ./build/agentrt/daemons/gateway_d/src/gateway_d
 | 依赖 | 说明 |
 |------|------|
 | `atomic_compat.h` | 跨平台原子操作（环形缓冲区 CAS） |
-| `memory_compat.h` | 统一内存管理 |
+| `airy_memory.h` | 统一内存管理 |
 | `compat.h` | 平台兼容层 |
 | `config_unified.h` | 日志配置热重载 |
 

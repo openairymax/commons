@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
+#include "logging.h"  /* d9: 改用 LOG_ERROR（logging.h 完整日志 API） */
 
 
 
@@ -112,11 +113,8 @@ int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count)
 
 void airy_assert_fail(const char *cond, const char *file, int line, const char *func)
 {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "Assertion failed: %s\n", cond);
-    fputs(buf, stderr);
-    snprintf(buf, sizeof(buf), "  at %s:%d in %s()\n", file, line, func);
-    fputs(buf, stderr);
+    LOG_ERROR("Assertion failed: %s", cond);
+    LOG_ERROR("  at %s:%d in %s()", file, line, func);
 
     if (g_assert_handler) {
         g_assert_handler(cond, file, line, func, NULL);
@@ -137,13 +135,9 @@ void airy_assert_fail(const char *cond, const char *file, int line, const char *
 void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
                              const char *msg)
 {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "Assertion failed: %s\n", cond);
-    fputs(buf, stderr);
-    snprintf(buf, sizeof(buf), "  Message: %s\n", msg);
-    fputs(buf, stderr);
-    snprintf(buf, sizeof(buf), "  at %s:%d in %s()\n", file, line, func);
-    fputs(buf, stderr);
+    LOG_ERROR("Assertion failed: %s", cond);
+    LOG_ERROR("  Message: %s", msg);
+    LOG_ERROR("  at %s:%d in %s()", file, line, func);
 
     if (g_assert_handler) {
         g_assert_handler(cond, file, line, func, msg);
@@ -202,7 +196,7 @@ const char *airy_build_info(void)
 
 #ifdef _WIN32
 #include <windows.h>
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 int gethostname(char *name, size_t len)
 {

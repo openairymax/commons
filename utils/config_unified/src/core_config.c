@@ -13,12 +13,12 @@
  */
 
 #include "core_config.h"
-#include "logging_compat.h"
+#include "logging.h"
 
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "platform.h"
 #include "string_compat.h"
 
@@ -880,54 +880,54 @@ const char *config_type_to_string(config_value_type_t type)
 void config_value_print(const config_value_t *value, int indent)
 {
     if (!value) {
-        AIRY_LOG_DEBUG("%*s(null)", indent, "");
+        LOG_DEBUG("%*s(null)", indent, "");
         return;
     }
 
     switch (value->type) {
     case CONFIG_TYPE_NULL:
-        AIRY_LOG_DEBUG("%*snull", indent, "");
+        LOG_DEBUG("%*snull", indent, "");
         break;
 
     case CONFIG_TYPE_BOOL:
-        AIRY_LOG_DEBUG("%*s%s", indent, "", value->data.bool_value ? "true" : "false");
+        LOG_DEBUG("%*s%s", indent, "", value->data.bool_value ? "true" : "false");
         break;
 
     case CONFIG_TYPE_INT:
-        AIRY_LOG_DEBUG("%*s%d", indent, "", value->data.int_value);
+        LOG_DEBUG("%*s%d", indent, "", value->data.int_value);
         break;
 
     case CONFIG_TYPE_INT64:
-        AIRY_LOG_DEBUG("%*s%lld", indent, "", (long long)value->data.int64_value);
+        LOG_DEBUG("%*s%lld", indent, "", (long long)value->data.int64_value);
         break;
 
     case CONFIG_TYPE_DOUBLE:
-        AIRY_LOG_DEBUG("%*s%g", indent, "", value->data.double_value);
+        LOG_DEBUG("%*s%g", indent, "", value->data.double_value);
         break;
 
     case CONFIG_TYPE_STRING:
-        AIRY_LOG_DEBUG("%*s\"%s\"", indent, "", value->data.string_value.str);
+        LOG_DEBUG("%*s\"%s\"", indent, "", value->data.string_value.str);
         break;
 
     case CONFIG_TYPE_ARRAY:
-        AIRY_LOG_DEBUG("%*s[", indent, "");
+        LOG_DEBUG("%*s[", indent, "");
         for (size_t i = 0; i < value->data.array_value.count; i++) {
             config_value_print(value->data.array_value.items[i], indent + 2);
         }
-        AIRY_LOG_DEBUG("%*s]", indent, "");
+        LOG_DEBUG("%*s]", indent, "");
         break;
 
     case CONFIG_TYPE_OBJECT:
-        AIRY_LOG_DEBUG("%*s{", indent, "");
+        LOG_DEBUG("%*s{", indent, "");
         for (size_t i = 0; i < value->data.object_value.count; i++) {
-            AIRY_LOG_DEBUG("%*s\"%s\": ", indent + 2, "", value->data.object_value.items[i].key);
+            LOG_DEBUG("%*s\"%s\": ", indent + 2, "", value->data.object_value.items[i].key);
             config_value_print(value->data.object_value.items[i].value, 0);
         }
-        AIRY_LOG_DEBUG("%*s}", indent, "");
+        LOG_DEBUG("%*s}", indent, "");
         break;
 
     case CONFIG_TYPE_BINARY:
-        AIRY_LOG_DEBUG("%*s<binary data, size=%zu>", indent, "", value->data.binary_value.size);
+        LOG_DEBUG("%*s<binary data, size=%zu>", indent, "", value->data.binary_value.size);
         break;
     }
 }

@@ -24,8 +24,8 @@
 #include <stdio.h>
 
 /* P0.17 阶段 2: AIRY_STRNCPY_TERM 安全字符串复制宏
- * 原定义位于 commons/utils/memory/include/memory_compat.h:607，
- * 但完整包含 memory_compat.h 会引入 error.h/airy_memory.h 等过重依赖
+ * 原定义位于 commons/utils/memory/include/airy_memory.h:607，
+ * 但完整包含 airy_memory.h 会引入 error.h/airy_memory.h 等过重依赖
  * （AIRY_EINVAL/AIRY_ERR_BUSY/airy_time_ms 等循环依赖冲突）。
  * 此处直接内联定义，带 ifndef 保护以避免重复定义。 */
 #ifndef AIRY_STRNCPY_TERM
@@ -56,10 +56,10 @@ typedef log_level_t airy_log_level_t;
 /* 兼容旧日志级别名称
  *
  * 注意：AIRY_LOG_DEBUG / INFO / WARN / ERROR / FATAL 已移除值宏定义，
- * 因为它们与 logging_compat.h 和 observability/logger.h 的函数式宏同名冲突。
+ * 因为它们与 observability/logger.h 的函数式宏同名冲突。
  * 文件中需要日志级别常量时，请直接使用 LOG_LEVEL_* 枚举值。
  * 文件中需要日志打印时，请使用 AIRY_LOG_*("fmt", ...) 函数式宏
- * （来自 logging_compat.h 或 observability/logger.h）或 SVC_LOG_* 宏。
+ * （来自 observability/logger.h）或 SVC_LOG_* 宏。
  */
 #ifndef AIRY_LOG_TRACE
 #define AIRY_LOG_TRACE LOG_LEVEL_DEBUG

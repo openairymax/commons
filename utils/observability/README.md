@@ -238,7 +238,7 @@ request_duration_ms_count 1
 | 依赖 | 说明 |
 |------|------|
 | `logging_compat.h` | 日志系统兼容层，映射到统一日志系统 |
-| `memory_compat.h` | 统一内存管理宏 |
+| `airy_memory.h` | 统一内存管理宏 |
 | `string_compat.h` | 字符串操作兼容层 |
 | `atomic_compat.h` | 跨平台原子操作（追踪模块使用） |
 | `platform.h` | 跨平台时间戳获取 |

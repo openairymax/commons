@@ -146,7 +146,7 @@ airy_cost_estimator_destroy(estimator);
 | 依赖 | 说明 |
 |------|------|
 | `libyaml`（可选） | YAML 定价配置文件解析 |
-| `memory_compat.h` | 统一内存管理 |
+| `airy_memory.h` | 统一内存管理 |
 
 ---
 

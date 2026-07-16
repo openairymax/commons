@@ -165,7 +165,7 @@ platform_adapter_cleanup();
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
+| `airy_memory.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
 | `string_compat.h` | 字符串操作兼容层 |
 | `platform.h` | 顶层系统级平台抽象（时间戳等） |
 | `error.h` | 统一错误码定义 |

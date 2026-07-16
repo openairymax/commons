@@ -25,7 +25,7 @@ memory/
 │   ├── memory_common.h           # 内存池与安全分配接口
 │   ├── memory_pool.h             # 内存池管理（创建/分配/释放/统计）
 │   ├── memory_debug.h            # 内存调试（泄漏检测/边界检查/堆栈跟踪）
-│   └── memory_compat.h           # 向后兼容层（安全包装器/迁移宏/OOM 水位监控）
+│   └── airy_memory.h           # 向后兼容层（安全包装器/迁移宏/OOM 水位监控）
 ├── src/
 │   ├── memory.c                  # 核心内存分配实现
 │   ├── memory_common.c           # 内存池与安全分配实现
@@ -171,7 +171,7 @@ memory/
 | `memory_debug_set_log_level(level)` | 设置日志级别 |
 | `memory_debug_log_operation(op, ptr, size, file, line, func)` | 记录内存操作 |
 
-### 兼容层 API（memory_compat.h）
+### 兼容层 API（airy_memory.h）
 
 | 函数/宏 | 说明 |
 |------|------|

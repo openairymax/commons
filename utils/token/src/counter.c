@@ -26,7 +26,7 @@
 #include <string.h>
 
 /* 统一基础库兼容层 */
-#include "../../memory/include/memory_compat.h"
+#include "../../memory/include/airy_memory.h"
 #include "../../string/include/string_compat.h"
 #include "error.h"
 

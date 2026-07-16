@@ -12,7 +12,7 @@
  * @details
  * SP03 解耦：本文件从 cupolas/src/ 迁移至 commons/utils/config_unified/include/，
  * 消除 atoms/coreloopthree 对 cupolas 层的物理依赖（ACC-SP03 解耦点 #2）。
- * yaml_minimal 仅依赖 commons 层的 memory_compat.h 与 error.h，迁移后
+ * yaml_minimal 仅依赖 commons 层的 airy_memory.h 与 error.h，迁移后
  * cupolas 与 coreloopthree 均通过 airy_common PUBLIC include 路径获取本头文件。
  *
  * @copyright (c) 2026 SPHARX. All Rights Reserved.

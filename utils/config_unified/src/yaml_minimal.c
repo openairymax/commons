@@ -15,7 +15,7 @@
 
 #include "yaml_minimal.h"
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 #include <ctype.h>
 #include <stdarg.h>

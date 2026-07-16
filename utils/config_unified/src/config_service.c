@@ -20,7 +20,7 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "string_compat.h"
 
 #define INDEX_NOT_FOUND (-1)

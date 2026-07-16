@@ -24,7 +24,7 @@
 #ifndef AIRY_RT_REFCOUNTED_H
 #define AIRY_RT_REFCOUNTED_H
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 #include <stdatomic.h>
 #include <stdbool.h>

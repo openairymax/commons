@@ -15,9 +15,7 @@
 /* Unified base library compatibility layer */
 #include "../include/atomic_logging.h"
 #include "../include/logging.h"
-#include "../include/logging_compat.h"
 #include "../include/service_logging.h"
-#include "include/memory_compat.h"
 #include "string_compat.h"
 
 #include <assert.h>
@@ -234,34 +232,6 @@ static int test_log_filtering(void)
 }
 
 /**
- * @brief 测试日志兼容层
- */
-static int test_logging_compat_layer(void)
-{
-    printf("  测试日志兼容层...\n");
-
-    // 测试兼容宏
-    AIRY_LOG_INIT();
-
-    AIRY_LOG_ERROR("兼容层错误消息");
-    AIRY_LOG_WARN("兼容层警告消息");
-    AIRY_LOG_INFO("兼容层信息消息");
-    AIRY_LOG_DEBUG("兼容层调试消息");
-
-    AIRY_LOG_ERROR_FMT("兼容层格式化错误: %s", "测试");
-    AIRY_LOG_INFO_FMT("兼容层格式化信息: %d", 42);
-
-    // 测试兼容层级别设置
-    AIRY_LOG_SET_LEVEL("DEBUG");
-
-    // 测试兼容层清理
-    AIRY_LOG_CLEANUP();
-
-    printf("  日志兼容层测试通过\n");
-    return 0;
-}
-
-/**
  * @brief 测试日志性能（基本）
  */
 static int test_logging_performance(void)
@@ -333,7 +303,6 @@ int main(void)
     TEST_RUN(test_atomic_logging);
     TEST_RUN(test_service_logging);
     TEST_RUN(test_log_filtering);
-    TEST_RUN(test_logging_compat_layer);
     TEST_RUN(test_logging_performance);
     TEST_RUN(test_logging_error_handling);
 

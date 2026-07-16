@@ -6,7 +6,7 @@
  * @brief Memory statistics periodic reporter (SEC-15)
  *
  * Runs a background thread that logs memory usage stats every 60 seconds.
- * Integrates with AIRY_MALLOC/AIRY_FREE via memory_compat.h.
+ * Integrates with AIRY_MALLOC/AIRY_FREE via airy_memory.h.
  */
 
 #include "memory_stats_reporter.h"

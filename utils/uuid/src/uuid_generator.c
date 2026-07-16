@@ -31,7 +31,7 @@
 
 /* Unified base library compatibility layer */
 #include "../../include/atomic_compat.h"
-#include "../../memory/include/memory_compat.h"
+#include "../../memory/include/airy_memory.h"
 #include "../../string/include/string_compat.h"
 
 static atomic_int g_uuid_initialized = 0;

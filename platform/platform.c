@@ -57,7 +57,7 @@
 #include "platform.h"
 
 #include <string.h>
-#include "memory_compat.h"
+#include "airy_memory.h"
 
 
 

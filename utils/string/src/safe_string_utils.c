@@ -14,7 +14,7 @@
 #include "safe_string_utils.h"
 
 #include "error.h"         /* AIRY_ERROR / AIRY_ERROR_NULL */
-#include "memory_compat.h" /* AIRY_MALLOC / AIRY_CALLOC / AIRY_REALLOC / AIRY_FREE */
+#include "airy_memory.h" /* AIRY_MALLOC / AIRY_CALLOC / AIRY_REALLOC / AIRY_FREE */
 
 #include <stdarg.h>
 #include <stdlib.h>

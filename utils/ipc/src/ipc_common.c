@@ -69,7 +69,7 @@
 #include <sys/time.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include "memory_compat.h"
+#include "airy_memory.h"
 #endif
 
 #ifndef OFF_MAX

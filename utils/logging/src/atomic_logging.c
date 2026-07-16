@@ -14,7 +14,7 @@
 
 #include "atomic_logging.h"
 
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "platform.h"
 #include "service_logging.h"
 #include "string_compat.h"

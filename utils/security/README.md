@@ -234,7 +234,7 @@ if (airy_safe_strcpy(dest, sizeof(dest), user_input) == AIRY_SUCCESS) {
 |------|------|
 | `error.h` | 统一错误码定义（`AIRY_SUCCESS`、`AIRY_EINVAL`、`AIRY_ESECURITY` 等） |
 | `logger.h` | 日志记录（安全事件告警） |
-| `memory_compat.h` | 统一内存管理宏 |
+| `airy_memory.h` | 统一内存管理宏 |
 | `string_compat.h` | 字符串操作兼容层 |
 
 ---

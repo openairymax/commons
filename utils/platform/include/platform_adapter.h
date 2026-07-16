@@ -58,7 +58,7 @@
 #include <stddef.h>
 
 /* Unified base library compatibility layer */
-#include "../../memory/include/memory_compat.h"
+#include "../../memory/include/airy_memory.h"
 #include "../../string/include/string_compat.h"
 
 #include <string.h>

@@ -12,12 +12,12 @@
 #include "memory_debug.h"
 
 #include "airy_memory.h"
-#include "logging_compat.h"
+#include "logging.h"
 
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "memory_compat.h"
+#include "airy_memory.h"
 #include "string_compat.h"
 
 #include <stdio.h>
@@ -196,12 +196,12 @@ static void __attribute__((unused)) memory_debug_record_error(memory_error_type_
 
     // 输出到日志
     if (g_debug_state.options.verbosity_level >= 1) {
-        AIRY_LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
+        LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
         if (description != NULL) {
-            AIRY_LOG_ERROR("描述%s", description);
+            LOG_ERROR("描述%s", description);
         }
         if (file != NULL && function != NULL) {
-            AIRY_LOG_ERROR("位置%s:%d (%s)", file, line, function);
+            LOG_ERROR("位置%s:%d (%s)", file, line, function);
         }
     }
 
@@ -368,7 +368,7 @@ bool memory_debug_init(const memory_debug_options_t *options)
         return true;
     }
 
-    AIRY_LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, boundary_check=%s)",
+    LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, boundary_check=%s)",
                      options ? options->redzone_size : 0,
                      options && options->track_allocations ? "true" : "false",
                      options && options->enable_leak_check ? "true" : "false",
@@ -954,7 +954,7 @@ void memory_debug_log_operation(const char *operation, void *ptr, size_t size, c
     if (file != NULL && function != NULL) {
         offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " at %s:%d (%s)", file, line, function);
     }
-    AIRY_LOG_DEBUG("%s", log_buf);
+    LOG_DEBUG("%s", log_buf);
 }
 
 /**
@@ -1010,11 +1010,11 @@ unsigned int memory_debug_checkpoint(const char *name)
     g_checkpoint_count++;
 
     if (g_debug_state.options.verbosity_level >= 1) {
-        AIRY_LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu",
+        LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu",
                          id, cp->name, cp->block_count,
                          cp->total_allocations, cp->total_frees);
     } else if (g_debug_state.options.verbosity_level >= 2) {
-        AIRY_LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
+        LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
     }
 
     memory_debug_unlock();
@@ -1097,11 +1097,11 @@ size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int c
     }
 
     if (g_debug_state.options.verbosity_level >= 2) {
-        AIRY_LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
-        AIRY_LOG_DEBUG("  新分配: %zu次", new_allocations);
-        AIRY_LOG_DEBUG("  新释放: %zu次", new_frees);
-        AIRY_LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
-        AIRY_LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
+        LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
+        LOG_DEBUG("  新分配: %zu次", new_allocations);
+        LOG_DEBUG("  新释放: %zu次", new_frees);
+        LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
+        LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
     }
 
     memory_debug_unlock();

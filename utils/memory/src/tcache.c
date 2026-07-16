@@ -19,8 +19,8 @@
  */
 
 #include "tcache.h"
-#include "logging_compat.h"
-#include "memory_compat.h"
+#include "logging.h"
+#include "airy_memory.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -78,12 +78,12 @@ airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_
         batch_size = max_cached;
     }
 
-    AIRY_LOG_INFO("tcache: tcache_create (batch_size=%zu, max_cached=%zu)",
+    LOG_INFO("tcache: tcache_create (batch_size=%zu, max_cached=%zu)",
                      batch_size, max_cached);
 
     airy_tcache_t *tc = (airy_tcache_t *)AIRY_CALLOC(1, sizeof(airy_tcache_t));
     if (!tc) {
-        AIRY_LOG_ERROR("tcache: tcache_create failed to alloc tcache struct");
+        LOG_ERROR("tcache: tcache_create failed to alloc tcache struct");
         return NULL;
     }
 
@@ -95,7 +95,7 @@ airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_
 
     /* 预填充一部分块以提高首次分配性能 */
     size_t filled = tcache_batch_fill(tc);
-    AIRY_LOG_INFO("tcache: tcache_create ok (tc=%p, pre_filled=%zu, cached=%zu)",
+    LOG_INFO("tcache: tcache_create ok (tc=%p, pre_filled=%zu, cached=%zu)",
                      (void *)tc, filled, tc->cached_count);
 
     return tc;
@@ -105,7 +105,7 @@ void tcache_destroy(airy_tcache_t *tc)
 {
     if (!tc) return;
 
-    AIRY_LOG_INFO("tcache: tcache_destroy (tc=%p, cached=%zu, allocs=%" PRIu64 ", hits=%" PRIu64
+    LOG_INFO("tcache: tcache_destroy (tc=%p, cached=%zu, allocs=%" PRIu64 ", hits=%" PRIu64
                      ", miss=%" PRIu64 ", fill=%" PRIu64 ", flush=%" PRIu64 ", bypass=%" PRIu64 ")",
                      (void *)tc, tc->cached_count,
                      tc->alloc_count, tc->hit_count, tc->miss_count,
@@ -116,7 +116,7 @@ void tcache_destroy(airy_tcache_t *tc)
 
     AIRY_FREE(tc);
 
-    AIRY_LOG_DEBUG("tcache: tcache_destroy done");
+    LOG_DEBUG("tcache: tcache_destroy done");
 }
 
 /* ============================================================================
@@ -135,14 +135,14 @@ void *tcache_alloc(airy_tcache_t *tc)
         tc->head = slot->next;
         tc->cached_count--;
         tc->hit_count++;
-        AIRY_LOG_DEBUG("tcache: tcache_alloc HIT (tc=%p, ptr=%p, cached=%zu/%zu, alloc#=%" PRIu64 ")",
+        LOG_DEBUG("tcache: tcache_alloc HIT (tc=%p, ptr=%p, cached=%zu/%zu, alloc#=%" PRIu64 ")",
                           (void *)tc, (void *)slot, tc->cached_count, tc->max_cached, tc->alloc_count);
         return (void *)slot;
     }
 
     /* 缓存为空，从全局池批量填充 */
     tc->miss_count++;
-    AIRY_LOG_DEBUG("tcache: tcache_alloc MISS (tc=%p, cached=0, miss#=%" PRIu64 ")",
+    LOG_DEBUG("tcache: tcache_alloc MISS (tc=%p, cached=0, miss#=%" PRIu64 ")",
                       (void *)tc, tc->miss_count);
 
     size_t filled = tcache_batch_fill(tc);
@@ -150,7 +150,7 @@ void *tcache_alloc(airy_tcache_t *tc)
         /* 全局池也空了，直接尝试从池获取一块 */
         tc->bypass_count++;
         void *ptr = memory_pool_alloc(tc->pool);
-        AIRY_LOG_WARN("tcache: tcache_alloc BYPASS (tc=%p, ptr=%p, bypass#=%" PRIu64 ")",
+        LOG_WARN("tcache: tcache_alloc BYPASS (tc=%p, ptr=%p, bypass#=%" PRIu64 ")",
                          (void *)tc, ptr, tc->bypass_count);
         return ptr;
     }
@@ -160,7 +160,7 @@ void *tcache_alloc(airy_tcache_t *tc)
     tc->head = slot->next;
     tc->cached_count--;
     tc->hit_count++;
-    AIRY_LOG_DEBUG("tcache: tcache_alloc FILLED (tc=%p, ptr=%p, filled=%zu, cached=%zu/%zu)",
+    LOG_DEBUG("tcache: tcache_alloc FILLED (tc=%p, ptr=%p, filled=%zu, cached=%zu/%zu)",
                       (void *)tc, (void *)slot, filled, tc->cached_count, tc->max_cached);
     return (void *)slot;
 }
@@ -176,7 +176,7 @@ void tcache_free(airy_tcache_t *tc, void *ptr)
         /* 缓存满，批量归还到全局池 */
         size_t flushed = tcache_batch_flush(tc);
         (void)flushed; /* 用于日志，非 DEBUG 模式下避免 unused 警告 */
-        AIRY_LOG_DEBUG("tcache: tcache_free FLUSH (tc=%p, flushed=%zu, cached=%zu/%zu)",
+        LOG_DEBUG("tcache: tcache_free FLUSH (tc=%p, flushed=%zu, cached=%zu/%zu)",
                           (void *)tc, flushed, tc->cached_count, tc->max_cached);
     }
 
@@ -186,7 +186,7 @@ void tcache_free(airy_tcache_t *tc, void *ptr)
     tc->head = slot;
     tc->cached_count++;
 
-    AIRY_LOG_DEBUG("tcache: tcache_free ok (tc=%p, ptr=%p, cached=%zu/%zu, free#=%" PRIu64 ")",
+    LOG_DEBUG("tcache: tcache_free ok (tc=%p, ptr=%p, cached=%zu/%zu, free#=%" PRIu64 ")",
                       (void *)tc, ptr, tc->cached_count, tc->max_cached, tc->free_count);
 }
 
@@ -204,7 +204,7 @@ size_t tcache_batch_fill(airy_tcache_t *tc)
 
     size_t batch = (tc->batch_size < remaining) ? tc->batch_size : remaining;
 
-    AIRY_LOG_DEBUG("tcache: tcache_batch_fill START (tc=%p, batch=%zu, remaining=%zu)",
+    LOG_DEBUG("tcache: tcache_batch_fill START (tc=%p, batch=%zu, remaining=%zu)",
                       (void *)tc, batch, remaining);
 
     /* P1.20.3: 使用 pool 批量分配 API，一次锁获取多个块 */
@@ -223,7 +223,7 @@ size_t tcache_batch_fill(airy_tcache_t *tc)
         tc->batch_fill_count++;
     }
 
-    AIRY_LOG_DEBUG("tcache: tcache_batch_fill DONE (tc=%p, filled=%zu/%zu, cached=%zu/%zu, fill#=%" PRIu64 ")",
+    LOG_DEBUG("tcache: tcache_batch_fill DONE (tc=%p, filled=%zu/%zu, cached=%zu/%zu, fill#=%" PRIu64 ")",
                       (void *)tc, filled, batch, tc->cached_count, tc->max_cached, tc->batch_fill_count);
 
     return filled;
@@ -248,7 +248,7 @@ size_t tcache_batch_flush(airy_tcache_t *tc)
         to_flush = tc->batch_size;
     }
 
-    AIRY_LOG_DEBUG("tcache: tcache_batch_flush START (tc=%p, to_flush=%zu, cached=%zu/%zu)",
+    LOG_DEBUG("tcache: tcache_batch_flush START (tc=%p, to_flush=%zu, cached=%zu/%zu)",
                       (void *)tc, to_flush, tc->cached_count, tc->max_cached);
 
     /* P1.20.3: 从 tcache 链表取出块，然后使用 pool 批量释放 API */
@@ -269,7 +269,7 @@ size_t tcache_batch_flush(airy_tcache_t *tc)
         tc->batch_flush_count++;
     }
 
-    AIRY_LOG_DEBUG("tcache: tcache_batch_flush DONE (tc=%p, flushed=%zu/%zu, cached=%zu, flush#=%" PRIu64 ")",
+    LOG_DEBUG("tcache: tcache_batch_flush DONE (tc=%p, flushed=%zu/%zu, cached=%zu, flush#=%" PRIu64 ")",
                       (void *)tc, flushed, to_flush, tc->cached_count, tc->batch_flush_count);
 
     return flushed;

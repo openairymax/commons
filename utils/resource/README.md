@@ -230,7 +230,7 @@ Total leaks: 3
 
 | 依赖 | 说明 |
 |------|------|
-| `memory_compat.h` | 统一内存管理宏 |
+| `airy_memory.h` | 统一内存管理宏 |
 | `airy_memory.h` | 内存分配/释放函数 |
 | `airy_string.h` | 字符串操作 |
 | `sync.h` | 互斥锁（资源追踪使用） |

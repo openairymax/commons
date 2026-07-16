@@ -12,8 +12,8 @@
 
 #include "arena.h"
 
-#include "logging_compat.h"
-#include "memory_compat.h"
+#include "logging.h"
+#include "airy_memory.h"
 #include "platform.h"
 
 #include <inttypes.h>
@@ -57,13 +57,13 @@ static arena_chunk_t *chunk_create(size_t size)
 {
     arena_chunk_t *chunk = (arena_chunk_t *)AIRY_MALLOC(sizeof(arena_chunk_t));
     if (!chunk) {
-        AIRY_LOG_ERROR("arena: chunk_create failed to alloc chunk_t (size=%zu)", size);
+        LOG_ERROR("arena: chunk_create failed to alloc chunk_t (size=%zu)", size);
         return NULL;
     }
 
     chunk->start = (uint8_t *)AIRY_MALLOC(size);
     if (!chunk->start) {
-        AIRY_LOG_ERROR("arena: chunk_create failed to alloc data region (size=%zu)", size);
+        LOG_ERROR("arena: chunk_create failed to alloc data region (size=%zu)", size);
         AIRY_FREE(chunk);
         return NULL;
     }
@@ -73,7 +73,7 @@ static arena_chunk_t *chunk_create(size_t size)
     chunk->size = size;
     chunk->next = NULL;
 
-    AIRY_LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)",
+    LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)",
                       size, (void *)chunk->start, (void *)chunk->end);
     return chunk;
 }
@@ -99,12 +99,12 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
         chunk_size = ARENA_MAX_CHUNK_SIZE;
     }
 
-    AIRY_LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)",
+    LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)",
                      chunk_size, max_chunks);
 
     airy_arena_t *arena = (airy_arena_t *)AIRY_CALLOC(1, sizeof(airy_arena_t));
     if (!arena) {
-        AIRY_LOG_ERROR("arena: arena_create failed to alloc arena struct");
+        LOG_ERROR("arena: arena_create failed to alloc arena struct");
         return NULL;
     }
 
@@ -115,7 +115,7 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
     /* 创建第一个 chunk */
     arena->first_chunk = chunk_create(chunk_size);
     if (!arena->first_chunk) {
-        AIRY_LOG_ERROR("arena: arena_create failed to create first chunk");
+        LOG_ERROR("arena: arena_create failed to create first chunk");
         AIRY_FREE(arena);
         return NULL;
     }
@@ -124,7 +124,7 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
 
     airy_mtx_init(&arena->lock);
 
-    AIRY_LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)",
+    LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)",
                      chunk_size, (void *)arena);
     return arena;
 }
@@ -133,14 +133,14 @@ void arena_destroy(airy_arena_t *arena)
 {
     if (!arena) return;
 
-    AIRY_LOG_INFO("arena: arena_destroy (arena=%p, chunks=%zu, total_alloc=%zu, allocs=%" PRIu64 ")",
+    LOG_INFO("arena: arena_destroy (arena=%p, chunks=%zu, total_alloc=%zu, allocs=%" PRIu64 ")",
                      (void *)arena, arena->num_chunks, arena->total_allocated, arena->alloc_count);
 
     airy_mtx_destroy(&arena->lock);
     chunk_destroy(arena->first_chunk);
     AIRY_FREE(arena);
 
-    AIRY_LOG_DEBUG("arena: arena_destroy done");
+    LOG_DEBUG("arena: arena_destroy done");
 }
 
 void *arena_alloc(airy_arena_t *arena, size_t size)
@@ -159,7 +159,7 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
         arena->alloc_count++;
         airy_mtx_unlock(&arena->lock);
         void *ptr = AIRY_MALLOC(aligned);
-        AIRY_LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64 ")",
+        LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64 ")",
                           size, aligned, ptr, arena->fallback_count);
         return ptr;
     }
@@ -169,7 +169,7 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
         /* 检查 chunk 数量限制 */
         if (arena->max_chunks > 0 && arena->num_chunks >= arena->max_chunks) {
             airy_mtx_unlock(&arena->lock);
-            AIRY_LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)",
+            LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)",
                              size, aligned, arena->num_chunks, arena->max_chunks);
             return NULL;  /* 达到 chunk 上限 */
         }
@@ -181,13 +181,13 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
             if (new_size > ARENA_MAX_CHUNK_SIZE) new_size = ARENA_MAX_CHUNK_SIZE;
         }
 
-        AIRY_LOG_INFO("arena: arena_alloc NEW_CHUNK (chunk#=%zu→%zu, new_size=%zu, aligned=%zu)",
+        LOG_INFO("arena: arena_alloc NEW_CHUNK (chunk#=%zu→%zu, new_size=%zu, aligned=%zu)",
                          arena->num_chunks, arena->num_chunks + 1, new_size, aligned);
 
         arena_chunk_t *new_chunk = chunk_create(new_size);
         if (!new_chunk) {
             airy_mtx_unlock(&arena->lock);
-            AIRY_LOG_ERROR("arena: arena_alloc failed to create new chunk (size=%zu)", new_size);
+            LOG_ERROR("arena: arena_alloc failed to create new chunk (size=%zu)", new_size);
             return NULL;
         }
 
@@ -206,7 +206,7 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
 
     airy_mtx_unlock(&arena->lock);
 
-    AIRY_LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64 ")",
+    LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64 ")",
                       size, aligned, ptr, arena->num_chunks, arena->alloc_count);
     return ptr;
 }
@@ -224,7 +224,7 @@ void arena_reset(airy_arena_t *arena)
 {
     if (!arena) return;
 
-    AIRY_LOG_INFO("arena: arena_reset (arena=%p, chunks=%zu, reset#=%" PRIu64 "→%" PRIu64 ")",
+    LOG_INFO("arena: arena_reset (arena=%p, chunks=%zu, reset#=%" PRIu64 "→%" PRIu64 ")",
                      (void *)arena, arena->num_chunks, arena->reset_count, arena->reset_count + 1);
 
     airy_mtx_lock(&arena->lock);
@@ -243,7 +243,7 @@ void arena_reset(airy_arena_t *arena)
 
     airy_mtx_unlock(&arena->lock);
 
-    AIRY_LOG_DEBUG("arena: arena_reset done");
+    LOG_DEBUG("arena: arena_reset done");
 }
 
 /* ==================== 标记 / 回退 API ==================== */
@@ -260,7 +260,7 @@ void arena_mark(airy_arena_t *arena, arena_mark_t *mark)
 
     airy_mtx_unlock(&arena->lock);
 
-    AIRY_LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
+    LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
                       (void *)arena, mark->bump, mark->chunk);
 }
 
@@ -271,7 +271,7 @@ void arena_release(arena_mark_t *mark)
     airy_arena_t *arena = mark->arena;
     arena_chunk_t *target = (arena_chunk_t *)mark->chunk;
 
-    AIRY_LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)",
+    LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)",
                      (void *)arena, (void *)target, mark->bump);
 
     airy_mtx_lock(&arena->lock);
@@ -304,7 +304,7 @@ void arena_release(arena_mark_t *mark)
 
     airy_mtx_unlock(&arena->lock);
 
-    AIRY_LOG_DEBUG("arena: arena_release done");
+    LOG_DEBUG("arena: arena_release done");
 }
 
 /* ==================== 查询 API ==================== */

@@ -47,9 +47,6 @@
 /* ==================== 服务层 ==================== */
 #include "config_service.h"
 
-/* ==================== 兼容层 ==================== */
-#include "config_compat.h"
-
 /* ==================== 简化宏定义 ==================== */
 
 /**
@@ -278,21 +275,6 @@
         }                                                                            \
         ctx;                                                                         \
     })
-
-/**
- * @brief 自动初始化配置兼容层
- */
-#define CONFIG_COMPAT_AUTO_INIT()                                                                  \
-    do {                                                                                           \
-        static atomic_int _config_compat_initialized = 0;                                          \
-        int _expected = 0;                                                                         \
-        if (atomic_compare_exchange_strong_explicit(&_config_compat_initialized, &_expected, 1,    \
-                                                    memory_order_seq_cst, memory_order_seq_cst)) { \
-            config_compat_config_t manager = {                                                     \
-                .mode = COMPAT_MODE_MIXED, .auto_init = true, .lazy_load = true};                  \
-            config_compat_init(&manager);                                                          \
-        }                                                                                          \
-    } while (0)
 
 /* ==================== 配置类型转换宏 ==================== */
 
