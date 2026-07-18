@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
  * test_sc_headers.c — P0-01 [SC] shared contract layer header verification
  *
