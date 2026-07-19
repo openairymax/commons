@@ -7,6 +7,14 @@
  * Verifies that all 6 [SC] core headers + 1 supplementary + uapi_compat
  * compile cleanly and satisfy their static assertions.
  *
+ * Capability Folding v1.1 (Layout C v4) coverage:
+ *   - struct airy_ipc_msg_hdr now 11 fields (8 base + capability_badge + crc32
+ *     + reserved[72] shrunk from v1.0 reserved[84])
+ *   - New opcodes: FREEZE (0x0005), CAP_REQUEST (0x0010), CAP_RESPONSE (0x0011)
+ *   - AIRY_CAP_PERM_* permission bits (7 bits, all=0x007F)
+ *   - AIRY_BADGE_BUILD/EPOCH/RANDTAG/PERMS macros (64-bit Badge)
+ *   - H3 assertion: agentrt user-space capability_badge always 0
+ *
  * ACC-RFRP-01: airymax headers count >= 6
  * ACC-RFRP-03: _Static_assert(sizeof(struct airy_ipc_msg_hdr) == 128)
  * ACC-RFRP-04: full compilation zero errors
@@ -75,15 +83,32 @@ int main(void)
 	};
 	if (desc.magic != AIRY_TASK_MAGIC) { printf("FAIL: task desc magic\n"); failures++; }
 
-	/* --- ipc.h --- */
+	/* --- ipc.h (Layout C v4, Capability Folding v1.1) --- */
 	if (AIRY_IPC_MAGIC != 0x41524531u) { printf("FAIL: AIRY_IPC_MAGIC\n"); failures++; }
 	if (AIRY_IPC_HDR_SZ != 128) { printf("FAIL: AIRY_IPC_HDR_SZ != 128\n"); failures++; }
 	if (AIRY_IPC_OP_CANCEL != 3) { printf("FAIL: AIRY_IPC_OP_CANCEL != 3\n"); failures++; }
+	/* v1.1 new opcodes (37 §6.2) */
+	if (AIRY_IPC_OP_FREEZE != 0x0005) { printf("FAIL: AIRY_IPC_OP_FREEZE != 0x0005\n"); failures++; }
+	if (AIRY_IPC_OP_CAP_REQUEST != 0x0010) { printf("FAIL: AIRY_IPC_OP_CAP_REQUEST != 0x0010\n"); failures++; }
+	if (AIRY_IPC_OP_CAP_RESPONSE != 0x0011) { printf("FAIL: AIRY_IPC_OP_CAP_RESPONSE != 0x0011\n"); failures++; }
+	/* v1.1 Capability Folding permission bits */
+	if (AIRY_CAP_PERM_SEND != (1u << 0)) { printf("FAIL: AIRY_CAP_PERM_SEND\n"); failures++; }
+	if (AIRY_CAP_PERM_ALL != 0x007Fu) { printf("FAIL: AIRY_CAP_PERM_ALL != 0x007F\n"); failures++; }
 
+	/* v1.1 Badge 64-bit Native Word extraction macros (37 §2.2) */
+	__u64 test_badge = AIRY_BADGE_BUILD(0x1234u, 0xDEADBEEFu, 0x007Fu);
+	if (AIRY_BADGE_EPOCH(test_badge) != 0x1234u) { printf("FAIL: AIRY_BADGE_EPOCH\n"); failures++; }
+	if (AIRY_BADGE_RANDTAG(test_badge) != 0xDEADBEEFu) { printf("FAIL: AIRY_BADGE_RANDTAG\n"); failures++; }
+	if (AIRY_BADGE_PERMS(test_badge) != 0x007Fu) { printf("FAIL: AIRY_BADGE_PERMS\n"); failures++; }
+
+	/* H3: agentrt user-space capability_badge is always 0 */
 	struct airy_ipc_msg_hdr hdr = {0};
 	hdr.magic = AIRY_IPC_MAGIC;
 	hdr.opcode = AIRY_IPC_OP_SEND;
 	hdr.payload_len = 256;
+	hdr.capability_badge = 0;  /* H3: agentrt user-space always 0 */
+	hdr.crc32 = 0;
+	if (hdr.capability_badge != 0) { printf("FAIL: H3 agentrt capability_badge must be 0\n"); failures++; }
 	(void)hdr;
 
 	/* --- syscalls.h --- */
@@ -98,7 +123,7 @@ int main(void)
 
 	/* --- Results --- */
 	if (failures == 0) {
-		printf("OK: All [SC] header assertions passed (8 files, 6 core + 1 supp + uapi_compat)\n");
+		printf("OK: All [SC] header assertions passed (8 files, 6 core + 1 supp + uapi_compat, ipc.h v1.1 Layout C v4)\n");
 		return 0;
 	}
 	printf("NO: %d assertion(s) failed\n", failures);

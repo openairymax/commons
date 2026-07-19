@@ -530,6 +530,125 @@ extern "C" {
 #define AIRY_ERR_CHECKSUM (-901)
 #endif
 
+/* ============================================================================
+ * Capability Folding v1.1 — IPC / Capability / Fault 错误码空间
+ *
+ * SSoT: docs-closed/agentrt-linux/00-reviews/_review_v2.2/37-capability-folding-
+ *       decision-and-roadmap.md §6.5
+ * 命名规范：与 AirymaxOS [SC] error.h (kernel/include/airymax/error.h) 对齐，
+ *     使用 AIRY_EIPC_* / AIRY_ECAP_* / AIRY_FAULT_* 前缀（无下划线分隔符）。
+ *
+ * 码空间分配：
+ *   IPC 码空间 [-41, -70]    — IPC 协议层错误（fastpath C-S0~C-S11）
+ *   Capability 码空间 [-71, -100] — Capability Folding Badge 校验错误（C-S9）
+ *   Fault 码空间 [0x1000, 0x1FFF] — 非可恢复故障（触发 USV Fault Handler）
+ *
+ * 注意：agentrt 现有 AIRY_ERR_* 扩展码（-40 ~ -50）与 IPC 码空间 [-41, -70]
+ * 在数值上有部分重叠，但命名前缀不同（AIRY_ERR_* vs AIRY_EIPC_*），故无宏重定义
+ * 冲突。调用方应使用语义宏（AIRY_EIPC_*），严禁与字面量直接比较。
+ *
+ * H3 约束：agentrt 用户态 capability_badge 始终为 0，理论上不会触发
+ *     AIRY_ECAP_* 错误（这些错误由 agentrt-linux 内核态 fastpath 抛出）。
+ *     此处定义仅为 [SC] 契约对齐与单元测试断言使用。
+ * ============================================================================ */
+
+/* ---- IPC 协议错误码 (-41..-70, v1.1) ---- */
+#ifndef AIRY_EIPC_MAGIC
+#define AIRY_EIPC_MAGIC        (-41)   /* C-S1: magic 不匹配 (期望 0x41524531 'ARE1') */
+#endif
+#ifndef AIRY_EIPC_OPCODE
+#define AIRY_EIPC_OPCODE       (-42)   /* C-S2: opcode 非法或未注册 */
+#endif
+#ifndef AIRY_EIPC_PAYLOAD
+#define AIRY_EIPC_PAYLOAD      (-43)   /* C-S3: payload_len 超过 registered buffer */
+#endif
+#ifndef AIRY_EIPC_HDRSIZE
+#define AIRY_EIPC_HDRSIZE      (-44)   /* C-S0: header 总长不等于 128 字节 */
+#endif
+#ifndef AIRY_EIPC_RESERVED
+#define AIRY_EIPC_RESERVED     (-45)   /* C-S4: reserved 字段非零 */
+#endif
+#ifndef AIRY_EIPC_FLAGS
+#define AIRY_EIPC_FLAGS        (-46)   /* C-S10: flags 非法组合 */
+#endif
+#ifndef AIRY_EIPC_NOTSUPP
+#define AIRY_EIPC_NOTSUPP      (-47)   /* C-S11: opcode 不支持 */
+#endif
+#ifndef AIRY_EIPC_KFIFO
+#define AIRY_EIPC_KFIFO        (-48)   /* kfifo 投递失败 */
+#endif
+#ifndef AIRY_EIPC_RECLAIM
+#define AIRY_EIPC_RECLAIM      (-49)   /* registered buffer 回收失败 */
+#endif
+#ifndef AIRY_EIPC_CONTEXT
+#define AIRY_EIPC_CONTEXT      (-50)   /* IPC 上下文非法 */
+#endif
+#ifndef AIRY_EIPC_CRC32
+#define AIRY_EIPC_CRC32        (-51)   /* C-S12: CRC32 校验失败（覆盖 header[0:52)+payload） */
+#endif
+#ifndef AIRY_EIPC_TIMEOUT
+#define AIRY_EIPC_TIMEOUT      (-52)   /* IPC 操作超时 */
+#endif
+
+/* ---- Capability / Badge 错误码 (-71..-100, v1.1) ----
+ *
+ * H3 约束：agentrt 用户态不感知 Badge，capability_badge 始终为 0。
+ * 这些错误码主要由 agentrt-linux 内核态 fastpath C-S9 抛出。
+ * agentrt 侧定义仅为 [SC] 契约对齐与跨端错误码翻译使用。
+ */
+#ifndef AIRY_ECAP_MISSING
+#define AIRY_ECAP_MISSING      (-71)   /* capability 不存在 */
+#endif
+#ifndef AIRY_ECAP_REVOKED
+#define AIRY_ECAP_REVOKED      (-72)   /* capability 已被撤销（atomic_inc 触发） */
+#endif
+#ifndef AIRY_ECAP_EXPIRED
+#define AIRY_ECAP_EXPIRED      (-73)   /* capability lease 已过期 */
+#endif
+#ifndef AIRY_ECAP_MISMATCH
+#define AIRY_ECAP_MISMATCH     (-74)   /* capability 派生链不匹配 */
+#endif
+#ifndef AIRY_ECAP_LSM_DENIED
+#define AIRY_ECAP_LSM_DENIED   (-75)   /* LSM 钩子拒绝操作 */
+#endif
+#ifndef AIRY_ECAP_RADIX_MISS
+#define AIRY_ECAP_RADIX_MISS   (-76)   /* radix tree 查找失败（遗留，v1.1 改用静态数组） */
+#endif
+#ifndef AIRY_ECAP_STATIC_KEY
+#define AIRY_ECAP_STATIC_KEY   (-77)   /* 静态密钥校验失败 */
+#endif
+#ifndef AIRY_ECAP_BADGE
+#define AIRY_ECAP_BADGE        (-78)   /* Badge 字段非法 */
+#endif
+#ifndef AIRY_ECAP_EPOCH
+#define AIRY_ECAP_EPOCH        (-79)   /* C-S9: Badge Epoch 与全局 Epoch 不匹配 */
+#endif
+#ifndef AIRY_ECAP_FORGED
+#define AIRY_ECAP_FORGED       (-80)   /* C-S9: Badge Random Tag 不匹配（防伪造）→ 触发 Fault */
+#endif
+#ifndef AIRY_ECAP_PERM
+#define AIRY_ECAP_PERM         (-81)   /* C-S9: Badge Perms 权限位不满足 */
+#endif
+#ifndef AIRY_ECAP_FROZEN
+#define AIRY_ECAP_FROZEN       (-82)   /* capability 已冻结（FREEZE opcode） */
+#endif
+
+/* ---- Fault 故障码 (0x1000+, v1.1, 非可恢复) ----
+ *
+ * Fault 码不是函数返回值，而是通过 fault 通知通道（eventfd / die_notifier）
+ * 传递给 USV Fault Handler。agentrt 用户态无 fault 机制，这些定义仅为
+ * [SC] 契约对齐与文档引用使用。
+ */
+#ifndef AIRY_FAULT_CAP_FORGED
+#define AIRY_FAULT_CAP_FORGED     (0x1001u)   /* Badge 伪造检测（C-S9 RandomTag 不匹配） */
+#endif
+#ifndef AIRY_FAULT_CAP_LEAK
+#define AIRY_FAULT_CAP_LEAK       (0x1002u)   /* capability 泄漏检测 */
+#endif
+#ifndef AIRY_FAULT_RING_CORRUPT
+#define AIRY_FAULT_RING_CORRUPT   (0x1003u)   /* IPC ring buffer 损坏 */
+#endif
+
 /* ==================== 错误上下文 ==================== */
 
 /**

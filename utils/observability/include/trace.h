@@ -9,6 +9,8 @@
 #ifndef AIRY_RT_UTILS_TRACE_H
 #define AIRY_RT_UTILS_TRACE_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

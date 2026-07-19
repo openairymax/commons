@@ -618,6 +618,11 @@ void memory_free(void *ptr)
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t size = debug_info ? debug_info->size : 0;
 
+    // 先移除调试信息（必须在 free 之前，否则 use-after-free）
+    if (g_state.debug_enabled) {
+        memory_remove_debug_info(ptr);
+    }
+
     /*
      * 释放内存：Windows 上所有分配（包括 alignment=0 的常规分配）都通过
      * _aligned_malloc 完成，因此统一使用 _aligned_free 释放（C-5）。
@@ -632,11 +637,6 @@ void memory_free(void *ptr)
     // 更新统计信息
     if (size > 0) {
         memory_update_stats_free(size);
-    }
-
-    // 移除调试信息
-    if (g_state.debug_enabled) {
-        memory_remove_debug_info(ptr);
     }
 
     memory_unlock();

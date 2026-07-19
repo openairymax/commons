@@ -261,7 +261,7 @@ void arena_mark(airy_arena_t *arena, arena_mark_t *mark)
     airy_mtx_unlock(&arena->lock);
 
     LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
-                      (void *)arena, mark->bump, mark->chunk);
+                      (void *)arena, (void *)mark->bump, (void *)mark->chunk);
 }
 
 void arena_release(arena_mark_t *mark)
