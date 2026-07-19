@@ -729,6 +729,53 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 /** @} */  // end of mutex_guard
 
+/* ==================== AIRY_MUTEX_* 兼容宏 ==================== */
+/* d8 清理：sync_compat.h 已迁移，但部分代码仍使用 AIRY_MUTEX_* 宏形式。
+ * 这里提供与 airy_mtx_* 函数的兼容映射，避免调用方逐一改写。
+ * 调用约定：调用方传入指针（如 AIRY_MUTEX_LOCK(&ctx->mutex)），
+ * 宏直接转发指针给 airy_mtx_* 函数。
+ * 新代码应直接使用 airy_mtx_init/lock/unlock/destroy 函数形式。 */
+
+/**
+ * @def AIRY_MUTEX_INIT(m, attr)
+ * @brief 初始化互斥锁（兼容宏 — 转发至 airy_mtx_init）
+ * @param m airy_mtx_t* 指针
+ * @param attr 未使用（保留兼容 pthread_mutex_init 签名）
+ * @return 0 成功，非 0 失败
+ */
+#define AIRY_MUTEX_INIT(m, attr) airy_mtx_init(m)
+
+/**
+ * @def AIRY_MUTEX_DESTROY(m)
+ * @brief 销毁互斥锁（兼容宏 — 转发至 airy_mtx_destroy）
+ * @param m airy_mtx_t* 指针
+ */
+#define AIRY_MUTEX_DESTROY(m) airy_mtx_destroy(m)
+
+/**
+ * @def AIRY_MUTEX_LOCK(m)
+ * @brief 加锁（兼容宏 — 转发至 airy_mtx_lock）
+ * @param m airy_mtx_t* 指针
+ * @return 0 成功，非 0 失败
+ */
+#define AIRY_MUTEX_LOCK(m) airy_mtx_lock(m)
+
+/**
+ * @def AIRY_MUTEX_UNLOCK(m)
+ * @brief 解锁（兼容宏 — 转发至 airy_mtx_unlock）
+ * @param m airy_mtx_t* 指针
+ * @return 0 成功，非 0 失败
+ */
+#define AIRY_MUTEX_UNLOCK(m) airy_mtx_unlock(m)
+
+/**
+ * @def AIRY_MUTEX_TRYLOCK(m)
+ * @brief 尝试加锁（兼容宏 — 转发至 airy_mtx_trylock）
+ * @param m airy_mtx_t* 指针
+ * @return 0 成功，非 0 失败（EBUSY 表示已锁定）
+ */
+#define AIRY_MUTEX_TRYLOCK(m) airy_mtx_trylock(m)
+
 #ifdef __cplusplus
 }
 #endif
