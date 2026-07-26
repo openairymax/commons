@@ -4,7 +4,12 @@
  * security_types.h — [SC] Shared Contract Layer: security model types
  *
  * SSoT: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.4
- * IRON-9 v2 [SC] layer — byte-identical shared between agentrt and agentrt-linux.
+ * IRON-9 v3 [SC] layer — content-identical shared between agentrt and agentrt-linux.
+ *
+ * This file is the agentrt (user-space) mirror of the kernel-side
+ * security_types.h. The authoritative physical host is:
+ *   kernel/include/uapi/linux/airymax/security_types.h
+ * The two files MUST keep their type definitions byte-identical.
  *
  * DO NOT redefine these types in agentrt or agentrt-linux source.
  * Reference via: #include <airymax/security_types.h>
@@ -15,36 +20,119 @@
 
 #include <airymax/uapi_compat.h>
 
-/*
- * POSIX capability IDs.
- * Linux 6.6 defines 41 standard capabilities (0-40).
- * Airymax-specific capabilities start at 41 to avoid conflicts.
- */
-#define AIRY_CAP_AGENT_SPAWN		41	/* Agent spawn (Airymax-specific) */
-#define AIRY_CAP_GPU_SCHED		42	/* GPU scheduling */
-#define AIRY_CAP_NPU_ACCESS		43	/* NPU access */
+/* ─── Capability Type ────────────────────────────────────────────────── */
+typedef __u64 cap_t;
 
-/* LSM hook IDs (252 total, subset shown) */
-#define AIRY_LSM_HOOK_TASK_CREATE	0
-#define AIRY_LSM_HOOK_IPC_SEND	1
+#define AIRY_CAP_NULL           0x0
 
-/* Cupolas policy verdict (4 values) */
+/* ─── POSIX Capability IDs (extended, 41 IDs) ─────────────────────────── */
+enum airy_cap_id {
+	AIRY_CAP_CHOWN            = 0,
+	AIRY_CAP_DAC_OVERRIDE     = 1,
+	AIRY_CAP_DAC_READ_SEARCH  = 2,
+	AIRY_CAP_FOWNER           = 3,
+	AIRY_CAP_FSETID           = 4,
+	AIRY_CAP_KILL             = 5,
+	AIRY_CAP_SETGID           = 6,
+	AIRY_CAP_SETUID           = 7,
+	AIRY_CAP_SETPCAP          = 8,
+	AIRY_CAP_LINUX_IMMUTABLE  = 9,
+	AIRY_CAP_NET_BIND_SERVICE = 10,
+	AIRY_CAP_NET_BROADCAST    = 11,
+	AIRY_CAP_NET_ADMIN        = 12,
+	AIRY_CAP_NET_RAW          = 13,
+	AIRY_CAP_IPC_LOCK         = 14,
+	AIRY_CAP_IPC_OWNER        = 15,
+	AIRY_CAP_SYS_MODULE       = 16,
+	AIRY_CAP_SYS_RAWIO        = 17,
+	AIRY_CAP_SYS_CHROOT       = 18,
+	AIRY_CAP_SYS_PTRACE       = 19,
+	AIRY_CAP_SYS_PACCT        = 20,
+	AIRY_CAP_SYS_ADMIN        = 21,
+	AIRY_CAP_SYS_BOOT         = 22,
+	AIRY_CAP_SYS_NICE         = 23,
+	AIRY_CAP_SYS_RESOURCE     = 24,
+	AIRY_CAP_SYS_TIME         = 25,
+	AIRY_CAP_SYS_TTY_CONFIG   = 26,
+	AIRY_CAP_MKNOD            = 27,
+	AIRY_CAP_LEASE            = 28,
+	AIRY_CAP_AUDIT_WRITE      = 29,
+	AIRY_CAP_AUDIT_CONTROL    = 30,
+	AIRY_CAP_SETFCAP          = 31,
+	AIRY_CAP_MAC_OVERRIDE     = 32,
+	AIRY_CAP_MAC_ADMIN        = 33,
+	AIRY_CAP_SYSLOG           = 34,
+	AIRY_CAP_WAKE_ALARM       = 35,
+	AIRY_CAP_BLOCK_SUSPEND    = 36,
+	AIRY_CAP_AUDIT_READ       = 37,
+	AIRY_CAP_PERFMON          = 38,
+	AIRY_CAP_BPF              = 39,
+	AIRY_CAP_CHECKPOINT       = 40,
+	/* Airymax-specific extensions */
+	AIRY_CAP_AGENT_SPAWN      = 41,  /* Spawn new Agent */
+	AIRY_CAP_GPU_SCHED        = 42,  /* GPU scheduling access */
+	AIRY_CAP_NPU_ACCESS       = 43,  /* NPU compute access */
+	AIRY_CAP_ID_MAX
+};
+
+/* ─── Cupolas 4-value Verdict ────────────────────────────────────────── */
 enum airy_verdict {
-	AIRY_VERDICT_ALLOW	= 0,
-	AIRY_VERDICT_DENY	= 1,
-	AIRY_VERDICT_AUDIT	= 2,
-	AIRY_VERDICT_ASK	= 3,
+	AIRY_VERDICT_ALLOW    = 0,   /* Allow access */
+	AIRY_VERDICT_DENY     = 1,   /* Deny access */
+	AIRY_VERDICT_AUDIT    = 2,   /* Allow but audit */
+	AIRY_VERDICT_COMPLAIN = 3,   /* Deny but log only */
 };
 
-/* Capability invocation operations (seL4 CNode model) */
+/* ─── seL4 CNode 7 Derivation Operations ─────────────────────────────── */
 enum airy_cap_op {
-	AIRY_CAP_OP_COPY	= 0,
-	AIRY_CAP_OP_MINT	= 1,
-	AIRY_CAP_OP_MOVE	= 2,
-	AIRY_CAP_OP_MUTATE	= 3,
-	AIRY_CAP_OP_REVOKE	= 4,
-	AIRY_CAP_OP_DELETE	= 5,
-	AIRY_CAP_OP_ROTATE	= 6,
+	AIRY_CAP_OP_COPY   = 0,   /* Copy capability (no demotion) */
+	AIRY_CAP_OP_MINT    = 1,   /* Mint new capability (may demote) */
+	AIRY_CAP_OP_MOVE    = 2,   /* Move (transfer) capability */
+	AIRY_CAP_OP_MUTATE  = 3,   /* Mutate capability permissions */
+	AIRY_CAP_OP_REVOKE  = 4,   /* Revoke capability globally */
+	AIRY_CAP_OP_DELETE  = 5,   /* Delete capability slot */
+	AIRY_CAP_OP_ROTATE  = 6,   /* Rotate capability badge */
+	AIRY_CAP_OP_MAX
 };
+
+/* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
+ * When AIRY_SC_FALLBACK is defined, the 41 POSIX capability IDs remain
+ * authoritative (needed for slowpath airy_cap_check()), but Badge
+ * derivation/compilation is suspended (sec_d unreachable). The Badge
+ * access macros below return 0 so that callers extracting fields from
+ * a fixed-0 badge still compile (H6 hard constraint). All non-POSIX
+ * Airymax-specific cap IDs (41-43) are unavailable.
+ * See [DSL] §2.2, §4.2 and §4.4.
+ */
+#ifdef AIRY_SC_FALLBACK
+	/* H6: Badge access macros return 0 (badge is always 0 in [DSL]). */
+	#ifndef AIRY_DSL_BADGE_EPOCH
+		#define AIRY_DSL_BADGE_EPOCH(b)         ((__u32)0)
+	#endif
+	#ifndef AIRY_DSL_BADGE_RANDTAG
+		#define AIRY_DSL_BADGE_RANDTAG(b)       ((__u32)0)
+	#endif
+	#ifndef AIRY_DSL_BADGE_PERMS
+		#define AIRY_DSL_BADGE_PERMS(b)         ((__u16)0)
+	#endif
+	#define AIRY_DSL_BADGE_COMPILE(epoch, randtag, perms)  0ULL
+
+	/* Badge derivation/compilation suspended — sec_d unreachable. */
+	#define AIRY_DSL_CAP_OP_COPY     AIRY_CAP_OP_COPY
+	#define AIRY_DSL_CAP_OP_MINT     AIRY_CAP_OP_COPY   /* MINT degrades to COPY */
+	#define AIRY_DSL_CAP_OP_MOVE     AIRY_CAP_OP_MOVE
+	#define AIRY_DSL_CAP_OP_MUTATE   AIRY_CAP_OP_COPY   /* MUTATE degrades to COPY */
+	#define AIRY_DSL_CAP_OP_REVOKE   AIRY_CAP_OP_DELETE /* REVOKE degrades to DELETE */
+	#define AIRY_DSL_CAP_OP_DELETE   AIRY_CAP_OP_DELETE
+	#define AIRY_DSL_CAP_OP_ROTATE   AIRY_CAP_OP_DELETE /* ROTATE suspended */
+	#define AIRY_DSL_CAP_OPS         2  /* Only COPY + DELETE retained */
+
+	/* Airymax-specific cap IDs (41-43) unavailable in fallback. */
+	#define AIRY_DSL_CAP_AGENT_SPAWN  (-1)
+	#define AIRY_DSL_CAP_GPU_SCHED    (-1)
+	#define AIRY_DSL_CAP_NPU_ACCESS   (-1)
+
+	#warning "AIRY_SC_FALLBACK active: security_types.h degraded — 41 POSIX caps retained, Badge macros return 0 (H6), Airymax cap IDs suspended"
+#endif /* AIRY_SC_FALLBACK */
 
 #endif /* _AIRY_SECURITY_TYPES_H */
