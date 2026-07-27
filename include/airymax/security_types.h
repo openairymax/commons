@@ -1,22 +1,18 @@
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-/* SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
+/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 /*
- * security_types.h — [SC] Shared Contract Layer: security model types
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * SSoT: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.4
- * IRON-9 v3 [SC] layer — content-identical shared between agentrt and agentrt-linux.
+ * Security types — [SC] shared contract header.
  *
- * This file is the agentrt (user-space) mirror of the kernel-side
- * security_types.h. The authoritative physical host is:
- *   kernel/include/uapi/linux/airymax/security_types.h
- * The two files MUST keep their type definitions byte-identical.
- *
- * DO NOT redefine these types in agentrt or agentrt-linux source.
- * Reference via: #include <airymax/security_types.h>
+ * POSIX capability 44 IDs (41 standard + 3 Airymax extensions),
+ * Airy LSM 5 implemented hooks (Linux 6.6 LSM framework exposes ~250
+ * total slots — see lsm_types.h AIRY_LSM_KERNEL_HOOK_TOTAL),
+ * Cupolas 4-value verdict, seL4 CNode 7 derivation operations,
+ * and capability type definitions.
  */
 
-#ifndef _AIRY_SECURITY_TYPES_H
-#define _AIRY_SECURITY_TYPES_H
+#ifndef _UAPI_AIRYMAX_SECURITY_TYPES_H
+#define _UAPI_AIRYMAX_SECURITY_TYPES_H
 
 #include <airymax/uapi_compat.h>
 
@@ -135,4 +131,4 @@ enum airy_cap_op {
 	#warning "AIRY_SC_FALLBACK active: security_types.h degraded — 41 POSIX caps retained, Badge macros return 0 (H6), Airymax cap IDs suspended"
 #endif /* AIRY_SC_FALLBACK */
 
-#endif /* _AIRY_SECURITY_TYPES_H */
+#endif /* _UAPI_AIRYMAX_SECURITY_TYPES_H */

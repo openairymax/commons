@@ -68,7 +68,7 @@ extern "C" {
  * v3.0 SSoT 统一收敛变更：
  *   - 移除 #undef AIRY_EPERM 重定义，让 airy_types.h 的 AIRY_EPERM=(-1)（POSIX EPERM）生效
  *   - 移除 AIRY_OK 定义，统一使用 AIRY_EOK（=0）
- *   - 将与 POSIX errno 负值冲突的 AIRY_ERR_* 扩展码迁移至 -40~-48 区间
+ *   - 将与 POSIX errno 负值冲突的 AIRY_ERR_* 扩展码迁移至 -36~-40 和 -55~-60 区间
  *     （AIRY_ERR_SYS_THREAD/SYS_CONDITION/SYS_PIPE/SYS_PROCESS 迁移至 -120~-123，
  *      避免与 ECONNRESET=-104/ENOTCONN=-107/ETIMEDOUT=-110/ECONNREFUSED=-111 冲突）
  *   - AIRY_ERR_UNKNOWN 从 -1 迁移至 -99（避免与 AIRY_EPERM=-1 冲突）
@@ -129,24 +129,29 @@ extern "C" {
  * v3.0 SSoT 统一收敛：与 POSIX errno 负值冲突的 AIRY_ERR_* 扩展码
  * 已迁移至 -40~-50 区间（原 -2/-5/-7/-10/-11/-12/-13/-16/-17 与
  * airy_types.h POSIX 码冲突；v4.0 追加 -4/-14 迁移至 -49/-50 以避让
- * AIRY_EINTR/AIRY_EFAULT）。未冲突的保留原值。 */
+ * AIRY_EINTR/AIRY_EFAULT）。
+ *
+ * v4.3 二次迁移：-40~-50 区间与 [SC] IPC 码空间 [-41, -70] 存在
+ * 值碰撞（AIRY_ERR_* vs AIRY_EIPC_* 同为 -45~-50），迁移至
+ * -36~-40（5 个）和 -55~-60（6 个）两个子区间，彻底消除碰撞。
+ * 未冲突的保留原值。 */
 #ifndef AIRY_ERR_INVALID_PARAM
-#define AIRY_ERR_INVALID_PARAM (-40)   /* 原 -2，迁移避免与 AIRY_ENOENT(-2) 冲突 */
+#define AIRY_ERR_INVALID_PARAM (-36)   /* 原 -2→-40→-36，迁移避免与 AIRY_ENOENT(-2) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_NULL_POINTER
 #define AIRY_ERR_NULL_POINTER (-3)
 #endif
 #ifndef AIRY_ERR_OUT_OF_MEMORY
-#define AIRY_ERR_OUT_OF_MEMORY (-49)   /* 原 -4，迁移避免与 AIRY_EINTR(-4) 冲突 */
+#define AIRY_ERR_OUT_OF_MEMORY (-59)   /* 原 -4→-49→-59，迁移避免与 AIRY_EINTR(-4) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_BUFFER_TOO_SMALL
-#define AIRY_ERR_BUFFER_TOO_SMALL (-41) /* 原 -5，迁移避免与 AIRY_EIO(-5) 冲突 */
+#define AIRY_ERR_BUFFER_TOO_SMALL (-37) /* 原 -5→-41→-37，迁移避免与 AIRY_EIO(-5) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_NOT_FOUND
 #define AIRY_ERR_NOT_FOUND (-6)
 #endif
 #ifndef AIRY_ERR_ALREADY_EXISTS
-#define AIRY_ERR_ALREADY_EXISTS (-42)  /* 原 -7，迁移避免与 AIRY_E2BIG(-7) 冲突 */
+#define AIRY_ERR_ALREADY_EXISTS (-38)  /* 原 -7→-42→-38，迁移避免与 AIRY_E2BIG(-7) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_TIMEOUT
 #define AIRY_ERR_TIMEOUT (-8)
@@ -155,28 +160,28 @@ extern "C" {
 #define AIRY_ERR_NOT_SUPPORTED (-9)
 #endif
 #ifndef AIRY_ERR_PERMISSION_DENIED
-#define AIRY_ERR_PERMISSION_DENIED (-43) /* 原 -10，迁移避免与 AIRY_ECANCELLED(-10) 冲突 */
+#define AIRY_ERR_PERMISSION_DENIED (-39) /* 原 -10→-43→-39，迁移避免与 AIRY_ECANCELLED(-10) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_IO
-#define AIRY_ERR_IO (-44)            /* 原 -11，迁移避免与 AIRY_EAGAIN(-11) 冲突 */
+#define AIRY_ERR_IO (-40)            /* 原 -11→-44→-40，迁移避免与 AIRY_EAGAIN(-11) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_PARSE_ERROR
-#define AIRY_ERR_PARSE_ERROR (-45)   /* 原 -12，迁移避免与 AIRY_ENOMEM(-12) 冲突 */
+#define AIRY_ERR_PARSE_ERROR (-55)   /* 原 -12→-45→-55，迁移避免与 AIRY_ENOMEM(-12) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_STATE_ERROR
-#define AIRY_ERR_STATE_ERROR (-46)   /* 原 -13，迁移避免与 AIRY_EACCES(-13) 冲突 */
+#define AIRY_ERR_STATE_ERROR (-56)   /* 原 -13→-46→-56，迁移避免与 AIRY_EACCES(-13) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_OVERFLOW
-#define AIRY_ERR_OVERFLOW (-50)        /* 原 -14，迁移避免与 AIRY_EFAULT(-14) 冲突 */
+#define AIRY_ERR_OVERFLOW (-60)        /* 原 -14→-50→-60，迁移避免与 AIRY_EFAULT(-14) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_UNDERFLOW
 #define AIRY_ERR_UNDERFLOW (-15)
 #endif
 #ifndef AIRY_ERR_CANCELED
-#define AIRY_ERR_CANCELED (-47)      /* 原 -16，迁移避免与 AIRY_EBUSY(-16) 冲突 */
+#define AIRY_ERR_CANCELED (-57)      /* 原 -16→-47→-57，迁移避免与 AIRY_EBUSY(-16) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_BUSY
-#define AIRY_ERR_BUSY (-48)          /* 原 -17，迁移避免与 AIRY_EEXIST(-17) 冲突 */
+#define AIRY_ERR_BUSY (-58)          /* 原 -17→-48→-58，迁移避免与 AIRY_EEXIST(-17) 及 IPC 码空间冲突 */
 #endif
 #ifndef AIRY_ERR_WOULD_BLOCK
 #define AIRY_ERR_WOULD_BLOCK (-18)
@@ -428,7 +433,7 @@ extern "C" {
  * P0.25.4 (ACC-STD06)：任务清单原要求 -700~-705 段，但 -700~-711 已被
  * AIRY_ERR_SEC_* 占用（v3.4 之前已定义）。为避免数值冲突，Cupolas 专属
  * 错误码段调整为 -712~-799。Cupolas 公共 API 仍可通过 cupolas_ERR_* enum
- * （数值与 AIRY_ERR_* 通用码一致，如 cupolas_ERR_OUT_OF_MEMORY=-49）
+ * （数值与 AIRY_ERR_* 通用码一致，如 cupolas_ERR_OUT_OF_MEMORY=-59）
  * 返回通用错误码；本段仅定义 Cupolas 特有的语义错误（如沙箱隔离、策略拒绝、
  * 审计失败等），供 cupolas 模块内部和调用方区分错误来源。
  *
@@ -543,9 +548,10 @@ extern "C" {
  *   Capability 码空间 [-71, -100] — Capability Folding Badge 校验错误（C-S9）
  *   Fault 码空间 [0x1000, 0x1FFF] — 非可恢复故障（触发 USV Fault Handler）
  *
- * 注意：agentrt 现有 AIRY_ERR_* 扩展码（-40 ~ -50）与 IPC 码空间 [-41, -70]
- * 在数值上有部分重叠，但命名前缀不同（AIRY_ERR_* vs AIRY_EIPC_*），故无宏重定义
- * 冲突。调用方应使用语义宏（AIRY_EIPC_*），严禁与字面量直接比较。
+ * 注意：v4.3 已将 AIRY_ERR_* 扩展码从 -40~-50 区间迁移至
+ * -36~-40（5 个）和 -55~-60（6 个）两个子区间，与 IPC 码空间 [-41, -70]
+ * 彻底分离，无值碰撞。
+ * 调用方应始终使用语义宏（AIRY_EIPC_*），严禁与字面量直接比较。
  *
  * H3 约束：agentrt 用户态 capability_badge 始终为 0，理论上不会触发
  *     AIRY_ECAP_* 错误（这些错误由 agentrt-linux 内核态 fastpath 抛出）。
