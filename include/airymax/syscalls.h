@@ -1,48 +1,55 @@
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-/* SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
+/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 /*
- * syscalls.h — [SC] Shared Contract Layer: syscall number assignments
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * SSoT: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.8
- * IRON-9 v2 [SC] layer — byte-identical shared between agentrt and agentrt-linux.
+ * Syscall numbering — [SC] shared contract header.
  *
- * DO NOT redefine these numbers in agentrt or agentrt-linux source.
- * Reference via: #include <airymax/syscalls.h>
+ * v1.1 唯一基线，v4.3 锁定（IRON-8：禁止双轨制）。
+ * 4 core syscalls (548-551) + 20 reserved (552-571), avoiding the
+ * x32 historical range 512-547. v1.0.1 起始编号统一为 548，对齐
+ * SSoT docs/AirymaxOS/140-application-development/07-syscall-registry.md
+ * 与 arch/x86/entry/syscalls/syscall_64.tbl + asm-generic/unistd.h
+ * 三方一致性（ABI 铁律）。
  */
 
-#ifndef _AIRY_SYSCALLS_H
-#define _AIRY_SYSCALLS_H
+#ifndef _UAPI_AIRYMAX_SYSCALLS_H
+#define _UAPI_AIRYMAX_SYSCALLS_H
 
-/*
- * Agent syscall architecture: 12 core + 12 reserved = 24 slots total
+#include <airymax/uapi_compat.h>
+
+/* ─── Core Syscalls (548-551) ────────────────────────────────────────── */
+#define AIRY_SYS_CALL            548   /* IPC send/recv */
+#define AIRY_SYS_ROVOL_CTL       549   /* MemoryRoVol control */
+#define AIRY_SYS_SCHED_CTL       550   /* Scheduler control */
+#define AIRY_SYS_CLT_NOTIFY      551   /* Cognition lifecycle notify */
+
+/* ─── Reserved Syscall Slots (552-571, 20 slots) ─────────────────────── */
+#define AIRY_SYS_RESERVED_BASE   552
+#define AIRY_SYS_RESERVED_END    571
+#define AIRY_SYS_SLOTS_MAX       24    /* 4 core + 20 reserved */
+
+/* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
+ * When AIRY_SC_FALLBACK is defined, only the 4 core syscalls (548-551)
+ * are available; the 20 reserved slots (552-571) are marked unavailable
+ * (-1). This aligns with Capability Folding v1.0.1 where the syscall
+ * surface is intentionally restricted to 4 in degraded mode. The
+ * AIRY_DSL_SYS_* aliases let callers detect fallback at compile time.
+ * See [DSL] §2.2 (v1.0.1 update: 12→4 syscalls).
  *
- * Core 12:
- *   IPC Primitives (8): Call/Send/Recv/NBSend/NBRecv/ReplyRecv/Yield/Reply
- *   Control Primitives (3): RovolCtl/SchedCtl/CltNotify
- *   Notification (1): Notify
- *
- * LsmCtl and WasmLoad are subsumed under Call via capability invocation:
- *   - LSM policy load -> airy_sys_call(security_cap, &msg)
- *   - Wasm module load -> airy_sys_call(module_cap, &msg)
- *
- * Inspired by seL4's 8-activity syscall model — all capability
- * operations are encoded in IPC messages, not as separate syscalls.
- * Data plane I/O is handled by io_uring (zero syscall).
- * Reply completes the seL4 8-activity set (Reply without Recv).
- * Notify provides async inter-agent signaling (seL4 Notification).
+ * Note: v1.0.1 起始编号统一为 548，避开 x86_64 x32 历史遗留区域
+ * (512-547)，确保跨架构二进制兼容。SSoT 注册表
+ * docs/AirymaxOS/140-application-development/07-syscall-registry.md
+ * 为唯一权威源，syscall_64.tbl 与 unistd.h 必须与本文件保持三方一致。
  */
-#define AIRY_SYS_CALL		0	/* Unified capability invocation */
-#define AIRY_SYS_SEND		1	/* Blocking synchronous send */
-#define AIRY_SYS_RECV		2	/* Blocking synchronous receive */
-#define AIRY_SYS_NBSEND	3	/* Non-blocking send */
-#define AIRY_SYS_NBRECV	4	/* Non-blocking receive */
-#define AIRY_SYS_REPLY_RECV	5	/* Reply and wait for next */
-#define AIRY_SYS_YIELD	6	/* Yield CPU */
-#define AIRY_SYS_ROVOL_CTL	7	/* Memory snapshot/restore/tier */
-#define AIRY_SYS_SCHED_CTL	8	/* Scheduling policy config */
-#define AIRY_SYS_CLT_NOTIFY	9	/* CoreLoopThree phase + kthread */
-#define AIRY_SYS_REPLY	10	/* Standalone reply (no wait) */
-#define AIRY_SYS_NOTIFY	11	/* Async notification signal */
-/* Reserved slots 12-23 for future expansion */
+#ifdef AIRY_SC_FALLBACK
+	#define AIRY_DSL_SYS_CALL        AIRY_SYS_CALL
+	#define AIRY_DSL_SYS_ROVOL_CTL   AIRY_SYS_ROVOL_CTL
+	#define AIRY_DSL_SYS_SCHED_CTL   AIRY_SYS_SCHED_CTL
+	#define AIRY_DSL_SYS_CLT_NOTIFY  AIRY_SYS_CLT_NOTIFY
+	#define AIRY_DSL_SYS_SLOTS_MAX   4    /* Only 4 core retained */
+	#define AIRY_DSL_SYS_RESERVED    (-1) /* Reserved slots unavailable */
 
-#endif /* _AIRY_SYSCALLS_H */
+	#warning "AIRY_SC_FALLBACK active: syscalls.h degraded to 4 core syscalls (548-551), 20 reserved slots unavailable"
+#endif /* AIRY_SC_FALLBACK */
+
+#endif /* _UAPI_AIRYMAX_SYSCALLS_H */

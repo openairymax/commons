@@ -1,41 +1,63 @@
-/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
-/* SPDX-Copyright: Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved. */
+/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 /*
- * memory_types.h — [SC] Shared Contract Layer: MemoryRovol memory types
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * SSoT: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.3
- * IRON-9 v2 [SC] layer — byte-identical shared between agentrt and agentrt-linux.
+ * MemoryRoVol types — [SC] shared contract header.
  *
- * DO NOT redefine these types in agentrt or agentrt-linux source.
- * Reference via: #include <airymax/memory_types.h>
+ * L1-L4 memory tiering definitions and GFP mask semantics.
  */
 
-#ifndef _AIRY_MEMORY_TYPES_H
-#define _AIRY_MEMORY_TYPES_H
+#ifndef _UAPI_AIRYMAX_MEMORY_TYPES_H
+#define _UAPI_AIRYMAX_MEMORY_TYPES_H
 
 #include <airymax/uapi_compat.h>
 
-/* MemoryRovol L1-L4 hierarchy (shared semantics) */
+/* ─── Memory Tier Levels ─────────────────────────────────────────────── */
 enum airy_mem_level {
-	AIRY_MEM_L1_HOT	= 0,	/* Hot working set, agent-local */
-	AIRY_MEM_L2_WARM	= 1,	/* Warm set, node-local */
-	AIRY_MEM_L3_COLD	= 2,	/* Cold set, node-remote */
-	AIRY_MEM_L4_PMEM	= 3,	/* Persistent memory */
+	AIRY_MEM_HOT    = 0,   /* L1: HBM/DDR hot tier */
+	AIRY_MEM_WARM   = 1,   /* L2: DDR warm tier */
+	AIRY_MEM_COLD   = 2,   /* L3: CXL/NVMe cold tier */
+	AIRY_MEM_PMEM   = 3,   /* L4: PMEM persistent tier */
+	AIRY_MEM_LEVEL_MAX
 };
 
-/*
- * GFP mask semantics for memory tier selection.
- *
- * These are platform-independent semantic tier selectors, NOT kernel
- * __GFP_* flags. Each side (agentrt user-space / agentrt-linux kernel)
- * translates AIRY_GFP_* to its own allocation mechanism internally.
- * Using independent bitmask constants ensures the [SC] header compiles
- * byte-identically on Linux/macOS/Windows (kernel GFP flags are
- * kernel-internal and unavailable in user-space).
- */
-#define AIRY_GFP_HOT		(0x01u)	/* Hot: agent-local working set */
-#define AIRY_GFP_WARM		(0x02u)	/* Warm: node-local */
-#define AIRY_GFP_COLD		(0x04u)	/* Cold: node-remote */
-#define AIRY_GFP_PMEM		(0x08u)	/* Persistent memory */
+/* ─── GFP Mask Semantics for MemoryRoVol ──────────────────────────────── */
+#define AIRY_GFP_HOT    0x01   /* Allocate from hot tier */
+#define AIRY_GFP_WARM   0x02   /* Allocate from warm tier */
+#define AIRY_GFP_COLD   0x04   /* Allocate from cold tier */
+#define AIRY_GFP_PMEM   0x08   /* Allocate from PMEM tier */
 
-#endif /* _AIRY_MEMORY_TYPES_H */
+/* ─── Memory Page Classification ──────────────────────────────────────── */
+#define AIRY_PAGE_CLASS_ANON     0x01  /* Anonymous page */
+#define AIRY_PAGE_CLASS_FILE     0x02  /* File-backed page */
+#define AIRY_PAGE_CLASS_SHMEM    0x04  /* Shared memory page */
+#define AIRY_PAGE_CLASS_AGENT    0x08  /* Agent-private page */
+
+/* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
+ * When AIRY_SC_FALLBACK is defined, MemoryRoVol L2-L4 tiering is
+ * unavailable; only L1 (hot tier, anonymous pages) is accessible. All
+ * GFP flags collapse to AIRY_GFP_HOT and all page classes collapse to
+ * AIRY_PAGE_CLASS_ANON. alloc_pages + mmap remain functional.
+ * See [DSL] §2.2 and §4.1.
+ */
+#ifdef AIRY_SC_FALLBACK
+	/* All tiers collapse to L1 hot. */
+	#define AIRY_DSL_MEM_LEVEL   AIRY_MEM_HOT
+	#define AIRY_DSL_MEM_TIERS   1  /* Only L1 retained */
+
+	/* All GFP flags collapse to HOT. */
+	#define AIRY_DSL_GFP_HOT     AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_WARM    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_COLD    AIRY_GFP_HOT
+	#define AIRY_DSL_GFP_PMEM    AIRY_GFP_HOT
+
+	/* All page classes collapse to ANON. */
+	#define AIRY_DSL_PAGE_CLASS_ANON   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_FILE   AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_SHMEM  AIRY_PAGE_CLASS_ANON
+	#define AIRY_DSL_PAGE_CLASS_AGENT  AIRY_PAGE_CLASS_ANON
+
+	#warning "AIRY_SC_FALLBACK active: memory_types.h degraded to L1 hot tier only, MemoryRoVol L2-L4 unavailable"
+#endif /* AIRY_SC_FALLBACK */
+
+#endif /* _UAPI_AIRYMAX_MEMORY_TYPES_H */
