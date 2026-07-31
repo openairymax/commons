@@ -5,7 +5,9 @@
  * Security types — [SC] shared contract header.
  *
  * POSIX capability 44 IDs (41 standard + 3 Airymax extensions),
- * Airy LSM 5 implemented hooks (Linux 6.6 LSM framework exposes ~250
+ * Airy LSM 7 implemented hooks (uring_cmd/task_alloc/task_free/
+ * task_kill/file_open/inode_alloc_security/inode_free_security;
+ * Linux 6.6 LSM framework exposes ~250
  * total slots — see lsm_types.h AIRY_LSM_KERNEL_HOOK_TOTAL),
  * Cupolas 4-value verdict, seL4 CNode 7 derivation operations,
  * and capability type definitions.
@@ -70,6 +72,29 @@ enum airy_cap_id {
 	AIRY_CAP_NPU_ACCESS       = 43,  /* NPU compute access */
 	AIRY_CAP_ID_MAX
 };
+
+
+/* ─── Badge Permission Bits (16-bit perms field) ──────────────────────
+ *
+ * SSoT (OS-IRON-014): this header is the single source of truth for
+ * AIRY_CAP_PERM_* permission bits. ipc.h includes this header rather
+ * than redefining the constants.
+ *
+ * Used by airy_cap_badge_ok() fastpath and airy_lsm hook entry checks.
+ * Bits 0-6 are defined; bits 7-15 reserved for future use.
+ */
+#define AIRY_CAP_PERM_NONE       0x0000
+#define AIRY_CAP_PERM_SEND       0x0001  /* IPC send */
+#define AIRY_CAP_PERM_RECV       0x0002  /* IPC recv */
+#define AIRY_CAP_PERM_DERIVE     0x0004  /* Capability derivation (MINT/COPY) */
+#define AIRY_CAP_PERM_KILL       0x0008  /* Signal delivery (task_kill hook) */
+#define AIRY_CAP_PERM_FILE_OPEN  0x0010  /* File access (file_open hook) */
+#define AIRY_CAP_PERM_ROTATE     0x0020  /* Badge rotation */
+#define AIRY_CAP_PERM_SUPERVISE  0x0040  /* Micro-Supervisor authority */
+#ifndef AIRY_CAP_PERM_ALL
+#define AIRY_CAP_PERM_ALL        0x007F  /* All defined permissions */
+#endif
+#define AIRY_CAP_PERM_RESERVED   0xFF80  /* Bits 7-15: must be zero (C-S10 check) */
 
 /* ─── Cupolas 4-value Verdict ────────────────────────────────────────── */
 enum airy_verdict {
