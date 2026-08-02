@@ -19,7 +19,16 @@
 #include <airymax/uapi_compat.h>
 
 /* ─── Capability Type ────────────────────────────────────────────────── */
-typedef __u64 cap_t;
+/*
+ * Airymax capability 以 64 位掩码表示 (__u64)。
+ *
+ * 命名注意：系统 libcap (<sys/capability.h>) 亦定义 `cap_t`（opaque 指针，
+ * `typedef struct _cap_struct *cap_t`）。gateway_d/ws_gateway.c 经
+ * <libwebsockets.h> 引入 libcap，与本头同名类型冲突会导致全量构建失败。
+ * 故本头统一以 `airy_cap_t` 作为唯一类型名，不提供 `cap_t` 别名
+ * （全仓无 `cap_t` 引用，别名无兼容价值且引入冲突风险）。
+ */
+typedef __u64 airy_cap_t;
 
 #define AIRY_CAP_NULL           0x0
 
