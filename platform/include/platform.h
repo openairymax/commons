@@ -776,6 +776,64 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  */
 #define AIRY_MUTEX_TRYLOCK(m) airy_mtx_trylock(m)
 
+/* ==================== AIRY_HOME 路径体系（生产就绪） ====================
+ *
+ * 统一安装根目录：默认 $HOME/.airymaxrt，可用环境变量 AIRY_HOME 覆盖。
+ * 全部运行时产物（socket/pid/日志/配置/数据）收敛于其下，非 root 部署、
+ * 容器化与卸载均干净，替代散布的 FHS 路径（/tmp、/var/log、/etc...）。
+ *
+ * 目录布局：
+ *   $AIRY_HOME/bin      — 可执行文件（agentrt、agent_d、llm_d、mem_d、airy_cli）
+ *   $AIRY_HOME/lib      — 运行时依赖（airymax_agents、openlab、sdk-python）
+ *   $AIRY_HOME/run      — Unix socket、PID 文件
+ *   $AIRY_HOME/logs     — daemon 日志、审计日志、agent 子进程日志
+ *   $AIRY_HOME/config   — agentrt.yaml、model.yaml、secrets.env
+ *   $AIRY_HOME/data     — 持久化数据（记忆等）
+ *   $AIRY_HOME/tmp      — 临时文件
+ *   $AIRY_HOME/cache    — 缓存
+ */
+
+#define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
+#define AIRY_HOME_SUBDIR_BIN    "bin"
+#define AIRY_HOME_SUBDIR_LIB    "lib"
+#define AIRY_HOME_SUBDIR_RUN    "run"
+#define AIRY_HOME_SUBDIR_LOG    "logs"
+#define AIRY_HOME_SUBDIR_CONFIG "config"
+#define AIRY_HOME_SUBDIR_DATA   "data"
+#define AIRY_HOME_SUBDIR_TMP    "tmp"
+#define AIRY_HOME_SUBDIR_CACHE  "cache"
+
+/** @brief AIRY_HOME 根目录（$AIRY_HOME 或 $HOME/.airymaxrt），线程安全 */
+const char *airy_home_dir(void);
+/** @brief 可执行文件目录，线程安全 */
+const char *airy_bin_dir(void);
+/** @brief 运行时依赖目录（Python SDK/agents），线程安全 */
+const char *airy_lib_dir(void);
+/** @brief 运行时目录（socket/pid），线程安全 */
+const char *airy_runtime_dir(void);
+/** @brief 日志目录，线程安全 */
+const char *airy_log_dir(void);
+/** @brief 配置目录，线程安全 */
+const char *airy_config_dir(void);
+/** @brief 数据目录，线程安全 */
+const char *airy_data_dir(void);
+/** @brief 临时目录，线程安全 */
+const char *airy_tmp_dir(void);
+/** @brief 缓存目录，线程安全 */
+const char *airy_cache_dir(void);
+
+/**
+ * @brief 初始化 AIRY_HOME 路径体系
+ *
+ * 解析各目录路径并创建（mkdir -p），同时向环境变量 setenv
+ * AIRY_RUNTIME_DIR/AIRY_LOG_DIR/AIRY_CONFIG_DIR/AIRY_DATA_DIR/
+ * AIRY_TMP_DIR/AIRY_CACHE_DIR，使既有 getenv 型消费点立即生效。
+ * 各 daemon 在 main 早期（日志初始化前）调用一次。
+ *
+ * @return AIRY_SUCCESS 成功；AIRY_ERR_SYS_FILE 目录创建失败
+ */
+int airy_paths_init(void);
+
 #ifdef __cplusplus
 }
 #endif
