@@ -1137,6 +1137,15 @@ const char *airy_runtime_dir(void)
     return g_run_dir;
 }
 
+const char *airy_runtime_dir_socket(const char *name)
+{
+    static char g_sock_buf[AIRY_PATH_MAX];
+    if (!name || name[0] == '\0')
+        return airy_runtime_dir();
+    snprintf(g_sock_buf, sizeof(g_sock_buf), "%s/%s", airy_runtime_dir(), name);
+    return g_sock_buf;
+}
+
 const char *airy_log_dir(void)
 {
     paths_ensure_resolved();

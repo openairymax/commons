@@ -811,6 +811,18 @@ const char *airy_bin_dir(void);
 const char *airy_lib_dir(void);
 /** @brief 运行时目录（socket/pid），线程安全 */
 const char *airy_runtime_dir(void);
+
+/**
+ * @brief 解析运行时 socket 路径：$AIRY_HOME/run/<name>（AIRY_HOME 路径体系）。
+ *
+ * 统一收敛各 daemon 的 socket 位置：历史宏 AIRY_RUNTIME_DIR "/<name>.sock"
+ * 是编译期常量（默认 /tmp/agentrt），不随 AIRY_HOME 部署生效。此 helper
+ * 在运行时拼接 airy_runtime_dir()，使 socket 始终落在 $AIRY_HOME/run。
+ *
+ * @param name socket 文件名（如 "agent.sock"）
+ * @return 静态缓冲（仅启动期一次性读取，daemon 单线程初始化阶段安全）
+ */
+const char *airy_runtime_dir_socket(const char *name);
 /** @brief 日志目录，线程安全 */
 const char *airy_log_dir(void);
 /** @brief 配置目录，线程安全 */
