@@ -572,7 +572,7 @@ AIRY_API void airy_debug_break(void);
 #define AIRY_VERSION_MAJOR 0
 #define AIRY_VERSION_MINOR 0
 #define AIRY_VERSION_PATCH 5
-#define AIRY_VERSION_STRING "0.1.0"
+#define AIRY_VERSION_STRING "0.1.1"
 
 /**
  * @brief 获取版本字符串

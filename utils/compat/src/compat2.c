@@ -198,7 +198,7 @@ void airy_debug_break(void)
 #endif
 }
 
-static const char *g_version_string = "0.1.0";
+static const char *g_version_string = "0.1.1";
 
 const char *airy_version_string(void)
 {
@@ -211,7 +211,7 @@ const char *airy_build_info(void)
 
     if (build_info[0] == '\0') {
         snprintf(build_info, sizeof(build_info),
-                 "AgentRT v%s | Compiler: %s | Platform: %s | Build: %s %s", "0.1.0", "gcc",
+                 "AgentRT v%s | Compiler: %s | Platform: %s | Build: %s %s", "0.1.1", "gcc",
                  "linux", __DATE__, __TIME__);
     }
 
