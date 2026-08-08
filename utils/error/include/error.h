@@ -299,6 +299,10 @@ extern "C" {
 #ifndef AIRY_ERR_SVC_LOADBALANCE
 #define AIRY_ERR_SVC_LOADBALANCE (-307)
 #endif
+#ifndef AIRY_ERR_SVC_CYCLE
+#define AIRY_ERR_SVC_CYCLE (-308) /* DAG 任务图存在依赖环 */
+#endif
+#define AIRY_ERR_CYCLE_DETECTED AIRY_ERR_SVC_CYCLE /* 别名：DAG 环检测 */
 
 /* LLM/AI服务错误 (-400 到 -499) */
 #ifndef AIRY_ERR_LLM_BASE

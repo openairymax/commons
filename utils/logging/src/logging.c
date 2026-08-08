@@ -695,8 +695,11 @@ void log_write(log_level_t level, const char *module, int line, const char *fmt,
 
     // 输出到控制台
     if (formatted_len > 0) {
-        // 根据级别选择输出流
-        FILE *stream = (level >= LOG_LEVEL_ERROR) ? stderr : stdout;
+        // 统一走 stderr（POSIX daemon 惯例：stdout 留给程序数据流）。
+        // 若按级别写 stdout，agent_d 等 daemon fork 子进程后 fd 1 是
+        // spawn/invoke 协议管道，INFO/WARN 日志会污染 JSON 行协议。
+        FILE *stream = stderr;
+        (void)level;
         fwrite(formatted_buffer, 1, formatted_len, stream);
         fflush(stream);
     }
@@ -742,7 +745,8 @@ void log_write_va(log_level_t level, const char *module, int line, const char *f
 
     // 输出到控制台
     if (formatted_len > 0) {
-        FILE *stream = (level >= LOG_LEVEL_ERROR) ? stderr : stdout;
+        FILE *stream = stderr;
+        (void)level;
         fwrite(formatted_buffer, 1, formatted_len, stream);
         fflush(stream);
     }
