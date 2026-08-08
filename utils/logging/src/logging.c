@@ -621,6 +621,16 @@ int log_init(const log_config_t *manager)
         g_logging_state.manager.enable_statistics = false;
     }
 
+    /* AIRY_LOG_LEVEL 环境变量覆盖默认级别（debug/info/warn/error），
+     * 便于运行时开启 DEBUG 日志排查调度阻塞等问题：
+     * AIRY_LOG_LEVEL=debug ./bin/sched_d */
+    {
+        const char *env_level = getenv("AIRY_LOG_LEVEL");
+        if (env_level && env_level[0]) {
+            g_logging_state.manager.level = log_level_from_string(env_level);
+        }
+    }
+
     /* 如果配置了文件输出，打开日志文件（合并自 logging_common.c） */
     if ((g_logging_state.manager.outputs & (1 << LOG_OUTPUT_FILE)) &&
         g_logging_state.manager.file_path && g_log_file_mutex_init) {
