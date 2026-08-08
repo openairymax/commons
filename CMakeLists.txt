@@ -55,6 +55,7 @@ set(SOURCES
     utils/config_unified/src/config_source.c
     utils/config_unified/src/yaml_minimal.c
     utils/execution/src/checkpoint.c
+    utils/task/src/task_desc.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
