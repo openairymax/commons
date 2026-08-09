@@ -87,6 +87,31 @@ void airy_ignore_sigpipe(void)
 #endif
 }
 
+/* ==================== 原子操作实现 ==================== */
+/* 补齐 platform.h 声明的 airy_atomic_* API（此前仅有声明无实现）。
+ * 底层复用 atomic_compat.h 的统一原语：C11 用 stdatomic，其余用
+ * Interlocked/__atomic builtins。默认顺序 memory_order_seq_cst。 */
+
+int airy_atomic_load(airy_atomic_int_t *atomic)
+{
+    return atomic_load_explicit(atomic, memory_order_seq_cst);
+}
+
+void airy_atomic_store(airy_atomic_int_t *atomic, int value)
+{
+    atomic_store_explicit(atomic, value, memory_order_seq_cst);
+}
+
+int airy_atomic_fetch_add(airy_atomic_int_t *atomic, int value)
+{
+    return atomic_fetch_add_explicit(atomic, value, memory_order_seq_cst);
+}
+
+int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value)
+{
+    return atomic_fetch_sub_explicit(atomic, value, memory_order_seq_cst);
+}
+
 /* ==================== 线程实现 ==================== */
 
 uint64_t airy_thread_id(void)

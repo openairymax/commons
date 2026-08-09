@@ -25,21 +25,21 @@ tests/
 │   ├── test_macros.h            # 测试辅助宏（EXPECT_EQ、ASSERT_TRUE 等）
 │   └── cmocka_stub.h            # cmocka 模拟框架兼容适配
 ├── unit/                        # 单元测试
-│   ├── core_test.c              # 核心功能测试
-│   ├── io_test.c                # I/O 工具测试
 │   ├── test_platform.c          # 平台抽象层测试
 │   ├── test_error.c             # 错误处理框架测试
 │   ├── test_logger.c            # 日志系统测试
 │   ├── test_token.c             # 令牌管理测试
 │   ├── test_cost.c              # 成本估算与控制测试
+│   ├── test_arena_tcache.c      # 内存池/竞技场测试
+│   ├── test_print.c             # 打印工具测试
 │   ├── test_config.c            # 配置系统测试（当前禁用）
 │   ├── test_types.c             # 类型系统测试（当前禁用）
 │   ├── test_ipc.c               # IPC 测试（当前禁用）
 │   ├── test_network.c           # 网络工具测试（当前禁用）
-│   ├── test_string_utils.c      # 字符串工具测试
-│   ├── test_observability.c     # 可观测性测试
-│   ├── test_resource_guard.c    # 资源保护测试
-│   └── test_input_validator.c   # 输入校验测试
+│   ├── test_string_utils.c      # 字符串工具测试（未接线 CMake）
+│   ├── test_observability.c     # 可观测性测试（未接线 CMake）
+│   ├── test_resource_guard.c    # 资源保护测试（未接线 CMake）
+│   └── test_input_validator.c   # 输入校验测试（未接线 CMake）
 └── integration/                  # 集成测试
     ├── test_common_integration.c # 公共模块集成测试（当前禁用）
     └── test_unified_modules.c   # 统一模块集成测试（当前禁用）
@@ -113,7 +113,7 @@ cd build/agentrt/commons/tests
 
 ## 当前状态
 
-### 活跃测试
+### 活跃测试（已接线 CMake）
 
 | 测试 | 状态 | 覆盖模块 |
 |------|------|----------|
@@ -122,12 +122,17 @@ cd build/agentrt/commons/tests
 | `test_logger` | 活跃 | 日志系统 |
 | `test_token` | 活跃 | 令牌管理 |
 | `test_cost` | 活跃 | 成本估算与控制 |
-| `test_string_utils` | 活跃 | 字符串操作 |
-| `test_observability` | 活跃 | 可观测性 |
-| `test_resource_guard` | 活跃 | 资源保护 |
-| `test_input_validator` | 活跃 | 输入校验 |
-| `core_test` | 活跃 | 核心功能 |
-| `io_test` | 活跃 | I/O 工具 |
+| `test_arena_tcache` | 活跃 | 内存池/竞技场 |
+| `test_print` | 活跃 | 打印工具 |
+
+### 未接线测试（源码保留，未纳入 CMake 构建）
+
+| 测试 | 状态 |
+|------|------|
+| `test_string_utils` | 未接线 |
+| `test_observability` | 未接线 |
+| `test_resource_guard` | 未接线 |
+| `test_input_validator` | 未接线 |
 
 ### 待启用测试
 
