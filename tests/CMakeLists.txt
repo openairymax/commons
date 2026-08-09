@@ -21,6 +21,8 @@ set(UNIT_TEST_SOURCES
     # unit/test_network.c # 禁用：需要cmocka测试框架
     unit/test_arena_tcache.c
     unit/test_print.c
+    # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链 + 跨线程唤醒）
+    unit/test_cancel_token.c
 )
 
 set(INTEGRATION_TEST_SOURCES
@@ -48,6 +50,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/network/include
         ${COMMONS_ROOT}/utils/memory/include
         ${COMMONS_ROOT}/utils/print/include
+        ${COMMONS_ROOT}/utils/sync/include
         ${COMMONS_ROOT}/../atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )

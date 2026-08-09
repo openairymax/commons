@@ -43,6 +43,8 @@ set(SOURCES
     utils/sync/src/sync_barrier.c
     utils/sync/src/sync_recursive_mutex.c
     utils/sync/src/sync_common.c
+    # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）
+    utils/sync/src/cancel_token.c
     utils/cache/src/cache_common.c
     utils/compat/src/compat.c
     utils/compat/src/compat2.c
