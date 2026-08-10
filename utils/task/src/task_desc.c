@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 /*
  * Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.

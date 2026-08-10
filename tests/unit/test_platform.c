@@ -15,6 +15,7 @@
 #include "mem.h"
 #include "platform.h"
 #include "string_compat.h"
+#include "cancel_token.h" /* 改进1：可取消命令执行（run_capture_ex 取消测试） */
 
 #include <assert.h>
 #include <string.h>
@@ -203,6 +204,69 @@ static int test_network_functions(void)
     return 0;
 }
 
+/* ==================== 事件源驱动子进程执行（改进1） ==================== */
+
+#if !defined(_WIN32)
+#include <signal.h>
+#include <unistd.h>
+
+/* 正常退出：捕获输出 + 退出码 */
+static int test_run_capture_exit(void)
+{
+    printf("  test_run_capture_exit...\n");
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c",
+                    (char *)"printf 'hello-event-source'", NULL};
+    char output[256] = {0};
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 5000,
+                                         output, sizeof(output), NULL);
+    TEST_ASSERT(rc == 0, "exit code should be 0");
+    TEST_ASSERT(strstr(output, "hello-event-source") != NULL,
+                "output should be captured");
+    return 0;
+}
+
+/* 超时：SIGKILL 后非阻塞回收，返回 -2 */
+static int test_run_capture_timeout(void)
+{
+    printf("  test_run_capture_timeout...\n");
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c", (char *)"sleep 30", NULL};
+    char output[256] = {0};
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 300,
+                                         output, sizeof(output), NULL);
+    TEST_ASSERT(rc == -2, "should return timeout -2");
+    return 0;
+}
+
+/* 取消：令牌命中 → SIGKILL → 返回 -3（AIRY_PROCESS_RC_CANCELED） */
+static void *cancel_proc_thread(void *arg)
+{
+    airy_sleep_ms(150);
+    airy_cancel_token_cancel((airy_cancel_token_t *)arg);
+    return NULL;
+}
+
+static int test_run_capture_cancel(void)
+{
+    printf("  test_run_capture_cancel...\n");
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c", (char *)"sleep 30", NULL};
+    char output[256] = {0};
+
+    airy_cancel_token_t token;
+    TEST_ASSERT(airy_cancel_token_init(&token) == 0, "token init");
+    airy_thread_t th;
+    TEST_ASSERT(airy_platform_thread_create(&th, cancel_proc_thread, &token) == 0,
+                "cancel thread create");
+
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 0,
+                                         output, sizeof(output), &token);
+    TEST_ASSERT(airy_platform_thread_join(th, NULL) == 0, "cancel thread join");
+    TEST_ASSERT(rc == AIRY_PROCESS_RC_CANCELED, "should return cancel -3");
+
+    airy_cancel_token_destroy(&token);
+    return 0;
+}
+#endif /* !_WIN32 */
+
 /* ==================== 主函?==================== */
 
 int main(void)
@@ -218,6 +282,12 @@ int main(void)
     TEST_RUN(test_file_operations);
     TEST_RUN(test_thread_primitives);
     TEST_RUN(test_network_functions);
+#if !defined(_WIN32)
+    /* 改进1（tool_d 事件源驱动）：run_capture_ex 正常/超时/取消 */
+    TEST_RUN(test_run_capture_exit);
+    TEST_RUN(test_run_capture_timeout);
+    TEST_RUN(test_run_capture_cancel);
+#endif
 
     printf("\n===========================================\n");
     printf("  测试结果: %d 通过, %d 失败\n", passed_tests, failed_tests);

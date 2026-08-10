@@ -803,41 +803,55 @@ airy_err_t network_http_request(network_connection_t *connection,
     char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
     int offset = 0;
 
+    /* 每步 snprintf 后检查截断：返回值是"应写入"长度，path/host/自定义头超长时
+     * 可能 >= 剩余容量，若直接累加会让 offset 超出缓冲、后续 size 参数无符号下溢，
+     * 必须终止并返回错误，保证 offset 始终在缓冲范围内。 */
+#define NETWORK_REQ_APPEND(fmt, ...)                                              \
+    do {                                                                          \
+        int wlen = snprintf(request_buf + offset,                                \
+                            sizeof(request_buf) - (size_t)offset, fmt,           \
+                            ##__VA_ARGS__);                                      \
+        if (wlen < 0 || (size_t)wlen >= sizeof(request_buf) - (size_t)offset) {  \
+            response->error = AIRY_ERR_OVERFLOW;                                  \
+            response->error_message = AIRY_STRDUP("HTTP request header too long"); \
+            return AIRY_ERR_OVERFLOW;                                             \
+        }                                                                         \
+        offset += wlen;                                                           \
+    } while (0)
+
     /* 请求行 */
-    offset +=
-        snprintf(request_buf + offset, sizeof(request_buf) - offset, "%s %s HTTP/1.1\r\n",
-                 request->method ? request->method : "GET", request->path ? request->path : "/");
+    NETWORK_REQ_APPEND("%s %s HTTP/1.1\r\n",
+                       request->method ? request->method : "GET",
+                       request->path ? request->path : "/");
 
     /* Host 头 */
     if (connection->config.host) {
-        offset += snprintf(request_buf + offset, sizeof(request_buf) - offset, "Host: %s\r\n",
-                           connection->config.host);
+        NETWORK_REQ_APPEND("Host: %s\r\n", connection->config.host);
     }
 
     /* Content-Type */
     if (request->content_type) {
-        offset += snprintf(request_buf + offset, sizeof(request_buf) - offset,
-                           "Content-Type: %s\r\n", request->content_type);
+        NETWORK_REQ_APPEND("Content-Type: %s\r\n", request->content_type);
     }
 
     /* Content-Length */
     if (request->body && request->body_len > 0) {
-        offset += snprintf(request_buf + offset, sizeof(request_buf) - offset,
-                           "Content-Length: %zu\r\n", request->body_len);
+        NETWORK_REQ_APPEND("Content-Length: %zu\r\n", request->body_len);
     }
 
     /* 自定义请求头 */
     if (request->headers && request->header_count > 0) {
         for (size_t i = 0; i < request->header_count; i++) {
             if (request->headers[i]) {
-                offset += snprintf(request_buf + offset, sizeof(request_buf) - offset, "%s\r\n",
-                                   request->headers[i]);
+                NETWORK_REQ_APPEND("%s\r\n", request->headers[i]);
             }
         }
     }
 
     /* 结束头部 */
-    offset += snprintf(request_buf + offset, sizeof(request_buf) - offset, "\r\n");
+    NETWORK_REQ_APPEND("\r\n");
+
+#undef NETWORK_REQ_APPEND
 
     /* 发送请求头 */
     airy_err_t err = network_send_all(connection, request_buf, (size_t)offset);

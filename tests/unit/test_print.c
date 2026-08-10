@@ -2,6 +2,7 @@
  * @file test_print.c
  * @brief P3.25: airy_print.h 运行时统一打印 API 单元测试
  * @copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * 验证 8 个宏可编译、可调用、不崩溃。
