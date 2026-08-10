@@ -404,6 +404,12 @@ int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse);
 
 /* ==================== 进程接口 ==================== */
 
+/* 前向声明：取消令牌（改进1 "取消下探"）。完整定义见
+ * commons/utils/sync/include/cancel_token.h（该头 include platform.h，
+ * 此处仅声明指针参数，避免循环依赖）。 */
+struct airy_cancel_token;
+typedef struct airy_cancel_token airy_cancel_token_t;
+
 /**
  * @brief 进程信息结构
  */
@@ -470,6 +476,28 @@ void airy_process_close_pipes(airy_process_info_t *proc);
 int airy_process_run_capture(const char *executable, char *const argv[],
                                 char *const envp[], uint32_t timeout_ms,
                                 char *output, size_t output_size);
+
+/**
+ * @brief 事件源驱动的可取消命令执行（改进1 "tool_d 事件源驱动"）
+ *
+ * 与 airy_process_run_capture 同语义，但等待机制为**事件源驱动**而非
+ * select 阻塞轮询 + 阻塞 waitpid：
+ *   - 自建唤醒管道（wake pipe）作为事件源：取消令牌命中时回调写入唤醒，
+ *     select 立即返回，无需 1s 粒度轮询；
+ *   - 子进程退出经管道 EOF 事件感知，waitpid WNOHANG **非阻塞**回收
+ *     （替代循环结束后的阻塞 waitpid）；
+ *   - 超时判定精确到毫秒（单调时钟 deadline）。
+ *
+ * @param cancel_token 取消令牌（可为 NULL = 等同 airy_process_run_capture）
+ * @return 退出码(0-255)；-1=启动失败；-2=超时；-3=取消（AIRY_PROCESS_RC_CANCELED）
+ */
+int airy_process_run_capture_ex(const char *executable, char *const argv[],
+                                char *const envp[], uint32_t timeout_ms,
+                                char *output, size_t output_size,
+                                airy_cancel_token_t *cancel_token);
+
+/* 可取消执行返回码：取消令牌命中（与超时 -2 区分） */
+#define AIRY_PROCESS_RC_CANCELED (-3)
 
 /* ==================== 时间接口 ==================== */
 

@@ -716,11 +716,22 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    size_t offset = snprintf(
+    size_t offset = 0;
+    int n = snprintf(
         buf, buf_size, "{\"code\": %d, \"message\": \"%s\", \"depth\": %d, \"contexts\": [",
         chain->code, airy_err_str_i18n(chain->code, use_lang), chain->depth);
+    /* snprintf 返回"应写入"的字符数，可能 >= 剩余空间；offset 必须始终 <= buf_size，
+     * 否则 buf_size - offset 无符号下溢会写入越界（与 resource_guard.c 的
+     * AIRY_REPORT_APPEND 防护模式一致）。 */
+    if (n < 0) {
+        offset = buf_size;
+    } else if ((size_t)n >= buf_size) {
+        offset = buf_size; /* 已截断，标记缓冲区已满 */
+    } else {
+        offset = (size_t)n;
+    }
 
-    for (int i = 0; i < chain->depth; i++) {
+    for (int i = 0; i < chain->depth && offset < buf_size; i++) {
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
 
         /* 转义消息字符串 */
@@ -732,15 +743,32 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
             }
             escaped_msg[k++] = msg[j];
         }
+        escaped_msg[sizeof(escaped_msg) - 1] = '\0'; /* 保证 NUL 结尾，避免 %s 越界读 */
 
-        offset += snprintf(buf + offset, buf_size - offset,
-                           "%s{\"file\": \"%s\", \"line\": %d, \"function\": \"%s\", \"code\": %d, "
-                           "\"message\": \"%s\"}",
-                           i > 0 ? ", " : "", ctx->file ? ctx->file : "", ctx->line,
-                           ctx->function ? ctx->function : "", ctx->error_code, escaped_msg);
+        n = snprintf(buf + offset, buf_size - offset,
+                     "%s{\"file\": \"%s\", \"line\": %d, \"function\": \"%s\", \"code\": %d, "
+                     "\"message\": \"%s\"}",
+                     i > 0 ? ", " : "", ctx->file ? ctx->file : "", ctx->line,
+                     ctx->function ? ctx->function : "", ctx->error_code, escaped_msg);
+        if (n < 0) {
+            offset = buf_size;
+        } else if ((size_t)n >= buf_size - offset) {
+            offset = buf_size; /* 已截断，标记缓冲区已满 */
+        } else {
+            offset += (size_t)n;
+        }
     }
 
-    offset += snprintf(buf + offset, buf_size - offset, "]}");
+    if (offset < buf_size) {
+        n = snprintf(buf + offset, buf_size - offset, "]}");
+        if (n < 0 || (size_t)n >= buf_size - offset) {
+            offset = buf_size; /* 已截断，标记缓冲区已满 */
+        } else {
+            offset += (size_t)n;
+        }
+    }
+
+    buf[buf_size - 1] = '\0'; /* 无论是否截断，保证缓冲区始终以 NUL 结尾 */
 
     return buf;
 }

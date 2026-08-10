@@ -2,6 +2,7 @@
  * @file safe_string_utils.c
  * @brief 安全字符串处理工具实现
  * @copyright (c) 2026 SPHARX. All Rights Reserved.
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @details
@@ -40,17 +41,24 @@ int safe_strcpy(char *dest, const char *src, size_t dest_size)
 int safe_strcat(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || !src || dest_size == 0) {
-        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strncpy: null parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strcat: null parameter");
     }
 
     size_t dest_len = strlen(dest);
     size_t src_len = strlen(src);
 
-    if (dest_len + src_len >= dest_size) {
+    /* dest_len + src_len 可能溢出 size_t；且 dest_len >= dest_size 时
+     * dest_size - dest_len - 1 会无符号下溢，须在加法前分别检查。 */
+    if (dest_len >= dest_size) {
+        dest[dest_size - 1] = '\0';
+        AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strcat: buffer overflow");
+    }
+
+    if (src_len > dest_size - dest_len - 1) {
         size_t remaining = dest_size - dest_len - 1;
         __builtin_memcpy(dest + dest_len, src, remaining);
         dest[dest_len + remaining] = '\0';
-        AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strncpy: buffer overflow");
+        AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strcat: buffer overflow");
     }
 
     __builtin_memcpy(dest + dest_len, src, src_len + 1);

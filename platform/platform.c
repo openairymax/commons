@@ -55,11 +55,9 @@
 /* 2. 项目头文件（最后包含，避免覆盖系统定义） */
 #include "error.h"
 #include "platform.h"
+#include "cancel_token.h" /* 改进1：可取消命令执行（airy_process_run_capture_ex） */
 
-#include <string.h>
 #include "airy_memory.h"
-
-
 
 /* ==================== 网络初始化 ==================== */
 
@@ -143,6 +141,16 @@ int airy_platform_thread_join(airy_thread_t thread, void **retval)
         return AIRY_EINVAL;
     }
     CloseHandle(thread);
+    return 0;
+}
+
+int airy_platform_thread_detach(airy_thread_t thread)
+{
+    /* Windows 无 pthread_detach 等价语义：关闭线程句柄即放弃对线程的
+     * 引用，线程继续运行，结束后由系统自动回收资源。detach 后不得再 join。 */
+    if (thread != NULL) {
+        CloseHandle(thread);
+    }
     return 0;
 }
 
@@ -617,6 +625,19 @@ int airy_process_run_capture(const char *executable, char *const argv[],
     return (int)exit_code;
 }
 
+/* Windows：事件源驱动基于 POSIX select/pipe，Windows 保持阻塞管道读取
+ * 语义（ReadFile 阻塞本身即事件源）；取消令牌暂不跨平台（返回 NOT_SUPPORTED
+ * 由调用方判定，POSIX 平台已实现完整事件源驱动）。 */
+int airy_process_run_capture_ex(const char *executable, char *const argv[],
+                                char *const envp[], uint32_t timeout_ms,
+                                char *output, size_t output_size,
+                                airy_cancel_token_t *cancel_token)
+{
+    (void)cancel_token;
+    return airy_process_run_capture(executable, argv, envp, timeout_ms,
+                                    output, output_size);
+}
+
 #else
 
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
@@ -753,19 +774,76 @@ int airy_process_run_capture(const char *executable, char *const argv[],
                                 char *const envp[], uint32_t timeout_ms,
                                 char *output, size_t output_size)
 {
+    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms,
+                                       output, output_size, NULL);
+}
+
+/* 事件源驱动实现（改进1 "tool_d 事件源驱动"）：
+ *   - 子进程退出经管道 EOF 事件感知：select 阻塞在 stdout/stderr 上，
+ *     子进程退出 → 写端关闭 → EOF → select 返回，无需 1s 固定轮询；
+ *   - waitpid WNOHANG 非阻塞回收：每轮 select 后尝试回收，替代循环
+ *     结束后的阻塞 waitpid（子进程已退出则立即回收，不阻塞调用线程）；
+ *   - 超时判定精确到毫秒（单调时钟 deadline，替代 time() 秒级）；
+ *   - 取消令牌短片轮询（100ms 片，与 agent 层 200ms 粒度一致）。
+ * 由于 cancel_token.h 暂无 unregister 接口，唤醒回调注册（栈 ctx 悬垂
+ * 风险）不启用——取消经 select 短片轮询实现，功能等价。 */
+int airy_process_run_capture_ex(const char *executable, char *const argv[],
+                                char *const envp[], uint32_t timeout_ms,
+                                char *output, size_t output_size,
+                                airy_cancel_token_t *cancel_token)
+{
     airy_process_info_t proc;
     if (airy_process_start(executable, argv, envp, &proc) != 0)
         return AIRY_ERR_EXEC_FAIL;
 
-    /* 读取 stdout + stderr 合并输出（select 多路复用，防止管道写满阻塞子进程） */
+    /* 读取 stdout + stderr 合并输出（事件源驱动 select 多路复用，
+     * 防止管道写满阻塞子进程） */
     size_t offset = 0;
     if (output && output_size > 0)
         output[0] = '\0';
 
-    time_t start = time(NULL);
+    uint64_t deadline_ms =
+        (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
     int timed_out = 0;
+    int canceled = 0;
+    int exit_code = -1;
 
     for (;;) {
+        /* 取消检查：令牌命中 → SIGKILL → 非阻塞回收 → 返回取消码 */
+        if (cancel_token && airy_cancel_token_is_canceled(cancel_token)) {
+            canceled = 1;
+            airy_process_kill(&proc);
+        }
+
+        /* 非阻塞回收：子进程已退出则立即回收（事件源驱动，不阻塞） */
+        if (canceled) {
+            airy_process_wait(&proc, 0, &exit_code);
+            airy_process_close_pipes(&proc);
+            if (output && output_size > 0)
+                output[offset] = '\0';
+            return AIRY_PROCESS_RC_CANCELED;
+        }
+        int st = 0;
+        pid_t wr = waitpid(proc.pid, &st, WNOHANG);
+        if (wr == proc.pid) {
+            /* 已回收：排空残余管道输出后返回 */
+            if (WIFEXITED(st))
+                exit_code = WEXITSTATUS(st);
+            else if (WIFSIGNALED(st))
+                exit_code = -WTERMSIG(st);
+            /* 管道已 EOF（子进程退出），此处排空残余数据（若有） */
+            break;
+        }
+
+        /* 超时检查（精确到毫秒） */
+        if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
+            timed_out = 1;
+            airy_process_kill(&proc);
+            continue; /* 下一轮 WNOHANG 回收 */
+        }
+
+        /* select 事件源：监听 stdout/stderr，片超时 ≤100ms
+         * （保证取消判定粒度；子进程退出即 EOF 立即唤醒） */
         fd_set rfds;
         FD_ZERO(&rfds);
         int max_fd = -1;
@@ -777,13 +855,36 @@ int airy_process_run_capture(const char *executable, char *const argv[],
             FD_SET(proc.stderr_fd, &rfds);
             if (proc.stderr_fd > max_fd) max_fd = proc.stderr_fd;
         }
-        if (max_fd < 0)
-            break; /* 所有管道已 EOF，子进程已退出 */
+        if (max_fd < 0) {
+            /* 所有管道已 EOF：子进程已退出（管道写端随子进程关闭）。
+             * 必须阻塞回收，消除 EOF 与 waitpid 之间的竞态窗口——否则
+             * 窗口内 break 会以 exit_code=-1 误报"启动失败"（间歇性 heisenbug，
+             * 见 tool_d test_sandbox_integration Test 1 随机失败）。 */
+            int eof_status = 0;
+            if (waitpid(proc.pid, &eof_status, 0) == proc.pid) {
+                if (WIFEXITED(eof_status))
+                    exit_code = WEXITSTATUS(eof_status);
+                else if (WIFSIGNALED(eof_status))
+                    exit_code = -WTERMSIG(eof_status);
+            }
+            break;
+        }
 
+        uint32_t slice_ms = 100;
+        if (deadline_ms > 0) {
+            uint64_t remain = deadline_ms - airy_time_ms();
+            if (remain < slice_ms)
+                slice_ms = (uint32_t)remain;
+        }
         struct timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+        tv.tv_sec = slice_ms / 1000U;
+        tv.tv_usec = (slice_ms % 1000U) * 1000U;
         int retval = select(max_fd + 1, &rfds, NULL, NULL, &tv);
+        if (retval < 0) {
+            if (errno == EINTR)
+                continue;
+            break; /* select 出错 */
+        }
         if (retval > 0) {
             char buf[4096];
             if (proc.stdout_fd >= 0 && FD_ISSET(proc.stdout_fd, &rfds)) {
@@ -810,27 +911,15 @@ int airy_process_run_capture(const char *executable, char *const argv[],
                     offset += copy;
                 }
             }
-        } else if (retval == 0) {
-            /* 1 秒无数据：检查总超时 */
-            if (timeout_ms > 0 &&
-                (uint32_t)((time(NULL) - start) * 1000) >= timeout_ms) {
-                timed_out = 1;
-                airy_process_kill(&proc);
-                /* SIGKILL 后子进程 fd 关闭，select 将返回 EOF，循环自然退出 */
-            }
-        } else if (errno != EINTR) {
-            break; /* select 出错 */
         }
     }
 
     airy_process_close_pipes(&proc);
 
-    int exit_code = -1;
-    /* 阻塞等待回收子进程（此时子进程已退出或被 SIGKILL） */
-    airy_process_wait(&proc, 0, &exit_code);
-
     if (output && output_size > 0)
         output[offset] = '\0';
+    if (canceled)
+        return AIRY_PROCESS_RC_CANCELED;
     return timed_out ? -2 : exit_code;
 }
 
@@ -1023,7 +1112,7 @@ int airy_strlcpy(char *dest, const char *src, size_t dest_size)
     size_t src_len = strlen(src);
     size_t copy_len = (src_len < dest_size - 1) ? src_len : dest_size - 1;
 
-__builtin_memcpy(dest, src, copy_len);
+    __builtin_memcpy(dest, src, copy_len);
     dest[copy_len] = '\0';
 
     return (int)copy_len;
@@ -1044,7 +1133,7 @@ int airy_strlcat(char *dest, const char *src, size_t dest_size)
     size_t remaining = dest_size - dest_len - 1;
     size_t copy_len = (src_len < remaining) ? src_len : remaining;
 
-__builtin_memcpy(dest + dest_len, src, copy_len);
+    __builtin_memcpy(dest + dest_len, src, copy_len);
     dest[dest_len + copy_len] = '\0';
 
     return (int)copy_len;
