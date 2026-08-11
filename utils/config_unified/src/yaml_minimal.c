@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file yaml_minimal.c
  * @brief YAML 1.1 parser - production-grade implementation
@@ -10,7 +11,6 @@
  * 迁移后编入 airy_common 静态库，cupolas 与 coreloopthree 通过
  * target_link_libraries(... airy_common) 获取 yaml_* 系列符号。
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "yaml_minimal.h"
@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-
 
 #define INITIAL_NODE_CAPACITY 64
 #define MAX_LINE_LEN 8192
@@ -136,7 +135,8 @@ static void register_anchor(struct parse_ctx *ctx, const char *name, struct yaml
         if (new_cap == 0)
             new_cap = INITIAL_ANCHORS;
         struct anchor_entry *new_anchors =
-            (struct anchor_entry *)AIRY_REALLOC(ctx->anchors, sizeof(struct anchor_entry) * new_cap);
+            (struct anchor_entry *)AIRY_REALLOC(ctx->anchors,
+                                                sizeof(struct anchor_entry) * new_cap);
         if (!new_anchors)
             return;
         ctx->anchors = new_anchors;
@@ -193,8 +193,9 @@ static struct yaml_node *deep_copy_node(yaml_document_t *doc, struct yaml_node *
     }
     case YAML_NODE_SEQUENCE: {
         copy->sequence.count = src->sequence.count;
-        copy->sequence.items = (struct yaml_sequence_item *)AIRY_CALLOC(
-            src->sequence.count, sizeof(struct yaml_sequence_item));
+        copy->sequence.items =
+            (struct yaml_sequence_item *)AIRY_CALLOC(src->sequence.count,
+                                                     sizeof(struct yaml_sequence_item));
         for (size_t i = 0; i < src->sequence.count; i++) {
             copy->sequence.items[i].item = deep_copy_node(doc, src->sequence.items[i].item);
         }
@@ -518,8 +519,8 @@ static struct yaml_node *parse_sequence(struct parse_ctx *ctx, int base_indent)
 
         if (seq->sequence.count >= cap) {
             cap *= 2;
-            seq->sequence.items = (struct yaml_sequence_item *)yaml_safe_realloc(
-                seq->sequence.items, cap * sizeof(struct yaml_sequence_item));
+            seq->sequence.items = (struct yaml_sequence_item *)
+                yaml_safe_realloc(seq->sequence.items, cap * sizeof(struct yaml_sequence_item));
             if (!seq->sequence.items)
                 return NULL;
         }
@@ -542,8 +543,9 @@ static void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
     while (cap < tgt_sz + src_sz)
         cap *= 2;
 
-    target->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-        target->mapping, cap * sizeof(struct yaml_mapping_entry));
+    target->mapping =
+        (struct yaml_mapping_entry *)yaml_safe_realloc(target->mapping,
+                                                       cap * sizeof(struct yaml_mapping_entry));
     if (!target->mapping)
         return;
 
@@ -560,8 +562,8 @@ static void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
         if (!found) {
             if (tgt_current >= cap) {
                 cap *= 2;
-                target->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-                    target->mapping, cap * sizeof(struct yaml_mapping_entry));
+                target->mapping = (struct yaml_mapping_entry *)
+                    yaml_safe_realloc(target->mapping, cap * sizeof(struct yaml_mapping_entry));
                 if (!target->mapping)
                     return;
             }
@@ -578,8 +580,7 @@ static struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
         return NULL;
 
     size_t cap = 8;
-    map->mapping =
-        (struct yaml_mapping_entry *)AIRY_CALLOC(cap, sizeof(struct yaml_mapping_entry));
+    map->mapping = (struct yaml_mapping_entry *)AIRY_CALLOC(cap, sizeof(struct yaml_mapping_entry));
     size_t map_size = 0;
     if (!map->mapping)
         return NULL;
@@ -650,8 +651,8 @@ static struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
                 null_node->scalar.value = AIRY_STRDUP("");
             if (map_size >= cap) {
                 cap *= 2;
-                map->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-                    map->mapping, cap * sizeof(struct yaml_mapping_entry));
+                map->mapping = (struct yaml_mapping_entry *)
+                    yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
                 if (!map->mapping)
                     return NULL;
             }
@@ -685,8 +686,8 @@ static struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
 
         if (map_size >= cap) {
             cap *= 2;
-            map->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-                map->mapping, cap * sizeof(struct yaml_mapping_entry));
+            map->mapping = (struct yaml_mapping_entry *)
+                yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
             if (!map->mapping)
                 return NULL;
         }
@@ -1037,8 +1038,8 @@ static struct yaml_node *parse_value(struct parse_ctx *ctx, int base_indent)
                 v->scalar.value = AIRY_STRDUP("");
             if (msz >= cap) {
                 cap *= 2;
-                map->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-                    map->mapping, cap * sizeof(struct yaml_mapping_entry));
+                map->mapping = (struct yaml_mapping_entry *)
+                    yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
                 if (!map->mapping)
                     return NULL;
             }

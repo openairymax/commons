@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cache_common.h
  * @brief 通用缓存库
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 提供通用的缓存实现，包括：
  * - LRU 缓存
@@ -34,14 +34,14 @@ typedef unsigned int (*cache_hash_func_t)(const void *key);
  * @brief 缓存配置结构体
  */
 typedef struct {
-    size_t capacity;                    // 缓存容量
-    int ttl_sec;                        // 过期时间（秒）
-    cache_hash_func_t hash_func;        // 哈希函数
-    cache_compare_func_t compare_func;  // 比较函数
-    cache_free_func_t key_free_func;    // 键释放函数
-    cache_free_func_t value_free_func;  // 值释放函数
-    cache_copy_func_t key_copy_func;    // 键复制函数
-    cache_copy_func_t value_copy_func;  // 值复制函数
+    size_t capacity;
+    int ttl_sec;
+    cache_hash_func_t hash_func;
+    cache_compare_func_t compare_func;
+    cache_free_func_t key_free_func;
+    cache_free_func_t value_free_func;
+    cache_copy_func_t key_copy_func;
+    cache_copy_func_t value_copy_func;
 } cache_config_t;
 
 /**

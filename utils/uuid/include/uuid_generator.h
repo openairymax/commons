@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file uuid_generator.h
  * @brief UUID v4 生成器接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_UUID_GENERATOR_H
@@ -74,8 +74,7 @@ int airy_uuid_is_valid(const char *uuid);
  * @param buf_len 缓冲区长度
  * @return 成功返回 AIRY_UUID_SUCCESS
  */
-airy_uuid_error_t airy_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_buf,
-                                             size_t buf_len);
+airy_uuid_error_t airy_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_buf, size_t buf_len);
 
 /**
  * @brief 将 UUID 字符串转换为原始二进制

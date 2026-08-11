@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file test_types.c
  * @brief 统一类型定义模块单元测试
@@ -295,7 +295,7 @@ static void test_ipc_header_structure(void **state)
 
     airy_ipc_header_t header = {0};
 
-    header.magic = AIRY_IPC_MAGIC; /* P0-05: 收敛至 SSoT */
+    header.magic = AIRY_IPC_MAGIC;
     header.version = 1;
     header.type = AIRY_IPC_PIPE;
     header.payload_len = 1024;
@@ -462,7 +462,7 @@ static void test_macro_time_conversion(void **state)
 {
     (void)state;
 
-    uint64_t ns = 1500000000ULL; /* 1.5 秒 */
+    uint64_t ns = 1500000000ULL;
 
     assert_int_equal(AIRY_NS_TO_MS(ns), 1500);
     assert_int_equal(AIRY_MS_TO_NS(1500), ns);
@@ -477,41 +477,33 @@ static void test_macro_time_conversion(void **state)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        /* 基础类型测试 */
+
         cmocka_unit_test(test_error_codes_valid),
         cmocka_unit_test(test_airy_result_t_structure),
         cmocka_unit_test(test_priority_enums),
 
-        /* 任务类型测试 */
         cmocka_unit_test(test_task_status_enums),
         cmocka_unit_test(test_task_config_init),
         cmocka_unit_test(test_task_result_structure),
 
-        /* 记忆类型测试 */
         cmocka_unit_test(test_memory_layer_enums),
         cmocka_unit_test(test_memory_entry_structure),
 
-        /* 会话类型测试 */
         cmocka_unit_test(test_session_config_structure),
         cmocka_unit_test(test_context_structure),
 
-        /* Agent 类型测试 */
         cmocka_unit_test(test_agent_contract_structure),
         cmocka_unit_test(test_capability_structure),
 
-        /* 可观测性类型测试 */
         cmocka_unit_test(test_metric_structure),
 
-        /* IPC 类型测试 */
         cmocka_unit_test(test_ipc_header_structure),
         cmocka_unit_test(test_ipc_config_structure),
 
-        /* 网络类型测试 */
         cmocka_unit_test(test_conn_config_structure),
         cmocka_unit_test(test_http_request_structure),
         cmocka_unit_test(test_http_response_structure),
 
-        /* 辅助宏测试 */
         cmocka_unit_test(test_macro_array_size),
         cmocka_unit_test(test_macro_min),
         cmocka_unit_test(test_macro_max),

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cost.h
  * @brief 成本预估与控制
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_UTILS_COST_H
@@ -25,7 +25,7 @@ typedef struct airy_cost_estimator airy_cost_estimator_t;
  */
 airy_cost_estimator_t *airy_cost_estimator_create(const char *config_path);
 
-// From data intelligence emerges. by spharx
+/* From data intelligence emerges. by spharx */
 /**
  * @brief 销毁预估器
  */
@@ -40,7 +40,7 @@ void airy_cost_estimator_destroy(airy_cost_estimator_t *estimator);
  * @return 成本（美元），失败返回 -1.0
  */
 double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char *model_name,
-                                       size_t input_tokens, size_t output_tokens);
+                                    size_t input_tokens, size_t output_tokens);
 
 typedef struct airy_budget_controller airy_budget_controller_t;
 
@@ -51,7 +51,7 @@ typedef struct airy_budget_controller airy_budget_controller_t;
  * @return 控制器句柄，失败返回 NULL
  */
 airy_budget_controller_t *airy_budget_controller_create(double max_cost_usd,
-                                                              uint32_t period_seconds);
+                                                        uint32_t period_seconds);
 
 /**
  * @brief 销毁控制器
@@ -106,8 +106,7 @@ uint64_t airy_budget_controller_denied(airy_budget_controller_t *controller);
  * @param threshold 阈值（0.0-1.0）
  * @return 0 成功，-1 失败
  */
-int airy_budget_controller_set_warning(airy_budget_controller_t *controller,
-                                          double threshold);
+int airy_budget_controller_set_warning(airy_budget_controller_t *controller, double threshold);
 
 /**
  * @brief 重置周期
@@ -173,7 +172,7 @@ void airy_cost_estimator_reset(airy_cost_estimator_t *estimator);
  * @return 0 成功，-1 失败
  */
 int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *model_name,
-                                     double input_cost_per_1k, double output_cost_per_1k);
+                                  double input_cost_per_1k, double output_cost_per_1k);
 
 #ifdef __cplusplus
 }

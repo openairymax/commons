@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file platform.c
  * @brief 跨平台兼容层实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 提供统一的跨平台抽象层：
  * - 线程与互斥锁
@@ -14,13 +14,11 @@
  * - 文件系统操作
  */
 
-/* 1. POSIX标准头文件（必须最先包含，确保特性测试宏生效） */
 #include <time.h>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
 
-/* 2. C标准库头文件 */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -52,14 +50,11 @@
 #include <sys/wait.h>
 #endif
 
-/* 2. 项目头文件（最后包含，避免覆盖系统定义） */
 #include "error.h"
 #include "platform.h"
-#include "cancel_token.h" /* 改进1：可取消命令执行（airy_process_run_capture_ex） */
+#include "cancel_token.h"
 
 #include "airy_memory.h"
-
-/* ==================== 网络初始化 ==================== */
 
 int airy_network_init(void)
 {
@@ -85,7 +80,6 @@ void airy_ignore_sigpipe(void)
 #endif
 }
 
-/* ==================== 原子操作实现 ==================== */
 /* 补齐 platform.h 声明的 airy_atomic_* API（此前仅有声明无实现）。
  * 底层复用 atomic_compat.h 的统一原语：C11 用 stdatomic，其余用
  * Interlocked/__atomic builtins。默认顺序 memory_order_seq_cst。 */
@@ -109,8 +103,6 @@ int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value)
 {
     return atomic_fetch_sub_explicit(atomic, value, memory_order_seq_cst);
 }
-
-/* ==================== 线程实现 ==================== */
 
 uint64_t airy_thread_id(void)
 {
@@ -172,8 +164,6 @@ int airy_platform_thread_detach(airy_thread_t thread)
 }
 
 #endif
-
-/* ==================== 互斥锁实现 ==================== */
 
 #if AIRY_PLATFORM_WINDOWS
 
@@ -272,8 +262,6 @@ void airy_mtx_free(airy_mtx_t *mutex)
 }
 
 #endif
-
-/* ==================== 条件变量实现 ==================== */
 
 #if AIRY_PLATFORM_WINDOWS
 
@@ -397,8 +385,6 @@ void airy_cond_free(airy_cond_t *cond)
 
 #endif
 
-/* ==================== Socket 实现 ==================== */
-
 airy_sock_t airy_sock_tcp(void)
 {
 #if AIRY_PLATFORM_WINDOWS
@@ -449,12 +435,10 @@ void airy_sock_close(airy_sock_t sock)
 #endif
 }
 
-/* ==================== 进程实现 ==================== */
-
 #if AIRY_PLATFORM_WINDOWS
 
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
-                          airy_process_info_t *proc)
+                       airy_process_info_t *proc)
 {
     (void)envp;
 
@@ -490,7 +474,6 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
         return AIRY_EINVAL;
     }
 
-    /* 将句柄存入 proc 而非全局变量，支持同时跟踪多个子进程且线程安全 */
     proc->process_handle = (void *)pi.hProcess;
     proc->thread_handle = (void *)pi.hThread;
     proc->pid = pi.dwProcessId;
@@ -552,9 +535,8 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
-int airy_process_run_capture(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size)
+int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
+                             uint32_t timeout_ms, char *output, size_t output_size)
 {
     (void)envp;
     (void)timeout_ms;
@@ -569,7 +551,6 @@ int airy_process_run_capture(const char *executable, char *const argv[],
             snprintf(cmdline + strlen(cmdline), remaining, " \"%s\"", argv[i]);
     }
 
-    /* 创建匿名管道捕获子进程 stdout */
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = NULL;
@@ -578,7 +559,7 @@ int airy_process_run_capture(const char *executable, char *const argv[],
     if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0)) {
         return AIRY_ERR_IO;
     }
-    /* 确保管道读端不被子进程继承 */
+
     SetHandleInformation(pipe_read, HANDLE_FLAG_INHERIT, 0);
 
     STARTUPINFOA si;
@@ -592,13 +573,12 @@ int airy_process_run_capture(const char *executable, char *const argv[],
     ZeroMemory(&pi, sizeof(pi));
 
     BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
-    CloseHandle(pipe_write); /* 父进程关闭写端，以便读端收到 EOF */
+    CloseHandle(pipe_write);
     if (!ok) {
         CloseHandle(pipe_read);
         return AIRY_ERR_EXEC_FAIL;
     }
 
-    /* 读取子进程输出 */
     size_t offset = 0;
     if (output && output_size > 0) {
         char buf[4096];
@@ -628,20 +608,18 @@ int airy_process_run_capture(const char *executable, char *const argv[],
 /* Windows：事件源驱动基于 POSIX select/pipe，Windows 保持阻塞管道读取
  * 语义（ReadFile 阻塞本身即事件源）；取消令牌暂不跨平台（返回 NOT_SUPPORTED
  * 由调用方判定，POSIX 平台已实现完整事件源驱动）。 */
-int airy_process_run_capture_ex(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size,
+int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
+                                uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
 {
     (void)cancel_token;
-    return airy_process_run_capture(executable, argv, envp, timeout_ms,
-                                    output, output_size);
+    return airy_process_run_capture(executable, argv, envp, timeout_ms, output, output_size);
 }
 
 #else
 
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
-                          airy_process_info_t *proc)
+                       airy_process_info_t *proc)
 {
     if (!proc)
         return AIRY_EINVAL;
@@ -650,7 +628,6 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
     proc->stdout_fd = -1;
     proc->stderr_fd = -1;
 
-    /* 创建 stdout/stderr 管道以捕获子进程输出（补全 airy_process_info_t 设计意图） */
     int stdout_pipe[2];
     int stderr_pipe[2];
     if (pipe(stdout_pipe) < 0)
@@ -671,7 +648,7 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
     }
 
     if (pid == 0) {
-        /* 子进程：重定向 stdout/stderr 到管道写端，关闭所有读端 */
+
         close(stdout_pipe[0]);
         close(stderr_pipe[0]);
         dup2(stdout_pipe[1], STDOUT_FILENO);
@@ -690,7 +667,6 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
         _exit(127);
     }
 
-    /* 父进程：关闭写端，保留读端供调用者读取输出 */
     close(stdout_pipe[1]);
     close(stderr_pipe[1]);
     proc->pid = pid;
@@ -770,12 +746,11 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
-int airy_process_run_capture(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size)
+int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
+                             uint32_t timeout_ms, char *output, size_t output_size)
 {
-    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms,
-                                       output, output_size, NULL);
+    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms, output, output_size,
+                                       NULL);
 }
 
 /* 事件源驱动实现（改进1 "tool_d 事件源驱动"）：
@@ -787,9 +762,8 @@ int airy_process_run_capture(const char *executable, char *const argv[],
  *   - 取消令牌短片轮询（100ms 片，与 agent 层 200ms 粒度一致）。
  * 由于 cancel_token.h 暂无 unregister 接口，唤醒回调注册（栈 ctx 悬垂
  * 风险）不启用——取消经 select 短片轮询实现，功能等价。 */
-int airy_process_run_capture_ex(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size,
+int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
+                                uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
 {
     airy_process_info_t proc;
@@ -802,20 +776,18 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
     if (output && output_size > 0)
         output[0] = '\0';
 
-    uint64_t deadline_ms =
-        (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
+    uint64_t deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
     int timed_out = 0;
     int canceled = 0;
     int exit_code = -1;
 
     for (;;) {
-        /* 取消检查：令牌命中 → SIGKILL → 非阻塞回收 → 返回取消码 */
+
         if (cancel_token && airy_cancel_token_is_canceled(cancel_token)) {
             canceled = 1;
             airy_process_kill(&proc);
         }
 
-        /* 非阻塞回收：子进程已退出则立即回收（事件源驱动，不阻塞） */
         if (canceled) {
             airy_process_wait(&proc, 0, &exit_code);
             airy_process_close_pipes(&proc);
@@ -826,20 +798,19 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
         int st = 0;
         pid_t wr = waitpid(proc.pid, &st, WNOHANG);
         if (wr == proc.pid) {
-            /* 已回收：排空残余管道输出后返回 */
+
             if (WIFEXITED(st))
                 exit_code = WEXITSTATUS(st);
             else if (WIFSIGNALED(st))
                 exit_code = -WTERMSIG(st);
-            /* 管道已 EOF（子进程退出），此处排空残余数据（若有） */
+
             break;
         }
 
-        /* 超时检查（精确到毫秒） */
         if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
             timed_out = 1;
             airy_process_kill(&proc);
-            continue; /* 下一轮 WNOHANG 回收 */
+            continue;
         }
 
         /* select 事件源：监听 stdout/stderr，片超时 ≤100ms
@@ -849,11 +820,13 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
         int max_fd = -1;
         if (proc.stdout_fd >= 0) {
             FD_SET(proc.stdout_fd, &rfds);
-            if (proc.stdout_fd > max_fd) max_fd = proc.stdout_fd;
+            if (proc.stdout_fd > max_fd)
+                max_fd = proc.stdout_fd;
         }
         if (proc.stderr_fd >= 0) {
             FD_SET(proc.stderr_fd, &rfds);
-            if (proc.stderr_fd > max_fd) max_fd = proc.stderr_fd;
+            if (proc.stderr_fd > max_fd)
+                max_fd = proc.stderr_fd;
         }
         if (max_fd < 0) {
             /* 所有管道已 EOF：子进程已退出（管道写端随子进程关闭）。
@@ -883,7 +856,7 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
         if (retval < 0) {
             if (errno == EINTR)
                 continue;
-            break; /* select 出错 */
+            break;
         }
         if (retval > 0) {
             char buf[4096];
@@ -893,8 +866,8 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
                     close(proc.stdout_fd);
                     proc.stdout_fd = -1;
                 } else if (output && offset + 1 < output_size) {
-                    size_t copy = (offset + (size_t)n < output_size) ? (size_t)n
-                                                                     : output_size - 1 - offset;
+                    size_t copy =
+                        (offset + (size_t)n < output_size) ? (size_t)n : output_size - 1 - offset;
                     __builtin_memcpy(output + offset, buf, copy);
                     offset += copy;
                 }
@@ -905,8 +878,8 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
                     close(proc.stderr_fd);
                     proc.stderr_fd = -1;
                 } else if (output && offset + 1 < output_size) {
-                    size_t copy = (offset + (size_t)n < output_size) ? (size_t)n
-                                                                     : output_size - 1 - offset;
+                    size_t copy =
+                        (offset + (size_t)n < output_size) ? (size_t)n : output_size - 1 - offset;
                     __builtin_memcpy(output + offset, buf, copy);
                     offset += copy;
                 }
@@ -924,8 +897,6 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[],
 }
 
 #endif
-
-/* ==================== 时间接口 ==================== */
 
 uint64_t airy_time_ns(void)
 {
@@ -957,8 +928,6 @@ void airy_sleep_ms(uint32_t ms)
     nanosleep(&ts, NULL);
 #endif
 }
-
-/* ==================== 随机数接口 ==================== */
 
 static AIRY_THREAD_LOCAL unsigned int g_random_seed = 0;
 static AIRY_THREAD_LOCAL int g_random_initialized = 0;
@@ -1027,8 +996,6 @@ int airy_random_bytes(void *buf, size_t len)
     return 0;
 #endif
 }
-
-/* ==================== 文件系统接口 ==================== */
 
 int airy_file_exists(const char *path)
 {
@@ -1101,8 +1068,6 @@ int64_t airy_file_size(const char *path)
 #endif
 }
 
-/* ==================== 字符串工具 ==================== */
-
 int airy_strlcpy(char *dest, const char *src, size_t dest_size)
 {
     if (!dest || dest_size == 0 || !src) {
@@ -1138,8 +1103,6 @@ int airy_strlcat(char *dest, const char *src, size_t dest_size)
 
     return (int)copy_len;
 }
-
-/* ==================== 错误处理 ==================== */
 
 int airy_get_last_error(void)
 {
@@ -1214,11 +1177,9 @@ static void paths_ensure_resolved(void)
         } else {
             const char *user_home = getenv("HOME");
             if (user_home && user_home[0] != '\0') {
-                snprintf(g_home_dir, sizeof(g_home_dir), "%s/%s",
-                         user_home, AIRY_DEFAULT_HOME_DIR);
+                snprintf(g_home_dir, sizeof(g_home_dir), "%s/%s", user_home, AIRY_DEFAULT_HOME_DIR);
             } else {
-                snprintf(g_home_dir, sizeof(g_home_dir), "%s",
-                         AIRY_DEFAULT_HOME_DIR);
+                snprintf(g_home_dir, sizeof(g_home_dir), "%s", AIRY_DEFAULT_HOME_DIR);
             }
         }
         paths_resolve_all();
@@ -1290,7 +1251,6 @@ const char *airy_cache_dir(void)
     return g_cache_dir;
 }
 
-/* mkdir -p：逐级创建，已存在则视为成功 */
 static int paths_mkdir_p(const char *path)
 {
     if (!path || path[0] == '\0')
@@ -1302,7 +1262,6 @@ static int paths_mkdir_p(const char *path)
     if (len == 0)
         return AIRY_ERR_INVALID_PARAM;
 
-    /* 去除尾部 '/' */
     while (len > 1 && tmp[len - 1] == '/')
         tmp[--len] = '\0';
 
@@ -1336,8 +1295,7 @@ int airy_paths_init(void)
         return rc;
 
     const char *dirs[] = {
-        g_bin_dir, g_lib_dir, g_run_dir, g_log_dir, g_cfg_dir,
-        g_data_dir, g_tmp_dir, g_cache_dir,
+        g_bin_dir, g_lib_dir, g_run_dir, g_log_dir, g_cfg_dir, g_data_dir, g_tmp_dir, g_cache_dir,
     };
     for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++) {
         rc = paths_mkdir_p(dirs[i]);

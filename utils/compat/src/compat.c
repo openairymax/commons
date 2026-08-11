@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file compat.c
  * @brief 跨平台兼容性实现
@@ -12,9 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-#include "logging.h"  /* d9: 改用 LOG_ERROR（logging.h 完整日志 API） */
-
-
+#include "logging.h"
 
 typedef void (*assert_handler_fn_t)(const char *cond, const char *file, int line, const char *func,
                                     const char *msg);
@@ -22,13 +21,12 @@ typedef void (*assert_handler_fn_t)(const char *cond, const char *file, int line
 static assert_handler_fn_t g_assert_handler = NULL;
 
 void airy_set_assert_handler(void (*handler)(const char *, const char *, int, const char *,
-                                                const char *))
+                                             const char *))
 {
     g_assert_handler = (assert_handler_fn_t)handler;
 }
 
-void (*airy_get_assert_handler(void))(const char *, const char *, int, const char *,
-                                         const char *)
+void (*airy_get_assert_handler(void))(const char *, const char *, int, const char *, const char *)
 {
     return (void (*)(const char *, const char *, int, const char *, const char *))g_assert_handler;
 }
@@ -41,8 +39,6 @@ void (*airy_get_assert_handler(void))(const char *, const char *, int, const cha
 #include <signal.h>
 #include <unistd.h>
 #endif
-
-/* ==================== 安全字符串函数实现 ==================== */
 
 char *airy_strncpy_safe(char *dest, const char *src, size_t dest_size)
 {
@@ -58,8 +54,6 @@ char *airy_strncpy_safe(char *dest, const char *src, size_t dest_size)
 
     return dest;
 }
-
-/* ==================== 安全内存函数实现 ==================== */
 
 int airy_memset_s(void *dest, int c, size_t dest_size, size_t count)
 {
@@ -86,7 +80,7 @@ int airy_memcpy_s(void *dest, size_t dest_size, const void *src, size_t count)
     }
 
     if ((char *)dest < (const char *)src + count && (const char *)src < (char *)dest + count) {
-        /* 重叠区域，使用 memmove */
+
         __builtin_memmove(dest, src, count);
     } else {
         __builtin_memcpy(dest, src, count);
@@ -108,8 +102,6 @@ int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count)
     __builtin_memmove(dest, src, count);
     return 0;
 }
-
-/* ==================== 断言函数实现 ==================== */
 
 void airy_assert_fail(const char *cond, const char *file, int line, const char *func)
 {
@@ -133,7 +125,7 @@ void airy_assert_fail(const char *cond, const char *file, int line, const char *
 }
 
 void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
-                             const char *msg)
+                          const char *msg)
 {
     LOG_ERROR("Assertion failed: %s", cond);
     LOG_ERROR("  Message: %s", msg);
@@ -155,8 +147,6 @@ void airy_assert_fail_msg(const char *cond, const char *file, int line, const ch
     abort();
 }
 
-/* ==================== 调试函数实现 ==================== */
-
 void airy_debug_break(void)
 {
 #ifdef AIRY_PLATFORM_WINDOWS
@@ -171,8 +161,6 @@ void airy_debug_break(void)
 #endif
 #endif
 }
-
-/* ==================== 版本信息实现 ==================== */
 
 static const char *g_version_string = "0.1.1";
 
@@ -258,5 +246,12 @@ struct tm *localtime_r(const time_t *timer, struct tm *buf)
     if (localtime_s(buf, timer) == 0)
         return buf;
     AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
+}
+
+/* strtok_r：MSVC 的 strtok_s 第三个参数即 char **context，与
+ * POSIX strtok_r 的 char **saveptr 语义一致，直接映射。 */
+char *strtok_r(char *str, const char *delim, char **saveptr)
+{
+    return strtok_s(str, delim, saveptr);
 }
 #endif

@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file memory_pool.h
  * @brief 统一内存管理模块 - 内存池管理
@@ -7,7 +8,6 @@
  * 提供高效的内存池管理功能，减少内存碎片和分配开销。
  * 适用于频繁分配和释放相同大小内存块的场景。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_MEMORY_POOL_H
@@ -29,12 +29,12 @@ extern "C" {
  * @brief 内存池选项
  */
 typedef struct {
-    size_t block_size;     /**< 内存块大小（字节） */
-    size_t initial_blocks; /**< 初始预分配块数 */
-    size_t max_blocks;     /**< 最大块数（0表示无限制） */
-    size_t expansion_size; /**< 池满时扩展的块数 */
-    bool thread_safe;      /**< 是否线程安全 */
-    const char *name;      /**< 内存池名称（用于调试） */
+    size_t block_size;
+    size_t initial_blocks;
+    size_t max_blocks;
+    size_t expansion_size;
+    bool thread_safe;
+    const char *name;
 } memory_pool_options_t;
 
 /**
@@ -46,16 +46,16 @@ typedef struct memory_pool memory_pool_t;
  * @brief 内存池统计信息
  */
 typedef struct {
-    size_t block_size;       /**< 内存块大小 */
-    size_t total_blocks;     /**< 总块数 */
-    size_t allocated_blocks; /**< 已分配块数 */
-    size_t free_blocks;      /**< 空闲块数 */
-    size_t total_memory;     /**< 总内存（字节） */
-    size_t used_memory;      /**< 已使用内存（字节） */
-    size_t allocation_count; /**< 分配次数 */
-    size_t free_count;       /**< 释放次数 */
-    size_t hit_count;        /**< 缓存命中次数 */
-    size_t miss_count;       /**< 缓存未命中次数 */
+    size_t block_size;
+    size_t total_blocks;
+    size_t allocated_blocks;
+    size_t free_blocks;
+    size_t total_memory;
+    size_t used_memory;
+    size_t allocation_count;
+    size_t free_count;
+    size_t hit_count;
+    size_t miss_count;
 } memory_pool_stats_t;
 
 /**
@@ -259,7 +259,6 @@ void memory_pool_set_name(memory_pool_t *pool, const char *name);
  */
 memory_pool_t *memory_pool_create_default(size_t block_size);
 
-/* ==================== P1.20.3: 批量操作 API ==================== */
 
 /**
  * @brief P1.20.3: 批量分配内存块（单次锁获取）
@@ -297,8 +296,7 @@ size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blo
  */
 size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count);
 
-/** @} */  // end of memory_pool_api
-
+/** @} */ /* end of memory_pool_api */
 #ifdef __cplusplus
 }
 #endif

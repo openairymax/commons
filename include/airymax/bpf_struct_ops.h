@@ -1,6 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+
 /*
- * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
  * bpf_struct_ops.h — Supplementary shared contract header (NOT a [SC]
  * core header). Defines struct_ops state machine + common_value layout
@@ -45,11 +46,11 @@
  * agentrt userspace observes state via BTF (read-only).
  */
 enum airy_struct_ops_state {
-	AIRY_STRUCT_OPS_INIT        = 0,  /* Allocated, not registered */
-	AIRY_STRUCT_OPS_REGISTERED  = 1,  /* register_bpf_struct_ops() done */
-	AIRY_STRUCT_OPS_ACTIVE      = 2,  /* Fully live, serving calls */
-	AIRY_STRUCT_OPS_DRAINING    = 3,  /* Quiescing, no new calls accepted */
-	AIRY_STRUCT_OPS_STATE_MAX
+    AIRY_STRUCT_OPS_INIT = 0, /* Allocated, not registered */
+    AIRY_STRUCT_OPS_REGISTERED = 1, /* register_bpf_struct_ops() done */
+    AIRY_STRUCT_OPS_ACTIVE = 2, /* Fully live, serving calls */
+    AIRY_STRUCT_OPS_DRAINING = 3, /* Quiescing, no new calls accepted */
+    AIRY_STRUCT_OPS_STATE_MAX
 };
 
 /* ─── struct_ops Common Value Layout ───────────────────────────────────
@@ -62,17 +63,17 @@ enum airy_struct_ops_state {
  * the kernel updates `state` and userspace polls it via BTF.
  */
 struct bpf_struct_ops_common_val {
-	__u32   state;          /* enum airy_struct_ops_state */
-	__u32   refcount;       /* kernel-managed reference count */
-	__u64   registered_ns;  /* monotonic time of REGISTERED transition */
-	__u64   activated_ns;   /* monotonic time of ACTIVE transition */
-	__u8    _reserved[32];  /* reserved for future kernel fields */
+    __u32 state; /* enum airy_struct_ops_state */
+    __u32 refcount; /* kernel-managed reference count */
+    __u64 registered_ns; /* monotonic time of REGISTERED transition */
+    __u64 activated_ns; /* monotonic time of ACTIVE transition */
+    __u8 _reserved[32]; /* reserved for future kernel fields */
 } __attribute__((aligned(64)));
 
 _Static_assert(offsetof(struct bpf_struct_ops_common_val, state) == 0,
-	       "state must be at offset 0 for BTF read compatibility");
+               "state must be at offset 0 for BTF read compatibility");
 _Static_assert(sizeof(struct bpf_struct_ops_common_val) == 64,
-	       "bpf_struct_ops_common_val must be exactly 64 bytes (cache line)");
+               "bpf_struct_ops_common_val must be exactly 64 bytes (cache line)");
 
 /* ─── Airymax struct_ops Value Type ────────────────────────────────────
  *
@@ -84,17 +85,17 @@ _Static_assert(sizeof(struct bpf_struct_ops_common_val) == 64,
  *         divergent state machines between BPF and non-BPF paths.
  */
 struct airy_struct_ops_value {
-	struct bpf_struct_ops_common_val common;  /* MUST be first */
-	__u32   version;                          /* struct_ops ABI version */
-	__u32   flags;                            /* reserved for future use */
-	__u8    name[48];                         /* human-readable identifier */
-	__u8    _reserved[8];                     /* padding to 128 bytes */
+    struct bpf_struct_ops_common_val common; /* MUST be first */
+    __u32 version; /* struct_ops ABI version */
+    __u32 flags; /* reserved for future use */
+    __u8 name[48]; /* human-readable identifier */
+    __u8 _reserved[8]; /* padding to 128 bytes */
 } __attribute__((aligned(64)));
 
 _Static_assert(offsetof(struct airy_struct_ops_value, common) == 0,
-	       "common must be first field for bpf_struct_ops framework");
+               "common must be first field for bpf_struct_ops framework");
 _Static_assert(sizeof(struct airy_struct_ops_value) == 128,
-	       "airy_struct_ops_value must be exactly 128 bytes (2 cache lines)");
+               "airy_struct_ops_value must be exactly 128 bytes (2 cache lines)");
 
 /* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
  * When AIRY_SC_FALLBACK is defined, struct_ops registration is
@@ -103,14 +104,20 @@ _Static_assert(sizeof(struct airy_struct_ops_value) == 128,
  * back to Linux 6.6 default EEVDF (see sched.h [DSL] block).
  */
 #ifdef AIRY_SC_FALLBACK
-	#define AIRY_DSL_STRUCT_OPS_STATE  AIRY_STRUCT_OPS_INIT
-	#define AIRY_DSL_STRUCT_OPS_VALUE_INIT  { \
-		.common = { .state = AIRY_STRUCT_OPS_INIT, .refcount = 0, \
-			    .registered_ns = 0, .activated_ns = 0, ._reserved = {0} }, \
-		.version = 0, .flags = 0, .name = {0}, ._reserved = {0} \
-	}
+#define AIRY_DSL_STRUCT_OPS_STATE AIRY_STRUCT_OPS_INIT
+#define AIRY_DSL_STRUCT_OPS_VALUE_INIT         \
+    {.common = {.state = AIRY_STRUCT_OPS_INIT, \
+                .refcount = 0,                 \
+                .registered_ns = 0,            \
+                .activated_ns = 0,             \
+                ._reserved = {0}},             \
+     .version = 0,                             \
+     .flags = 0,                               \
+     .name = {0},                              \
+     ._reserved = {0}}
 
-	#warning "AIRY_SC_FALLBACK active: bpf_struct_ops.h degraded — struct_ops registration unavailable, states collapse to INIT"
+#warning \
+    "AIRY_SC_FALLBACK active: bpf_struct_ops.h degraded — struct_ops registration unavailable, states collapse to INIT"
 #endif /* AIRY_SC_FALLBACK */
 
 #endif /* _UAPI_AIRYMAX_BPF_STRUCT_OPS_H */

@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 #ifndef AIRY_RT_ATOMIC_COMPAT_H
 #define AIRY_RT_ATOMIC_COMPAT_H
 
@@ -31,12 +32,11 @@
 extern "C" {
 #endif
 
-/* ==================== 平台检测与内存顺序定义 ==================== */
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && !defined(_WIN32) && \
     !defined(AIRY_NO_STDATOMIC) && !defined(_MSC_VER)
 
-/* C11 环境：使用系统 stdatomic.h（跳过本地shim） */
+
 #ifndef AIRY_COREKERN_STDATOMIC_SHIM
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -190,7 +190,7 @@ static inline _Bool atomic_compare_exchange_strong_ptr(_Atomic void **ptr, void 
 
 #else
 
-/* 非 C11 环境或 Windows：定义自定义 memory_order 枚举 */
+
 typedef enum {
     memory_order_relaxed = 0,
     memory_order_consume = 1,
@@ -214,7 +214,6 @@ typedef enum {
 
 #define _Atomic volatile
 
-/* ==================== 8位原子操作（Windows） ==================== */
 
 static inline char atomic_load_8(volatile char *ptr, memory_order order)
 {
@@ -283,7 +282,6 @@ static inline char atomic_fetch_sub_8(volatile char *ptr, char value, memory_ord
 #endif
 }
 
-/* ==================== 16位原子操作（Windows） ==================== */
 
 static inline short atomic_load_16(volatile short *ptr, memory_order order)
 {
@@ -328,7 +326,6 @@ static inline short atomic_fetch_sub_16(volatile short *ptr, short value, memory
     return (short)InterlockedExchangeAdd16((volatile SHORT *)ptr, -value);
 }
 
-/* ==================== 32位原子操作（Windows） ==================== */
 
 static inline long atomic_load_32(volatile long *ptr, memory_order order)
 {
@@ -375,7 +372,6 @@ static inline long atomic_fetch_sub_32(volatile long *ptr, long value, memory_or
     return (long)InterlockedExchangeAdd((volatile LONG *)ptr, -value);
 }
 
-/* ==================== 64位原子操作（Windows） ==================== */
 
 static inline __int64 atomic_load_64(volatile __int64 *ptr, memory_order order)
 {
@@ -423,7 +419,6 @@ static inline __int64 atomic_fetch_sub_64(volatile __int64 *ptr, __int64 value, 
     return (__int64)InterlockedExchangeAdd64((volatile LONGLONG *)ptr, -value);
 }
 
-/* ==================== 指针原子操作（Windows） ==================== */
 
 static inline void *atomic_load_ptr(void *volatile *ptr, memory_order order)
 {
@@ -458,21 +453,19 @@ static inline int atomic_compare_exchange_strong_ptr(void *volatile *ptr, void *
     return 0;
 }
 
-/* ==================== size_t 原子操作（Windows） ==================== */
 
 #ifdef _WIN64
 #define atomic_fetch_add_size(p, v, o) (__int64)atomic_fetch_add_64((__int64 *)(p), (__int64)(v), o)
 #define atomic_fetch_sub_size(p, v, o) (__int64)atomic_fetch_sub_64((__int64 *)(p), (__int64)(v), o)
-#define atomic_load_size(p, o) (size_t) atomic_load_64((__int64 *)(p), o)
+#define atomic_load_size(p, o) (size_t)atomic_load_64((__int64 *)(p), o)
 #define atomic_store_size(p, v, o) atomic_store_64((__int64 *)(p), (__int64)(v), o)
 #else
 #define atomic_fetch_add_size(p, v, o) (long)atomic_fetch_add_32((long *)(p), (long)(v), o)
 #define atomic_fetch_sub_size(p, v, o) (long)atomic_fetch_sub_32((long *)(p), (long)(v), o)
-#define atomic_load_size(p, o) (size_t) atomic_load_32((long *)(p), o)
+#define atomic_load_size(p, o) (size_t)atomic_load_32((long *)(p), o)
 #define atomic_store_size(p, v, o) atomic_store_32((long *)(p), (long)(v), o)
 #endif
 
-/* ==================== double 原子操作（Windows） ==================== */
 
 static inline double atomic_load_double(volatile double *ptr, memory_order order)
 {
@@ -657,8 +650,6 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 
 #endif /* Platform selection */
 
-/* ==================== 跨平台通用原子类型别名 ==================== */
-
 #if AIRY_USE_STDATOMIC
 
 typedef _Atomic double atomic_double;
@@ -668,9 +659,7 @@ typedef _Atomic size_t atomic_size_t;
 typedef _Atomic uint_fast64_t atomic_uint_fast64_t;
 typedef _Atomic unsigned long atomic_uint_fast32_t;
 
-/* C11 stdatomic.h 已经定义了 atomic_int, atomic_uint, atomic_bool, atomic_long, atomic_ulong */
 
-/* C11 double 原子操作补充 */
 static inline double atomic_load_double_fn(_Atomic double *ptr, memory_order order)
 {
     return (double)atomic_load_explicit(ptr, order);
@@ -725,7 +714,6 @@ typedef volatile int atomic_bool;
 
 #endif
 
-/* ==================== atomic_bool 专用操作 ==================== */
 
 #if AIRY_USE_STDATOMIC
 
@@ -786,111 +774,110 @@ static inline int atomic_exchange_bool(volatile int *ptr, int desired, memory_or
 
 #endif
 
-/* ==================== 初始化与通用宏 ==================== */
 
 #if !AIRY_USE_STDATOMIC
 #define atomic_init(ptr, val) (*(ptr) = (val))
 
 #define atomic_load_explicit(ptr, order)                                           \
-    (sizeof(*(ptr)) == 1   ? (int)atomic_load_8((volatile char *)(ptr), order)     \
-     : sizeof(*(ptr)) == 2 ? (int)atomic_load_16((volatile short *)(ptr), order)   \
-     : sizeof(*(ptr)) == 4 ? (int)atomic_load_32((volatile long *)(ptr), order)    \
-     : sizeof(*(ptr)) == 8 ? (int)atomic_load_64((volatile int64_t *)(ptr), order) \
-                           : *(ptr))
+    (sizeof(*(ptr)) == 1 ? (int)atomic_load_8((volatile char *)(ptr), order) :     \
+     sizeof(*(ptr)) == 2 ? (int)atomic_load_16((volatile short *)(ptr), order) :   \
+     sizeof(*(ptr)) == 4 ? (int)atomic_load_32((volatile long *)(ptr), order) :    \
+     sizeof(*(ptr)) == 8 ? (int)atomic_load_64((volatile int64_t *)(ptr), order) : \
+                           *(ptr))
 
 #define atomic_store_explicit(ptr, val, order)                                                 \
-    (sizeof(*(ptr)) == 1   ? atomic_store_8((volatile char *)(ptr), (char)(val), order)        \
-     : sizeof(*(ptr)) == 2 ? atomic_store_16((volatile short *)(ptr), (short)(val), order)     \
-     : sizeof(*(ptr)) == 4 ? atomic_store_32((volatile long *)(ptr), (long)(val), order)       \
-     : sizeof(*(ptr)) == 8 ? atomic_store_64((volatile int64_t *)(ptr), (int64_t)(val), order) \
-                           : (*(ptr) = (val)))
+    (sizeof(*(ptr)) == 1 ? atomic_store_8((volatile char *)(ptr), (char)(val), order) :        \
+     sizeof(*(ptr)) == 2 ? atomic_store_16((volatile short *)(ptr), (short)(val), order) :     \
+     sizeof(*(ptr)) == 4 ? atomic_store_32((volatile long *)(ptr), (long)(val), order) :       \
+     sizeof(*(ptr)) == 8 ? atomic_store_64((volatile int64_t *)(ptr), (int64_t)(val), order) : \
+                           (*(ptr) = (val)))
 
 #define atomic_load(ptr) atomic_load_explicit(ptr, memory_order_seq_cst)
 #define atomic_store(ptr, val) atomic_store_explicit(ptr, val, memory_order_seq_cst)
 
 #define atomic_exchange(ptr, val)                                                          \
-    (sizeof(*(ptr)) == 1                                                                   \
-         ? (int)atomic_exchange_8((char *)(ptr), (char)(val), memory_order_seq_cst)        \
-     : sizeof(*(ptr)) == 2                                                                 \
-         ? (int)atomic_exchange_16((short *)(ptr), (short)(val), memory_order_seq_cst)     \
-     : sizeof(*(ptr)) == 4                                                                 \
-         ? (int)atomic_exchange_32((long *)(ptr), (long)(val), memory_order_seq_cst)       \
-     : sizeof(*(ptr)) == 8                                                                 \
-         ? (int)atomic_exchange_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) \
-         : *(ptr))
+    (sizeof(*(ptr)) == 1 ?                                                                 \
+         (int)atomic_exchange_8((char *)(ptr), (char)(val), memory_order_seq_cst) :        \
+     sizeof(*(ptr)) == 2 ?                                                                 \
+         (int)atomic_exchange_16((short *)(ptr), (short)(val), memory_order_seq_cst) :     \
+     sizeof(*(ptr)) == 4 ?                                                                 \
+         (int)atomic_exchange_32((long *)(ptr), (long)(val), memory_order_seq_cst) :       \
+     sizeof(*(ptr)) == 8 ?                                                                 \
+         (int)atomic_exchange_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) : \
+         *(ptr))
 
-#define atomic_compare_exchange_strong(ptr, expected, desired)                                   \
-    (sizeof(*(ptr)) == 1                                                                         \
-         ? atomic_compare_exchange_strong_8((char *)(ptr), (char *)(expected), (char)(desired),  \
-                                            memory_order_seq_cst, memory_order_seq_cst)          \
-     : sizeof(*(ptr)) == 2 ? atomic_compare_exchange_strong_16(                                  \
-                                 (short *)(ptr), (short *)(expected), (short)(desired),          \
-                                 memory_order_seq_cst, memory_order_seq_cst)                     \
-     : sizeof(*(ptr)) == 4                                                                       \
-         ? atomic_compare_exchange_strong_32((long *)(ptr), (long *)(expected), (long)(desired), \
-                                             memory_order_seq_cst, memory_order_seq_cst)         \
-     : sizeof(*(ptr)) == 8 ? atomic_compare_exchange_strong_64(                                  \
-                                 (int64_t *)(ptr), (int64_t *)(expected), (int64_t)(desired),    \
-                                 memory_order_seq_cst, memory_order_seq_cst)                     \
-                           : 0)
+#define atomic_compare_exchange_strong(ptr, expected, desired)                                    \
+    (sizeof(*(ptr)) == 1 ?                                                                        \
+         atomic_compare_exchange_strong_8((char *)(ptr), (char *)(expected), (char)(desired),     \
+                                          memory_order_seq_cst, memory_order_seq_cst) :           \
+     sizeof(*(ptr)) == 2 ?                                                                        \
+         atomic_compare_exchange_strong_16((short *)(ptr), (short *)(expected), (short)(desired), \
+                                           memory_order_seq_cst, memory_order_seq_cst) :          \
+     sizeof(*(ptr)) == 4 ?                                                                        \
+         atomic_compare_exchange_strong_32((long *)(ptr), (long *)(expected), (long)(desired),    \
+                                           memory_order_seq_cst, memory_order_seq_cst) :          \
+     sizeof(*(ptr)) == 8 ?                                                                        \
+         atomic_compare_exchange_strong_64((int64_t *)(ptr), (int64_t *)(expected),               \
+                                           (int64_t)(desired), memory_order_seq_cst,              \
+                                           memory_order_seq_cst) :                                \
+         0)
 
-#define atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail)            \
-    (sizeof(*(ptr)) == 1                                                                       \
-         ? atomic_compare_exchange_strong_8((volatile char *)(ptr), (char *)(expected),        \
-                                            (char)(desired), succ, fail)                       \
-     : sizeof(*(ptr)) == 2                                                                     \
-         ? atomic_compare_exchange_strong_16((volatile short *)(ptr), (short *)(expected),     \
-                                             (short *)(desired), succ, fail)                   \
-     : sizeof(*(ptr)) == 4                                                                     \
-         ? atomic_compare_exchange_strong_32((volatile long *)(ptr), (long *)(expected),       \
-                                             (long)(desired), succ, fail)                      \
-     : sizeof(*(ptr)) == 8                                                                     \
-         ? atomic_compare_exchange_strong_64((volatile int64_t *)(ptr), (int64_t *)(expected), \
-                                             (int64_t *)(desired), succ, fail)                 \
-         : 0)
+#define atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail)          \
+    (sizeof(*(ptr)) == 1 ?                                                                   \
+         atomic_compare_exchange_strong_8((volatile char *)(ptr), (char *)(expected),        \
+                                          (char)(desired), succ, fail) :                     \
+     sizeof(*(ptr)) == 2 ?                                                                   \
+         atomic_compare_exchange_strong_16((volatile short *)(ptr), (short *)(expected),     \
+                                           (short *)(desired), succ, fail) :                 \
+     sizeof(*(ptr)) == 4 ?                                                                   \
+         atomic_compare_exchange_strong_32((volatile long *)(ptr), (long *)(expected),       \
+                                           (long)(desired), succ, fail) :                    \
+     sizeof(*(ptr)) == 8 ?                                                                   \
+         atomic_compare_exchange_strong_64((volatile int64_t *)(ptr), (int64_t *)(expected), \
+                                           (int64_t *)(desired), succ, fail) :               \
+         0)
 
 #define atomic_fetch_add(ptr, val)                                                          \
-    (sizeof(*(ptr)) == 1                                                                    \
-         ? (int)atomic_fetch_add_8((char *)(ptr), (char)(val), memory_order_seq_cst)        \
-     : sizeof(*(ptr)) == 2                                                                  \
-         ? (int)atomic_fetch_add_16((short *)(ptr), (short)(val), memory_order_seq_cst)     \
-     : sizeof(*(ptr)) == 4                                                                  \
-         ? (int)atomic_fetch_add_32((long *)(ptr), (long)(val), memory_order_seq_cst)       \
-     : sizeof(*(ptr)) == 8                                                                  \
-         ? (int)atomic_fetch_add_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) \
-         : 0)
+    (sizeof(*(ptr)) == 1 ?                                                                  \
+         (int)atomic_fetch_add_8((char *)(ptr), (char)(val), memory_order_seq_cst) :        \
+     sizeof(*(ptr)) == 2 ?                                                                  \
+         (int)atomic_fetch_add_16((short *)(ptr), (short)(val), memory_order_seq_cst) :     \
+     sizeof(*(ptr)) == 4 ?                                                                  \
+         (int)atomic_fetch_add_32((long *)(ptr), (long)(val), memory_order_seq_cst) :       \
+     sizeof(*(ptr)) == 8 ?                                                                  \
+         (int)atomic_fetch_add_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) : \
+         0)
 
 #define atomic_fetch_sub(ptr, val)                                                          \
-    (sizeof(*(ptr)) == 1                                                                    \
-         ? (int)atomic_fetch_sub_8((char *)(ptr), (char)(val), memory_order_seq_cst)        \
-     : sizeof(*(ptr)) == 2                                                                  \
-         ? (int)atomic_fetch_sub_16((short *)(ptr), (short)(val), memory_order_seq_cst)     \
-     : sizeof(*(ptr)) == 4                                                                  \
-         ? (int)atomic_fetch_sub_32((long *)(ptr), (long)(val), memory_order_seq_cst)       \
-     : sizeof(*(ptr)) == 8                                                                  \
-         ? (int)atomic_fetch_sub_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) \
-         : 0)
+    (sizeof(*(ptr)) == 1 ?                                                                  \
+         (int)atomic_fetch_sub_8((char *)(ptr), (char)(val), memory_order_seq_cst) :        \
+     sizeof(*(ptr)) == 2 ?                                                                  \
+         (int)atomic_fetch_sub_16((short *)(ptr), (short)(val), memory_order_seq_cst) :     \
+     sizeof(*(ptr)) == 4 ?                                                                  \
+         (int)atomic_fetch_sub_32((long *)(ptr), (long)(val), memory_order_seq_cst) :       \
+     sizeof(*(ptr)) == 8 ?                                                                  \
+         (int)atomic_fetch_sub_64((int64_t *)(ptr), (int64_t)(val), memory_order_seq_cst) : \
+         0)
 
 #define atomic_fetch_add_explicit(ptr, val, order)                                                \
-    (sizeof(*(ptr)) == 1 ? (int)atomic_fetch_add_8((volatile char *)(ptr), (char)(val), order)    \
-     : sizeof(*(ptr)) == 2                                                                        \
-         ? (int)atomic_fetch_add_16((volatile short *)(ptr), (short)(val), order)                 \
-     : sizeof(*(ptr)) == 4 ? (int)atomic_fetch_add_32((volatile long *)(ptr), (long)(val), order) \
-     : sizeof(*(ptr)) == 8                                                                        \
-         ? (int)atomic_fetch_add_64((volatile int64_t *)(ptr), (int64_t)(val), order)             \
-         : 0)
+    (sizeof(*(ptr)) == 1 ? (int)atomic_fetch_add_8((volatile char *)(ptr), (char)(val), order) :  \
+     sizeof(*(ptr)) == 2 ? (int)atomic_fetch_add_16((volatile short *)(ptr), (short)(val),        \
+                                                    order) :                                      \
+     sizeof(*(ptr)) == 4 ? (int)atomic_fetch_add_32((volatile long *)(ptr), (long)(val), order) : \
+     sizeof(*(ptr)) == 8 ? (int)atomic_fetch_add_64((volatile int64_t *)(ptr), (int64_t)(val),    \
+                                                    order) :                                      \
+                           0)
 
 #define atomic_fetch_sub_explicit(ptr, val, order)                                                \
-    (sizeof(*(ptr)) == 1 ? (int)atomic_fetch_sub_8((volatile char *)(ptr), (char)(val), order)    \
-     : sizeof(*(ptr)) == 2                                                                        \
-         ? (int)atomic_fetch_sub_16((volatile short *)(ptr), (short)(val), order)                 \
-     : sizeof(*(ptr)) == 4 ? (int)atomic_fetch_sub_32((volatile long *)(ptr), (long)(val), order) \
-     : sizeof(*(ptr)) == 8                                                                        \
-         ? (int)atomic_fetch_sub_64((volatile int64_t *)(ptr), (int64_t)(val), order)             \
-         : 0)
+    (sizeof(*(ptr)) == 1 ? (int)atomic_fetch_sub_8((volatile char *)(ptr), (char)(val), order) :  \
+     sizeof(*(ptr)) == 2 ? (int)atomic_fetch_sub_16((volatile short *)(ptr), (short)(val),        \
+                                                    order) :                                      \
+     sizeof(*(ptr)) == 4 ? (int)atomic_fetch_sub_32((volatile long *)(ptr), (long)(val), order) : \
+     sizeof(*(ptr)) == 8 ? (int)atomic_fetch_sub_64((volatile int64_t *)(ptr), (int64_t)(val),    \
+                                                    order) :                                      \
+                           0)
 #endif /* !AIRY_USE_STDATOMIC */
 
-/* ==================== 内存屏障 ==================== */
 
 #if AIRY_USE_STDATOMIC
 

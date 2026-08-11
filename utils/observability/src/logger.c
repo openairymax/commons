@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file logger.c
  * @brief airy_log_* API 实现（基于统一分层日志系统 logging.h）
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * d6 清理（IRON-8 兼容层清理）：本文件从 logging_compat.c 迁移 airy_log_* 实现，
@@ -26,8 +26,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-/* ==================== 模块自动初始化 ==================== */
-
 /**
  * @brief 日志模块一次性初始化
  *
@@ -38,14 +36,11 @@ static void ensure_log_initialized(void)
 {
     static atomic_int initialized = 0;
     int expected = 0;
-    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1,
-                                                 memory_order_seq_cst,
-                                                 memory_order_seq_cst)) {
+    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1, memory_order_seq_cst,
+                                                memory_order_seq_cst)) {
         log_init(NULL);
     }
 }
-
-/* ==================== airy_log_* API 实现 ==================== */
 
 const char *airy_log_set_trace_id(const char *trace_id)
 {
@@ -84,9 +79,6 @@ void airy_log_write_va(int level, const char *file, int line, const char *fmt, v
     log_write_va(new_level, file, line, fmt, args);
 }
 
-/* ==================== 编译时自动初始化 ==================== */
-
-/* 使用 GCC/Clang 的 constructor 属性在程序启动时自动初始化 */
 #if defined(__GNUC__) || defined(__clang__)
 static void __attribute__((constructor)) logging_module_constructor(void)
 {
@@ -94,7 +86,6 @@ static void __attribute__((constructor)) logging_module_constructor(void)
 }
 #endif
 
-/* 使用 MSVC 的初始化段在程序启动时自动初始化 */
 #if defined(_MSC_VER)
 #pragma section(".CRT$XCU", read)
 static void __cdecl logging_module_constructor(void)

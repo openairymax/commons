@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file logging.h
  * @brief 统一分层日志系统核心层API
@@ -32,7 +32,7 @@
  * @details
  * 使用示例：
  * @code
- * // 初始化日志系统
+ *
  * log_config_t manager = {
  *     .level = LOG_LEVEL_INFO,
  *     .output = LOG_OUTPUT_CONSOLE,
@@ -40,14 +40,14 @@
  * };
  * log_init(&manager);
  *
- * // 记录日志
+ *
  * LOG_INFO("系统启动成功，版本: %s", version);
  * LOG_ERROR("连接失败，错误码: %d", errno);
  *
- * // 设置追踪ID
+ *
  * log_set_trace_id("req-123456");
  *
- * // 清理日志系统
+ *
  * log_cleanup();
  * @endcode
  */
@@ -65,7 +65,6 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-/* ==================== 日志级别定义 ==================== */
 
 /**
  * @brief 日志级别枚举
@@ -73,22 +72,22 @@ extern "C" {
  * 定义5级日志级别，遵循Syslog标准，支持细粒度日志控制。
  */
 typedef enum {
-    /** @brief 调试信息，用于开发调试，生产环境通常关闭 */
+
     LOG_LEVEL_DEBUG = 0,
 
-    /** @brief 普通信息，记录系统正常运行状态 */
+
     LOG_LEVEL_INFO = 1,
 
-    /** @brief 警告信息，表示可能的问题但不会影响系统运行 */
+
     LOG_LEVEL_WARN = 2,
 
-    /** @brief 错误信息，表示功能错误但不影响系统继续运行 */
+
     LOG_LEVEL_ERROR = 3,
 
-    /** @brief 致命错误，表示系统无法继续运行，通常会导致进程退出 */
+
     LOG_LEVEL_FATAL = 4,
 
-    /** @brief 日志级别数量，用于数组边界检查 */
+
     LOG_LEVEL_COUNT = 5
 } log_level_t;
 
@@ -112,7 +111,6 @@ const char *log_level_to_string(log_level_t level);
  */
 log_level_t log_level_from_string(const char *str);
 
-/* ==================== 输出目标定义 ==================== */
 
 /**
  * @brief 日志输出目标枚举
@@ -120,26 +118,25 @@ log_level_t log_level_from_string(const char *str);
  * 定义日志可以输出的目标位置，支持多目标同时输出。
  */
 typedef enum {
-    /** @brief 控制台输出（stdout/stderr） */
+
     LOG_OUTPUT_CONSOLE = 0,
 
-    /** @brief 文件输出，支持轮转和压缩 */
+
     LOG_OUTPUT_FILE = 1,
 
-    /** @brief Syslog输出，遵循Syslog协议 */
+
     LOG_OUTPUT_SYSLOG = 2,
 
-    /** @brief 网络输出，支持TCP/UDP传输 */
+
     LOG_OUTPUT_NETWORK = 3,
 
-    /** @brief 内存缓冲输出，用于调试和测试 */
+
     LOG_OUTPUT_BUFFER = 4,
 
-    /** @brief 输出目标数量，用于数组边界检查 */
+
     LOG_OUTPUT_COUNT = 5
 } log_output_t;
 
-/* ==================== 输出格式定义 ==================== */
 
 /**
  * @brief 日志输出格式枚举
@@ -147,23 +144,22 @@ typedef enum {
  * 定义日志的格式化方式，支持多种结构化格式。
  */
 typedef enum {
-    /** @brief 简单文本格式，人类可读，易于调试 */
+
     LOG_FORMAT_TEXT = 0,
 
-    /** @brief JSON格式，机器可读，支持结构化查询 */
+
     LOG_FORMAT_JSON = 1,
 
-    /** @brief 结构化格式，键值对分隔，兼顾可读性和机器解析 */
+
     LOG_FORMAT_STRUCTURED = 2,
 
-    /** @brief 二进制格式，高性能，节省存储空间 */
+
     LOG_FORMAT_BINARY = 3,
 
-    /** @brief 输出格式数量，用于数组边界检查 */
+
     LOG_FORMAT_COUNT = 4
 } log_format_t;
 
-/* ==================== 日志记录结构体 ==================== */
 
 /**
  * @brief 日志记录结构体
@@ -172,35 +168,34 @@ typedef enum {
  * 用于在日志系统的不同层次之间传递。
  */
 typedef struct {
-    /** @brief 时间戳（Unix时间，毫秒精度） */
+
     uint64_t timestamp;
 
-    /** @brief 日志级别 */
+
     log_level_t level;
 
-    /** @brief 模块名称（来源文件或组件） */
+
     const char *module;
 
-    /** @brief 源代码行号 */
+
     int line;
 
-    /** @brief 线程追踪ID，用于请求跟踪 */
+
     const char *trace_id;
 
-    /** @brief Span ID，用于OpenTelemetry链路追踪 */
+
     const char *span_id;
 
-    /** @brief 日志消息内容 */
+
     const char *message;
 
-    /** @brief 线程ID，标识产生日志的线程 */
+
     uint64_t thread_id;
 
-    /** @brief 进程ID，标识产生日志的进程 */
+
     uint32_t process_id;
 } log_record_t;
 
-/* ==================== 配置结构体 ==================== */
 
 /**
  * @brief 日志配置结构体
@@ -208,50 +203,49 @@ typedef struct {
  * 配置日志系统的行为，支持运行时动态修改。
  */
 typedef struct {
-    /** @brief 全局日志级别，低于此级别的日志将被过滤 */
+
     log_level_t level;
 
-    /** @brief 输出目标，支持多个目标（使用位掩码组合） */
+
     uint32_t outputs;
 
-    /** @brief 输出格式 */
+
     log_format_t format;
 
-    /** @brief 文件输出配置 - 文件路径（仅当outputs包含FILE时有效） */
+
     const char *file_path;
 
-    /** @brief 文件输出配置 - 最大文件大小（字节），超过则轮转 */
+
     size_t max_file_size;
 
-    /** @brief 文件输出配置 - 最大保留文件数 */
+
     int max_backup_count;
 
-    /** @brief 网络输出配置 - 服务器地址（仅当outputs包含NETWORK时有效） */
+
     const char *network_host;
 
-    /** @brief 网络输出配置 - 服务器端口 */
+
     uint16_t network_port;
 
-    /** @brief Syslog配置 - 设施（facility） */
+
     int syslog_facility;
 
-    /** @brief 异步模式开关，启用后日志写入不会阻塞调用线程 */
+
     bool async_mode;
 
-    /** @brief 异步缓冲大小（字节），仅当async_mode为true时有效 */
+
     size_t async_buffer_size;
 
-    /** @brief 是否启用性能统计 */
+
     bool enable_statistics;
 
-    /** @brief 是否启用日志节流（相同消息限流） */
+
     bool enable_throttling;
 
-    /** @brief 每秒最大相同消息数（节流阈值），默认100 */
+
     uint32_t throttle_max_per_sec;
 } log_config_t;
 
-/* ==================== 核心API函数 ==================== */
 
 /**
  * @brief 初始化日志系统
@@ -362,8 +356,8 @@ int log_set_module_level(const char *module_pattern, log_level_t level);
  * 描述单个模块级别过滤规则，由 log_get_module_info() 填充。
  */
 typedef struct {
-    char pattern[128];   /**< 模块名称模式（支持通配符*） */
-    log_level_t level;   /**< 该模块的日志级别 */
+    char pattern[128];
+    log_level_t level;
 } log_module_info_t;
 
 /**
@@ -413,7 +407,6 @@ void log_flush(void);
  */
 void log_cleanup(void);
 
-/* ==================== 便捷日志宏 ==================== */
 
 /**
  * @brief 调试级别日志宏
@@ -468,7 +461,6 @@ void log_cleanup(void);
         }                                                             \
     } while (0)
 
-/* ==================== 日志采样与节流 ==================== */
 
 /**
  * @brief 启用日志节流

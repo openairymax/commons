@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file memory.c
  * @brief 统一内存管理模块 - 核心层实现
  *
  * 实现安全、高效、统一的内存管理功能，支持内存分配、释放、调试和统计功能
- *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @note AIRY_COMPLIANCE_IMPL: memory subsystem
  * 本文件是内存管理子系统的核心实现，直接使用 C 标准库 malloc/free/realloc
@@ -36,20 +35,17 @@
  * @brief 模块内部状态
  */
 typedef struct {
-    bool initialized;         /**< 模块是否已初始化 */
-    bool debug_enabled;       /**< 调试功能是否启用 */
-    memory_options_t options; /**< 当前配置选项 */
+    bool initialized;
+    bool debug_enabled;
+    memory_options_t options;
 
-    // 统计信息
-    memory_stats_t stats; /**< 内存统计信息 */
+    memory_stats_t stats;
 
     // 线程同步
-    airy_mtx_t lock; /**< 平台抽象互斥锁 */
+    airy_mtx_t lock;
 
-    // 调试信息链表头
-    struct memory_debug_info *debug_list_head; /**< 调试信息链表头*/
+    struct memory_debug_info *debug_list_head;
 
-    // 分配失败回调
     void (*fail_callback)(size_t size, const char *tag, void *user_data);
     void *fail_callback_user_data;
 } memory_state_t;
@@ -103,7 +99,7 @@ static uint64_t memory_get_timestamp(void)
     FILETIME ft;
     GetSystemTimeAsFileTime(&ft);
     uint64_t ts = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-    return ts / 10000;  // 转换为毫秒
+    return ts / 10000;
 #else
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -119,12 +115,10 @@ static uint64_t memory_get_timestamp(void)
  */
 static void memory_handle_fail(size_t size, const char *tag)
 {
-    // 调用用户回调
     if (g_state.fail_callback != NULL) {
         g_state.fail_callback(size, tag, g_state.fail_callback_user_data);
     }
 
-    // 根据策略处理
     switch (g_state.options.fail_strategy) {
     case MEMORY_FAIL_STRATEGY_ABORT:
         LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
@@ -149,8 +143,10 @@ static void memory_handle_fail(size_t size, const char *tag)
  * @param[in] addr 内存地址
  * @param[in] size 分配大小
  * @param[in] tag 分配标签
- * @param[in] file 源文? * @param[in] line 行号
- * @param[in] function 函数? */
+ * @param[in] file 源文件
+ * @param[in] line 行号
+ * @param[in] function 函数
+ */
 static void memory_add_debug_info(void *addr, size_t size, size_t alignment, const char *tag,
                                   const char *file, int line, const char *function)
 {
@@ -267,7 +263,8 @@ static void memory_update_stats_free(size_t size)
  * @param[in] tag 分配标签
  * @param[in] zero 是否清零
  * @param[in] alignment 对齐要求
- * @return 分配的内存指? */
+ * @return 分配的内存指针
+ */
 static void *memory_allocate_internal(size_t size, const char *tag, bool zero, size_t alignment)
 {
     if (size == 0) {
@@ -287,7 +284,6 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
     ptr = _aligned_malloc(size, effective_alignment);
 #else
     if (alignment > 0) {
-        // POSIX系统使用posix_memalign
         if (posix_memalign(&ptr, alignment, size) != 0) {
             ptr = NULL;
         }
@@ -301,15 +297,12 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
         return NULL;
     }
 
-    // 清零内存
     if (zero || g_state.options.zero_memory) {
         __builtin_memset(ptr, 0, size);
     }
 
-    // 更新统计信息
     memory_update_stats_alloc(size);
 
-    // 记录调试信息（Windows 存储 effective_alignment 供 _aligned_realloc 使用）
     if (g_state.debug_enabled) {
 #ifdef _WIN32
         memory_add_debug_info(ptr, size, effective_alignment, tag, __FILE__, __LINE__, __func__);
@@ -328,22 +321,17 @@ bool memory_init(const memory_options_t *options)
     }
 
     LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
-                     options && options->zero_memory ? "true" : "false",
-                     options ? options->alignment : 0);
+             options && options->zero_memory ? "true" : "false", options ? options->alignment : 0);
 
-    // 初始化锁
     if (!memory_lock_init()) {
         return false;
     }
 
     memory_lock();
 
-    // 设置选项
     if (options != NULL) {
         __builtin_memcpy(&g_state.options, options, sizeof(memory_options_t));
     }
-
-    // 初始化统计信?    __builtin_memset(&g_state.stats, 0, sizeof(memory_stats_t));
 
     g_state.initialized = true;
     g_state.debug_enabled = false;
@@ -362,10 +350,10 @@ void memory_cleanup(void)
         return;
     }
 
-    LOG_INFO("memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
-                     g_state.stats.total_allocated, g_state.stats.current_allocated,
-                     g_state.stats.peak_allocated, g_state.stats.allocation_count,
-                     g_state.stats.free_count);
+    LOG_INFO(
+        "memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
+        g_state.stats.total_allocated, g_state.stats.current_allocated,
+        g_state.stats.peak_allocated, g_state.stats.allocation_count, g_state.stats.free_count);
 
     memory_lock();
 
@@ -381,7 +369,7 @@ void memory_cleanup(void)
             leak_count++;
             leak_size += current->size;
             LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
-                    current->tag ? current->tag : "(null)");
+                     current->tag ? current->tag : "(null)");
 
             // 释放泄漏的内存（可选）
             // AIRY_FREE(current->address);
@@ -407,15 +395,12 @@ void memory_cleanup(void)
 
     memory_unlock();
 
-    // 销毁锁
     memory_lock_destroy();
 }
 
 void *memory_alloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
-        // 如果模块未初始化，使用系统默认分配
-        // Windows 上统一使用 _aligned_malloc，与 memory_free 的 _aligned_free 配对（C-5）
 #ifdef _WIN32
         void *ptr = _aligned_malloc(size, sizeof(void *));
 #else
@@ -437,8 +422,6 @@ void *memory_alloc(size_t size, const char *tag)
 void *memory_calloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
-        // 如果模块未初始化，使用系统默认分配
-        // Windows 上统一使用 _aligned_malloc + memset，与 memory_free 的 _aligned_free 配对（C-5）
 #ifdef _WIN32
         void *ptr = _aligned_malloc(size, sizeof(void *));
         if (ptr != NULL) {
@@ -460,7 +443,6 @@ void *memory_calloc(size_t size, const char *tag)
 void *memory_aligned_alloc(size_t alignment, size_t size, const char *tag)
 {
     if (!g_state.initialized) {
-        // 如果模块未初始化，使用系统默认分配
 #ifdef _WIN32
         void *ptr = _aligned_malloc(size, alignment);
         if (ptr != NULL) {
@@ -498,7 +480,6 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     }
 
     if (!g_state.initialized) {
-        // Windows 上统一使用 _aligned_realloc，与 _aligned_malloc/_aligned_free 配对（C-5）
 #ifdef _WIN32
         return _aligned_realloc(ptr, new_size, sizeof(void *));
 #else
@@ -510,7 +491,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t old_size = debug_info ? debug_info->size : 0;
-    /* 保存原始 alignment 供 _aligned_realloc 使用；无 debug_info 时默认 sizeof(void*) */
+
     size_t saved_alignment = debug_info ? debug_info->alignment : sizeof(void *);
 
     void *old_ptr = ptr;
@@ -538,7 +519,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     void *new_ptr = realloc(ptr, new_size);
 #endif
     if (new_ptr == NULL) {
-        /* realloc 失败，原始 ptr 仍有效，恢复 debug info */
+
         if (debug_info_saved && g_state.debug_enabled) {
             memory_add_debug_info(old_ptr, old_size, saved_alignment,
                                   saved_tag[0] ? saved_tag : tag,
@@ -602,8 +583,6 @@ void memory_free(void *ptr)
     }
 
     if (!g_state.initialized) {
-        // 如果模块未初始化，使用系统默认释放
-        // Windows 上统一使用 _aligned_free，与 _aligned_malloc 配对（C-5）
 #ifdef _WIN32
         _aligned_free(ptr);
 #else
@@ -614,7 +593,6 @@ void memory_free(void *ptr)
 
     memory_lock();
 
-    // 查找分配信息
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t size = debug_info ? debug_info->size : 0;
 
@@ -634,7 +612,6 @@ void memory_free(void *ptr)
     free(ptr);
 #endif
 
-    // 更新统计信息
     if (size > 0) {
         memory_update_stats_free(size);
     }
@@ -689,9 +666,8 @@ bool memory_debug_enable(bool enable)
         return false;
     }
 
-    LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)",
-                     enable ? "true" : "false",
-                     g_state.debug_enabled ? "true" : "false");
+    LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)", enable ? "true" : "false",
+             g_state.debug_enabled ? "true" : "false");
 
     memory_lock();
 
@@ -702,7 +678,6 @@ bool memory_debug_enable(bool enable)
 
     g_state.debug_enabled = enable;
 
-    // 如果禁用调试，清理现有调试信息
     if (!enable && g_state.debug_list_head != NULL) {
         struct memory_debug_info *current = g_state.debug_list_head;
         while (current != NULL) {

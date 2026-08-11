@@ -1,10 +1,9 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file ipc_backpressure.h
  * @brief IPC Bus 背压控制 — 三级策略
- *
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * P0.17 阶段 4：从 daemons/common/include/ 迁移至 commons，
  * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
@@ -31,36 +30,36 @@ extern "C" {
  * @brief 背压级别
  */
 typedef enum {
-    IPC_BP_NORMAL = 0,      /**< < 60% 正常 */
-    IPC_BP_SLOW   = 1,      /**< 60-80% 降速 */
-    IPC_BP_DROP   = 2,      /**< 80-90% 丢弃低优先级消息 */
-    IPC_BP_REJECT = 3       /**< > 90% 拒绝新连接 */
+    IPC_BP_NORMAL = 0,
+    IPC_BP_SLOW = 1,
+    IPC_BP_DROP = 2,
+    IPC_BP_REJECT = 3
 } ipc_bp_level_t;
 
 /**
  * @brief 背压配置
  */
 typedef struct {
-    size_t queue_capacity;       /**< 队列容量（消息数） */
-    uint32_t slow_threshold_pct; /**< 降速阈值百分比（默认 80） */
-    uint32_t drop_threshold_pct; /**< 丢弃阈值百分比（默认 90） */
-    uint32_t reject_threshold_pct;/**< 拒绝阈值百分比（默认 95） */
-    uint32_t recover_threshold_pct;/**< 恢复阈值百分比（默认 60） */
-    uint32_t sample_interval_ms; /**< 采样间隔（默认 5000） */
+    size_t queue_capacity;
+    uint32_t slow_threshold_pct;
+    uint32_t drop_threshold_pct;
+    uint32_t reject_threshold_pct;
+    uint32_t recover_threshold_pct;
+    uint32_t sample_interval_ms;
 } ipc_bp_config_t;
 
 /**
  * @brief 背压统计
  */
 typedef struct {
-    ipc_bp_level_t current_level; /**< 当前背压级别 */
-    size_t queue_depth;           /**< 当前队列深度 */
-    size_t queue_capacity;        /**< 队列容量 */
-    uint64_t total_sent;          /**< 总发送数 */
-    uint64_t total_dropped;       /**< 总丢弃数 */
-    uint64_t total_rejected;      /**< 总拒绝数 */
-    uint64_t slow_down_events;    /**< 降速事件数 */
-    uint64_t recover_events;      /**< 恢复事件数 */
+    ipc_bp_level_t current_level;
+    size_t queue_depth;
+    size_t queue_capacity;
+    uint64_t total_sent;
+    uint64_t total_dropped;
+    uint64_t total_rejected;
+    uint64_t slow_down_events;
+    uint64_t recover_events;
 } ipc_bp_stats_t;
 
 /**

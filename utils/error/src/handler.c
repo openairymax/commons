@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file handler.c
  * @brief 统一错误处理模块实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 本模块提供统一的错误处理功能，包括：
  * - 错误码描述和严重程度管理
@@ -12,7 +12,6 @@
  * - 错误统计和报告
  */
 
-/* 使用明确的相对路径确保包含commons的error.h */
 #include "atomic_compat.h"
 #include "error.h"
 #include "logging.h"
@@ -34,19 +33,14 @@
 #endif
 #include "platform.h"
 
-/* ==================== 全局状态 ==================== */
-
-/* 当前语言环境 */
 static airy_language_t g_current_language = AIRY_LANG_EN_US;
 
-/* 自定义多语言错误描述条目 */
 static airy_err_i18n_entry_t *g_i18n_entries = NULL;
 static size_t g_i18n_entry_count = 0;
 
-/* 错误统计信息 */
 static struct {
     uint64_t total_errors;
-    uint64_t errors_by_severity[4]; /* 按严重程度统计 */
+    uint64_t errors_by_severity[4];
     uint64_t last_error_time;
     airy_err_t last_error;
 } g_error_stats;
@@ -64,32 +58,30 @@ static void ensure_stats_init(void)
     }
 }
 
-#define STATS_LOCK()                              \
-    do {                                          \
-        ensure_stats_init();                      \
+#define STATS_LOCK()                         \
+    do {                                     \
+        ensure_stats_init();                 \
         airy_mtx_lock(&g_error_stats_mutex); \
     } while (0)
 
-#define STATS_UNLOCK()                              \
-    do {                                            \
+#define STATS_UNLOCK()                         \
+    do {                                       \
         airy_mtx_unlock(&g_error_stats_mutex); \
     } while (0)
 
 #else
 static airy_mtx_t g_error_stats_mutex = {0};
 
-#define STATS_LOCK()                              \
-    do {                                          \
+#define STATS_LOCK()                         \
+    do {                                     \
         airy_mtx_lock(&g_error_stats_mutex); \
     } while (0)
 
-#define STATS_UNLOCK()                              \
-    do {                                            \
+#define STATS_UNLOCK()                         \
+    do {                                       \
         airy_mtx_unlock(&g_error_stats_mutex); \
     } while (0)
 #endif
-
-/* ==================== 线程本地错误状态 ==================== */
 
 typedef struct {
     airy_err_chain_t chain;
@@ -133,8 +125,6 @@ static thread_error_state_t *get_thread_error_state(void)
 }
 #endif
 
-/* ==================== 错误码描述表 ==================== */
-
 typedef struct {
     airy_err_t code;
     const char *name;
@@ -144,15 +134,13 @@ typedef struct {
 } error_info_t;
 
 static const error_info_t g_error_info[] = {
-    /* 成功 */
+
     {AIRY_OK, "OK", "Success", "成功", AIRY_ERR_SEVERITY_INFO},
 
-    /* 通用基础错误 */
     {AIRY_ERR_UNKNOWN, "ERR_UNKNOWN", "Unknown error", "未知错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_INVALID_PARAM, "ERR_INVALID_PARAM", "Invalid parameter", "无效参数",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_NULL_POINTER, "ERR_NULL_POINTER", "Null pointer", "空指针",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_NULL_POINTER, "ERR_NULL_POINTER", "Null pointer", "空指针", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_OUT_OF_MEMORY, "ERR_OUT_OF_MEMORY", "Out of memory", "内存不足",
      AIRY_ERR_SEVERITY_CRITICAL},
     {AIRY_ERR_BUFFER_TOO_SMALL, "ERR_BUFFER_TOO_SMALL", "Buffer too small", "缓冲区太小",
@@ -166,45 +154,34 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_PERMISSION_DENIED, "ERR_PERMISSION_DENIED", "Permission denied", "权限不足",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_IO, "ERR_IO", "I/O error", "I/O 错误", AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_PARSE_ERROR, "ERR_PARSE_ERROR", "Parse error", "解析错误",
-     AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_STATE_ERROR, "ERR_STATE_ERROR", "State error", "状态错误",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_PARSE_ERROR, "ERR_PARSE_ERROR", "Parse error", "解析错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_STATE_ERROR, "ERR_STATE_ERROR", "State error", "状态错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_OVERFLOW, "ERR_OVERFLOW", "Overflow", "溢出", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_UNDERFLOW, "ERR_UNDERFLOW", "Underflow", "下溢", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_CANCELED, "ERR_CANCELED", "Canceled", "已取消", AIRY_ERR_SEVERITY_INFO},
     {AIRY_ERR_BUSY, "ERR_BUSY", "Busy", "忙碌", AIRY_ERR_SEVERITY_WARNING},
-    {AIRY_ERR_WOULD_BLOCK, "ERR_WOULD_BLOCK", "Would block", "将阻塞",
-     AIRY_ERR_SEVERITY_WARNING},
-    {AIRY_ERR_INTERRUPTED, "ERR_INTERRUPTED", "Interrupted", "被中断",
-     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_WOULD_BLOCK, "ERR_WOULD_BLOCK", "Would block", "将阻塞", AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_INTERRUPTED, "ERR_INTERRUPTED", "Interrupted", "被中断", AIRY_ERR_SEVERITY_WARNING},
 
-    /* 系统与平台错误 */
     {AIRY_ERR_SYS_NOT_INIT, "ERR_SYS_NOT_INIT", "System not initialized", "系统未初始化",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_RESOURCE, "ERR_SYS_RESOURCE", "System resource error", "系统资源错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_SYS_DEADLOCK, "ERR_SYS_DEADLOCK", "Deadlock", "死锁",
-     AIRY_ERR_SEVERITY_CRITICAL},
-    {AIRY_ERR_SYS_THREAD, "ERR_SYS_THREAD", "Thread error", "线程错误",
-     AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_SYS_MUTEX, "ERR_SYS_MUTEX", "Mutex error", "互斥锁错误",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_DEADLOCK, "ERR_SYS_DEADLOCK", "Deadlock", "死锁", AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_SYS_THREAD, "ERR_SYS_THREAD", "Thread error", "线程错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_MUTEX, "ERR_SYS_MUTEX", "Mutex error", "互斥锁错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_SEMAPHORE, "ERR_SYS_SEMAPHORE", "Semaphore error", "信号量错误",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_CONDITION, "ERR_SYS_CONDITION", "Condition variable error", "条件变量错误",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_ATOMIC, "ERR_SYS_ATOMIC", "Atomic operation error", "原子操作错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_SYS_SOCKET, "ERR_SYS_SOCKET", "Socket error", "套接字错误",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_SOCKET, "ERR_SYS_SOCKET", "Socket error", "套接字错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_PIPE, "ERR_SYS_PIPE", "Pipe error", "管道错误", AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_SYS_PROCESS, "ERR_SYS_PROCESS", "Process error", "进程错误",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SYS_PROCESS, "ERR_SYS_PROCESS", "Process error", "进程错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_FILE, "ERR_SYS_FILE", "File error", "文件错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_TIME, "ERR_SYS_TIME", "Time error", "时间错误", AIRY_ERR_SEVERITY_ERROR},
 
-    /* 内核层错误 */
     {AIRY_ERR_KERN_IPC, "ERR_KERN_IPC", "IPC error", "IPC 错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_KERN_TASK, "ERR_KERN_TASK", "Task error", "任务错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_KERN_SYNC, "ERR_KERN_SYNC", "Synchronization error", "同步错误",
@@ -213,16 +190,13 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_KERN_MEM, "ERR_KERN_MEM", "Memory error", "内存错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_KERN_SCHED, "ERR_KERN_SCHED", "Scheduler error", "调度器错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_KERN_TIMER, "ERR_KERN_TIMER", "Timer error", "定时器错误",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_KERN_TIMER, "ERR_KERN_TIMER", "Timer error", "定时器错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_KERN_INTERRUPT, "ERR_KERN_INTERRUPT", "Interrupt error", "中断错误",
      AIRY_ERR_SEVERITY_ERROR},
 
-    /* 服务层错误 */
     {AIRY_ERR_SVC_NOT_READY, "ERR_SVC_NOT_READY", "Service not ready", "服务未就绪",
      AIRY_ERR_SEVERITY_WARNING},
-    {AIRY_ERR_SVC_BUSY, "ERR_SVC_BUSY", "Service busy", "服务忙碌",
-     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_SVC_BUSY, "ERR_SVC_BUSY", "Service busy", "服务忙碌", AIRY_ERR_SEVERITY_WARNING},
     {AIRY_ERR_SVC_STOPPED, "ERR_SVC_STOPPED", "Service stopped", "服务已停止",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SVC_CONFIG, "ERR_SVC_CONFIG", "Service configuration error", "服务配置错误",
@@ -234,15 +208,14 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_SVC_LOADBALANCE, "ERR_SVC_LOADBALANCE", "Load balance error", "负载均衡错误",
      AIRY_ERR_SEVERITY_ERROR},
 
-    /* LLM/AI 服务错误 */
     {AIRY_ERR_LLM_NO_PROVIDER, "ERR_LLM_NO_PROVIDER", "No LLM provider", "无 LLM 提供商",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_LLM_PROVIDER_FAIL, "ERR_LLM_PROVIDER_FAIL", "LLM provider failure",
-     "LLM 提供商失败", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_PROVIDER_FAIL, "ERR_LLM_PROVIDER_FAIL", "LLM provider failure", "LLM 提供商失败",
+     AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_LLM_RATE_LIMIT, "ERR_LLM_RATE_LIMIT", "Rate limit exceeded", "超出速率限制",
      AIRY_ERR_SEVERITY_WARNING},
-    {AIRY_ERR_LLM_CONTEXT_LEN, "ERR_LLM_CONTEXT_LEN", "Context length exceeded",
-     "超出上下文长度", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_LLM_CONTEXT_LEN, "ERR_LLM_CONTEXT_LEN", "Context length exceeded", "超出上下文长度",
+     AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_LLM_INVALID_MODEL, "ERR_LLM_INVALID_MODEL", "Invalid model", "无效模型",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_LLM_AUTH_FAIL, "ERR_LLM_AUTH_FAIL", "Authentication failed", "认证失败",
@@ -256,25 +229,22 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_LLM_COST_EXCEED, "ERR_LLM_COST_EXCEED", "Cost exceeded", "超出成本限制",
      AIRY_ERR_SEVERITY_WARNING},
 
-    /* 执行/工具错误 */
     {AIRY_ERR_EXEC_NOT_FOUND, "ERR_EXEC_NOT_FOUND", "Executor not found", "执行器未找到",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_EXEC_FAIL, "ERR_EXEC_FAIL", "Execution failed", "执行失败",
-     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_FAIL, "ERR_EXEC_FAIL", "Execution failed", "执行失败", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_EXEC_TIMEOUT, "ERR_EXEC_TIMEOUT", "Execution timeout", "执行超时",
      AIRY_ERR_SEVERITY_WARNING},
-    {AIRY_ERR_EXEC_VALIDATION, "ERR_EXEC_VALIDATION", "Execution validation failed",
-     "执行验证失败", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_VALIDATION, "ERR_EXEC_VALIDATION", "Execution validation failed", "执行验证失败",
+     AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_EXEC_SANDBOX, "ERR_EXEC_SANDBOX", "Sandbox error", "沙箱错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_EXEC_PERMISSION, "ERR_EXEC_PERMISSION", "Execution permission denied",
-     "执行权限不足", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_PERMISSION, "ERR_EXEC_PERMISSION", "Execution permission denied", "执行权限不足",
+     AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_EXEC_ARGS, "ERR_EXEC_ARGS", "Invalid execution arguments", "无效执行参数",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_EXEC_ENV, "ERR_EXEC_ENV", "Execution environment error", "执行环境错误",
      AIRY_ERR_SEVERITY_ERROR},
 
-    /* 记忆/存储错误 */
     {AIRY_ERR_MEM_WRITE, "ERR_MEM_WRITE", "Memory write error", "内存写入错误",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_MEM_READ, "ERR_MEM_READ", "Memory read error", "内存读取错误",
@@ -289,7 +259,6 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_MEM_NOT_INIT, "ERR_MEM_NOT_INIT", "Memory not initialized", "内存未初始化",
      AIRY_ERR_SEVERITY_ERROR},
 
-    /* 安全/沙箱错误 */
     {AIRY_ERR_SEC_VIOLATION, "ERR_SEC_VIOLATION", "Security violation", "安全违规",
      AIRY_ERR_SEVERITY_CRITICAL},
     {AIRY_ERR_SEC_SANITIZE, "ERR_SEC_SANITIZE", "Sanitization error", "清理错误",
@@ -299,20 +268,17 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SEC_VALIDATION, "ERR_SEC_VALIDATION", "Security validation error", "安全验证错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_SEC_QUOTA, "ERR_SEC_QUOTA", "Quota exceeded", "超出配额",
-     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_SEC_QUOTA, "ERR_SEC_QUOTA", "Quota exceeded", "超出配额", AIRY_ERR_SEVERITY_WARNING},
     {AIRY_ERR_SEC_TEMP_DIR, "ERR_SEC_TEMP_DIR", "Temporary directory error", "临时目录错误",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SEC_SYMLINK, "ERR_SEC_SYMLINK", "Symbolic link error", "符号链接错误",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SEC_PATH_TRAV, "ERR_SEC_PATH_TRAV", "Path traversal detected", "检测到路径遍历",
      AIRY_ERR_SEVERITY_CRITICAL},
-    {AIRY_ERR_ESECURITY, "ERR_ESECURITY", "Security error", "安全错误",
-     AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ERR_ESECURITY, "ERR_ESECURITY", "Security error", "安全错误", AIRY_ERR_SEVERITY_CRITICAL},
     {AIRY_ERR_ESANITIZE, "ERR_ESANITIZE", "Sanitization error", "清理错误",
      AIRY_ERR_SEVERITY_ERROR},
 
-    /* 协调/规划错误 */
     {AIRY_ERR_COORD_PLAN_FAIL, "ERR_COORD_PLAN_FAIL", "Planning failed", "规划失败",
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_COORD_SYNC_FAIL, "ERR_COORD_SYNC_FAIL", "Synchronization failed", "同步失败",
@@ -323,18 +289,16 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_COORD_COMPENSATE, "ERR_COORD_COMPENSATE", "Compensation error", "补偿错误",
      AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_COORD_RETRY_EXCEED, "ERR_COORD_RETRY_EXCEED", "Retry limit exceeded",
-     "超出重试限制", AIRY_ERR_SEVERITY_ERROR},
-    /* P0.22.1 (ARE L2): 协议/校验错误段 */
+    {AIRY_ERR_COORD_RETRY_EXCEED, "ERR_COORD_RETRY_EXCEED", "Retry limit exceeded", "超出重试限制",
+     AIRY_ERR_SEVERITY_ERROR},
+
     {AIRY_ERR_PROTOCOL, "ERR_PROTOCOL", "Protocol violation (magic/version/reserved)",
      "协议违规（magic/version/reserved 字段不匹配）", AIRY_ERR_SEVERITY_ERROR},
-    {AIRY_ERR_CHECKSUM, "ERR_CHECKSUM", "Checksum mismatch (CRC32)",
-     "校验和不匹配（CRC32）", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_CHECKSUM, "ERR_CHECKSUM", "Checksum mismatch (CRC32)", "校验和不匹配（CRC32）",
+     AIRY_ERR_SEVERITY_ERROR},
 };
 
 static const size_t g_error_info_count = sizeof(g_error_info) / sizeof(g_error_info[0]);
-
-/* ==================== 核心错误处理函数 ==================== */
 
 /**
  * @brief 获取错误码的英文描述字符串
@@ -388,7 +352,7 @@ void airy_err_clear(void)
     if (state == NULL || !state->initialized) {
         return;
     }
-    /* 释放错误链中每个条目的 message 字符串 */
+
     for (int i = 0; i < state->chain.depth; i++) {
         AIRY_FREE((void *)state->chain.contexts[i].message);
         state->chain.contexts[i].message = NULL;
@@ -403,7 +367,7 @@ void airy_err_thread_cleanup(void)
     if (g_tls_index != TLS_OUT_OF_INDEXES) {
         thread_error_state_t *state = (thread_error_state_t *)TlsGetValue(g_tls_index);
         if (state != NULL) {
-            /* 先释放错误链中的所有 message */
+
             for (int i = 0; i < state->chain.depth; i++) {
                 AIRY_FREE((void *)state->chain.contexts[i].message);
                 state->chain.contexts[i].message = NULL;
@@ -414,7 +378,7 @@ void airy_err_thread_cleanup(void)
     }
 #else
     if (g_tls_error_state != NULL) {
-        /* 先释放错误链中的所有 message */
+
         for (int i = 0; i < g_tls_error_state->chain.depth; i++) {
             AIRY_FREE((void *)g_tls_error_state->chain.contexts[i].message);
             g_tls_error_state->chain.contexts[i].message = NULL;
@@ -424,8 +388,6 @@ void airy_err_thread_cleanup(void)
     }
 #endif
 }
-
-/* ==================== 时间获取函数 ==================== */
 
 /**
  * @brief 获取当前时间（纳秒级）
@@ -445,8 +407,6 @@ static uint64_t get_current_time_ns(void)
 #endif
 }
 
-/* ==================== 错误上下文添加函数 ==================== */
-
 /**
  * @brief 向错误链中添加错误上下文信息（带详细位置）
  * @param code 错误码
@@ -457,7 +417,7 @@ static uint64_t get_current_time_ns(void)
  * @param ... 可变参数
  */
 void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *func,
-                           const char *fmt, ...)
+                      const char *fmt, ...)
 {
     thread_error_state_t *state = get_thread_error_state();
     if (state == NULL || !state->initialized) {
@@ -466,7 +426,6 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
 
     airy_err_chain_t *chain = &state->chain;
 
-    /* 更新错误统计 */
     STATS_LOCK();
     g_error_stats.total_errors++;
     airy_err_severity_t severity = airy_err_get_severity(code);
@@ -477,7 +436,6 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
     g_error_stats.last_error = code;
     STATS_UNLOCK();
 
-    /* 格式化错误消息 */
     char message_buffer[1024];
     va_list args;
     va_start(args, fmt);
@@ -485,24 +443,22 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
               args); /* flawfinder: ignore - variadic error handler with bounded buffer */
     va_end(args);
 
-    /* 添加到错误链 */
     if (chain->depth < AIRY_ERROR_CONTEXT_MAX_DEPTH) {
         airy_err_context_entry_t *entry = &chain->contexts[chain->depth];
         entry->file = file;
         entry->line = line;
         entry->function = func;
-        entry->message = AIRY_STRDUP(message_buffer); /* 需要释放，但错误链生命周期内保持 */
+        entry->message = AIRY_STRDUP(message_buffer);
         entry->error_code = code;
         entry->timestamp_ns = get_current_time_ns();
         chain->depth++;
     } else {
-        /* 链已满，移除最旧的条目 */
+
         AIRY_FREE((void *)chain->contexts[0].message);
         for (int i = 0; i < AIRY_ERROR_CONTEXT_MAX_DEPTH - 1; i++) {
             chain->contexts[i] = chain->contexts[i + 1];
         }
-        airy_err_context_entry_t *entry =
-            &chain->contexts[AIRY_ERROR_CONTEXT_MAX_DEPTH - 1];
+        airy_err_context_entry_t *entry = &chain->contexts[AIRY_ERROR_CONTEXT_MAX_DEPTH - 1];
         entry->file = file;
         entry->line = line;
         entry->function = func;
@@ -511,7 +467,6 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
         entry->timestamp_ns = get_current_time_ns();
     }
 
-    /* 更新链的最新错误码 */
     chain->code = code;
 }
 
@@ -531,8 +486,8 @@ void airy_err_print_chain(const airy_err_chain_t *chain)
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
         (void)ctx;
         LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
-                           ctx->line, ctx->function ? ctx->function : "(unknown)", ctx->error_code,
-                           ctx->message ? ctx->message : "");
+                  ctx->line, ctx->function ? ctx->function : "(unknown)", ctx->error_code,
+                  ctx->message ? ctx->message : "");
     }
 }
 
@@ -547,7 +502,6 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain)
         return AIRY_STRDUP("{\"error\": \"null chain\"}");
     }
 
-    /* 调用多语言版本，使用当前语言 */
     return airy_err_chain_to_json_i18n(chain, -1);
 }
 
@@ -585,8 +539,6 @@ void airy_err_reset_stats(void)
     g_error_stats.last_error = AIRY_OK;
     STATS_UNLOCK();
 }
-
-/* ==================== 多语言支持函数实现 ==================== */
 
 /**
  * @brief 设置错误描述的语言
@@ -629,7 +581,6 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
         use_lang = AIRY_LANG_EN_US;
     }
 
-    /* 首先检查自定义 i18n 条目 */
     for (size_t i = 0; i < g_i18n_entry_count; i++) {
         if (g_i18n_entries[i].error_code == code) {
             const char *desc = g_i18n_entries[i].descriptions[use_lang];
@@ -639,20 +590,18 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
         }
     }
 
-    /* 回退到内置多语言描述 */
     for (size_t i = 0; i < g_error_info_count; i++) {
         if (g_error_info[i].code == code) {
             switch (use_lang) {
             case AIRY_LANG_ZH_CN:
-                return g_error_info[i].description_zh_cn ? g_error_info[i].description_zh_cn
-                                                         : g_error_info[i].description_en;
+                return g_error_info[i].description_zh_cn ? g_error_info[i].description_zh_cn :
+                                                           g_error_info[i].description_en;
             default:
                 return g_error_info[i].description_en;
             }
         }
     }
 
-    /* 最后回退到默认错误描述 */
     return airy_err_str(code);
 }
 
@@ -669,23 +618,19 @@ airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t c
         return AIRY_ERR_INVALID_PARAM;
     }
 
-    /* 释放现有条目 */
     if (g_i18n_entries != NULL) {
         for (size_t i = 0; i < g_i18n_entry_count; i++) {
-            /* 注意：这里假设 descriptions 是静态字符串，不需要释放 */
         }
         AIRY_FREE(g_i18n_entries);
         g_i18n_entries = NULL;
         g_i18n_entry_count = 0;
     }
 
-    /* 分配新内存 */
     g_i18n_entries = airy_malloc_array(count, sizeof(airy_err_i18n_entry_t));
     if (g_i18n_entries == NULL) {
         return AIRY_ERR_OUT_OF_MEMORY;
     }
 
-    /* 复制条目 */
     __builtin_memcpy(g_i18n_entries, entries, count * sizeof(airy_err_i18n_entry_t));
     g_i18n_entry_count = count;
 
@@ -717,16 +662,16 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
     }
 
     size_t offset = 0;
-    int n = snprintf(
-        buf, buf_size, "{\"code\": %d, \"message\": \"%s\", \"depth\": %d, \"contexts\": [",
-        chain->code, airy_err_str_i18n(chain->code, use_lang), chain->depth);
+    int n = snprintf(buf, buf_size,
+                     "{\"code\": %d, \"message\": \"%s\", \"depth\": %d, \"contexts\": [",
+                     chain->code, airy_err_str_i18n(chain->code, use_lang), chain->depth);
     /* snprintf 返回"应写入"的字符数，可能 >= 剩余空间；offset 必须始终 <= buf_size，
      * 否则 buf_size - offset 无符号下溢会写入越界（与 resource_guard.c 的
      * AIRY_REPORT_APPEND 防护模式一致）。 */
     if (n < 0) {
         offset = buf_size;
     } else if ((size_t)n >= buf_size) {
-        offset = buf_size; /* 已截断，标记缓冲区已满 */
+        offset = buf_size;
     } else {
         offset = (size_t)n;
     }
@@ -734,7 +679,6 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
     for (int i = 0; i < chain->depth && offset < buf_size; i++) {
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
 
-        /* 转义消息字符串 */
         char escaped_msg[2048] = {0};
         const char *msg = ctx->message ? ctx->message : "";
         for (size_t j = 0, k = 0; j < strlen(msg) && k < sizeof(escaped_msg) - 1; j++) {
@@ -743,7 +687,7 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
             }
             escaped_msg[k++] = msg[j];
         }
-        escaped_msg[sizeof(escaped_msg) - 1] = '\0'; /* 保证 NUL 结尾，避免 %s 越界读 */
+        escaped_msg[sizeof(escaped_msg) - 1] = '\0';
 
         n = snprintf(buf + offset, buf_size - offset,
                      "%s{\"file\": \"%s\", \"line\": %d, \"function\": \"%s\", \"code\": %d, "
@@ -753,7 +697,7 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
         if (n < 0) {
             offset = buf_size;
         } else if ((size_t)n >= buf_size - offset) {
-            offset = buf_size; /* 已截断，标记缓冲区已满 */
+            offset = buf_size;
         } else {
             offset += (size_t)n;
         }
@@ -762,26 +706,23 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
     if (offset < buf_size) {
         n = snprintf(buf + offset, buf_size - offset, "]}");
         if (n < 0 || (size_t)n >= buf_size - offset) {
-            offset = buf_size; /* 已截断，标记缓冲区已满 */
+            offset = buf_size;
         } else {
             offset += (size_t)n;
         }
     }
 
-    buf[buf_size - 1] = '\0'; /* 无论是否截断，保证缓冲区始终以 NUL 结尾 */
+    buf[buf_size - 1] = '\0';
 
     return buf;
 }
-
-/* ==================== 错误链增强功能实现 ==================== */
 
 /**
  * @brief 初始化错误链迭代器
  * @param chain 错误链指针
  * @param iter 迭代器结构
  */
-void airy_err_chain_iter_init(const airy_err_chain_t *chain,
-                                   airy_err_chain_iterator_t *iter)
+void airy_err_chain_iter_init(const airy_err_chain_t *chain, airy_err_chain_iterator_t *iter)
 {
 
     if (!iter)
@@ -796,8 +737,7 @@ void airy_err_chain_iter_init(const airy_err_chain_t *chain,
  * @param iter 迭代器指针
  * @return 错误上下文条目，到达末尾返回 NULL
  */
-const airy_err_context_entry_t *
-airy_err_chain_iter_next(airy_err_chain_iterator_t *iter)
+const airy_err_context_entry_t *airy_err_chain_iter_next(airy_err_chain_iterator_t *iter)
 {
 
     if (!iter || !iter->chain) {
@@ -857,7 +797,7 @@ airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
  * @param chain 错误链指针
  * @return 最新错误码，失败返回 AIRY_OK
  */
-airy_err_t airy_err_chain_get_latest_error(const airy_err_chain_t *chain)
+airy_err_t airy_ech_get_latest_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
         return AIRY_OK;

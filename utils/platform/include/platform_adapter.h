@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file platform_adapter.h
  * @brief 平台适配器 - 高级跨平台工具集
@@ -47,7 +48,6 @@
  * （fork+execvp，不经 shell），消除命令注入风险。
  * platform_exec()/platform_free_exec_result() 已移除（BAN-211/235 安全合规）。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  * @see platform.h (顶层系统抽象层)
  */
 
@@ -78,11 +78,11 @@ typedef enum {
  * @brief 文件信息
  */
 typedef struct platform_file_info {
-    const char *path;  /**< 文件路径 */
-    size_t size;       /**< 文件大小 */
-    time_t mtime;      /**< 修改时间 */
-    bool is_directory; /**< 是否为目录 */
-    bool exists;       /**< 是否存在 */
+    const char *path;
+    size_t size;
+    time_t mtime;
+    bool is_directory;
+    bool exists;
 } platform_file_info_t;
 
 /**

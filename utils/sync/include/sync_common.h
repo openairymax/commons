@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file sync_common.h
  * @brief 同步功能通用定义
@@ -7,7 +8,6 @@
  * 提供同步相关的共享功能，包括互斥锁、条件变量、信号量等
  * 减少同步相关代码的重复
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef SYNC_COMMON_H
@@ -24,33 +24,33 @@ extern "C" {
  * @brief 互斥锁结构
  */
 typedef struct {
-    void *mutex;      /**< 底层互斥锁 */
-    bool initialized; /**< 是否已初始化 */
+    void *mutex;
+    bool initialized;
 } sync_mutex_t;
 
 /**
  * @brief 条件变量结构
  */
 typedef struct {
-    void *cond;       /**< 底层条件变量 */
-    bool initialized; /**< 是否已初始化 */
+    void *cond;
+    bool initialized;
 } sync_cond_t;
 
 /**
  * @brief 信号量结构
  */
 typedef struct {
-    void *sem;        /**< 底层信号量 */
-    bool initialized; /**< 是否已初始化 */
-    uint32_t value;   /**< 当前值 */
+    void *sem;
+    bool initialized;
+    uint32_t value;
 } sync_sem_t;
 
 /**
  * @brief 读写锁结构
  */
 typedef struct {
-    void *rwlock;     /**< 底层读写锁 */
-    bool initialized; /**< 是否已初始化 */
+    void *rwlock;
+    bool initialized;
 } sync_rwlock_t;
 
 /**
@@ -234,4 +234,4 @@ int sync_rwlock_unlock(sync_rwlock_t *rwlock);
 }
 #endif
 
-#endif  // SYNC_COMMON_H
+#endif /* SYNC_COMMON_H */

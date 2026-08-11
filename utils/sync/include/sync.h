@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file sync.h
  * @brief 统一线程同步原语模块 - 核心层API
@@ -37,77 +37,77 @@ extern "C" {
  * @brief 同步原语类型
  */
 typedef enum {
-    SYNC_TYPE_UNKNOWN = 0,     /**< 未知类型 */
-    SYNC_TYPE_MUTEX,           /**< 互斥锁 */
-    SYNC_TYPE_RECURSIVE_MUTEX, /**< 递归互斥锁 */
-    SYNC_TYPE_RWLOCK,          /**< 读写锁 */
-    SYNC_TYPE_SPINLOCK,        /**< 自旋锁 */
-    SYNC_TYPE_SEMAPHORE,       /**< 信号量 */
-    SYNC_TYPE_CONDITION,       /**< 条件变量 */
-    SYNC_TYPE_BARRIER,         /**< 屏障 */
-    SYNC_TYPE_EVENT            /**< 事件 */
+    SYNC_TYPE_UNKNOWN = 0,
+    SYNC_TYPE_MUTEX,
+    SYNC_TYPE_RECURSIVE_MUTEX,
+    SYNC_TYPE_RWLOCK,
+    SYNC_TYPE_SPINLOCK,
+    SYNC_TYPE_SEMAPHORE,
+    SYNC_TYPE_CONDITION,
+    SYNC_TYPE_BARRIER,
+    SYNC_TYPE_EVENT
 } sync_type_t;
 
 /**
  * @brief 锁对象类型（用于 sync_get_type 函数的类型安全调用）
  */
 typedef enum {
-    SYNC_LOCK_MUTEX,           /**< 互斥锁 */
-    SYNC_LOCK_RECURSIVE_MUTEX, /**< 递归互斥锁 */
-    SYNC_LOCK_RWLOCK,          /**< 读写锁 */
-    SYNC_LOCK_SPINLOCK,        /**< 自旋锁 */
-    SYNC_LOCK_SEMAPHORE,       /**< 信号量 */
-    SYNC_LOCK_CONDITION,       /**< 条件变量 */
-    SYNC_LOCK_BARRIER,         /**< 屏障 */
-    SYNC_LOCK_EVENT            /**< 事件 */
+    SYNC_LOCK_MUTEX,
+    SYNC_LOCK_RECURSIVE_MUTEX,
+    SYNC_LOCK_RWLOCK,
+    SYNC_LOCK_SPINLOCK,
+    SYNC_LOCK_SEMAPHORE,
+    SYNC_LOCK_CONDITION,
+    SYNC_LOCK_BARRIER,
+    SYNC_LOCK_EVENT
 } sync_lock_type_t;
 
 /**
  * @brief 锁操作结果
  */
 typedef enum {
-    SYNC_SUCCESS = 0,       /**< 操作成功 */
-    SYNC_ERROR_TIMEOUT,     /**< 操作超时 */
-    SYNC_ERROR_DEADLOCK,    /**< 检测到死锁 */
-    SYNC_ERROR_INVALID,     /**< 无效参数或状态 */
-    SYNC_ERROR_MEMORY,      /**< 内存分配失败 */
-    SYNC_ERROR_PERMISSION,  /**< 权限不足 */
-    SYNC_ERROR_BUSY,        /**< 资源繁忙 */
-    SYNC_ERROR_UNSUPPORTED, /**< 不支持的操作 */
-    SYNC_ERROR_UNKNOWN      /**< 未知错误 */
+    SYNC_SUCCESS = 0,
+    SYNC_ERROR_TIMEOUT,
+    SYNC_ERROR_DEADLOCK,
+    SYNC_ERROR_INVALID,
+    SYNC_ERROR_MEMORY,
+    SYNC_ERROR_PERMISSION,
+    SYNC_ERROR_BUSY,
+    SYNC_ERROR_UNSUPPORTED,
+    SYNC_ERROR_UNKNOWN
 } sync_result_t;
 
 /**
  * @brief 锁选项标志
  */
 typedef enum {
-    SYNC_FLAG_NONE = 0,                  /**< 无特殊标志 */
-    SYNC_FLAG_SHARED = 1 << 0,           /**< 共享锁（读写锁） */
-    SYNC_FLAG_EXCLUSIVE = 1 << 1,        /**< 排他锁（读写锁） */
-    SYNC_FLAG_TRY = 1 << 2,              /**< 尝试获取，不阻塞 */
-    SYNC_FLAG_TIMEOUT = 1 << 3,          /**< 支持超时 */
-    SYNC_FLAG_RECURSIVE = 1 << 4,        /**< 递归锁 */
-    SYNC_FLAG_ERROR_CHECK = 1 << 5,      /**< 错误检查锁 */
-    SYNC_FLAG_PRIORITY_INHERIT = 1 << 6, /**< 优先级继承 */
-    SYNC_FLAG_ROBUST = 1 << 7            /**< 健壮锁（进程间） */
+    SYNC_FLAG_NONE = 0,
+    SYNC_FLAG_SHARED = 1 << 0,
+    SYNC_FLAG_EXCLUSIVE = 1 << 1,
+    SYNC_FLAG_TRY = 1 << 2,
+    SYNC_FLAG_TIMEOUT = 1 << 3,
+    SYNC_FLAG_RECURSIVE = 1 << 4,
+    SYNC_FLAG_ERROR_CHECK = 1 << 5,
+    SYNC_FLAG_PRIORITY_INHERIT = 1 << 6,
+    SYNC_FLAG_ROBUST = 1 << 7
 } sync_flag_t;
 
 /**
  * @brief 锁选项标识符（用于 sync_set_option / sync_get_option）
  */
 typedef enum {
-    SYNC_OPTION_NAME = 1,             /**< 锁名称（const char*） */
-    SYNC_OPTION_TIMEOUT = 2,          /**< 默认超时时间（uint64_t，毫秒） */
-    SYNC_OPTION_PRIORITY_INHERIT = 3, /**< 优先级继承（bool） */
-    SYNC_OPTION_ROBUST = 4            /**< 健壮锁配置（bool） */
+    SYNC_OPTION_NAME = 1,
+    SYNC_OPTION_TIMEOUT = 2,
+    SYNC_OPTION_PRIORITY_INHERIT = 3,
+    SYNC_OPTION_ROBUST = 4
 } sync_option_t;
 
 /**
  * @brief 超时选项
  */
 typedef struct {
-    uint64_t timeout_ms; /**< 超时时间（毫秒） */
-    bool absolute;       /**< 是否为绝对时间 */
+    uint64_t timeout_ms;
+    bool absolute;
 } sync_timeout_t;
 
 /**
@@ -154,34 +154,34 @@ typedef struct sync_event *sync_event_t;
  * @brief 锁属性
  */
 typedef struct {
-    sync_type_t type; /**< 锁类型 */
-    uint32_t flags;   /**< 标志位 */
-    const char *name; /**< 锁名称（用于调试） */
-    void *context;    /**< 用户上下文 */
+    sync_type_t type;
+    uint32_t flags;
+    const char *name;
+    void *context;
 } sync_attr_t;
 
 /**
  * @brief 锁统计信息
  */
 typedef struct {
-    size_t lock_count;           /**< 加锁次数 */
-    size_t unlock_count;         /**< 解锁次数 */
-    size_t wait_count;           /**< 等待次数 */
-    size_t timeout_count;        /**< 超时次数 */
-    size_t deadlock_count;       /**< 死锁检测次数 */
-    uint64_t total_wait_time_ms; /**< 总等待时间（毫秒） */
-    uint64_t max_wait_time_ms;   /**< 最大等待时间（毫秒） */
+    size_t lock_count;
+    size_t unlock_count;
+    size_t wait_count;
+    size_t timeout_count;
+    size_t deadlock_count;
+    uint64_t total_wait_time_ms;
+    uint64_t max_wait_time_ms;
 } sync_stats_t;
 
 /**
  * @brief 死锁检测信息
  */
 typedef struct {
-    size_t thread_count;     /**< 涉及线程数 */
-    size_t lock_count;       /**< 涉及锁数量 */
-    uint64_t detection_time; /**< 检测时间戳 */
-    char **thread_names;     /**< 线程名称数组 */
-    char **lock_names;       /**< 锁名称数组 */
+    size_t thread_count;
+    size_t lock_count;
+    uint64_t detection_time;
+    char **thread_names;
+    char **lock_names;
 } sync_deadlock_info_t;
 
 /**
@@ -727,8 +727,7 @@ sync_result_t sync_set_option(void *lock, int option, void *value);
  */
 sync_result_t sync_get_option(void *lock, int option, void *value);
 
-/** @} */  // end of sync_api
-
+/** @} */ /* end of sync_api */
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file ipc_shared_buf.h
  * @brief P1.21.3: IPC 共享缓冲区 — 基于 refcounted_t 的引用计数管理
@@ -27,10 +28,9 @@
  *   // 消费者
  *   void on_message(ipc_shared_buf_t *buf) {
  *       process(buf->data, buf->size);
- *       ipc_buf_release(buf);  // 消费者释放引用
+ *       ipc_buf_release(buf);
  *   }
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_IPC_SHARED_BUF_H
@@ -60,10 +60,10 @@ extern "C" {
  * @ownership release — ipc_buf_release() 减少引用计数，归零时释放
  */
 typedef struct {
-    AIRY_REFCOUNTED_HEADER;   /**< 引用计数首部（refcounted_t _rc） */
-    size_t   size;               /**< 数据大小（字节） */
-    uint64_t timestamp;          /**< 创建时间戳（纳秒） */
-    char     data[];             /**< 柔性数组：实际数据 */
+    AIRY_REFCOUNTED_HEADER;
+    size_t size;
+    uint64_t timestamp;
+    char data[];
 } ipc_shared_buf_t;
 
 /* ============================================================================
@@ -80,17 +80,18 @@ typedef struct {
  */
 static inline ipc_shared_buf_t *ipc_buf_create(size_t size)
 {
-    /* 防止溢出：size + sizeof(ipc_shared_buf_t) */
+
     if (size > SIZE_MAX - sizeof(ipc_shared_buf_t)) {
         return NULL;
     }
 
     size_t total_size = sizeof(ipc_shared_buf_t) + size;
     ipc_shared_buf_t *buf = (ipc_shared_buf_t *)refcount_alloc(total_size, NULL);
-    if (!buf) return NULL;
+    if (!buf)
+        return NULL;
 
     buf->size = size;
-    buf->timestamp = 0;  /* 调用者可设置 */
+    buf->timestamp = 0;
 
     return buf;
 }
@@ -136,7 +137,8 @@ static inline void ipc_buf_release(ipc_shared_buf_t *buf)
  */
 static inline uint32_t ipc_buf_refcount(const ipc_shared_buf_t *buf)
 {
-    if (!buf) return 0;
+    if (!buf)
+        return 0;
     return refcount_get(&buf->_rc);
 }
 
@@ -147,7 +149,8 @@ static inline uint32_t ipc_buf_refcount(const ipc_shared_buf_t *buf)
  */
 static inline size_t ipc_buf_size(const ipc_shared_buf_t *buf)
 {
-    if (!buf) return 0;
+    if (!buf)
+        return 0;
     return buf->size;
 }
 
@@ -158,7 +161,8 @@ static inline size_t ipc_buf_size(const ipc_shared_buf_t *buf)
  */
 static inline size_t ipc_buf_total_size(const ipc_shared_buf_t *buf)
 {
-    if (!buf) return 0;
+    if (!buf)
+        return 0;
     return sizeof(ipc_shared_buf_t) + buf->size;
 }
 

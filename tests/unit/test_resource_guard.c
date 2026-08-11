@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_resource_guard.c
  * @brief 资源管理模块单元测试
  *
  * 测试RAII资源管理模式、内存泄漏检测、资源配额管理
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "../../utils/memory/include/memory.h"

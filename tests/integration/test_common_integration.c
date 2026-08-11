@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_common_integration.c
  * @brief commons 模块集成测试
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include <stdio.h>
@@ -45,7 +45,7 @@ static int passed_tests = 0;
 static int failed_tests = 0;
 
 /**
- * @brief 测试完整工作?
+ * @brief 测试完整工作流
  */
 static int test_full_workflow(void)
 {
@@ -54,7 +54,6 @@ static int test_full_workflow(void)
 
     printf("  Step 2: Load configuration...\n");
     airy_config_t *manager = airy_config_load("test_config.json");
-    /* 配置加载失败是正常的，因为测试文件不存在 */
 
     printf("  Step 3: Create token counter...\n");
     airy_token_counter_t *counter = airy_token_counter_create("gpt-4");
@@ -87,11 +86,11 @@ static int test_full_workflow(void)
 }
 
 /**
- * @brief 测试跨平台兼容?
+ * @brief 测试跨平台兼容性
  */
 static int test_cross_platform(void)
 {
-    /* 测试时间函数 */
+
     uint64_t start = airy_time_ns();
 #ifdef _WIN32
     Sleep(10);
@@ -104,7 +103,6 @@ static int test_cross_platform(void)
     TEST_ASSERT(end > start, "Time should advance");
     printf("  Time elapsed: %llu ns\n", (unsigned long long)(end - start));
 
-    /* 测试内存分配 */
     void *ptr = airy_mem_alloc(1024);
     TEST_ASSERT(ptr != NULL, "Memory allocation should succeed");
     airy_mem_free(ptr);
@@ -113,18 +111,15 @@ static int test_cross_platform(void)
 }
 
 /**
- * @brief 测试错误处理?
+ * @brief 测试错误处理链
  */
 static int test_error_handling_chain(void)
 {
     airy_err_chain_t *chain = airy_err_chain_create();
     TEST_ASSERT(chain != NULL, "Error chain creation should succeed");
 
-    /* 模拟错误?*/
-    airy_err_chain_add(chain, AIRY_ERR_INVALID_PARAM, "file1.c", 10, "func1",
-                            "First error");
-    airy_err_chain_add(chain, AIRY_ERR_OUT_OF_MEMORY, "file2.c", 20, "func2",
-                            "Second error");
+    airy_err_chain_add(chain, AIRY_ERR_INVALID_PARAM, "file1.c", 10, "func1", "First error");
+    airy_err_chain_add(chain, AIRY_ERR_OUT_OF_MEMORY, "file2.c", 20, "func2", "Second error");
 
     int count = airy_err_chain_count(chain);
     printf("  Error chain count: %d\n", count);

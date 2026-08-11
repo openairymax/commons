@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file ipc_bus_helper.h
  * @brief C-L09: IPC Bus → daemon 自动注册便捷层（commons 权威版本）
@@ -47,7 +48,6 @@
 extern "C" {
 #endif
 
-/* ==================== 便捷类型 ==================== */
 
 /**
  * @brief IPC Bus 助手句柄
@@ -56,7 +56,6 @@ extern "C" {
  */
 typedef struct ipc_bus_helper_s ipc_bus_helper_t;
 
-/* ==================== 生命周期 ==================== */
 
 /**
  * @brief 初始化 IPC Bus 助手
@@ -79,7 +78,6 @@ ipc_bus_helper_t *ipc_bus_helper_init(const char *daemon_name,
  */
 void ipc_bus_helper_shutdown(ipc_bus_helper_t *ibh);
 
-/* ==================== 通道注册（P1.8.1） ==================== */
 
 /**
  * @brief 为当前 daemon 注册 IPC Bus 通道
@@ -91,8 +89,7 @@ void ipc_bus_helper_shutdown(ipc_bus_helper_t *ibh);
  * @param default_protocol 默认协议
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_register_channel(ipc_bus_helper_t *ibh,
-                                    const char *channel_name,
+int ipc_bus_helper_register_channel(ipc_bus_helper_t *ibh, const char *channel_name,
                                     ipc_bus_proto_t default_protocol);
 
 /**
@@ -105,13 +102,10 @@ int ipc_bus_helper_register_channel(ipc_bus_helper_t *ibh,
  * @param proto_count  协议数量
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_register_endpoint(ipc_bus_helper_t *ibh,
-                                     const char *service_name,
-                                     const char *endpoint,
-                                     const ipc_bus_proto_t *protocols,
+int ipc_bus_helper_register_endpoint(ipc_bus_helper_t *ibh, const char *service_name,
+                                     const char *endpoint, const ipc_bus_proto_t *protocols,
                                      uint32_t proto_count);
 
-/* ==================== 消息处理器（P1.8.2） ==================== */
 
 /**
  * @brief 注册消息处理器
@@ -123,8 +117,7 @@ int ipc_bus_helper_register_endpoint(ipc_bus_helper_t *ibh,
  * @param user_data 用户数据
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_register_handler(ipc_bus_helper_t *ibh,
-                                    ipc_bus_message_handler_t handler,
+int ipc_bus_helper_register_handler(ipc_bus_helper_t *ibh, ipc_bus_message_handler_t handler,
                                     void *user_data);
 
 /**
@@ -138,12 +131,9 @@ int ipc_bus_helper_register_handler(ipc_bus_helper_t *ibh,
  * @param user_data  用户数据
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_register_event_handler(ipc_bus_helper_t *ibh,
-                                          const char *event_name,
-                                          ipc_bus_event_handler_t handler,
-                                          void *user_data);
+int ipc_bus_helper_register_event_handler(ipc_bus_helper_t *ibh, const char *event_name,
+                                          ipc_bus_event_handler_t handler, void *user_data);
 
-/* ==================== 消息发送（P1.8.3） ==================== */
 
 /**
  * @brief 发送消息到目标 daemon
@@ -159,8 +149,8 @@ int ipc_bus_helper_register_event_handler(ipc_bus_helper_t *ibh,
  * @return 0 成功，非0 失败
  */
 int ipc_bus_helper_send(ipc_bus_helper_t *ibh, const char *target_service,
-                        ipc_bus_msg_type_t msg_type, ipc_bus_proto_t protocol,
-                        const void *payload, size_t payload_size);
+                        ipc_bus_msg_type_t msg_type, ipc_bus_proto_t protocol, const void *payload,
+                        size_t payload_size);
 
 /**
  * @brief 发送请求并等待响应
@@ -175,8 +165,8 @@ int ipc_bus_helper_send(ipc_bus_helper_t *ibh, const char *target_service,
  * @return 0 成功，非0 失败
  */
 int ipc_bus_helper_request(ipc_bus_helper_t *ibh, const char *target_service,
-                           const ipc_bus_message_t *request,
-                           ipc_bus_message_t *response, uint32_t timeout_ms);
+                           const ipc_bus_message_t *request, ipc_bus_message_t *response,
+                           uint32_t timeout_ms);
 
 /**
  * @brief 广播消息到所有 daemon
@@ -185,8 +175,7 @@ int ipc_bus_helper_request(ipc_bus_helper_t *ibh, const char *target_service,
  * @param message     广播消息
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_broadcast(ipc_bus_helper_t *ibh,
-                             const ipc_bus_message_t *message);
+int ipc_bus_helper_broadcast(ipc_bus_helper_t *ibh, const ipc_bus_message_t *message);
 
 /**
  * @brief 发送通知（fire-and-forget）
@@ -198,11 +187,9 @@ int ipc_bus_helper_broadcast(ipc_bus_helper_t *ibh,
  * @param protocol       协议类型
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_notify(ipc_bus_helper_t *ibh, const char *target_service,
-                          const void *payload, size_t payload_size,
-                          ipc_bus_proto_t protocol);
+int ipc_bus_helper_notify(ipc_bus_helper_t *ibh, const char *target_service, const void *payload,
+                          size_t payload_size, ipc_bus_proto_t protocol);
 
-/* ==================== 协议透明路由（P1.8.4） ==================== */
 
 /**
  * @brief 自动选择协议并路由消息
@@ -217,8 +204,7 @@ int ipc_bus_helper_notify(ipc_bus_helper_t *ibh, const char *target_service,
  * @param payload_size   负载大小
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_route_auto(ipc_bus_helper_t *ibh,
-                              const char *target_service,
+int ipc_bus_helper_route_auto(ipc_bus_helper_t *ibh, const char *target_service,
                               const void *payload, size_t payload_size);
 
 /**
@@ -232,13 +218,10 @@ int ipc_bus_helper_route_auto(ipc_bus_helper_t *ibh,
  * @param found_count  实际找到数量
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_discover(ipc_bus_helper_t *ibh,
-                            const char *service_name,
-                            ipc_bus_proto_t protocol,
-                            ipc_bus_endpoint_t *endpoints,
+int ipc_bus_helper_discover(ipc_bus_helper_t *ibh, const char *service_name,
+                            ipc_bus_proto_t protocol, ipc_bus_endpoint_t *endpoints,
                             uint32_t max_count, uint32_t *found_count);
 
-/* ==================== 状态查询 ==================== */
 
 /**
  * @brief 获取底层 ipc_service_bus 句柄
@@ -256,7 +239,6 @@ ipc_service_bus_t ipc_bus_helper_get_bus(ipc_bus_helper_t *ibh);
  */
 bool ipc_bus_helper_is_running(ipc_bus_helper_t *ibh);
 
-/* ==================== 背压控制集成（P1.24） ==================== */
 
 /**
  * @brief P1.24: 为 IPC Bus 助手启用背压控制
@@ -268,8 +250,7 @@ bool ipc_bus_helper_is_running(ipc_bus_helper_t *ibh);
  * @param config 背压配置（NULL 使用默认配置）
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_enable_backpressure(ipc_bus_helper_t *ibh,
-                                       const ipc_bp_config_t *config);
+int ipc_bus_helper_enable_backpressure(ipc_bus_helper_t *ibh, const ipc_bp_config_t *config);
 
 /**
  * @brief P1.24: 更新队列深度（由 daemon 定期调用）
@@ -281,8 +262,7 @@ int ipc_bus_helper_enable_backpressure(ipc_bus_helper_t *ibh,
  * @param current_depth 当前队列深度（消息数）
  * @return 当前背压级别
  */
-ipc_bp_level_t ipc_bus_helper_update_backpressure(ipc_bus_helper_t *ibh,
-                                                   size_t current_depth);
+ipc_bp_level_t ipc_bus_helper_update_backpressure(ipc_bus_helper_t *ibh, size_t current_depth);
 
 /**
  * @brief P1.24: 发送消息时自动检查背压
@@ -302,8 +282,7 @@ ipc_bp_level_t ipc_bus_helper_update_backpressure(ipc_bus_helper_t *ibh,
  */
 int ipc_bus_helper_send_with_bp(ipc_bus_helper_t *ibh, const char *target,
                                 ipc_bus_msg_type_t msg_type, ipc_bus_proto_t protocol,
-                                const void *payload, size_t payload_size,
-                                bool is_droppable);
+                                const void *payload, size_t payload_size, bool is_droppable);
 
 /**
  * @brief P1.24: 检查是否应接受新连接
@@ -330,7 +309,6 @@ int ipc_bus_helper_get_bp_stats(ipc_bus_helper_t *ibh, ipc_bp_stats_t *out_stats
  */
 ipc_bp_level_t ipc_bus_helper_get_bp_level(ipc_bus_helper_t *ibh);
 
-/* ==================== P1.8: 路由统计查询 ==================== */
 
 /**
  * @brief P1.8: 获取 IPC Bus 路由统计信息
@@ -348,12 +326,9 @@ ipc_bp_level_t ipc_bus_helper_get_bp_level(ipc_bus_helper_t *ibh);
  * @param out_bp_rejects       背压拒绝次数（可为 NULL）
  * @return 0 成功，非0 失败
  */
-int ipc_bus_helper_get_routing_stats(ipc_bus_helper_t *ibh,
-                                     uint64_t *out_total_sends,
-                                     uint64_t *out_total_routes,
-                                     uint64_t *out_route_fallbacks,
-                                     uint64_t *out_send_failures,
-                                     uint64_t *out_bp_drops,
+int ipc_bus_helper_get_routing_stats(ipc_bus_helper_t *ibh, uint64_t *out_total_sends,
+                                     uint64_t *out_total_routes, uint64_t *out_route_fallbacks,
+                                     uint64_t *out_send_failures, uint64_t *out_bp_drops,
                                      uint64_t *out_bp_rejects);
 
 #ifdef __cplusplus

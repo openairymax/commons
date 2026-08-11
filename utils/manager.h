@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file manager.h
  * @brief 向后兼容层 — 旧版 manager.h API 兼容
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 原 agentrt/manager/ 目录已迁移至 ecosystem/manager/。
  * 本文件为 C 测试代码提供向后兼容的类型和函数声明。

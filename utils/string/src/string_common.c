@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file string_common.c
  * @brief 字符串工具公共库实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "string_common.h"
@@ -157,21 +157,18 @@ char **string_common_strsplit(const char *str, const char *delim)
     size_t count = 0;
     const char *temp = str;
 
-    // 计算分割后的字符串数量
     while (strstr(temp, delim)) {
         count++;
         temp = strstr(temp, delim) + strlen(delim);
     }
     count++;
 
-    // 分配字符串数组
     char **arr;
     arr = airy_malloc_array((size_t)(count + 1), sizeof(char *));
     if (!arr) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 分割字符串
     size_t index = 0;
     temp = str;
     while (index < count) {
@@ -285,7 +282,6 @@ size_t string_common_itoa(int value, int base, char *buf, size_t buf_size)
         value = -value;
     }
 
-    // 转换为字符串
     do {
         int digit = value % base;
         *ptr++ = (digit < 10) ? (digit + '0') : (digit - 10 + 'a');
@@ -298,7 +294,6 @@ size_t string_common_itoa(int value, int base, char *buf, size_t buf_size)
 
     *ptr = '\0';
 
-    // 反转字符串
     size_t len = ptr - buf;
     for (size_t i = 0; i < len / 2; i++) {
         char temp = buf[i];
@@ -324,7 +319,6 @@ size_t string_common_utoa(uint32_t value, int base, char *buf, size_t buf_size)
 
     char *ptr = buf;
 
-    // 转换为字符串
     do {
         int digit = value % base;
         *ptr++ = (digit < 10) ? (digit + '0') : (digit - 10 + 'a');
@@ -333,7 +327,6 @@ size_t string_common_utoa(uint32_t value, int base, char *buf, size_t buf_size)
 
     *ptr = '\0';
 
-    // 反转字符串
     size_t len = ptr - buf;
     for (size_t i = 0; i < len / 2; i++) {
         char temp = buf[i];
@@ -366,12 +359,10 @@ char *string_common_strtrim(char *str)
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 去除开头空白字符
     while (isspace((unsigned char)*str)) {
         str++;
     }
 
-    // 去除结尾空白字符
     char *end = str + strlen(str) - 1;
     while (end > str && isspace((unsigned char)*end)) {
         end--;

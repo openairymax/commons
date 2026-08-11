@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file resource_quota.c
  * @brief 资源配额管理实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 基于E-3资源确定性原则实现的资源配额管理系统。
@@ -19,15 +19,13 @@
 #include <string.h>
 #include <time.h>
 
-
 #define RESOURCE_FLAG_MEMORY_EXCEEDED 0x01
 #define RESOURCE_FLAG_CPU_EXCEEDED 0x02
 #define RESOURCE_FLAG_IO_EXCEEDED 0x04
 #define RESOURCE_FLAG_NETWORK_EXCEEDED 0x08
 
-airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota,
-                                                const char *resource_id,
-                                                airy_resource_manager_t **out_manager)
+airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota, const char *resource_id,
+                                        airy_resource_manager_t **out_manager)
 {
 
     if (!quota || !resource_id || !out_manager) {
@@ -71,8 +69,7 @@ void airy_resource_manager_destroy(airy_resource_manager_t *manager)
     AIRY_FREE(manager);
 }
 
-airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
-                                              size_t requested_bytes)
+airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager, size_t requested_bytes)
 {
 
     if (!manager || !manager->enabled) {
@@ -88,9 +85,9 @@ airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
         if (projected > manager->quota.max_memory_bytes) {
             manager->exceeded_flags |= RESOURCE_FLAG_MEMORY_EXCEEDED;
             AIRY_LOG_WARN("Resource %s: Memory quota exceeded (current: %zu, "
-                             "requested: %zu, limit: %zu)",
-                             manager->resource_id, manager->usage.current_memory_bytes,
-                             requested_bytes, manager->quota.max_memory_bytes);
+                          "requested: %zu, limit: %zu)",
+                          manager->resource_id, manager->usage.current_memory_bytes,
+                          requested_bytes, manager->quota.max_memory_bytes);
             AIRY_RET_ERR(AIRY_ENOMEM);
         }
     }
@@ -98,8 +95,7 @@ airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
     return AIRY_SUCCESS;
 }
 
-airy_err_t airy_resource_record_allocation(airy_resource_manager_t *manager,
-                                                   size_t bytes)
+airy_err_t airy_resource_rec_alloc(airy_resource_manager_t *manager, size_t bytes)
 {
 
     if (!manager || !manager->enabled) {
@@ -136,7 +132,7 @@ airy_err_t airy_resource_record_free(airy_resource_manager_t *manager, size_t by
         manager->usage.current_memory_bytes -= bytes;
     } else {
         AIRY_LOG_WARN("Resource %s: Free amount (%zu) exceeds allocated (%zu)",
-                         manager->resource_id, bytes, manager->usage.current_memory_bytes);
+                      manager->resource_id, bytes, manager->usage.current_memory_bytes);
         manager->usage.current_memory_bytes = 0;
     }
 
@@ -158,8 +154,7 @@ airy_err_t airy_resource_record_io(airy_resource_manager_t *manager)
     if (manager->quota.max_io_ops > 0 && manager->usage.total_io_ops >= manager->quota.max_io_ops) {
         manager->exceeded_flags |= RESOURCE_FLAG_IO_EXCEEDED;
         AIRY_LOG_WARN("Resource %s: I/O quota exceeded (total: %zu, limit: %zu)",
-                         manager->resource_id, manager->usage.total_io_ops,
-                         manager->quota.max_io_ops);
+                      manager->resource_id, manager->usage.total_io_ops, manager->quota.max_io_ops);
         AIRY_RET_ERR(AIRY_EBUSY);
     }
 
@@ -174,8 +169,7 @@ int airy_resource_is_exceeded(airy_resource_manager_t *manager)
     return (manager->exceeded_flags != 0) ? 1 : 0;
 }
 
-void airy_resource_get_usage(airy_resource_manager_t *manager,
-                                airy_resource_usage_t *out_usage)
+void airy_resource_get_usage(airy_resource_manager_t *manager, airy_resource_usage_t *out_usage)
 {
 
     if (!manager || !out_usage) {
@@ -185,7 +179,7 @@ void airy_resource_get_usage(airy_resource_manager_t *manager,
     __builtin_memcpy(out_usage, &manager->usage, sizeof(airy_resource_usage_t));
 }
 
-const char *airy_resource_get_exceeded_info(airy_resource_manager_t *manager)
+const char *airy_resource_get_exc_info(airy_resource_manager_t *manager)
 {
 
     static char info_buffer[512];

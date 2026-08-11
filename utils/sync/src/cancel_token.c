@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file cancel_token.c
  * @brief 取消令牌实现（改进1：Codex parallel.rs cancel_token 模式）
@@ -12,7 +13,6 @@
  *
  * 回调采用"锁内快照 + 锁外执行"，回调可安全调用本模块 API（无自死锁）。
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "cancel_token.h"
@@ -55,7 +55,6 @@ void airy_cancel_token_cancel(airy_cancel_token_t *token)
     if (!token || !token->init_done)
         return;
 
-    /* 快照回调链（锁内），标志置位 + 广播（锁内），回调锁外触发 */
     airy_cancel_cb_t snap[AIRY_CANCEL_TOKEN_MAX_CBS];
     void *snap_ctx[AIRY_CANCEL_TOKEN_MAX_CBS];
     size_t snap_n = 0;
@@ -120,7 +119,7 @@ int airy_cancel_token_wait(airy_cancel_token_t *token, uint32_t timeout_ms)
     airy_mtx_lock(&token->lock);
     if (airy_atomic_load(&token->cancelled) != 0) {
         airy_mtx_unlock(&token->lock);
-        return 0; /* 已取消 */
+        return 0;
     }
     if (timeout_ms == 0) {
         while (airy_atomic_load(&token->cancelled) == 0)
@@ -128,9 +127,9 @@ int airy_cancel_token_wait(airy_cancel_token_t *token, uint32_t timeout_ms)
         airy_mtx_unlock(&token->lock);
         return 0;
     }
-    /* 带超时：deadline 方式计算剩余时间，容忍虚假唤醒 */
+
     uint64_t deadline = airy_time_ms() + (uint64_t)timeout_ms;
-    int rc = 1; /* 默认超时 */
+    int rc = 1;
     for (;;) {
         uint64_t now = airy_time_ms();
         if (airy_atomic_load(&token->cancelled) != 0) {

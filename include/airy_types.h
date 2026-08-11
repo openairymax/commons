@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
  * airy_types.h - AgentRT 统一类型定义权威源
  *
@@ -9,21 +12,17 @@
  * 2. 统一性：全项目使用统一的类型定义和接口契约
  * 3. 兼容性：确保Windows、Linux、macOS三平台兼容
  *
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  */
 
 #ifndef AIRY_RT_UNIFIED_TYPES_H
 #define AIRY_RT_UNIFIED_TYPES_H
 
-/* ==================== 平台检测和基础定义 ==================== */
+
 #include "../platform/include/platform.h"
 
-/* ==================== [SC] 共享契约层（P0-05 magic SSoT） ==================== */
+
 #include <airymax/ipc.h> /* AIRY_IPC_MAGIC (0x41524531 'ARE1') */
 
-/* ==================== 统一的基础类型定义 ==================== */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,7 +31,7 @@
 extern "C" {
 #endif
 
-/* ==================== 统一的错误码定义（权威源） ==================== */
+
 /**
  * @brief 错误码类型
  * @details 所有错误码为负值，成功为0。SSoT 方案 A（POSIX errno 负值）。
@@ -53,43 +52,43 @@ typedef int32_t airy_err_t;
  *          无对应 POSIX errno 的保留自定义负值（如 AIRY_ENOTINIT、AIRY_ECANCELLED 等）。
  *          跨平台兼容：数值固定（不依赖目标平台 errno.h），仅与 Linux errno 值对齐作为命名参考。
  */
-#define AIRY_EPERM (-1)            /**< 权限不足（POSIX EPERM=1） */
-#define AIRY_ENOENT (-2)           /**< 资源不存在（POSIX ENOENT=2） */
-#define AIRY_EINTR (-4)            /**< 被中断（POSIX EINTR=4） */
-#define AIRY_EIO (-5)              /**< I/O 错误（POSIX EIO=5） */
-#define AIRY_E2BIG (-7)            /**< 参数过长（POSIX E2BIG=7） */
-#define AIRY_EAGAIN (-11)          /**< 资源暂时不可用（POSIX EAGAIN=11） */
-#define AIRY_ENOMEM (-12)          /**< 内存不足（POSIX ENOMEM=12） */
-#define AIRY_EACCES (-13)          /**< 权限不足（POSIX EACCES=13） */
-#define AIRY_EFAULT (-14)          /**< 地址错误（POSIX EFAULT=14） */
-#define AIRY_EBUSY (-16)           /**< 资源忙碌（POSIX EBUSY=16） */
-#define AIRY_EEXIST (-17)          /**< 资源已存在（POSIX EEXIST=17） */
-#define AIRY_EINVAL (-22)          /**< 参数无效（POSIX EINVAL=22） */
-#define AIRY_ENOSPC (-28)          /**< 空间不足（POSIX ENOSPC=28） */
-#define AIRY_ERANGE (-34)          /**< 数值范围错误（POSIX ERANGE=34） */
-#define AIRY_EDEADLK (-35)         /**< 死锁（POSIX EDEADLK=35） */
-#define AIRY_ENOSYS (-38)          /**< 函数未实现（POSIX ENOSYS=38） */
-#define AIRY_EPROTO (-71)          /**< 协议错误（POSIX EPROTO=71） */
-#define AIRY_EOVERFLOW (-75)       /**< 溢出错误（POSIX EOVERFLOW=75） */
-#define AIRY_EMSGSIZE (-90)        /**< 消息过长（POSIX EMSGSIZE=90） */
-#define AIRY_EPROTONOSUPPORT (-93) /**< 协议/命令不支持（POSIX EPROTONOSUPPORT=93） */
-#define AIRY_ENOTSUP (-95)         /**< 操作不支持（POSIX ENOTSUP=95） */
-#define AIRY_ECONNRESET (-104)     /**< 连接重置（POSIX ECONNRESET=104） */
-#define AIRY_ENOTCONN (-107)       /**< 未连接（POSIX ENOTCONN=107） */
-#define AIRY_ETIMEDOUT (-110)      /**< 操作超时（POSIX ETIMEDOUT=110） */
-#define AIRY_ECONNREFUSED (-111)   /**< 连接被拒绝（POSIX ECONNREFUSED=111） */
-#define AIRY_EALREADY (-114)       /**< 操作已在进行（POSIX EALREADY=114） */
-/* 以下错误码无对应 POSIX errno，保留自定义负值 */
-#define AIRY_ENOTINIT (-9)         /**< 引擎未初始化（自定义，无 POSIX 对应） */
-#define AIRY_ECANCELLED (-10)      /**< 操作已取消（自定义，无 POSIX 对应） */
-#define AIRY_EUNAVAILABLE (-25)    /**< 服务不可用（自定义，无 POSIX 对应） */
-#define AIRY_EQUOTA (-26)          /**< 配额超限（自定义，无 POSIX 对应） */
-#define AIRY_EPLATFORM (-27)       /**< 平台未初始化（自定义，无 POSIX 对应） */
-#define AIRY_ESERVICE (-29)        /**< 服务不可用（自定义，无 POSIX 对应） */
-#define AIRY_EFAIL (-31)           /**< 通用失败（自定义，无 POSIX 对应；与 error.h AIRY_ERR_FAIL 同值） */
-#define AIRY_EUNKNOWN (-99)        /**< 未知错误（自定义，无 POSIX 对应） */
+#define AIRY_EPERM (-1)
+#define AIRY_ENOENT (-2)
+#define AIRY_EINTR (-4)
+#define AIRY_EIO (-5)
+#define AIRY_E2BIG (-7)
+#define AIRY_EAGAIN (-11)
+#define AIRY_ENOMEM (-12)
+#define AIRY_EACCES (-13)
+#define AIRY_EFAULT (-14)
+#define AIRY_EBUSY (-16)
+#define AIRY_EEXIST (-17)
+#define AIRY_EINVAL (-22)
+#define AIRY_ENOSPC (-28)
+#define AIRY_ERANGE (-34)
+#define AIRY_EDEADLK (-35)
+#define AIRY_ENOSYS (-38)
+#define AIRY_EPROTO (-71)
+#define AIRY_EOVERFLOW (-75)
+#define AIRY_EMSGSIZE (-90)
+#define AIRY_EPROTONOSUPPORT (-93)
+#define AIRY_ENOTSUP (-95)
+#define AIRY_ECONNRESET (-104)
+#define AIRY_ENOTCONN (-107)
+#define AIRY_ETIMEDOUT (-110)
+#define AIRY_ECONNREFUSED (-111)
+#define AIRY_EALREADY (-114)
 
-/* ==================== 统一的同步原语类型（来自platform.h） ==================== */
+#define AIRY_ENOTINIT (-9)
+#define AIRY_ECANCELLED (-10)
+#define AIRY_EUNAVAILABLE (-25)
+#define AIRY_EQUOTA (-26)
+#define AIRY_EPLATFORM (-27)
+#define AIRY_ESERVICE (-29)
+#define AIRY_EFAIL (-31)
+#define AIRY_EUNKNOWN (-99)
+
+
 /*
  * 以下类型在platform.h中定义，此处仅作声明引用：
  * - airy_thread_t
@@ -101,7 +100,7 @@ typedef int32_t airy_err_t;
  * - airy_pid_t
  */
 
-/* ==================== 统一的IPC类型定义（解决冲突） ==================== */
+
 /**
  * @section IPC类型架构说明
  *
@@ -149,17 +148,17 @@ typedef int32_t airy_err_t;
  * @brief IPC消息头结构（权威定义）
  */
 typedef struct {
-    uint32_t magic;          /**< 魔数 (AIRY_IPC_MAGIC = 0x41524531 'ARE1', P0-05 收敛) */
-    uint32_t version;        /**< 协议版本 */
-    uint32_t type;           /**< 消息类型 */
-    uint32_t flags;          /**< 消息标志 */
-    uint64_t msg_id;         /**< 消息ID */
-    uint64_t correlation_id; /**< 关联ID（请求-响应模式） */
-    char source[64];         /**< 发送者标识 */
-    char target[64];         /**< 目标标识 */
-    uint32_t payload_len;    /**< 负载长度 */
-    uint32_t checksum;       /**< 校验和 */
-    uint64_t timestamp;      /**< 时间戳（纳秒） */
+    uint32_t magic;
+    uint32_t version;
+    uint32_t type;
+    uint32_t flags;
+    uint64_t msg_id;
+    uint64_t correlation_id;
+    char source[64];
+    char target[64];
+    uint32_t payload_len;
+    uint32_t checksum;
+    uint64_t timestamp;
 } airy_ipc_header_t;
 
 /**
@@ -167,12 +166,12 @@ typedef struct {
  * @note 这是应用层标准的airy_ipc_message_t定义，与内核级airy_kernel_ipc_message_t区分
  */
 typedef struct {
-    airy_ipc_header_t header; /**< 消息头 */
-    void *payload;               /**< 负载数据 */
-    size_t payload_size;         /**< 负载大小 */
+    airy_ipc_header_t header;
+    void *payload;
+    size_t payload_size;
 } airy_ipc_message_t;
 
-/* ==================== IPC类型转换函数（跨层通信支持） ==================== */
+
 /*
  * 内核级IPC消息类型说明：
  *
@@ -187,7 +186,7 @@ typedef struct {
  * 注意：此类型仅在corekern模块内使用，应用层应使用airy_ipc_message_t
  */
 
-/* ==================== 统一的任务相关类型 ==================== */
+
 /**
  * @brief 任务ID类型
  */
@@ -198,7 +197,7 @@ typedef uint64_t airy_task_id_t;
  */
 typedef uint64_t airy_message_id_t;
 
-/* ==================== 统一的函数接口契约 ==================== */
+
 /*
  * 函数接口契约标准：
  * 1. 所有平台相关函数返回int类型（0成功，负数错误码）

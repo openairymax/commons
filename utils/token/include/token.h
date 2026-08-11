@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file token.h
  * @brief Token计数与预算管理
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_UTILS_TOKEN_H
@@ -25,7 +25,7 @@ typedef struct airy_token_counter airy_token_counter_t;
  */
 airy_token_counter_t *airy_token_counter_create(const char *model_name);
 
-// From data intelligence emerges. by spharx
+/* From data intelligence emerges. by spharx */
 /**
  * @brief 销毁计数器
  */
@@ -48,7 +48,7 @@ size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text)
  * @return 0 成功，-1 失败
  */
 size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char **texts,
-                                         size_t count, size_t *out_counts);
+                                      size_t count, size_t *out_counts);
 
 /**
  * @brief 截断文本到指定Token数
@@ -59,7 +59,7 @@ size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char 
  * @return 新分配的截断文本，失败返回 NULL
  */
 char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *text,
-                                     size_t max_tokens, const char *side);
+                                  size_t max_tokens, const char *side);
 
 /**
  * @brief Token预算句柄
@@ -85,8 +85,7 @@ void airy_token_budget_destroy(airy_token_budget_t *budget);
  * @param output_tokens 输出Token数
  * @return 0 成功，-1 超出预算
  */
-int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens,
-                             size_t output_tokens);
+int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens, size_t output_tokens);
 
 /**
  * @brief 获取剩余Token数

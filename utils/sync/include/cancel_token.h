@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cancel_token.h
  * @brief 异步可中断执行模型：取消令牌（改进1：Codex parallel.rs cancel_token 模式）
@@ -13,7 +14,6 @@
  * 线程安全：全部公共接口线程安全。
  * 纯 C 核心，跨 Linux/macOS/Windows（依赖 platform 层 airy_mtx/airy_cond/airy_atomic）。
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_CANCEL_TOKEN_H
@@ -23,13 +23,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "platform.h" /* airy_mtx_t / airy_cond_t / airy_atomic_int_t（值类型成员） */
-
+#include "platform.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @brief 取消回调数量上限（有界回调链，防资源失控） */
+
 #define AIRY_CANCEL_TOKEN_MAX_CBS 8
 
 /**
@@ -42,13 +41,13 @@ typedef void (*airy_cancel_cb_t)(void *ctx);
  * @brief 取消令牌结构（不透明使用：调用方持有实例，勿直接访问内部字段）
  */
 typedef struct airy_cancel_token {
-    airy_mtx_t lock;         /**< 内部互斥锁（保护回调链） */
-    airy_cond_t cond;        /**< 内部条件变量（wait 唤醒） */
-    airy_atomic_int_t cancelled; /**< 原子取消标志（0=活跃，1=已取消） */
-    int init_done;           /**< 初始化标记（destroy 幂等依据） */
-    airy_cancel_cb_t cbs[AIRY_CANCEL_TOKEN_MAX_CBS]; /**< 唤醒回调链 */
-    void *cb_ctxs[AIRY_CANCEL_TOKEN_MAX_CBS];        /**< 回调上下文 */
-    size_t cb_count;         /**< 已注册回调数 */
+    airy_mtx_t lock;
+    airy_cond_t cond;
+    airy_atomic_int_t cancelled;
+    int init_done;
+    airy_cancel_cb_t cbs[AIRY_CANCEL_TOKEN_MAX_CBS];
+    void *cb_ctxs[AIRY_CANCEL_TOKEN_MAX_CBS];
+    size_t cb_count;
 } airy_cancel_token_t;
 
 /**

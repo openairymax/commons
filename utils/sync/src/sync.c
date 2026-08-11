@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file sync.c
  * @brief 统一线程同步原语模块 - 核心层实现
@@ -17,7 +18,6 @@
  *       - sync_barrier.c: 屏障
  *       - sync_event.c: 事件
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "sync.h"
@@ -45,7 +45,8 @@
 #endif
 
 #include "sync_platform.h"
-#include "logging.h"  /* d9: sync_debug() 改用 LOG_DEBUG（原 AIRY_LOG_DEBUG 在 logging_compat.h 中未定义） */
+
+#include "logging.h"
 
 /**
  * @brief 全局同步模块状态结构体
@@ -173,7 +174,6 @@ sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
         return SYNC_ERROR_INVALID;
     }
 
-    // 复制实际统计信息
     *stats = base->stats;
 
     return SYNC_SUCCESS;
@@ -193,7 +193,6 @@ sync_result_t sync_reset_stats(void *lock)
         return SYNC_ERROR_INVALID;
     }
 
-    // 实际重置统计信息
     AIRY_MEMSET(&base->stats, 0, sizeof(sync_stats_t));
 
     return SYNC_SUCCESS;
@@ -345,8 +344,7 @@ sync_result_t sync_debug(void *lock)
     LOG_DEBUG("[SYNC DEBUG] ====================");
     LOG_DEBUG("[SYNC DEBUG] Lock at: %p", (void *)lock);
     LOG_DEBUG("[SYNC DEBUG] Type: %d", base->type);
-    LOG_DEBUG("[SYNC DEBUG] Initialized: %s",
-                   base->initialized ? "true" : "false");
+    LOG_DEBUG("[SYNC DEBUG] Initialized: %s", base->initialized ? "true" : "false");
 
     const char *name = sync_get_name(lock);
     if (name != NULL) {
@@ -363,10 +361,8 @@ sync_result_t sync_debug(void *lock)
         LOG_DEBUG("[SYNC DEBUG] Wait count: %zu", stats.wait_count);
         LOG_DEBUG("[SYNC DEBUG] Timeout count: %zu", stats.timeout_count);
         LOG_DEBUG("[SYNC DEBUG] Deadlock count: %zu", stats.deadlock_count);
-        LOG_DEBUG("[SYNC DEBUG] Total wait time: %lu ms",
-                       (unsigned long)stats.total_wait_time_ms);
-        LOG_DEBUG("[SYNC DEBUG] Max wait time: %lu ms",
-                       (unsigned long)stats.max_wait_time_ms);
+        LOG_DEBUG("[SYNC DEBUG] Total wait time: %lu ms", (unsigned long)stats.total_wait_time_ms);
+        LOG_DEBUG("[SYNC DEBUG] Max wait time: %lu ms", (unsigned long)stats.max_wait_time_ms);
     }
 
     LOG_DEBUG("[SYNC DEBUG] ====================");
@@ -423,13 +419,11 @@ void sync_sleep(unsigned int ms)
     sync_sleep_ms((uint64_t)ms);
 }
 
-/* ==================== 锁注册表（用于死锁检测诊断） ==================== */
-
 #define SYNC_MAX_REGISTRY 256
 
 typedef struct {
     void *lock;
-    char *name;          /* strdup 副本，注册表拥有所有权 */
+    char *name;
     sync_type_t type;
     bool in_use;
 } sync_registry_entry_t;
@@ -447,11 +441,15 @@ static void registry_ensure_init(void)
         s_registry_mutex_init = true;
     }
 }
-#define REGISTRY_LOCK()   do { registry_ensure_init(); EnterCriticalSection(&s_registry_mutex); } while(0)
+#define REGISTRY_LOCK()                          \
+    do {                                         \
+        registry_ensure_init();                  \
+        EnterCriticalSection(&s_registry_mutex); \
+    } while (0)
 #define REGISTRY_UNLOCK() LeaveCriticalSection(&s_registry_mutex)
 #else
 static pthread_mutex_t s_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
-#define REGISTRY_LOCK()   (void)pthread_mutex_lock(&s_registry_mutex)
+#define REGISTRY_LOCK() (void)pthread_mutex_lock(&s_registry_mutex)
 #define REGISTRY_UNLOCK() (void)pthread_mutex_unlock(&s_registry_mutex)
 #endif
 
@@ -462,7 +460,6 @@ static void registry_register(void *lock, const char *name, sync_type_t type)
 {
     REGISTRY_LOCK();
 
-    /* 已注册则更新名称 */
     for (size_t i = 0; i < s_registry_count; i++) {
         if (s_lock_registry[i].in_use && s_lock_registry[i].lock == lock) {
             if (s_lock_registry[i].name)
@@ -474,7 +471,6 @@ static void registry_register(void *lock, const char *name, sync_type_t type)
         }
     }
 
-    /* 复用已释放的槽位 */
     for (size_t i = 0; i < s_registry_count; i++) {
         if (!s_lock_registry[i].in_use) {
             s_lock_registry[i].lock = lock;
@@ -486,7 +482,6 @@ static void registry_register(void *lock, const char *name, sync_type_t type)
         }
     }
 
-    /* 追加新条目 */
     if (s_registry_count < SYNC_MAX_REGISTRY) {
         s_lock_registry[s_registry_count].lock = lock;
         s_lock_registry[s_registry_count].name = name ? sync_internal_strdup(name) : NULL;
@@ -546,13 +541,13 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
             pthread_mutex_unlock(&m->mutex);
             return false;
         }
-        return true; /* EBUSY → 被持有 */
+        return true;
 #endif
     }
     case SYNC_TYPE_SPINLOCK: {
         struct sync_spinlock *sp = (struct sync_spinlock *)lock;
 #ifdef _WIN32
-        /* Windows 自旋锁使用 atomic int，用 CAS 探测 */
+
         int expected = 0;
         if (_InterlockedCompareExchange((volatile LONG *)&sp->lock, 1, expected) == expected) {
             _InterlockedExchange((volatile LONG *)&sp->lock, 0);
@@ -593,18 +588,18 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
             ReleaseSemaphore(sem->semaphore, 1, NULL);
             return false;
         }
-        return true; /* WAIT_TIMEOUT → 被持有 */
+        return true;
 #else
         int rc = sem_trywait(&sem->semaphore);
         if (rc == 0) {
             sem_post(&sem->semaphore);
             return false;
         }
-        return true; /* EAGAIN/EWOULDBLOCK → 被持有 */
+        return true;
 #endif
     }
     default:
-        /* condition/barrier/event 无"持有"概念，跳过 */
+
         return false;
     }
 }
@@ -630,10 +625,8 @@ sync_result_t sync_set_name(void *lock, const char *name)
 
     sync_type_t type = base->type;
 
-    /* 释放旧名称（create 路径和本函数都用 sync_internal_strdup 分配） */
     const char *old_name = sync_get_name(lock);
 
-    /* 按类型分发，设置新名称 */
     char *new_name = NULL;
     if (name) {
         new_name = sync_internal_strdup(name);
@@ -641,7 +634,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
             return SYNC_ERROR_MEMORY;
     }
 
-    /* 释放旧名称并设置新名称 */
     switch (type) {
     case SYNC_TYPE_MUTEX:
     case SYNC_TYPE_RECURSIVE_MUTEX: {
@@ -699,7 +691,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
         return SYNC_ERROR_UNSUPPORTED;
     }
 
-    /* 注册/注销到全局注册表 */
     if (name) {
         registry_register(lock, name, type);
     } else {
@@ -729,13 +720,12 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
     AIRY_MEMSET(info, 0, sizeof(sync_deadlock_info_t));
     info->detection_time = (uint64_t)time(NULL);
 
-    /* 本地缓冲：收集被持有的锁名 */
     size_t cap = (max_info_size < SYNC_MAX_REGISTRY) ? max_info_size : SYNC_MAX_REGISTRY;
     char *held_names[SYNC_MAX_REGISTRY];
     for (size_t i = 0; i < SYNC_MAX_REGISTRY; i++)
         held_names[i] = NULL;
-    size_t held_count = 0;   /* 实际写入 held_names 的数量 */
-    size_t total_held = 0;   /* 被持有的锁总数（可能超过 cap） */
+    size_t held_count = 0;
+    size_t total_held = 0;
 
     REGISTRY_LOCK();
     for (size_t i = 0; i < s_registry_count; i++) {
@@ -744,7 +734,6 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
 
         struct sync_mutex *base = (struct sync_mutex *)s_lock_registry[i].lock;
 
-        /* 自清理：移除已释放的陈旧条目 */
         if (base == NULL || !base->initialized) {
             if (s_lock_registry[i].name)
                 AIRY_FREE(s_lock_registry[i].name);
@@ -754,7 +743,6 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
             continue;
         }
 
-        /* trylock 探测锁是否被持有 */
         if (registry_lock_is_held(s_lock_registry[i].lock, s_lock_registry[i].type)) {
             total_held++;
             if (held_count < cap && s_lock_registry[i].name) {
@@ -769,14 +757,14 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
     info->lock_count = total_held;
 
     if (total_held > 0) {
-        /* 分配输出数组并转移所有权 */
+
         if (held_count > 0) {
             info->lock_names = (char **)AIRY_CALLOC(held_count, sizeof(char *));
             if (info->lock_names) {
                 for (size_t i = 0; i < held_count; i++)
                     info->lock_names[i] = held_names[i];
             } else {
-                /* 内存不足，释放本地缓冲 */
+
                 for (size_t i = 0; i < held_count; i++) {
                     if (held_names[i])
                         AIRY_FREE(held_names[i]);
@@ -807,7 +795,8 @@ uint64_t sync_get_thread_id(void)
 bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
 {
 #ifdef _WIN32
-    return _InterlockedCompareExchange64((volatile LONG64 *)ptr, (LONG64)desired, (LONG64)expected) == (LONG64)expected;
+    return _InterlockedCompareExchange64((volatile LONG64 *)ptr, (LONG64)desired,
+                                         (LONG64)expected) == (LONG64)expected;
 #else
     return __sync_bool_compare_and_swap((volatile uintptr_t *)ptr, expected, desired);
 #endif

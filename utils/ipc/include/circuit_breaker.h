@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file circuit_breaker.h
  * @brief 熔断器与自愈框架（commons 权威版本）
@@ -37,7 +38,6 @@
 extern "C" {
 #endif
 
-/* ==================== 常量定义 ==================== */
 
 #define CB_MAX_BREAKERS 64
 #define CB_MAX_NAME_LEN 64
@@ -47,11 +47,9 @@ extern "C" {
 #define CB_DEFAULT_TIMEOUT_MS 30000
 #define CB_DEFAULT_HALF_OPEN_MAX 1
 
-/* ==================== 熔断器状态 ==================== */
 
 typedef enum { CB_STATE_CLOSED = 0, CB_STATE_OPEN = 1, CB_STATE_HALF_OPEN = 2 } cb_state_t;
 
-/* ==================== 熔断器配置 ==================== */
 
 typedef struct {
     uint32_t failure_threshold;
@@ -66,7 +64,6 @@ typedef struct {
     bool enable_auto_failover;
 } cb_config_t;
 
-/* ==================== 熔断器统计 ==================== */
 
 typedef struct {
     uint64_t total_calls;
@@ -85,7 +82,6 @@ typedef struct {
     uint32_t consecutive_successes;
 } cb_stats_t;
 
-/* ==================== 熔断器事件 ==================== */
 
 typedef enum {
     CB_EVENT_STATE_CHANGE = 1,
@@ -108,7 +104,6 @@ typedef struct {
 
 typedef void (*cb_event_callback_t)(const cb_event_t *event, void *user_data);
 
-/* ==================== 故障转移策略 ==================== */
 
 typedef enum {
     CB_FAILOVER_RETRY = 0,
@@ -125,15 +120,12 @@ typedef struct {
     uint32_t retry_backoff_factor;
 } cb_failover_config_t;
 
-/* ==================== 熔断器句柄 ==================== */
 
 typedef struct circuit_breaker_s *circuit_breaker_t;
 
-/* ==================== 熔断器管理器 ==================== */
 
 typedef struct cb_manager_s *cb_manager_t;
 
-/* ==================== 熔断器生命周期 ==================== */
 
 /**
  * @brief 创建熔断器管理器
@@ -147,7 +139,6 @@ AIRY_API cb_manager_t cb_manager_create(void);
  */
 AIRY_API void cb_manager_destroy(cb_manager_t manager);
 
-/* ==================== 熔断器操作 ==================== */
 
 /**
  * @brief 创建熔断器
@@ -157,7 +148,7 @@ AIRY_API void cb_manager_destroy(cb_manager_t manager);
  * @return 熔断器句柄，失败返回NULL
  */
 AIRY_API circuit_breaker_t cb_create(cb_manager_t manager, const char *name,
-                                        const cb_config_t *config);
+                                     const cb_config_t *config);
 
 /**
  * @brief 销毁熔断器
@@ -192,7 +183,6 @@ AIRY_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code);
  */
 AIRY_API void cb_record_timeout(circuit_breaker_t breaker);
 
-/* ==================== 熔断器状态查询 ==================== */
 
 /**
  * @brief 获取熔断器当前状态
@@ -234,7 +224,6 @@ AIRY_API void cb_force_open(circuit_breaker_t breaker);
  */
 AIRY_API void cb_force_close(circuit_breaker_t breaker);
 
-/* ==================== 故障转移 ==================== */
 
 /**
  * @brief 配置故障转移策略
@@ -243,7 +232,7 @@ AIRY_API void cb_force_close(circuit_breaker_t breaker);
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t cb_set_failover_config(circuit_breaker_t breaker,
-                                                   const cb_failover_config_t *config);
+                                           const cb_failover_config_t *config);
 
 /**
  * @brief 执行故障转移
@@ -254,9 +243,8 @@ AIRY_API airy_err_t cb_set_failover_config(circuit_breaker_t breaker,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t cb_execute_failover(circuit_breaker_t breaker, int32_t original_error,
-                                                char *fallback_result, size_t result_size);
+                                        char *fallback_result, size_t result_size);
 
-/* ==================== 事件与回调 ==================== */
 
 /**
  * @brief 注册熔断器事件回调
@@ -265,9 +253,8 @@ AIRY_API airy_err_t cb_execute_failover(circuit_breaker_t breaker, int32_t origi
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t cb_register_event_callback(cb_manager_t manager,
-                                                       cb_event_callback_t callback,
-                                                       void *user_data);
+AIRY_API airy_err_t cb_register_event_callback(cb_manager_t manager, cb_event_callback_t callback,
+                                               void *user_data);
 
 /**
  * @brief 查找熔断器
@@ -284,7 +271,6 @@ AIRY_API circuit_breaker_t cb_find(cb_manager_t manager, const char *name);
  */
 AIRY_API uint32_t cb_count(cb_manager_t manager);
 
-/* ==================== 工具函数 ==================== */
 
 /**
  * @brief 熔断器状态转字符串

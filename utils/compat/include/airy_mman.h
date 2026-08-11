@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 #ifndef AIRY_RT_COMPAT_MMAN_H
 #define AIRY_RT_COMPAT_MMAN_H
 
@@ -69,8 +70,8 @@ static inline int munmap(void *addr, size_t len)
 {
     (void)len;
     if (!addr || addr == MAP_FAILED)
-        return -1;  /* BAN-073 exempt: POSIX API contract */
-    return VirtualFree(addr, 0, MEM_RELEASE) ? 0 : -1;  /* BAN-073 exempt: POSIX API contract */
+        return -1; /* BAN-073 exempt: POSIX API contract */
+    return VirtualFree(addr, 0, MEM_RELEASE) ? 0 : -1; /* BAN-073 exempt: POSIX API contract */
 }
 
 static inline int mprotect(void *addr, size_t len, int prot)
@@ -89,13 +90,13 @@ static inline int shm_open(const char *name, int oflag, mode_t mode)
     (void)name;
     (void)oflag;
     (void)mode;
-    return -1;  /* BAN-073 exempt: POSIX API contract (stub) */
+    return -1; /* BAN-073 exempt: POSIX API contract (stub) */
 }
 
 static inline int shm_unlink(const char *name)
 {
     (void)name;
-    return -1;  /* BAN-073 exempt: POSIX API contract (stub) */
+    return -1; /* BAN-073 exempt: POSIX API contract (stub) */
 }
 
 #else

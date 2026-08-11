@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file trace.h
  * @brief 链路追踪接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_UTILS_TRACE_H
@@ -57,7 +57,6 @@ void airy_trace_cleanup(void);
  */
 int airy_trace_get_span_count(void);
 
-/* ==================== Span 字段访问器（用于持久化） ==================== */
 
 /**
  * @brief 获取 span 的追踪 ID

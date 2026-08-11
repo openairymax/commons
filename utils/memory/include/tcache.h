@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file tcache.h
  * @brief P1.20: per-Thread 缓存层 — 减少 pool.c 全局锁竞争
@@ -15,7 +16,6 @@
  *
  * 性能目标：单线程分配延迟降低 > 30%
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_TCACHE_H
@@ -31,30 +31,25 @@
 extern "C" {
 #endif
 
-/* ==================== 默认配置 ==================== */
 
-#define TCACHE_DEFAULT_BATCH_SIZE 16     /**< 默认批量获取/归还数量 */
-#define TCACHE_MAX_CACHED         64     /**< 最大缓存块数（防内存积压） */
-#define TCACHE_FLUSH_THRESHOLD    48     /**< 达到此阈值强制 flush */
-
-/* ==================== tcache 句柄 ==================== */
+#define TCACHE_DEFAULT_BATCH_SIZE 16
+#define TCACHE_MAX_CACHED 64
+#define TCACHE_FLUSH_THRESHOLD 48
 
 typedef struct airy_tcache airy_tcache_t;
 
-/* ==================== tcache 统计 ==================== */
 
 typedef struct {
-    uint64_t alloc_count;       /**< 分配次数（含命中和未命中） */
-    uint64_t free_count;        /**< 释放次数 */
-    uint64_t hit_count;         /**< tcache 命中次数 */
-    uint64_t miss_count;        /**< tcache 未命中（需访问全局池） */
-    uint64_t batch_fill_count;  /**< 批量填充次数 */
-    uint64_t batch_flush_count; /**< 批量归还次数 */
-    uint64_t bypass_count;      /**< 绕过 tcache 直接访问池的次数 */
-    double   hit_rate;          /**< 命中率 (hit / alloc * 100) */
+    uint64_t alloc_count;
+    uint64_t free_count;
+    uint64_t hit_count;
+    uint64_t miss_count;
+    uint64_t batch_fill_count;
+    uint64_t batch_flush_count;
+    uint64_t bypass_count;
+    double hit_rate;
 } tcache_stats_t;
 
-/* ==================== 生命周期 API ==================== */
 
 /**
  * @brief P1.20.1: 创建 tcache（通常每个线程一个）
@@ -77,7 +72,6 @@ airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_
  */
 void tcache_destroy(airy_tcache_t *tc);
 
-/* ==================== 分配 / 释放 API ==================== */
 
 /**
  * @brief P1.20.2: 从 tcache 快速分配
@@ -103,7 +97,6 @@ void *tcache_alloc(airy_tcache_t *tc);
  */
 void tcache_free(airy_tcache_t *tc, void *ptr);
 
-/* ==================== 批量操作 ==================== */
 
 /**
  * @brief P1.20.1: 从全局池批量填充 tcache
@@ -128,7 +121,6 @@ size_t tcache_batch_flush(airy_tcache_t *tc);
  */
 void tcache_flush_all(airy_tcache_t *tc);
 
-/* ==================== 查询 API ==================== */
 
 /**
  * @brief 获取 tcache 统计信息

@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file service_discovery.h
  * @brief 跨进程服务发现机制（commons 权威版本）
@@ -36,7 +37,6 @@
 extern "C" {
 #endif
 
-/* ==================== 常量定义 ==================== */
 
 #define SD_MAX_SERVICES 128
 #define SD_MAX_NAME_LEN 64
@@ -49,7 +49,6 @@ extern "C" {
 #define SD_DEFAULT_EXPIRE_MS 30000
 #define SD_SHM_NAME "/airy_svc_registry"
 
-/* ==================== 服务实例信息 ==================== */
 
 typedef struct {
     char instance_id[SD_MAX_NAME_LEN];
@@ -64,7 +63,6 @@ typedef struct {
     uint32_t pid;
 } sd_instance_t;
 
-/* ==================== 服务注册条目 ==================== */
 
 typedef struct {
     char name[SD_MAX_NAME_LEN];
@@ -79,7 +77,6 @@ typedef struct {
     uint64_t last_updated;
 } sd_service_entry_t;
 
-/* ==================== 负载均衡策略 ==================== */
 
 typedef enum {
     SD_LB_ROUND_ROBIN = 0,
@@ -89,7 +86,6 @@ typedef enum {
     SD_LB_LEAST_LOAD = 4
 } sd_lb_strategy_t;
 
-/* ==================== 服务发现配置 ==================== */
 
 typedef struct {
     uint32_t heartbeat_interval_ms;
@@ -101,7 +97,6 @@ typedef struct {
     uint32_t shm_size;
 } sd_config_t;
 
-/* ==================== 服务发现统计 ==================== */
 
 typedef struct {
     uint64_t registrations;
@@ -114,11 +109,9 @@ typedef struct {
     uint32_t active_instances;
 } sd_stats_t;
 
-/* ==================== 服务发现句柄 ==================== */
 
 typedef struct service_discovery_s *service_discovery_t;
 
-/* ==================== 服务变更回调 ==================== */
 
 typedef enum {
     SD_EVENT_REGISTERED = 1,
@@ -132,7 +125,6 @@ typedef enum {
 typedef void (*sd_event_callback_t)(sd_event_type_t event, const char *service_name,
                                     const sd_instance_t *instance, void *user_data);
 
-/* ==================== 生命周期管理 ==================== */
 
 /**
  * @brief 创建服务发现实例
@@ -161,7 +153,6 @@ AIRY_API airy_err_t sd_start(service_discovery_t sd);
  */
 AIRY_API airy_err_t sd_stop(service_discovery_t sd);
 
-/* ==================== 服务注册 ==================== */
 
 /**
  * @brief 注册服务实例
@@ -174,8 +165,8 @@ AIRY_API airy_err_t sd_stop(service_discovery_t sd);
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_register(service_discovery_t sd, const char *service_name,
-                                        const char *service_type, const sd_instance_t *instance,
-                                        const char *tags, const char *dependencies);
+                                const char *service_type, const sd_instance_t *instance,
+                                const char *tags, const char *dependencies);
 
 /**
  * @brief 注销服务实例
@@ -185,7 +176,7 @@ AIRY_API airy_err_t sd_register(service_discovery_t sd, const char *service_name
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_deregister(service_discovery_t sd, const char *service_name,
-                                          const char *instance_id);
+                                  const char *instance_id);
 
 /**
  * @brief 注销服务的所有实例
@@ -195,7 +186,6 @@ AIRY_API airy_err_t sd_deregister(service_discovery_t sd, const char *service_na
  */
 AIRY_API airy_err_t sd_deregister_all(service_discovery_t sd, const char *service_name);
 
-/* ==================== 服务发现 ==================== */
 
 /**
  * @brief 发现服务（获取所有健康实例）
@@ -207,8 +197,8 @@ AIRY_API airy_err_t sd_deregister_all(service_discovery_t sd, const char *servic
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_discover(service_discovery_t sd, const char *service_name,
-                                        sd_instance_t *instances, uint32_t max_count,
-                                        uint32_t *found_count);
+                                sd_instance_t *instances, uint32_t max_count,
+                                uint32_t *found_count);
 
 /**
  * @brief 按类型发现服务
@@ -220,8 +210,8 @@ AIRY_API airy_err_t sd_discover(service_discovery_t sd, const char *service_name
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_discover_by_type(service_discovery_t sd, const char *service_type,
-                                                sd_service_entry_t *entries, uint32_t max_count,
-                                                uint32_t *found_count);
+                                        sd_service_entry_t *entries, uint32_t max_count,
+                                        uint32_t *found_count);
 
 /**
  * @brief 按标签发现服务
@@ -233,8 +223,8 @@ AIRY_API airy_err_t sd_discover_by_type(service_discovery_t sd, const char *serv
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_discover_by_tags(service_discovery_t sd, const char *tags,
-                                                sd_service_entry_t *entries, uint32_t max_count,
-                                                uint32_t *found_count);
+                                        sd_service_entry_t *entries, uint32_t max_count,
+                                        uint32_t *found_count);
 
 /**
  * @brief 选择最优实例（负载均衡）
@@ -245,9 +235,8 @@ AIRY_API airy_err_t sd_discover_by_tags(service_discovery_t sd, const char *tags
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_select_instance(service_discovery_t sd, const char *service_name,
-                                               sd_lb_strategy_t strategy, sd_instance_t *instance);
+                                       sd_lb_strategy_t strategy, sd_instance_t *instance);
 
-/* ==================== 心跳与健康 ==================== */
 
 /**
  * @brief 发送心跳
@@ -257,7 +246,7 @@ AIRY_API airy_err_t sd_select_instance(service_discovery_t sd, const char *servi
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd, const char *service_name,
-                                         const char *instance_id);
+                                 const char *instance_id);
 
 /**
  * @brief 更新实例健康状态
@@ -268,7 +257,7 @@ AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd, const char *service_nam
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_update_health(service_discovery_t sd, const char *service_name,
-                                             const char *instance_id, bool healthy);
+                                     const char *instance_id, bool healthy);
 
 /**
  * @brief 更新实例连接数
@@ -279,10 +268,8 @@ AIRY_API airy_err_t sd_update_health(service_discovery_t sd, const char *service
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_update_connections(service_discovery_t sd, const char *service_name,
-                                                  const char *instance_id,
-                                                  uint32_t active_connections);
+                                          const char *instance_id, uint32_t active_connections);
 
-/* ==================== 依赖管理 ==================== */
 
 /**
  * @brief 获取服务依赖列表
@@ -293,7 +280,7 @@ AIRY_API airy_err_t sd_update_connections(service_discovery_t sd, const char *se
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t sd_get_dependencies(service_discovery_t sd, const char *service_name,
-                                                char *dependencies, size_t max_len);
+                                        char *dependencies, size_t max_len);
 
 /**
  * @brief 检查服务依赖是否满足
@@ -304,9 +291,8 @@ AIRY_API airy_err_t sd_get_dependencies(service_discovery_t sd, const char *serv
  * @return 0所有依赖满足，非0有缺失依赖
  */
 AIRY_API airy_err_t sd_check_dependencies(service_discovery_t sd, const char *service_name,
-                                                  char *missing_deps, size_t max_len);
+                                          char *missing_deps, size_t max_len);
 
-/* ==================== 事件与统计 ==================== */
 
 /**
  * @brief 注册服务变更回调
@@ -315,9 +301,8 @@ AIRY_API airy_err_t sd_check_dependencies(service_discovery_t sd, const char *se
  * @param user_data 用户数据
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t sd_register_event_callback(service_discovery_t sd,
-                                                       sd_event_callback_t callback,
-                                                       void *user_data);
+AIRY_API airy_err_t sd_register_event_callback(service_discovery_t sd, sd_event_callback_t callback,
+                                               void *user_data);
 
 /**
  * @brief 获取服务发现统计
@@ -341,7 +326,6 @@ AIRY_API uint32_t sd_service_count(service_discovery_t sd);
  */
 AIRY_API bool sd_is_running(service_discovery_t sd);
 
-/* ==================== 工具函数 ==================== */
 
 /**
  * @brief 负载均衡策略转字符串

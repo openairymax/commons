@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file compat.h
  * @brief 跨平台兼容性定义
@@ -12,7 +13,6 @@
 #ifndef AIRY_RT_UTILS_COMPAT_H
 #define AIRY_RT_UTILS_COMPAT_H
 
-/* ==================== Windows 平台专用定义 ==================== */
 
 #ifdef _WIN32
 #ifndef _SSIZE_T_DEFINED
@@ -31,7 +31,6 @@ typedef SSIZE_T ssize_t;
 extern "C" {
 #endif
 
-/* ==================== 导出宏 ==================== */
 
 #ifndef AIRY_API
 #ifdef _WIN32
@@ -47,7 +46,6 @@ extern "C" {
 #endif
 #endif /* AIRY_API */
 
-/* ==================== 编译器检测 ==================== */
 
 #if defined(__GNUC__)
 #define AIRY_COMPILER_GCC 1
@@ -67,7 +65,6 @@ extern "C" {
 #define AIRY_COMPILER_VERSION 0
 #endif
 
-/* ==================== 平台检测 ==================== */
 
 #if defined(_WIN32) || defined(_WIN64)
 #define AIRY_PLATFORM_WINDOWS 1
@@ -83,7 +80,6 @@ extern "C" {
 #define AIRY_PLATFORM_NAME "Unknown"
 #endif
 
-/* ==================== 编译器属性宏 ==================== */
 
 #if defined(AIRY_COMPILER_GCC) || defined(AIRY_COMPILER_CLANG)
 #ifndef AIRY_INLINE
@@ -99,17 +95,13 @@ extern "C" {
 #define AIRY_ALIGNED(x) __attribute__((aligned(x)))
 #define AIRY_DEPRECATED __attribute__((deprecated))
 #define AIRY_FALLTHROUGH __attribute__((fallthrough))
-#define AIRY_PRINTF_FORMAT(fmt, args) \
-    __attribute__((                      \
-        format(__printf__, fmt, args)))
-#define AIRY_SCANF_FORMAT(fmt, args) \
-    __attribute__((                     \
-        format(__scanf__, fmt, args)))
+#define AIRY_PRINTF_FORMAT(fmt, args) __attribute__((format(__printf__, fmt, args)))
+#define AIRY_SCANF_FORMAT(fmt, args) __attribute__((format(__scanf__, fmt, args)))
 #define AIRY_LIKELY(x) __builtin_expect(!!(x), 1)
 #define AIRY_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #define AIRY_PREFETCH(x) __builtin_prefetch(x)
 #define AIRY_UNREACHABLE() __builtin_unreachable()
-#define AIRY_ASSUME(x)            \
+#define AIRY_ASSUME(x)               \
     do {                             \
         if (!(x))                    \
             __builtin_unreachable(); \
@@ -158,7 +150,6 @@ extern "C" {
 #define AIRY_ASSUME(x) ((void)0)
 #endif
 
-/* ==================== 线程本地存储 ==================== */
 
 #if defined(AIRY_PLATFORM_WINDOWS)
 #define AIRY_THREAD_LOCAL __declspec(thread)
@@ -166,7 +157,6 @@ extern "C" {
 #define AIRY_THREAD_LOCAL __thread
 #endif
 
-/* ==================== POSIX函数Windows兼容映射 ==================== */
 
 #if defined(AIRY_PLATFORM_WINDOWS)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -191,8 +181,7 @@ AIRY_API char *strndup(const char *s, size_t n);
 AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 
 #define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
-#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) \
-    atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
+#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
 
 #ifndef _SC_PAGESIZE
 #define _SC_PAGESIZE 1
@@ -208,11 +197,9 @@ AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 #endif
 #else
 #define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
-#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) \
-    atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
+#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
 #endif
 
-/* ==================== 路径分隔符 ==================== */
 
 #if defined(AIRY_PLATFORM_WINDOWS)
 #define AIRY_PATH_SEP '\\'
@@ -230,7 +217,6 @@ AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 #endif
 #endif
 
-/* ==================== 对齐工具 ==================== */
 
 /**
  * @brief 检查指针是否对齐
@@ -265,7 +251,6 @@ AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
     return value & ~(align - 1);
 }
 
-/* ==================== 数组工具 ==================== */
 
 /**
  * @brief 获取数组元素数量
@@ -283,7 +268,7 @@ AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
 #if defined(AIRY_COMPILER_GCC) || defined(AIRY_COMPILER_CLANG)
 #define AIRY_OFFSETOF(type, member) __builtin_offsetof(type, member)
 #else
-#define AIRY_OFFSETOF(type, member) ((size_t) & ((type *)0)->member)
+#define AIRY_OFFSETOF(type, member) ((size_t)&((type *)0)->member)
 #endif
 
 /**
@@ -293,10 +278,8 @@ AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
  * @param member 成员名
  * @return 结构体指针
  */
-#define AIRY_CONTAINER_OF(ptr, type, member) \
-    ((type *)((char *)(ptr) - AIRY_OFFSETOF(type, member)))
+#define AIRY_CONTAINER_OF(ptr, type, member) ((type *)((char *)(ptr) - AIRY_OFFSETOF(type, member)))
 
-/* ==================== 位操作工具 ==================== */
 
 /**
  * @brief 检查位是否设置
@@ -417,7 +400,6 @@ AIRY_INLINE unsigned int airy_ctz(unsigned int x)
 #endif
 }
 
-/* ==================== 安全字符串函数 ==================== */
 
 /**
  * @brief 安全字符串复制
@@ -446,7 +428,6 @@ AIRY_API int airy_strlcat(char *dest, const char *src, size_t dest_size);
  */
 AIRY_API char *airy_strncpy_safe(char *dest, const char *src, size_t dest_size);
 
-/* ==================== 安全内存函数 ==================== */
 
 /**
  * @brief 安全内存设置
@@ -478,38 +459,36 @@ AIRY_API int airy_memcpy_s(void *dest, size_t dest_size, const void *src, size_t
  */
 AIRY_API int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count);
 
-/* ==================== 断言宏 ==================== */
 
 #ifdef NDEBUG
 #define AIRY_ASSERT(cond) ((void)0)
 #define AIRY_ASSERT_MSG(cond, msg) ((void)0)
 #else
 #define AIRY_ASSERT(cond)                                          \
-    do {                                                              \
-        if (!(cond)) {                                                \
+    do {                                                           \
+        if (!(cond)) {                                             \
             airy_assert_fail(#cond, __FILE__, __LINE__, __func__); \
-        }                                                             \
+        }                                                          \
     } while (0)
 
 #define AIRY_ASSERT_MSG(cond, msg)                                          \
-    do {                                                                       \
-        if (!(cond)) {                                                         \
+    do {                                                                    \
+        if (!(cond)) {                                                      \
             airy_assert_fail_msg(#cond, __FILE__, __LINE__, __func__, msg); \
-        }                                                                      \
+        }                                                                   \
     } while (0)
 #endif
 
 /**
  * @brief 断言失败处理函数
  */
-AIRY_API void airy_assert_fail(const char *cond, const char *file, int line,
-                                     const char *func);
+AIRY_API void airy_assert_fail(const char *cond, const char *file, int line, const char *func);
 
 /**
  * @brief 断言失败处理函数（带消息）
  */
-AIRY_API void airy_assert_fail_msg(const char *cond, const char *file, int line,
-                                         const char *func, const char *msg);
+AIRY_API void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
+                                   const char *msg);
 
 /**
  * @brief 自定义断言处理器回调类型
@@ -518,7 +497,7 @@ AIRY_API void airy_assert_fail_msg(const char *cond, const char *file, int line,
  * 生产环境可设置为日志记录+优雅降级。
  */
 typedef void (*airy_assert_handler_t)(const char *cond, const char *file, int line,
-                                         const char *func, const char *msg);
+                                      const char *func, const char *msg);
 
 /**
  * @brief 设置自定义断言处理器
@@ -530,7 +509,6 @@ AIRY_API void airy_set_assert_handler(airy_assert_handler_t handler);
  */
 AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 
-/* ==================== 静态断言 ==================== */
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define AIRY_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
@@ -538,15 +516,13 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 #define AIRY_STATIC_ASSERT(cond, msg) \
     typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1] __attribute__((unused))
 #else
-#define AIRY_STATIC_ASSERT(cond, msg) \
-    typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1]
+#define AIRY_STATIC_ASSERT(cond, msg) typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1]
 #endif
 
 /**
  * @brief 编译时检查
  */
-#define AIRY_COMPILE_TIME_ASSERT(cond) \
-    AIRY_STATIC_ASSERT(cond, "Compile-time assertion failed")
+#define AIRY_COMPILE_TIME_ASSERT(cond) AIRY_STATIC_ASSERT(cond, "Compile-time assertion failed")
 
 /**
  * @brief 检查类型大小
@@ -554,7 +530,6 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 #define AIRY_CHECK_SIZE(type, size) \
     AIRY_STATIC_ASSERT(sizeof(type) == size, "Size mismatch for " #type)
 
-/* ==================== 调试辅助 ==================== */
 
 #ifdef DEBUG
 #define AIRY_DEBUG_BREAK() airy_debug_break()
@@ -567,7 +542,6 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
  */
 AIRY_API void airy_debug_break(void);
 
-/* ==================== 版本信息 ==================== */
 
 #define AIRY_VERSION_MAJOR 0
 #define AIRY_VERSION_MINOR 0

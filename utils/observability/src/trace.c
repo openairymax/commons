@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file trace.c
- * @brief 链路追踪实现（跨平台?
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 链路追踪实现（跨平台）
  *
  * @details
- * 本模块实现分布式链路追踪功能?
- * - 支持Span的创建和生命周期管理
- * - 提供事件注解和属性添?
- * - 支持JSON格式的追踪导?
- * - 符合OpenTelemetry追踪规范
+ * 本模块实现分布式链路追踪功能。
+ * - 支持 Span 的创建和生命周期管理
+ * - 提供事件注解和属性添加
+ * - 支持 JSON 格式的追踪导出
+ * - 符合 OpenTelemetry 追踪规范
  */
 
 #include "trace.h"
@@ -27,7 +27,6 @@
 #include <string.h>
 #include <time.h>
 
-/* 跨平台原子操作支持 - 使用统一的 atomic_compat.h */
 #include "atomic_compat.h"
 #include "platform.h"
 #include "error.h"
@@ -36,8 +35,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #endif
-
-
 
 #define MAX_SPANS 1024
 #define MAX_EVENTS_PER_SPAN 64
@@ -48,10 +45,10 @@
  * @brief 追踪事件结构
  */
 typedef struct trace_event {
-    char name[128];           /**< 事件名称 */
-    int64_t timestamp;        /**< 事件时间戳（微秒?*/
-    char attributes[512];     /**< 事件属?*/
-    struct trace_event *next; /**< 下一个事?*/
+    char name[128];
+    int64_t timestamp;
+    char attributes[512];
+    struct trace_event *next;
 } trace_event_t;
 
 /**
@@ -95,34 +92,34 @@ static void trace_mutex_unlock(trace_mutex_t *mutex)
  * @brief 追踪Span内部结构
  */
 struct airy_trace_span {
-    char trace_id[MAX_TRACE_ID_LEN]; /**< 追踪ID */
-    char span_id[MAX_SPAN_ID_LEN];   /**< Span ID */
-    char parent_id[MAX_SPAN_ID_LEN]; /**< 父Span ID */
-    char name[128];                  /**< Span名称 */
-    int64_t start_time;              /**< 开始时间（微秒?*/
-    int64_t end_time;                /**< 结束时间（微秒） */
-    atomic_int status;               /**< 状态：0=运行? 1=完成, 2=错误 */
-    trace_event_t *events;           /**< 事件链表 */
-    trace_event_t *events_tail;      /**< 事件链表?*/
-    int event_count;                 /**< 事件数量 */
-    trace_mutex_t mutex;             /**< 互斥?*/
-    struct airy_trace_span *next; /**< 下一个Span */
+    char trace_id[MAX_TRACE_ID_LEN];
+    char span_id[MAX_SPAN_ID_LEN]; /**< Span ID */
+    char parent_id[MAX_SPAN_ID_LEN];
+    char name[128];
+    int64_t start_time;
+    int64_t end_time;
+    atomic_int status;
+    trace_event_t *events;
+    trace_event_t *events_tail;
+    int event_count;
+    trace_mutex_t mutex;
+    struct airy_trace_span *next;
 };
 
 /**
- * @brief 全局追踪状?
+ * @brief 全局追踪状态
  */
 static struct {
-    atomic_uint64_t span_counter;  /**< Span计数?*/
-    atomic_uint64_t trace_counter; /**< 追踪计数?*/
-    airy_trace_span_t *head;    /**< Span链表?*/
-    airy_trace_span_t *tail;    /**< Span链表?*/
-    trace_mutex_t mutex;           /**< 互斥?*/
-    int initialized;               /**< 初始化标?*/
+    atomic_uint64_t span_counter;
+    atomic_uint64_t trace_counter;
+    airy_trace_span_t *head;
+    airy_trace_span_t *tail;
+    trace_mutex_t mutex;
+    int initialized;
 } g_trace_state;
 
 /**
- * @brief 获取当前时间戳（微秒? 跨平台实?
+ * @brief 获取当前时间戳（微秒），跨平台实现
  */
 static int64_t get_current_time_us(void)
 {
@@ -139,7 +136,7 @@ static int64_t get_current_time_us(void)
 }
 
 /**
- * @brief 初始化追踪系?
+ * @brief 初始化追踪系统
  */
 static int init_trace_system(void)
 {
@@ -217,8 +214,7 @@ airy_trace_span_t *airy_trace_begin(const char *name, const char *parent_id)
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    airy_trace_span_t *span =
-        (airy_trace_span_t *)AIRY_MALLOC(sizeof(airy_trace_span_t));
+    airy_trace_span_t *span = (airy_trace_span_t *)AIRY_MALLOC(sizeof(airy_trace_span_t));
     if (!span) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -379,9 +375,9 @@ char *airy_trace_export(void)
         }
 
         offset += snprintf(buffer + offset, buffer_size - offset, "    \"status\": \"%s\",\n",
-                           atomic_load(&span->status) == 1   ? "ok"
-                           : atomic_load(&span->status) == 2 ? "error"
-                                                             : "running");
+                           atomic_load(&span->status) == 1 ? "ok" :
+                           atomic_load(&span->status) == 2 ? "error" :
+                                                             "running");
 
         if (span->event_count > 0) {
             offset += snprintf(buffer + offset, buffer_size - offset, "    \"events\": [\n");
@@ -485,8 +481,6 @@ int airy_trace_get_span_count(void)
     return count;
 }
 
-/* ==================== Span 字段访问器 ==================== */
-
 const char *airy_trace_span_get_trace_id(const airy_trace_span_t *span)
 {
     return span ? span->trace_id : NULL;
@@ -507,12 +501,12 @@ const char *airy_trace_span_get_name(const airy_trace_span_t *span)
     return span ? span->name : NULL;
 }
 
-int64_t airy_trace_span_get_start_time_us(const airy_trace_span_t *span)
+int64_t airy_tspan_get_start_time_us(const airy_trace_span_t *span)
 {
     return span ? span->start_time : 0;
 }
 
-int64_t airy_trace_span_get_end_time_us(const airy_trace_span_t *span)
+int64_t airy_tspan_get_end_time_us(const airy_trace_span_t *span)
 {
     return span ? span->end_time : 0;
 }

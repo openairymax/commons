@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file memory_debug.c
  * @brief 统一内存管理模块 - 内存调试功能实现
  *
- * 实现高级内存调试功能，包括泄漏检测、边界检查、使用分析等? *
- * 与核心内存管理模块紧密集成，提供详细的调试信息? *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
+ * 实现高级内存调试功能，包括泄漏检测、边界检查、使用分析等。
+ * 与核心内存管理模块紧密集成，提供详细的调试信息。
  */
 
 #include "memory_debug.h"
@@ -37,54 +37,50 @@
  * @brief 内存调试块头（红区）
  */
 typedef struct memory_debug_block {
-    size_t magic;                    /**< 魔数，用于验?*/
-    size_t size;                     /**< 原始分配大小 */
-    size_t redzone_size;             /**< 红区大小 */
-    const char *tag;                 /**< 分配标签 */
-    const char *file;                /**< 分配位置文件 */
-    int line;                        /**< 分配位置行号 */
-    const char *function;            /**< 分配位置函数 */
-    uint64_t timestamp;              /**< 分配时间?*/
-    unsigned char redzone_pattern;   /**< 红区填充模式 */
-    bool allocated;                  /**< 是否已分?*/
-    void *stack_trace[16];           /**< 堆栈跟踪（如果启用） */
-    size_t stack_depth;              /**< 堆栈深度 */
-    struct memory_debug_block *next; /**< 下一个调试块 */
-    struct memory_debug_block *prev; /**< 前一个调试块 */
+    size_t magic;
+    size_t size;
+    size_t redzone_size;
+    const char *tag;
+    const char *file;
+    int line;
+    const char *function;
+    uint64_t timestamp;
+    unsigned char redzone_pattern;
+    bool allocated;
+    void *stack_trace[16];
+    size_t stack_depth;
+    struct memory_debug_block *next;
+    struct memory_debug_block *prev;
 } memory_debug_block_t;
 
 /**
- * @brief 内存调试内部状? */
+ * @brief 内存调试内部状态
+ */
 typedef struct {
-    bool initialized;               /**< 模块是否已初始化 */
-    memory_debug_options_t options; /**< 当前调试选项 */
+    bool initialized;
+    memory_debug_options_t options;
 
-    // 调试块链表
-    memory_debug_block_t *block_list_head; /**< 调试块链表头 */
-    size_t block_count;                    /**< 调试块数?*/
+    memory_debug_block_t *block_list_head;
+    size_t block_count;
 
-    // 统计信息
-    size_t total_allocations; /**< 总分配次?*/
-    size_t total_frees;       /**< 总释放次?*/
-    size_t error_count;       /**< 错误数量 */
+    size_t total_allocations;
+    size_t total_frees;
+    size_t error_count;
 
     // 线程同步
 #ifdef _WIN32
-    airy_mtx_t lock; /**< Windows临界?*/
+    airy_mtx_t lock;
 #else
-    airy_mtx_t lock; /**< POSIX互斥?*/
+    airy_mtx_t lock;
 #endif
 
-    // 回调函数
-    memory_debug_callback_t callback; /**< 错误回调函数 */
-    void *callback_user_data;         /**< 回调用户数据 */
+    memory_debug_callback_t callback;
+    void *callback_user_data;
 
-    // 堆栈跟踪
-    bool stack_trace_enabled; /**< 是否启用堆栈跟踪 */
-    size_t max_stack_depth;   /**< 最大堆栈深?*/
+    bool stack_trace_enabled;
+    size_t max_stack_depth;
 
-    // 检查点管理
-    unsigned int next_checkpoint_id; /**< 下一个检查点ID */
+    unsigned int next_checkpoint_id;
 } memory_debug_state_t;
 
 /**
@@ -93,7 +89,8 @@ typedef struct {
 #define MEMORY_DEBUG_MAGIC 0xDEADBEEFCAFEBABEULL
 
 /**
- * @brief 全局调试状? */
+ * @brief 全局调试状态
+ */
 static memory_debug_state_t g_debug_state = {0};
 
 /**
@@ -112,7 +109,8 @@ static bool memory_debug_lock_init(void)
 }
 
 /**
- * @brief 内部锁销? */
+ * @brief 内部锁销毁
+ */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static void memory_debug_lock_destroy(void)
@@ -149,8 +147,10 @@ static void memory_debug_unlock(void)
 }
 
 /**
- * @brief 获取当前时间戳（毫秒? *
- * @return 时间? */
+ * @brief 获取当前时间戳（毫秒）
+ *
+ * @return 时间戳
+ */
 static uint64_t memory_debug_get_timestamp(void)
 {
 #ifdef _WIN32
@@ -172,8 +172,10 @@ static uint64_t memory_debug_get_timestamp(void)
  * @param[in] addr 相关地址
  * @param[in] size 相关大小
  * @param[in] description 错误描述
- * @param[in] file 文件? * @param[in] line 行号
- * @param[in] function 函数? */
+ * @param[in] file 文件
+ * @param[in] line 行号
+ * @param[in] function 函数
+ */
 static void __attribute__((unused)) memory_debug_record_error(memory_error_type_t type, void *addr,
                                                               size_t size, const char *description,
                                                               const char *file, int line,
@@ -194,7 +196,6 @@ static void __attribute__((unused)) memory_debug_record_error(memory_error_type_
 
     g_debug_state.error_count++;
 
-    // 输出到日志
     if (g_debug_state.options.verbosity_level >= 1) {
         LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
         if (description != NULL) {
@@ -205,15 +206,15 @@ static void __attribute__((unused)) memory_debug_record_error(memory_error_type_
         }
     }
 
-    // 调用回调函数
     if (g_debug_state.callback != NULL) {
         g_debug_state.callback(&report, g_debug_state.callback_user_data);
     }
 }
 
 /**
- * @brief 查找调试? *
- * @param[in] user_ptr 用户指针（红区后的地址? * @return 调试块指针，未找到返回NULL
+ * @brief 查找调试块
+ * @param[in] user_ptr 用户指针（红区后的地址）
+ * @return 调试块指针，未找到返回NULL
  */
 static memory_debug_block_t *memory_debug_find_block(void *user_ptr)
 {
@@ -234,7 +235,8 @@ static memory_debug_block_t *memory_debug_find_block(void *user_ptr)
 /**
  * @brief 添加调试块到链表
  *
- * @param[in] block 调试? */
+ * @param[in] block 调试块
+ */
 static void memory_debug_add_block(memory_debug_block_t *block)
 {
     if (block == NULL) {
@@ -255,7 +257,8 @@ static void memory_debug_add_block(memory_debug_block_t *block)
 /**
  * @brief 从链表移除调试块
  *
- * @param[in] block 调试? */
+ * @param[in] block 调试块
+ */
 static void memory_debug_remove_block(memory_debug_block_t *block)
 {
     if (block == NULL) {
@@ -279,8 +282,9 @@ static void memory_debug_remove_block(memory_debug_block_t *block)
 #pragma GCC diagnostic pop
 
 /**
- * @brief 验证调试块完整? *
- * @param[in] block 调试? * @param[out] error 错误报告
+ * @brief 验证调试块完整性
+ * @param[in] block 调试块
+ * @param[out] error 错误报告
  * @return 完整返回true，损坏返回false
  */
 static bool memory_debug_validate_block(memory_debug_block_t *block, memory_error_report_t *error)
@@ -300,7 +304,6 @@ static bool memory_debug_validate_block(memory_debug_block_t *block, memory_erro
         return false;
     }
 
-    // 检查魔数
     if (block->magic != MEMORY_DEBUG_MAGIC) {
         if (error != NULL) {
             memory_error_report_t report = {.type = MEMORY_ERROR_CORRUPTION,
@@ -316,7 +319,6 @@ static bool memory_debug_validate_block(memory_debug_block_t *block, memory_erro
         return false;
     }
 
-    // 检查红区
     if (g_debug_state.options.enable_boundary_check &&
         g_debug_state.options.redzone_size > sizeof(memory_debug_block_t)) {
         uint8_t *redzone_start = (uint8_t *)block + sizeof(memory_debug_block_t);
@@ -347,7 +349,9 @@ static bool memory_debug_validate_block(memory_debug_block_t *block, memory_erro
  * @brief 获取堆栈跟踪
  *
  * @param[out] frames 堆栈帧输出缓冲区
- * @param[in] max_frames 最大帧? * @return 实际获取的帧? */
+ * @param[in] max_frames 最大帧
+ * @return 实际获取的帧
+ */
 static size_t __attribute__((unused)) memory_debug_capture_stack_trace(void **frames,
                                                                        size_t max_frames)
 {
@@ -368,25 +372,23 @@ bool memory_debug_init(const memory_debug_options_t *options)
         return true;
     }
 
-    LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, boundary_check=%s)",
-                     options ? options->redzone_size : 0,
-                     options && options->track_allocations ? "true" : "false",
-                     options && options->enable_leak_check ? "true" : "false",
-                     options && options->enable_boundary_check ? "true" : "false");
+    LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, "
+             "boundary_check=%s)",
+             options ? options->redzone_size : 0,
+             options && options->track_allocations ? "true" : "false",
+             options && options->enable_leak_check ? "true" : "false",
+             options && options->enable_boundary_check ? "true" : "false");
 
-    // 初始化锁
     if (!memory_debug_lock_init()) {
         return false;
     }
 
     memory_debug_lock();
 
-    // 设置选项
     if (options != NULL) {
         __builtin_memcpy(&g_debug_state.options, options, sizeof(memory_debug_options_t));
     }
 
-    // 初始化状态
     g_debug_state.block_list_head = NULL;
     g_debug_state.block_count = 0;
     g_debug_state.total_allocations = 0;
@@ -407,7 +409,6 @@ bool memory_debug_init(const memory_debug_options_t *options)
 
 bool memory_debug_enable(bool enable)
 {
-    // 启用/禁用由memory.c处理，这里只返回状态
     return g_debug_state.initialized;
 }
 
@@ -443,7 +444,6 @@ size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log)
             leak_count++;
             total_leaked_bytes += current->size;
 
-            // 填充报告
             if (report != NULL && leak_count <= 100) {
                 report->leaks[leak_count - 1].address =
                     (uint8_t *)current + g_debug_state.options.redzone_size;
@@ -458,13 +458,11 @@ size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log)
         current = current->next;
     }
 
-    // 更新报告
     if (report != NULL) {
         report->leak_count = leak_count;
         report->total_leaked_bytes = total_leaked_bytes;
     }
 
-    // 输出到日志
     if (dump_to_log && leak_count > 0) {
         FILE *log = stderr;
         if (g_debug_state.options.log_file != NULL) {
@@ -506,7 +504,8 @@ size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log)
                         /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                         fprintf(log, " (%s:%d", current->file, current->line);
                         if (current->function != NULL) {
-                            /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
+                            /* BAN-70 EXEMPT: diagnostic report output to configurable
+                             * FILE* stream */
                             fprintf(log, " in %s", current->function);
                         }
                         /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
@@ -560,7 +559,6 @@ bool memory_debug_validate(void *ptr, memory_error_report_t *error)
     bool valid = memory_debug_validate_block(block, error);
 
     if (!valid && error != NULL && error->type == MEMORY_ERROR_NONE) {
-        // 块未找到
         memory_error_report_t report = {.type = MEMORY_ERROR_INVALID_FREE,
                                         .address = ptr,
                                         .size = 0,
@@ -710,7 +708,8 @@ void memory_debug_dump_info(const char *file, bool include_stack_trace)
             /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
             fprintf(output, "  位置%s:%d", current->file, current->line);
             if (current->function != NULL) {
-                /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
+                /* BAN-70 EXEMPT: memory diagnostic report/dump output to
+                 * configurable FILE* stream */
                 fprintf(output, " (%s)", current->function);
             }
             /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
@@ -724,11 +723,13 @@ void memory_debug_dump_info(const char *file, bool include_stack_trace)
             /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
             fprintf(output, "  堆栈跟踪%zu帧）：\n", current->stack_depth);
             for (size_t i = 0; i < current->stack_depth && i < 8; i++) {
-                /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
+                /* BAN-70 EXEMPT: memory diagnostic report/dump output to
+                 * configurable FILE* stream */
                 fprintf(output, "    [%zu] %p\n", i, current->stack_trace[i]);
             }
             if (current->stack_depth > 8) {
-                /* BAN-70 EXEMPT: memory diagnostic report/dump output to configurable FILE* stream */
+                /* BAN-70 EXEMPT: memory diagnostic report/dump output to
+                 * configurable FILE* stream */
                 fprintf(output, "    ...%zu更多帧）\n", current->stack_depth - 8);
             }
         }
@@ -952,7 +953,8 @@ void memory_debug_log_operation(const char *operation, void *ptr, size_t size, c
         offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " (%zu字节)", size);
     }
     if (file != NULL && function != NULL) {
-        offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " at %s:%d (%s)", file, line, function);
+        offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " at %s:%d (%s)", file, line,
+                           function);
     }
     LOG_DEBUG("%s", log_buf);
 }
@@ -961,14 +963,14 @@ void memory_debug_log_operation(const char *operation, void *ptr, size_t size, c
  * @brief 检查点数据结构
  */
 typedef struct {
-    unsigned int id;          /**< 检查点ID */
-    char name[256];           /**< 检查点名称 */
-    size_t block_count;       /**< 创建时的块数?*/
-    size_t total_allocations; /**< 总分配次数 */
-    size_t total_frees;       /**< 总释放次?*/
-    size_t error_count;       /**< 错误数量 */
-    uint64_t timestamp;       /**< 创建时间戳 */
-    bool valid;               /**< 是否有效 */
+    unsigned int id;
+    char name[256];
+    size_t block_count;
+    size_t total_allocations;
+    size_t total_frees;
+    size_t error_count;
+    uint64_t timestamp;
+    bool valid;
 } memory_checkpoint_t;
 
 #define MAX_CHECKPOINTS 16
@@ -1010,9 +1012,8 @@ unsigned int memory_debug_checkpoint(const char *name)
     g_checkpoint_count++;
 
     if (g_debug_state.options.verbosity_level >= 1) {
-        LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu",
-                         id, cp->name, cp->block_count,
-                         cp->total_allocations, cp->total_frees);
+        LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu", id, cp->name,
+                 cp->block_count, cp->total_allocations, cp->total_frees);
     } else if (g_debug_state.options.verbosity_level >= 2) {
         LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
     }

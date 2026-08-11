@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_observability.c
  * @brief 可观测性模块单元测试
  *
  * 测试指标采集、追踪、日志桥接等可观测性功能
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "../../utils/observability/include/observability.h"
@@ -114,7 +114,6 @@ static void test_counter_metric(void **state)
 {
     mock_metric_t *counter = mock_metric_create("requests_total", "count", METRIC_TYPE_COUNTER);
 
-    // 记录多次值
     mock_metric_record(counter, 1.0);
     AIRY_TEST_ASSERT_DOUBLE_EQUAL(1.0, counter->value);
 
@@ -137,7 +136,6 @@ static void test_gauge_metric(void **state)
     mock_metric_t *gauge =
         mock_metric_create("current_connections", "connections", METRIC_TYPE_GAUGE);
 
-    // 记录值（应该覆盖）
     mock_metric_record(gauge, 10.0);
     AIRY_TEST_ASSERT_DOUBLE_EQUAL(10.0, gauge->value);
 
@@ -158,7 +156,6 @@ static void test_multiple_metrics(void **state)
     const int num_metrics = 20;
     mock_metric_t *metrics[num_metrics];
 
-    // 创建多个指标
     for (int i = 0; i < num_metrics; i++) {
         char name[64];
         snprintf(name, sizeof(name), "metric_%d", i);
@@ -170,7 +167,6 @@ static void test_multiple_metrics(void **state)
 
     AIRY_TEST_ASSERT_INT_EQ(num_metrics, metrics_created);
 
-    // 记录值
     for (int i = 0; i < num_metrics; i++) {
         int ret = mock_metric_record(metrics[i], (double)i);
         AIRY_TEST_ASSERT_SUCCESS(ret);
@@ -178,7 +174,6 @@ static void test_multiple_metrics(void **state)
 
     AIRY_TEST_ASSERT_INT_EQ(num_metrics, metrics_recorded);
 
-    // 清理
     for (int i = 0; i < num_metrics; i++) {
         mock_metric_destroy(metrics[i]);
     }
@@ -189,7 +184,6 @@ static void test_multiple_metrics(void **state)
  */
 static void test_metric_metadata(void **state)
 {
-    // 创建带详细信息的指标
     mock_metric_t *m =
         mock_metric_create("http_requests_duration_seconds", "seconds", METRIC_TYPE_HISTOGRAM);
 
@@ -213,19 +207,16 @@ static void test_metric_metadata(void **state)
  */
 static void test_null_metric_handling(void **state)
 {
-    // NULL名称
     mock_metric_t *m1 = mock_metric_create(NULL, "unit", METRIC_TYPE_COUNTER);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(m1);
     AIRY_TEST_ASSERT_NULL(m1->name);
     mock_metric_destroy(m1);
 
-    // NULL单位
     mock_metric_t *m2 = mock_metric_create("name", NULL, METRIC_TYPE_GAUGE);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(m2);
     AIRY_TEST_ASSERT_NULL(m2->unit);
     mock_metric_destroy(m2);
 
-    // 记录到NULL指标
     int ret = mock_metric_record(NULL, 42.0);
     AIRY_TEST_ASSERT_FALSE(ret == 0);
 }

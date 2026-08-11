@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file resource_quota.h
  * @brief 资源配额管理接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 基于E-3资源确定性原则实现的资源配额管理系统。
@@ -51,17 +51,14 @@ typedef struct airy_resource_manager {
     uint8_t exceeded_flags;
 } airy_resource_manager_t;
 
-airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota,
-                                                const char *resource_id,
-                                                airy_resource_manager_t **out_manager);
+airy_err_t airy_resource_manager_create(const airy_resource_quota_t *quota, const char *resource_id,
+                                        airy_resource_manager_t **out_manager);
 
 void airy_resource_manager_destroy(airy_resource_manager_t *manager);
 
-airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager,
-                                              size_t requested_bytes);
+airy_err_t airy_resource_check_memory(airy_resource_manager_t *manager, size_t requested_bytes);
 
-airy_err_t airy_resource_record_allocation(airy_resource_manager_t *manager,
-                                                   size_t bytes);
+airy_err_t airy_resource_record_allocation(airy_resource_manager_t *manager, size_t bytes);
 
 airy_err_t airy_resource_record_free(airy_resource_manager_t *manager, size_t bytes);
 
@@ -69,8 +66,7 @@ airy_err_t airy_resource_record_io(airy_resource_manager_t *manager);
 
 int airy_resource_is_exceeded(airy_resource_manager_t *manager);
 
-void airy_resource_get_usage(airy_resource_manager_t *manager,
-                                airy_resource_usage_t *out_usage);
+void airy_resource_get_usage(airy_resource_manager_t *manager, airy_resource_usage_t *out_usage);
 
 const char *airy_resource_get_exceeded_info(airy_resource_manager_t *manager);
 

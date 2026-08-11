@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file memory_prealloc.c
  * @brief Critical path pre-allocation for signal handling, OOM, audit, and shutdown
@@ -8,7 +9,6 @@
  * (signal handlers, OOM reporting, audit logging, emergency shutdown)
  * never fail due to memory pressure.
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "memory_prealloc.h"
@@ -35,11 +35,16 @@ static airy_mtx_t g_prealloc_lock;
 static void *prealloc_get_buf(int category)
 {
     switch (category) {
-    case AIRY_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf;
-    case AIRY_PREALLOC_OOM:      return g_prealloc_pool.oom_buf;
-    case AIRY_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf;
-    case AIRY_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf;
-    default:                        return NULL;
+    case AIRY_PREALLOC_SIGNAL:
+        return g_prealloc_pool.signal_buf;
+    case AIRY_PREALLOC_OOM:
+        return g_prealloc_pool.oom_buf;
+    case AIRY_PREALLOC_AUDIT:
+        return g_prealloc_pool.audit_buf;
+    case AIRY_PREALLOC_SHUTDOWN:
+        return g_prealloc_pool.shutdown_buf;
+    default:
+        return NULL;
     }
 }
 
@@ -49,11 +54,16 @@ static void *prealloc_get_buf(int category)
 static size_t prealloc_get_buf_size(int category)
 {
     switch (category) {
-    case AIRY_PREALLOC_SIGNAL:   return g_prealloc_pool.signal_buf_size;
-    case AIRY_PREALLOC_OOM:      return g_prealloc_pool.oom_buf_size;
-    case AIRY_PREALLOC_AUDIT:    return g_prealloc_pool.audit_buf_size;
-    case AIRY_PREALLOC_SHUTDOWN: return g_prealloc_pool.shutdown_buf_size;
-    default:                        return 0;
+    case AIRY_PREALLOC_SIGNAL:
+        return g_prealloc_pool.signal_buf_size;
+    case AIRY_PREALLOC_OOM:
+        return g_prealloc_pool.oom_buf_size;
+    case AIRY_PREALLOC_AUDIT:
+        return g_prealloc_pool.audit_buf_size;
+    case AIRY_PREALLOC_SHUTDOWN:
+        return g_prealloc_pool.shutdown_buf_size;
+    default:
+        return 0;
     }
 }
 
@@ -63,11 +73,16 @@ static size_t prealloc_get_buf_size(int category)
 static int *prealloc_get_in_use(int category)
 {
     switch (category) {
-    case AIRY_PREALLOC_SIGNAL:   return &g_prealloc_pool.signal_buf_in_use;
-    case AIRY_PREALLOC_OOM:      return &g_prealloc_pool.oom_buf_in_use;
-    case AIRY_PREALLOC_AUDIT:    return &g_prealloc_pool.audit_buf_in_use;
-    case AIRY_PREALLOC_SHUTDOWN: return &g_prealloc_pool.shutdown_buf_in_use;
-    default:                        return NULL;
+    case AIRY_PREALLOC_SIGNAL:
+        return &g_prealloc_pool.signal_buf_in_use;
+    case AIRY_PREALLOC_OOM:
+        return &g_prealloc_pool.oom_buf_in_use;
+    case AIRY_PREALLOC_AUDIT:
+        return &g_prealloc_pool.audit_buf_in_use;
+    case AIRY_PREALLOC_SHUTDOWN:
+        return &g_prealloc_pool.shutdown_buf_in_use;
+    default:
+        return NULL;
     }
 }
 
@@ -77,11 +92,16 @@ static int *prealloc_get_in_use(int category)
 static const char *prealloc_category_name(int category)
 {
     switch (category) {
-    case AIRY_PREALLOC_SIGNAL:   return "SIGNAL";
-    case AIRY_PREALLOC_OOM:      return "OOM";
-    case AIRY_PREALLOC_AUDIT:    return "AUDIT";
-    case AIRY_PREALLOC_SHUTDOWN: return "SHUTDOWN";
-    default:                        return "UNKNOWN";
+    case AIRY_PREALLOC_SIGNAL:
+        return "SIGNAL";
+    case AIRY_PREALLOC_OOM:
+        return "OOM";
+    case AIRY_PREALLOC_AUDIT:
+        return "AUDIT";
+    case AIRY_PREALLOC_SHUTDOWN:
+        return "SHUTDOWN";
+    default:
+        return "UNKNOWN";
     }
 }
 
@@ -148,18 +168,16 @@ int airy_prealloc_init(void)
     airy_mtx_unlock(&g_prealloc_lock);
 
     LOG_INFO("[PREALLOC] Emergency buffer pool initialized: "
-            "signal=%d, oom=%d, audit=%d, shutdown=%d bytes",
-            AIRY_PREALLOC_SIGNAL_BUF_SIZE,
-            AIRY_PREALLOC_OOM_BUF_SIZE,
-            AIRY_PREALLOC_AUDIT_BUF_SIZE,
-            AIRY_PREALLOC_SHUTDOWN_BUF_SIZE);
+             "signal=%d, oom=%d, audit=%d, shutdown=%d bytes",
+             AIRY_PREALLOC_SIGNAL_BUF_SIZE, AIRY_PREALLOC_OOM_BUF_SIZE,
+             AIRY_PREALLOC_AUDIT_BUF_SIZE, AIRY_PREALLOC_SHUTDOWN_BUF_SIZE);
 
     return 0;
 
 fail:
     airy_mtx_unlock(&g_prealloc_lock);
     airy_mtx_destroy(&g_prealloc_lock);
-    return AIRY_ERR_OUT_OF_MEMORY;  /* fail 路径均为 AIRY_MALLOC 返回 NULL */
+    return AIRY_ERR_OUT_OF_MEMORY;
 }
 
 void airy_prealloc_shutdown(void)
@@ -213,8 +231,8 @@ void *airy_prealloc_acquire(int category)
     int *in_use = prealloc_get_in_use(category);
     if (!in_use || *in_use) {
         LOG_WARN("[PREALLOC] Buffer already in use for category %s, "
-                "cannot acquire",
-                prealloc_category_name(category));
+                 "cannot acquire",
+                 prealloc_category_name(category));
         airy_mtx_unlock(&g_prealloc_lock);
         return NULL;
     }

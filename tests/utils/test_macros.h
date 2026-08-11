@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file test_macros.h
  * @brief AgentRT C 测试宏工具库
  * @details 提供统一的测试宏，减少样板代码，提高测试代码可维护性
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_TEST_MACROS_H
@@ -37,15 +37,15 @@
  * @param expected 期望值
  * @param actual 实际值
  */
-#define TEST_ASSERT_EQUAL(expected, actual)                                                       \
-    do {                                                                                          \
-        if ((expected) != (actual)) {                                                             \
-            fprintf(stderr,                                                                       \
+#define TEST_ASSERT_EQUAL(expected, actual)                                                      \
+    do {                                                                                         \
+        if ((expected) != (actual)) {                                                            \
+            fprintf(stderr,                                                                      \
                     "❌ ASSERT EQUAL FAILED:\n   Expected: %lld\n   Actual: %lld\n   File: %s, " \
-                    "Line: %d\n",                                                                 \
-                    (long long)(expected), (long long)(actual), __FILE__, __LINE__);              \
-            return -1;                                                                            \
-        }                                                                                         \
+                    "Line: %d\n",                                                                \
+                    (long long)(expected), (long long)(actual), __FILE__, __LINE__);             \
+            return -1;                                                                           \
+        }                                                                                        \
     } while (0)
 
 /**
@@ -53,15 +53,15 @@
  * @param expected 期望字符串
  * @param actual 实际字符串
  */
-#define TEST_ASSERT_STRING_EQUAL(expected, actual)                                                 \
-    do {                                                                                           \
-        if (strcmp((expected), (actual)) != 0) {                                                   \
-            fprintf(stderr,                                                                        \
+#define TEST_ASSERT_STRING_EQUAL(expected, actual)                                                \
+    do {                                                                                          \
+        if (strcmp((expected), (actual)) != 0) {                                                  \
+            fprintf(stderr,                                                                       \
                     "❌ ASSERT STRING EQUAL FAILED:\n   Expected: \"%s\"\n   Actual: \"%s\"\n   " \
-                    "File: %s, Line: %d\n",                                                        \
-                    (expected), (actual), __FILE__, __LINE__);                                     \
-            return -1;                                                                             \
-        }                                                                                          \
+                    "File: %s, Line: %d\n",                                                       \
+                    (expected), (actual), __FILE__, __LINE__);                                    \
+            return -1;                                                                            \
+        }                                                                                         \
     } while (0)
 
 /**
@@ -105,11 +105,11 @@
     do {                                                                        \
         printf("Testing " #engine_type " create/destroy...\n");                 \
         engine_type *engine = NULL;                                             \
-        airy_err_t err = create_func(__VA_ARGS__, &engine);                \
-        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                \
+        airy_err_t err = create_func(__VA_ARGS__, &engine);                     \
+        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                   \
         TEST_ASSERT_NOT_NULL(engine);                                           \
         err = destroy_func(engine);                                             \
-        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                \
+        TEST_ASSERT_EQUAL(AIRY_SUCCESS, err);                                   \
         printf("✓ " #engine_type " create/destroy test passed\n");              \
     } while (0)
 
@@ -124,7 +124,7 @@
     do {                                                                          \
         printf("Testing " #engine_type " create failure...\n");                   \
         engine_type *engine = NULL;                                               \
-        airy_err_t err = create_func(__VA_ARGS__, &engine);                  \
+        airy_err_t err = create_func(__VA_ARGS__, &engine);                       \
         TEST_ASSERT_EQUAL(expected_error, err);                                   \
         TEST_ASSERT_NULL(engine);                                                 \
         printf("✓ " #engine_type " create failure test passed\n");                \
@@ -179,10 +179,10 @@
            "="                                                                                     \
            "="                                                                                     \
            "="\n "); \
-    printf(" Test Suite                                                                            \
-           : % s\n ", suite_name); \
+    printf(" Test Suite : %                                                                        \
+               s\n ", suite_name); \
     printf(" = " " = " " = " " = " " = " " = " " = " " = " " = " " = " " = " " = " " = " " = " " = \
-                 " " = " " = " " = " " = " " = " " = " " = "\n\n");                                \
+               " " = " " = " " = " " = " " = " " = " " = "\n\n");                                  \
     int total_tests = 0;                                                                           \
     int passed_tests = 0;                                                                          \
     int failed_tests = 0
@@ -190,27 +190,32 @@
 /**
  * @brief 测试套件结束
  */
-#define TEST_SUITE_END()                                                                      \
-    printf("\n"                                                                               \
+#define TEST_SUITE_END()                                                                        \
+    printf("\n"                                                                                 \
            "======================\n"); /* flawfinder: ignore - format string is compile-time \
-                                           constant */                                        \
-    printf("Test Results: %d total, %d passed, %d failed\n", total_tests, passed_tests,       \
-           failed_tests); /* flawfinder: ignore - format string is compile-time constant */   \
+                                           constant */ \
+    printf("Test Results: %d total, %d passed, %d failed\n", total_tests, passed_tests,         \
+           failed_tests); /* flawfinder: ignore - format string is compile-time constant */     \
     printf("======================\n"); /* flawfinder: ignore - format string is compile-time \
-                                           constant */                                        \
+                                           constant */ \
     return (failed_tests > 0) ? 1 : 0
 
-/** @brief 重置测试统计 */
-#define RESET_TEST_STATS() do { total_tests = 0; passed_tests = 0; failed_tests = 0; } while (0)
 
-/** @brief 打印测试统计 */
-#define PRINT_TEST_STATS() \
-    printf("\n======================\n" \
+#define RESET_TEST_STATS() \
+    do {                   \
+        total_tests = 0;   \
+        passed_tests = 0;  \
+        failed_tests = 0;  \
+    } while (0)
+
+
+#define PRINT_TEST_STATS()                                  \
+    printf("\n======================\n"                     \
            "Test Results: %d total, %d passed, %d failed\n" \
-           "======================\n", \
+           "======================\n",                      \
            total_tests, passed_tests, failed_tests)
 
-/** @brief 检查是否所有测试通过 */
+
 #define TESTS_PASSED() (failed_tests == 0)
 
 /* ============================================================

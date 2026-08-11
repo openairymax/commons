@@ -1,6 +1,5 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
-// Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
 
 #ifndef AIRY_RT_MEMORY_STATS_REPORTER_H
 #define AIRY_RT_MEMORY_STATS_REPORTER_H
@@ -20,17 +19,17 @@ typedef struct airy_mem_stats {
     size_t peak_bytes_allocated;
     size_t active_blocks;
     size_t oom_events;
-    size_t pressure_level;  /* 0=NORMAL, 1=WARNING, 2=DEGRADED, 3=CRITICAL, 4=FATAL */
+    size_t pressure_level; /* 0=NORMAL, 1=WARNING, 2=DEGRADED, 3=CRITICAL, 4=FATAL */
 } airy_mem_stats_t;
 
 /* Initialize the stats reporter (starts background thread) */
 int airy_mem_stats_reporter_init(void);
 
 /* Shutdown the stats reporter (stops background thread) */
-void airy_mem_stats_reporter_shutdown(void);
+void airy_msrep_shutdown(void);
 
 /* Get current memory statistics snapshot */
-int airy_mem_stats_get(airy_mem_stats_t* stats);
+int airy_mem_stats_get(airy_mem_stats_t *stats);
 
 /* Update allocation counter (called by AIRY_MALLOC) */
 void airy_mem_stats_record_alloc(size_t bytes);

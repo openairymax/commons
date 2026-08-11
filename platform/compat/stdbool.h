@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
  * C99 stdbool.h compatibility header
  *
@@ -32,12 +33,10 @@ typedef unsigned char _Bool;
 #endif
 
 #else /* __cplusplus */
-
 /* In C++, bool is a built-in type */
 #ifndef bool
 #define bool bool
 #endif
 
 #endif /* __cplusplus */
-
 #endif /* AIRY_RT_COMPAT_STDBOOL_H */

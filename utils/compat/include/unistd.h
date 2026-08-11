@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file unistd.h
  * @brief Windows compatibility shim for POSIX <unistd.h>
@@ -136,7 +137,6 @@ long airy_platform_getentropy(void *buf, size_t len);
 #pragma GCC diagnostic pop
 
 #endif /* _WIN32 */
-
 #ifdef __cplusplus
 }
 #endif

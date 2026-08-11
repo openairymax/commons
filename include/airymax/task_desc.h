@@ -1,6 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
 /* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+
 /*
- * Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
  *
  * A-TD (Airymax Task Descriptor) — [SC] shared contract header.
  *
@@ -20,61 +21,57 @@
 #include <airymax/error.h>
 
 #include <stddef.h> /* size_t */
-
 /* ─── Constants ──────────────────────────────────────────────────────── */
-#define AIRY_TASK_DESC_MAGIC    0x41475453u /* 'AGTS' */
-#define AIRY_TASK_DESC_VERSION  1
+#define AIRY_TASK_DESC_MAGIC 0x41475453u /* 'AGTS' */
+#define AIRY_TASK_DESC_VERSION 1
 #define AIRY_TASK_DESC_HDR_SIZE 128
 
 /* ─── Task Opcodes ───────────────────────────────────────────────────── */
-#define AIRY_TASK_OP_CREATE    0x0001  /* 创建任务 */
-#define AIRY_TASK_OP_EXECUTE   0x0002  /* 执行任务 */
-#define AIRY_TASK_OP_CANCEL    0x0003  /* 取消任务 */
-#define AIRY_TASK_OP_STATUS    0x0004  /* 查询任务状态 */
-
+#define AIRY_TASK_OP_CREATE 0x0001
+#define AIRY_TASK_OP_EXECUTE 0x0002
+#define AIRY_TASK_OP_CANCEL 0x0003
+#define AIRY_TASK_OP_STATUS 0x0004
 /* ─── Task Flags ─────────────────────────────────────────────────────── */
-#define AIRY_TASK_FLAG_CRITICAL  0x0001  /* 关键任务（失败即上报） */
-#define AIRY_TASK_FLAG_DETACHED  0x0002  /* 分离任务（不阻塞调用方） */
-#define AIRY_TASK_FLAG_RESERVED  0xFFFC  /* 保留位，必须为零 */
+#define AIRY_TASK_FLAG_CRITICAL 0x0001
+#define AIRY_TASK_FLAG_DETACHED 0x0002
+#define AIRY_TASK_FLAG_RESERVED 0xFFFC
 
-/* ─── Task Descriptor Layout（128 字节，aligned(64)） ─────────────────── */
 struct airy_task_desc {
-	__u32   magic;             /* offset  0:  AIRY_TASK_DESC_MAGIC ('AGTS') */
-	__u16   version;           /* offset  4:  描述符版本（AIRY_TASK_DESC_VERSION） */
-	__u16   opcode;            /* offset  6:  任务操作码（AIRY_TASK_OP_*） */
-	__u64   task_id;           /* offset  8:  任务标识符 */
-	__u64   parent_task_id;    /* offset 16:  父任务标识符（0=根任务） */
-	__u64   submit_time_ns;    /* offset 24:  提交时间戳（monotonic ns） */
-	__u64   deadline_ns;       /* offset 32:  截止时间戳（0=无截止） */
-	__u64   src_task;          /* offset 40:  源任务标识 */
-	__u64   dst_task;          /* offset 48:  目标任务标识 */
-	__u32   payload_len;       /* offset 56:  payload 长度（字节） */
-	__u32   flags;             /* offset 60:  任务标志（AIRY_TASK_FLAG_*） */
-	__u32   priority;          /* offset 64:  调度优先级 */
-	__u32   crc32;             /* offset 68:  CRC32（header[0:72) + payload） */
-	__u8    reserved[56];      /* offset 72:  保留，必须为零（校验拒绝非零） */
+    __u32 magic; /* offset  0:  AIRY_TASK_DESC_MAGIC ('AGTS') */
+    __u16 version;
+    __u16 opcode;
+    __u64 task_id;
+    __u64 parent_task_id;
+    __u64 submit_time_ns;
+    __u64 deadline_ns;
+    __u64 src_task;
+    __u64 dst_task;
+    __u32 payload_len;
+    __u32 flags;
+    __u32 priority;
+    __u32 crc32;
+    __u8 reserved[56];
 } __attribute__((aligned(64)));
 
 _Static_assert(sizeof(struct airy_task_desc) == AIRY_TASK_DESC_HDR_SIZE,
-	       "airy_task_desc must be exactly 128 bytes");
+               "airy_task_desc must be exactly 128 bytes");
 
 _Static_assert(offsetof(struct airy_task_desc, magic) == 0,
-	       "airy_task_desc.magic must be at offset 0");
+               "airy_task_desc.magic must be at offset 0");
 _Static_assert(offsetof(struct airy_task_desc, version) == 4,
-	       "airy_task_desc.version must be at offset 4");
+               "airy_task_desc.version must be at offset 4");
 _Static_assert(offsetof(struct airy_task_desc, opcode) == 6,
-	       "airy_task_desc.opcode must be at offset 6");
+               "airy_task_desc.opcode must be at offset 6");
 _Static_assert(offsetof(struct airy_task_desc, task_id) == 8,
-	       "airy_task_desc.task_id must be at offset 8");
+               "airy_task_desc.task_id must be at offset 8");
 _Static_assert(offsetof(struct airy_task_desc, payload_len) == 56,
-	       "airy_task_desc.payload_len must be at offset 56");
+               "airy_task_desc.payload_len must be at offset 56");
 _Static_assert(offsetof(struct airy_task_desc, crc32) == 68,
-	       "airy_task_desc.crc32 must be at offset 68");
+               "airy_task_desc.crc32 must be at offset 68");
 _Static_assert(offsetof(struct airy_task_desc, reserved) == 72,
-	       "airy_task_desc.reserved must be at offset 72");
+               "airy_task_desc.reserved must be at offset 72");
 
 /* ─── API ────────────────────────────────────────────────────────────── */
-
 /**
  * @brief 计算 CRC-32（IEEE 802.3）校验和
  *
@@ -106,10 +103,9 @@ __u32 airy_task_desc_crc32(const void *data, size_t len);
  * @param priority        调度优先级
  * @return AIRY_EOK 成功；AIRY_EINVAL 参数无效
  */
-airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode,
-                                 __u64 task_id, __u64 parent_task_id,
-                                 __u64 deadline_ns, __u64 src_task, __u64 dst_task,
-                                 const void *payload, __u32 payload_len,
+airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u64 task_id,
+                                 __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,
+                                 __u64 dst_task, const void *payload, __u32 payload_len,
                                  __u32 flags, __u32 priority);
 
 /**
@@ -129,7 +125,7 @@ airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode,
  * @param payload_len 提供的负载长度（必须 >= desc->payload_len）
  * @return AIRY_EOK 校验通过；否则返回对应错误码
  */
-airy_err_t airy_task_desc_validate(const struct airy_task_desc *desc,
-                                   const void *payload, __u32 payload_len);
+airy_err_t airy_task_desc_validate(const struct airy_task_desc *desc, const void *payload,
+                                   __u32 payload_len);
 
 #endif /* _UAPI_AIRYMAX_TASK_DESC_H */

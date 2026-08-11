@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file atomic_logging.c
  * @brief 统一分层日志系统原子层实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 本文件实现统一分层日志系统的原子层功能，提供：
  * 1. 线程安全的日志记录缓冲和环形队列管理
@@ -24,11 +24,7 @@
 #include "../../error/include/error.h"
 #include "error.h"
 
-
-
 static AIRY_THREAD_LOCAL ThreadLocalBuffer *g_tls_log_buffer = NULL;
-
-/* ==================== 内部常量定义 ==================== */
 
 static const size_t DEFAULT_THREAD_LOCAL_BUFFER_SIZE = 8192;
 
@@ -38,8 +34,6 @@ static const size_t DEFAULT_BATCH_COMMIT_THRESHOLD = 16;
 
 typedef enum { NODE_STATE_FREE = 0, NODE_STATE_WRITTEN = 1, NODE_STATE_PROCESSED = 2 } node_state_t;
 
-/* ==================== 平台无关辅助函数 ==================== */
-
 static void atomic_sleep_ms(uint32_t ms)
 {
 #if AIRY_PLATFORM_WINDOWS
@@ -48,8 +42,6 @@ static void atomic_sleep_ms(uint32_t ms)
     usleep((useconds_t)ms * 1000);
 #endif
 }
-
-/* ==================== 内部数据结构 ==================== */
 
 typedef struct {
     AtomicLogRecordNode *nodes;
@@ -74,15 +66,14 @@ typedef struct {
 static atomic_logging_state_t g_atomic_state = {.initialized = false,
                                                 .flush_thread_running = false};
 
-/* ==================== 内部辅助函数 ==================== */
-
 static ThreadLocalBuffer *get_thread_local_buffer(void)
 {
     if (!g_tls_log_buffer) {
         g_tls_log_buffer = (ThreadLocalBuffer *)AIRY_CALLOC(1, sizeof(ThreadLocalBuffer));
         if (g_tls_log_buffer) {
             g_tls_log_buffer->capacity = g_atomic_state.manager.batch_commit_threshold;
-            SAFE_MALLOC_ARRAY(g_tls_log_buffer->buffer, g_tls_log_buffer->capacity, sizeof(log_record_t));
+            SAFE_MALLOC_ARRAY(g_tls_log_buffer->buffer, g_tls_log_buffer->capacity,
+                              sizeof(log_record_t));
             g_tls_log_buffer->position = 0;
             g_tls_log_buffer->thread_id = (uint64_t)airy_thread_id();
 
@@ -216,8 +207,6 @@ static void *flush_thread_func(void *arg __attribute__((unused)))
     return NULL;
 }
 
-/* ==================== 公开API实现 ==================== */
-
 int atomic_logging_init(const atomic_logging_config_t *manager)
 {
     if (g_atomic_state.initialized) {
@@ -239,8 +228,9 @@ int atomic_logging_init(const atomic_logging_config_t *manager)
     }
 
     g_atomic_state.ring_buffer.capacity = g_atomic_state.manager.ring_buffer_capacity;
-    g_atomic_state.ring_buffer.nodes = (AtomicLogRecordNode *)AIRY_CALLOC(
-        g_atomic_state.ring_buffer.capacity, sizeof(AtomicLogRecordNode));
+    g_atomic_state.ring_buffer.nodes =
+        (AtomicLogRecordNode *)AIRY_CALLOC(g_atomic_state.ring_buffer.capacity,
+                                           sizeof(AtomicLogRecordNode));
 
     if (!g_atomic_state.ring_buffer.nodes) {
         return AIRY_ERR_OVERFLOW;
@@ -295,7 +285,7 @@ int atomic_logging_submit(const log_record_t *record, bool non_blocking)
         while (submit_to_ring_buffer(record) != 0 && g_atomic_state.initialized &&
                max_retries-- > 0) {
             airy_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
-                                   &g_atomic_state.ring_buffer.mutex, 10);
+                                &g_atomic_state.ring_buffer.mutex, 10);
         }
         airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
@@ -448,7 +438,7 @@ int atomic_logging_acquire(log_record_t *record, int timeout_ms)
         while (g_atomic_state.ring_buffer.consumer_pos == g_atomic_state.ring_buffer.producer_pos &&
                waited < timeout_ms) {
             airy_cond_timedwait(&g_atomic_state.ring_buffer.not_full,
-                                   &g_atomic_state.ring_buffer.mutex, 10);
+                                &g_atomic_state.ring_buffer.mutex, 10);
             waited += 10;
         }
         airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);

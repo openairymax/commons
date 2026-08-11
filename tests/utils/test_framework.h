@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file test_framework.h
  * @brief AgentRT 测试框架 - CMocka 集成层
@@ -41,7 +41,7 @@
 #ifndef AIRY_RT_TEST_FRAMEWORK_H
 #define AIRY_RT_TEST_FRAMEWORK_H
 
-/* CMocka 标准头文件 */
+
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -49,7 +49,7 @@
 #ifdef AIRY_HAS_CMOCKA
 #include <cmocka.h>
 #else
-/* 使用 CMocka stub 实现（用于无 CMocka 环境的编译） */
+
 #include "cmocka_stub.h"
 #endif /* AIRY_HAS_CMOCKA */
 
@@ -69,7 +69,7 @@ extern "C" {
  * @{
  */
 
-/* 基础断言宏（继承自 CMocka） */
+
 #define AIRY_TEST_ASSERT(condition) assert_true(condition)
 #define AIRY_TEST_ASSERT_NOT(condition) assert_false(condition)
 #define AIRY_TEST_ASSERT_EQUAL(a, b) assert_int_equal(a, b)
@@ -129,7 +129,6 @@ extern "C" {
 #define AIRY_TEST_ASSERT_BITS_CLEAR(value, mask) assert_true(((value) & (mask)) == 0)
 
 /** @} */ /* end of TestMacros */
-
 /* ============================================================================
  * 测试夹具（Fixture）宏
  * ============================================================================ */
@@ -144,7 +143,7 @@ extern "C" {
  * @brief 定义测试组
  * @param name 测试组名称
  */
-#define AIRY_TEST_GROUP(name)           \
+#define AIRY_TEST_GROUP(name)              \
     static int setup_##name(void **state); \
     static int teardown_##name(void **state)
 
@@ -172,7 +171,6 @@ extern "C" {
     cmocka_unit_test_setup_teardown(test, setup, teardown)
 
 /** @} */ /* end of TestFixtures */
-
 /* ============================================================================
  * 测试辅助宏
  * ============================================================================ */
@@ -188,7 +186,7 @@ extern "C" {
  * @param reason 跳过原因
  */
 #define AIRY_TEST_SKIP(reason) \
-    skip();                       \
+    skip();                    \
     print_message("Skipped: %s\n", reason)
 
 /**
@@ -234,9 +232,9 @@ extern "C" {
  * @brief 性能测试计时结束
  * @param threshold_us 阈值（微秒）
  */
-#define AIRY_PERF_END(threshold_us)                                                         \
+#define AIRY_PERF_END(threshold_us)                                                            \
     do {                                                                                       \
-        uint64_t _perf_end = airy_get_timestamp_ns();                                       \
+        uint64_t _perf_end = airy_get_timestamp_ns();                                          \
         uint64_t _perf_us = (_perf_end - _perf_start) / 1000;                                  \
         print_message("[PERF] Elapsed: %lu us (threshold: %lu us)\n", (unsigned long)_perf_us, \
                       (unsigned long)(threshold_us));                                          \
@@ -244,7 +242,6 @@ extern "C" {
     } while (0)
 
 /** @} */ /* end of TestHelpers */
-
 /* ============================================================================
  * 内存测试宏
  * ============================================================================ */
@@ -261,12 +258,12 @@ extern "C" {
  * @param size 期望大小
  */
 #define AIRY_TEST_ASSERT_ALLOCATED(ptr, size)                    \
-    do {                                                            \
-        assert_non_null(ptr);                                       \
-        if (ptr) {                                                  \
+    do {                                                         \
+        assert_non_null(ptr);                                    \
+        if (ptr) {                                               \
             size_t _actual_size = airy_test_get_alloc_size(ptr); \
-            assert_true(_actual_size >= (size));                    \
-        }                                                           \
+            assert_true(_actual_size >= (size));                 \
+        }                                                        \
     } while (0)
 
 /**
@@ -274,8 +271,7 @@ extern "C" {
  * @param ptr 指针
  * @param alignment 对齐值
  */
-#define AIRY_TEST_ASSERT_ALIGNED(ptr, alignment) \
-    assert_true(((uintptr_t)(ptr) % (alignment)) == 0)
+#define AIRY_TEST_ASSERT_ALIGNED(ptr, alignment) assert_true(((uintptr_t)(ptr) % (alignment)) == 0)
 
 /**
  * @brief 测试缓冲区边界
@@ -288,7 +284,6 @@ extern "C" {
     assert_true((offset) + (access_size) <= (len))
 
 /** @} */ /* end of MemoryTestMacros */
-
 /* ============================================================================
  * 测试运行器
  * ============================================================================ */
@@ -297,11 +292,11 @@ extern "C" {
  * @brief 测试运行器结构
  */
 typedef struct {
-    const char *name;               /**< 测试组名称 */
-    const struct CMUnitTest *tests; /**< 测试数组 */
-    size_t test_count;              /**< 测试数量 */
-    CMFixtureFunction setup;        /**< 全局设置函数 */
-    CMFixtureFunction teardown;     /**< 全局清理函数 */
+    const char *name;
+    const struct CMUnitTest *tests;
+    size_t test_count;
+    CMFixtureFunction setup;
+    CMFixtureFunction teardown;
 } airy_test_runner_t;
 
 /**
@@ -392,17 +387,17 @@ bool airy_test_compare_files(const char *path1, const char *path2);
  * @brief 参数化测试数据结构
  */
 typedef struct {
-    const char *name;  /**< 参数名称 */
-    void *value;       /**< 参数值 */
-    size_t value_size; /**< 值大小 */
+    const char *name;
+    void *value;
+    size_t value_size;
 } airy_test_param_t;
 
 /**
  * @brief 参数化测试数据数组
  */
 typedef struct {
-    airy_test_param_t *params; /**< 参数数组 */
-    size_t count;                 /**< 参数数量 */
+    airy_test_param_t *params;
+    size_t count;
 } airy_test_params_t;
 
 /**
@@ -427,7 +422,7 @@ void airy_test_params_free(airy_test_params_t *params);
  * @param value_size 值大小
  */
 void airy_test_params_set(airy_test_params_t *params, size_t index, const char *name,
-                             const void *value, size_t value_size);
+                          const void *value, size_t value_size);
 
 /**
  * @brief 获取参数值
@@ -437,8 +432,8 @@ void airy_test_params_set(airy_test_params_t *params, size_t index, const char *
  * @param value_size 值大小
  * @return 错误码
  */
-airy_err_t airy_test_params_get(const airy_test_params_t *params, const char *name,
-                                        void *value, size_t value_size);
+airy_err_t airy_test_params_get(const airy_test_params_t *params, const char *name, void *value,
+                                size_t value_size);
 
 /* ============================================================================
  * 测试报告
@@ -448,23 +443,23 @@ airy_err_t airy_test_params_get(const airy_test_params_t *params, const char *na
  * @brief 测试结果结构
  */
 typedef struct {
-    const char *test_name; /**< 测试名称 */
-    bool passed;           /**< 是否通过 */
-    const char *message;   /**< 结果消息 */
-    uint64_t duration_us;  /**< 执行时间（微秒） */
+    const char *test_name;
+    bool passed;
+    const char *message;
+    uint64_t duration_us;
 } airy_test_result_t;
 
 /**
  * @brief 测试报告结构
  */
 typedef struct {
-    const char *group_name;         /**< 测试组名称 */
-    airy_test_result_t *results; /**< 测试结果数组 */
-    size_t result_count;            /**< 结果数量 */
-    size_t passed_count;            /**< 通过数量 */
-    size_t failed_count;            /**< 失败数量 */
-    size_t skipped_count;           /**< 跳过数量 */
-    uint64_t total_duration_us;     /**< 总执行时间 */
+    const char *group_name;
+    airy_test_result_t *results;
+    size_t result_count;
+    size_t passed_count;
+    size_t failed_count;
+    size_t skipped_count;
+    uint64_t total_duration_us;
 } airy_test_report_t;
 
 /**
@@ -475,8 +470,8 @@ typedef struct {
  * @param len 缓冲区长度
  * @return 错误码
  */
-airy_err_t airy_test_generate_report(const airy_test_report_t *report,
-                                             const char *format, char *buffer, size_t len);
+airy_err_t airy_test_generate_report(const airy_test_report_t *report, const char *format,
+                                     char *buffer, size_t len);
 
 /**
  * @brief 打印测试报告

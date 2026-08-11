@@ -1,10 +1,9 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file checkpoint.c
  * @brief AgentRT 任务检查点实现（生产级 v0.1.0）
- *
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * v0.1.0 变更：
  * - CROSS-01: airy_mtx_t → airy_mtx_t
@@ -20,11 +19,10 @@
 
 #include "checkpoint.h"
 
-#include <logging.h>       /* LOG_ERROR/LOG_INFO/LOG_WARN/LOG_DEBUG → log_write() */
-#include <types.h>         /* AIRY_SUCCESS */
-#include "platform.h"      /* airy_time_ns/airy_mtx_* */
-#include "error.h"         /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
-
+#include <logging.h> /* LOG_ERROR/LOG_INFO/LOG_WARN/LOG_DEBUG → log_write() */
+#include <types.h> /* AIRY_SUCCESS */
+#include "platform.h" /* airy_time_ns/airy_mtx_* */
+#include "error.h" /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +94,7 @@ static airy_checkpoint_state_t string_to_state(const char *s)
 
 static char *safe_strdup(const char *src)
 {
-    /* 参数校验：调用者通过 NULL 返回值处理，无需推入 error chain。 */
+
     if (!src) {
         return NULL;
     }
@@ -111,7 +109,7 @@ static char *safe_strdup(const char *src)
 
 static char **safe_str_array_dup(char **src, size_t count)
 {
-    /* 参数校验：调用者通过 NULL 返回值处理。 */
+
     if (!src || count == 0) {
         return NULL;
     }
@@ -140,14 +138,12 @@ static char **safe_str_array_dup(char **src, size_t count)
  * checkpoint_{task_id}_{seq}.json，使每个序列号的检查点独立落盘，
  * 不再相互覆盖。这是 list/restore_seq 的正确性基础 —— 旧格式每次
  * save 覆盖同一文件，导致 per-task 只能保留 1 个检查点。 */
-static int build_filepath_with_seq(const char *task_id, uint64_t seq,
-                                   char *buf, size_t size)
+static int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t size)
 {
     if (!task_id || !buf || size == 0)
         return AIRY_ERR_INVALID_PARAM;
-    int n = snprintf(buf, size, "%s/%s%s_%llu%s", g_checkpoint_storage_path,
-                     CHECKPOINT_FILE_PREFIX, task_id,
-                     (unsigned long long)seq, CHECKPOINT_FILE_EXTENSION);
+    int n = snprintf(buf, size, "%s/%s%s_%llu%s", g_checkpoint_storage_path, CHECKPOINT_FILE_PREFIX,
+                     task_id, (unsigned long long)seq, CHECKPOINT_FILE_EXTENSION);
     return (n > 0 && (size_t)n < size) ? 0 : AIRY_ERR_OVERFLOW;
 }
 
@@ -161,15 +157,13 @@ static int build_filepath_with_seq(const char *task_id, uint64_t seq,
  * 健壮性：task_id 中若含 '_'，prefix 仍能精确匹配完整 task_id 段，
  * 因为 middle 必须全数字且紧接 .json，可排除 task_id 前缀重叠的误匹配
  * （如 task_id="a" 不会匹配 task_id="a_b" 的文件，因为 "b_3" 非全数字）。 */
-static bool parse_seq_from_filename(const char *filename, const char *task_id,
-                                    uint64_t *out_seq)
+static bool parse_seq_from_filename(const char *filename, const char *task_id, uint64_t *out_seq)
 {
     if (!filename || !task_id || !out_seq)
         return false;
 
     char prefix[MAX_CHECKPOINT_PATH];
-    int pn = snprintf(prefix, sizeof(prefix), "%s%s%s",
-                      CHECKPOINT_FILE_PREFIX, task_id, "_");
+    int pn = snprintf(prefix, sizeof(prefix), "%s%s%s", CHECKPOINT_FILE_PREFIX, task_id, "_");
     if (pn <= 0 || (size_t)pn >= sizeof(prefix))
         return false;
 
@@ -220,8 +214,8 @@ static uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
 
 #ifdef _WIN32
     char pattern[MAX_CHECKPOINT_PATH];
-    snprintf(pattern, sizeof(pattern), "%s/%s*.json",
-             g_checkpoint_storage_path, CHECKPOINT_FILE_PREFIX);
+    snprintf(pattern, sizeof(pattern), "%s/%s*.json", g_checkpoint_storage_path,
+             CHECKPOINT_FILE_PREFIX);
     WIN32_FIND_DATAA find_data;
     HANDLE hFind = FindFirstFileA(pattern, &find_data);
     if (hFind != INVALID_HANDLE_VALUE) {
@@ -231,7 +225,11 @@ static uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
                 if (cnt >= cap) {
                     cap *= 2;
                     uint64_t *ns = (uint64_t *)AIRY_REALLOC(seqs, cap * sizeof(uint64_t));
-                    if (!ns) { AIRY_FREE(seqs); FindClose(hFind); return NULL; }
+                    if (!ns) {
+                        AIRY_FREE(seqs);
+                        FindClose(hFind);
+                        return NULL;
+                    }
                     seqs = ns;
                 }
                 seqs[cnt++] = seq;
@@ -249,7 +247,11 @@ static uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
                 if (cnt >= cap) {
                     cap *= 2;
                     uint64_t *ns = (uint64_t *)AIRY_REALLOC(seqs, cap * sizeof(uint64_t));
-                    if (!ns) { AIRY_FREE(seqs); closedir(dir); return NULL; }
+                    if (!ns) {
+                        AIRY_FREE(seqs);
+                        closedir(dir);
+                        return NULL;
+                    }
                     seqs = ns;
                 }
                 seqs[cnt++] = seq;
@@ -304,7 +306,7 @@ static void init_fields(airy_task_checkpoint_t *cp, const char *task_id, const c
 }
 
 static airy_err_t copy_nodes(airy_task_checkpoint_t *cp, char **completed, size_t ccount,
-                                  char **pending, size_t pcount)
+                             char **pending, size_t pcount)
 {
     if (!cp)
         return AIRY_EINVAL;
@@ -331,28 +333,28 @@ static airy_err_t copy_nodes(airy_task_checkpoint_t *cp, char **completed, size_
 
 static char *json_extract_string(const char *json, const char *key)
 {
-    /* 参数校验：调用者通过 NULL 返回值处理。 */
+
     if (!json || !key) {
         return NULL;
     }
     char search[256];
     snprintf(search, sizeof(search), "\"%s\"", key);
     const char *p = strstr(json, search);
-    /* 键未找到：JSON 解析的正常控制流（如非必填字段），返回 NULL 即可。 */
+
     if (!p) {
         return NULL;
     }
     p += strlen(search);
     while (*p && isspace((unsigned char)*p))
         p++;
-    /* 缺少冒号：JSON 格式异常但属解析分支，返回 NULL 让上层判断。 */
+
     if (*p != ':') {
         return NULL;
     }
     p++;
     while (*p && isspace((unsigned char)*p))
         p++;
-    /* 缺少起始引号：JSON 格式异常但属解析分支，返回 NULL 让上层判断。 */
+
     if (*p != '"') {
         return NULL;
     }
@@ -390,8 +392,9 @@ static char *json_extract_string(const char *json, const char *key)
                 cap *= 2;
                 val = (char *)AIRY_REALLOC(val, cap);
                 if (!val) {
-                    LOG_ERROR("C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc escape) for key=%s",
-                                  key);
+                    LOG_ERROR(
+                        "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc escape) for key=%s",
+                        key);
                     return NULL;
                 }
             }
@@ -402,8 +405,9 @@ static char *json_extract_string(const char *json, const char *key)
                 cap *= 2;
                 val = (char *)AIRY_REALLOC(val, cap);
                 if (!val) {
-                    LOG_ERROR("C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc char) for key=%s",
-                                  key);
+                    LOG_ERROR(
+                        "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc char) for key=%s",
+                        key);
                     return NULL;
                 }
             }
@@ -434,7 +438,6 @@ static uint64_t json_extract_uint64(const char *json, const char *key)
 }
 
 /* ==================== Public API ==================== */
-
 airy_err_t airy_checkpoint_init(const char *storage_path)
 {
     if (g_checkpoint_initialized)
@@ -443,7 +446,8 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
     size_t len = strlen(path);
     if (len == 0 || len >= sizeof(g_checkpoint_storage_path)) {
         LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — invalid storage path "
-                      "len=%zu max=%zu", len, sizeof(g_checkpoint_storage_path));
+                  "len=%zu max=%zu",
+                  len, sizeof(g_checkpoint_storage_path));
         return AIRY_EINVAL;
     }
     __builtin_memcpy(g_checkpoint_storage_path, path, len);
@@ -456,7 +460,8 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
             if (airy_mtx_init(&g_checkpoint_mutex) != 0) {
                 atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_seq_cst);
                 LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — mutex init failed "
-                              "path=%s", g_checkpoint_storage_path);
+                          "path=%s",
+                          g_checkpoint_storage_path);
                 return AIRY_ERR_STATE_ERROR;
             }
         }
@@ -480,18 +485,18 @@ airy_err_t airy_checkpoint_shutdown(void)
     g_auto_hook_user_data = NULL;
     atomic_store_explicit(&g_checkpoint_initialized, 0, memory_order_seq_cst);
     LOG_INFO("C-L07: Checkpoint: SHUTDOWN-OK "
-                 "total=%llu success=%llu failed=%llu",
-                 (unsigned long long)g_checkpoint_stats.total_checkpoints,
-                 (unsigned long long)g_checkpoint_stats.successful_checkpoints,
-                 (unsigned long long)g_checkpoint_stats.failed_checkpoints);
+             "total=%llu success=%llu failed=%llu",
+             (unsigned long long)g_checkpoint_stats.total_checkpoints,
+             (unsigned long long)g_checkpoint_stats.successful_checkpoints,
+             (unsigned long long)g_checkpoint_stats.failed_checkpoints);
     return AIRY_SUCCESS;
 }
 
 airy_err_t airy_checkpoint_create(const char *task_id, const char *session_id,
-                                          uint64_t sequence_num, const char *state_json,
-                                          char **completed_nodes, size_t completed_count,
-                                          char **pending_nodes, size_t pending_count,
-                                          airy_task_checkpoint_t **out_cp)
+                                  uint64_t sequence_num, const char *state_json,
+                                  char **completed_nodes, size_t completed_count,
+                                  char **pending_nodes, size_t pending_count,
+                                  airy_task_checkpoint_t **out_cp)
 {
 
     if (!g_checkpoint_initialized)
@@ -515,8 +520,7 @@ airy_err_t airy_checkpoint_create(const char *task_id, const char *session_id,
     }
     cp->state_size = strlen(state_json);
 
-    airy_err_t err =
-        copy_nodes(cp, completed_nodes, completed_count, pending_nodes, pending_count);
+    airy_err_t err = copy_nodes(cp, completed_nodes, completed_count, pending_nodes, pending_count);
     if (err != AIRY_SUCCESS) {
         AIRY_FREE(cp->state_json);
         AIRY_FREE(cp);
@@ -579,8 +583,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
         return AIRY_EINVAL;
 
     char filepath[MAX_CHECKPOINT_PATH];
-    if (build_filepath_with_seq(cp->task_id, cp->sequence_num,
-                                filepath, sizeof(filepath)) != 0)
+    if (build_filepath_with_seq(cp->task_id, cp->sequence_num, filepath, sizeof(filepath)) != 0)
         return AIRY_EINVAL;
 
     char tmppath[MAX_CHECKPOINT_PATH];
@@ -592,7 +595,8 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
         g_checkpoint_stats.failed_checkpoints++;
         airy_mtx_unlock(&g_checkpoint_mutex);
         LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — cannot open file "
-                      "path=%s task_id=%s errno=%d", tmppath, cp->task_id, errno);
+                  "path=%s task_id=%s errno=%d",
+                  tmppath, cp->task_id, errno);
         return AIRY_EIO;
     }
 
@@ -665,8 +669,8 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
         g_checkpoint_stats.failed_checkpoints++;
         airy_mtx_unlock(&g_checkpoint_mutex);
         LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — rename failed "
-                      "tmp=%s dst=%s task_id=%s errno=%d",
-                      tmppath, filepath, cp->task_id, errno);
+                  "tmp=%s dst=%s task_id=%s errno=%d",
+                  tmppath, filepath, cp->task_id, errno);
         return AIRY_EIO;
     }
 
@@ -686,13 +690,13 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     }
     airy_mtx_unlock(&g_checkpoint_mutex);
 
-    LOG_DEBUG("C-L07: Checkpoint: SAVE-OK task_id=%s seq=%llu size=%zu",
-                  cp->task_id, (unsigned long long)cp->sequence_num, cp->state_size);
+    LOG_DEBUG("C-L07: Checkpoint: SAVE-OK task_id=%s seq=%llu size=%zu", cp->task_id,
+              (unsigned long long)cp->sequence_num, cp->state_size);
     return AIRY_SUCCESS;
 }
 
 airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
-                                           airy_task_checkpoint_t **out_cp)
+                                   airy_task_checkpoint_t **out_cp)
 {
 
     if (!g_checkpoint_initialized)
@@ -707,7 +711,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
         actual_seq = find_latest_seq(task_id);
         if (actual_seq == 0) {
             LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
-                         "task_id=%s", task_id);
+                     "task_id=%s",
+                     task_id);
             return AIRY_ENOENT;
         }
     }
@@ -719,8 +724,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     FILE *fp = fopen(filepath, "r");
     if (!fp) {
         LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — file not found "
-                     "path=%s task_id=%s seq=%llu errno=%d",
-                     filepath, task_id, (unsigned long long)actual_seq, errno);
+                 "path=%s task_id=%s seq=%llu errno=%d",
+                 filepath, task_id, (unsigned long long)actual_seq, errno);
         return AIRY_ENOENT;
     }
 
@@ -730,7 +735,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     if (file_size <= 0 || file_size > 10 * 1024 * 1024) {
         fclose(fp);
         LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — invalid file size "
-                      "path=%s size=%ld task_id=%s", filepath, file_size, task_id);
+                  "path=%s size=%ld task_id=%s",
+                  filepath, file_size, task_id);
         return AIRY_EIO;
     }
 
@@ -738,7 +744,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     if (!json_buf) {
         fclose(fp);
         LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — OOM "
-                      "path=%s size=%ld task_id=%s", filepath, file_size, task_id);
+                  "path=%s size=%ld task_id=%s",
+                  filepath, file_size, task_id);
         return AIRY_ENOMEM;
     }
 
@@ -747,8 +754,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
         AIRY_FREE(json_buf);
         fclose(fp);
         LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — read error "
-                      "path=%s expected=%ld actual=%zu task_id=%s",
-                      filepath, file_size, read_len, task_id);
+                  "path=%s expected=%ld actual=%zu task_id=%s",
+                  filepath, file_size, read_len, task_id);
         return AIRY_EIO;
     }
     json_buf[read_len] = '\0';
@@ -791,9 +798,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     g_checkpoint_stats.total_restore_ops++;
     airy_mtx_unlock(&g_checkpoint_mutex);
     *out_cp = cp;
-    LOG_DEBUG("C-L07: Checkpoint: RESTORE-OK task_id=%s seq=%llu state=%s",
-                  task_id, (unsigned long long)cp->sequence_num,
-                  state_to_string(cp->state));
+    LOG_DEBUG("C-L07: Checkpoint: RESTORE-OK task_id=%s seq=%llu state=%s", task_id,
+              (unsigned long long)cp->sequence_num, state_to_string(cp->state));
     return AIRY_SUCCESS;
 }
 
@@ -804,7 +810,6 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
     if (!task_id)
         return AIRY_EINVAL;
 
-    /* seq_num > 0: 删除指定序列号的检查点文件 */
     if (seq_num > 0) {
         char filepath[MAX_CHECKPOINT_PATH];
         if (build_filepath_with_seq(task_id, seq_num, filepath, sizeof(filepath)) != 0)
@@ -815,24 +820,22 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
         if (result == 0) {
             if (g_checkpoint_stats.total_checkpoints > 0)
                 g_checkpoint_stats.total_checkpoints--;
-            LOG_INFO("C-L07: Checkpoint: DELETE-OK task_id=%s seq=%llu",
-                         task_id, (unsigned long long)seq_num);
+            LOG_INFO("C-L07: Checkpoint: DELETE-OK task_id=%s seq=%llu", task_id,
+                     (unsigned long long)seq_num);
         } else {
             LOG_WARN("C-L07: Checkpoint: DELETE-FAIL — unlink failed "
-                         "task_id=%s seq=%llu errno=%d",
-                         task_id, (unsigned long long)seq_num, errno);
+                     "task_id=%s seq=%llu errno=%d",
+                     task_id, (unsigned long long)seq_num, errno);
         }
         airy_mtx_unlock(&g_checkpoint_mutex);
 
         return (result == 0) ? AIRY_SUCCESS : AIRY_ENOENT;
     }
 
-    /* seq_num == 0: 删除该 task_id 的全部检查点文件 */
     size_t cnt = 0;
     uint64_t *seqs = collect_task_seqs(task_id, &cnt);
     if (!seqs) {
-        LOG_INFO("C-L07: Checkpoint: DELETE-ALL — no checkpoints for task_id=%s",
-                     task_id);
+        LOG_INFO("C-L07: Checkpoint: DELETE-ALL — no checkpoints for task_id=%s", task_id);
         return AIRY_ENOENT;
     }
 
@@ -851,13 +854,12 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
     airy_mtx_unlock(&g_checkpoint_mutex);
     AIRY_FREE(seqs);
 
-    LOG_INFO("C-L07: Checkpoint: DELETE-ALL task_id=%s deleted=%zu/%zu",
-                 task_id, deleted, cnt);
+    LOG_INFO("C-L07: Checkpoint: DELETE-ALL task_id=%s deleted=%zu/%zu", task_id, deleted, cnt);
     return (deleted > 0) ? AIRY_SUCCESS : AIRY_ENOENT;
 }
 
 airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***out_cps,
-                                        size_t *out_count)
+                                size_t *out_count)
 {
     if (!g_checkpoint_initialized)
         return AIRY_ENOTINIT;
@@ -867,15 +869,14 @@ airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***o
     *out_cps = NULL;
     *out_count = 0;
 
-    /* 扫描目录，收集 task_id 的全部 sequence_num */
     size_t cnt = 0;
     uint64_t *seqs = collect_task_seqs(task_id, &cnt);
     if (!seqs || cnt == 0) {
-        if (seqs) AIRY_FREE(seqs);
+        if (seqs)
+            AIRY_FREE(seqs);
         return AIRY_ENOENT;
     }
 
-    /* 按 seq 升序排序（插入排序，cnt 通常很小） */
     for (size_t i = 1; i < cnt; i++) {
         uint64_t key = seqs[i];
         size_t j = i;
@@ -1045,14 +1046,16 @@ airy_err_t airy_snapshot_create(const char *task_id, const char *snap_path)
     if (!fp) {
         airy_checkpoint_destroy(cp);
         LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-CREATE-FAIL — cannot open file "
-                      "path=%s task_id=%s errno=%d", snap_path, task_id, errno);
+                  "path=%s task_id=%s errno=%d",
+                  snap_path, task_id, errno);
         return AIRY_EIO;
     }
 
     char _cp_buf[2048];
     fputs("SNAPSHOT_V1\n", fp);
     fprintf_sanitized(fp, "TaskID", cp->task_id); /* BAN-70 EXEMPT: checkpoint snapshot output */
-    fprintf_sanitized(fp, "SessionID", cp->session_id); /* BAN-70 EXEMPT: checkpoint snapshot output */
+    fprintf_sanitized(fp, "SessionID",
+                      cp->session_id); /* BAN-70 EXEMPT: checkpoint snapshot output */
     snprintf(_cp_buf, sizeof(_cp_buf), "SequenceNum: %lu\n", (unsigned long)cp->sequence_num);
     fputs(_cp_buf, fp);
     snprintf(_cp_buf, sizeof(_cp_buf), "Timestamp: %lu\n", (unsigned long)cp->timestamp);
@@ -1078,7 +1081,8 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
     FILE *fp = fopen(snap_path, "rb");
     if (!fp) {
         LOG_WARN("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — file not found "
-                     "path=%s errno=%d", snap_path, errno);
+                 "path=%s errno=%d",
+                 snap_path, errno);
         return AIRY_ENOENT;
     }
 
@@ -1086,7 +1090,8 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
     if (!fgets(header, sizeof(header), fp) || strncmp(header, "SNAPSHOT_V1", 11) != 0) {
         fclose(fp);
         LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — bad header "
-                      "path=%s header=%.20s", snap_path, header);
+                  "path=%s header=%.20s",
+                  snap_path, header);
         return AIRY_EIO;
     }
 
@@ -1111,9 +1116,8 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
 }
 
 /* ========== Auto-checkpoint hooks (CoreLoopThree integration) ========== */
-
 airy_err_t airy_checkpoint_set_auto_hook(airy_checkpoint_hook_fn hook, void *user_data,
-                                                 uint64_t interval_ms)
+                                         uint64_t interval_ms)
 {
 
     if (!g_checkpoint_initialized)

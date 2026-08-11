@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
  *
  * cupolas_vault_cred_type.h - Canonical Credential Type Definition
  *
@@ -17,12 +17,12 @@
  * @brief Credential type classification for vault storage
  */
 typedef enum {
-    CUPOLAS_VAULT_CRED_PASSWORD = 1,    /**< Password */
-    CUPOLAS_VAULT_CRED_TOKEN = 2,       /**< Token (API Key, OAuth Token) */
-    CUPOLAS_VAULT_CRED_KEY = 3,         /**< Key (private key) */
+    CUPOLAS_VAULT_CRED_PASSWORD = 1, /**< Password */
+    CUPOLAS_VAULT_CRED_TOKEN = 2, /**< Token (API Key, OAuth Token) */
+    CUPOLAS_VAULT_CRED_KEY = 3, /**< Key (private key) */
     CUPOLAS_VAULT_CRED_CERTIFICATE = 4, /**< Certificate */
-    CUPOLAS_VAULT_CRED_SECRET = 5,      /**< Generic secret */
-    CUPOLAS_VAULT_CRED_NOTE = 6         /**< Secure note */
+    CUPOLAS_VAULT_CRED_SECRET = 5, /**< Generic secret */
+    CUPOLAS_VAULT_CRED_NOTE = 6 /**< Secure note */
 } cupolas_vault_cred_type_t;
 
 #endif /* CUPOLAS_VAULT_CRED_TYPE_H */

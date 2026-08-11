@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file compat.c
  * @brief 跨平台兼容性实现
@@ -12,8 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-#include "logging.h"  /* d9: 改用 LOG_ERROR（logging.h 完整日志 API） */
-
+#include "logging.h"
 
 typedef void (*assert_handler_fn_t)(const char *cond, const char *file, int line, const char *func,
                                     const char *msg);
@@ -21,13 +21,12 @@ typedef void (*assert_handler_fn_t)(const char *cond, const char *file, int line
 static assert_handler_fn_t g_assert_handler = NULL;
 
 void airy_set_assert_handler(void (*handler)(const char *, const char *, int, const char *,
-                                                const char *))
+                                             const char *))
 {
     g_assert_handler = (assert_handler_fn_t)handler;
 }
 
-void (*airy_get_assert_handler(void))(const char *, const char *, int, const char *,
-                                         const char *)
+void (*airy_get_assert_handler(void))(const char *, const char *, int, const char *, const char *)
 {
     return (void (*)(const char *, const char *, int, const char *, const char *))g_assert_handler;
 }
@@ -161,7 +160,7 @@ void airy_assert_fail(const char *cond, const char *file, int line, const char *
 }
 
 void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
-                             const char *msg)
+                          const char *msg)
 {
     LOG_ERROR("Assertion failed: %s", cond);
     LOG_ERROR("  Message: %s", msg);

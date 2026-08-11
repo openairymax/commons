@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file cognition_common.c
  * @brief 认知模块通用功能实现
@@ -7,7 +8,6 @@
  * 提供认知模块共享的功能，包括计划、调度、协调等
  * 减少认知模块之间的代码重复
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "cognition_common.h"
@@ -87,17 +87,13 @@ void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency
         agent->successful_tasks++;
     }
 
-    // 更新成功率
     agent->success_rate = (double)agent->successful_tasks / agent->total_tasks;
 
-    // 更新平均延迟
     agent->avg_latency =
         (agent->avg_latency * (agent->total_tasks - 1) + latency) / agent->total_tasks;
 
-    // 更新最后使用时间
     agent->last_used = airy_time_monotonic_ms();
 
-    // 更新权重
     agent->weight = agent_info_calculate_weight(agent);
 }
 
@@ -112,11 +108,9 @@ double agent_info_calculate_weight(const agent_info_t *agent)
         return 0.0;
     }
 
-    // 基于成功率和延迟计算权重
     double success_factor = agent->success_rate;
-    double latency_factor = 1.0 / (1.0 + agent->avg_latency / 1000.0);  // 延迟越低，因子越高
+    double latency_factor = 1.0 / (1.0 + agent->avg_latency / 1000.0);
 
-    // 结合两个因子，成功率权重更高
     double weight = (success_factor * 0.7) + (latency_factor * 0.3);
 
     return weight;
@@ -331,7 +325,6 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
         return AIRY_EINVAL;
     }
 
-    // 找到权重最高的Agent
     size_t best_agent_index = 0;
     double best_weight = agents[0].weight;
 
@@ -342,7 +335,6 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
         }
     }
 
-    // 设置调度结果
     result->success = true;
     result->selected_agent = memory_safe_strdup(agents[best_agent_index].agent_id);
     result->confidence = best_weight;
@@ -369,8 +361,6 @@ int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
         return AIRY_EINVAL;
     }
 
-    // 简单的计划生成逻辑
-    // 实际项目中可能需要更复杂的逻辑
     size_t plan_size = strlen("Execute task: ") + strlen(task->task_content) + 1;
     char *plan = memory_safe_alloc(plan_size);
 
@@ -404,8 +394,6 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
         return AIRY_EINVAL;
     }
 
-    // 简单的协调逻辑：选择第一个结果
-    // 实际项目中可能需要更复杂的逻辑，如投票、加权等
     size_t decision_size = strlen(agent_results[0]) + 1;
     char *decision = memory_safe_alloc(decision_size);
 
@@ -436,11 +424,8 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
         return 0;
     }
 
-    // 简单的优先级计算逻辑
-    // 实际项目中可能需要更复杂的逻辑
     uint64_t priority = 0;
 
-    // 基于任务类型设置基础优先级
     if (strcmp(task->task_type, "emergency") == 0) {
         priority = 100;
     } else if (strcmp(task->task_type, "urgent") == 0) {
@@ -451,14 +436,13 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
         priority = 20;
     }
 
-    // 基于截止时间调整优先级
     if (task->deadline > 0) {
         uint64_t now = airy_time_monotonic_ms();
         uint64_t time_left = task->deadline - now;
 
-        if (time_left < 3600000) {  // 少于1小时
+        if (time_left < 3600000) {
             priority += 30;
-        } else if (time_left < 86400000) {  // 少于1天
+        } else if (time_left < 86400000) {
             priority += 15;
         }
     }
@@ -478,16 +462,12 @@ int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task)
         return 0;
     }
 
-    // 简单的计划质量评估逻辑
-    // 实际项目中可能需要更复杂的逻辑
-    int score = 50;  // 基础分数
+    int score = 50;
 
-    // 检查计划是否包含任务内容
     if (strstr(plan, task->task_content)) {
         score += 30;
     }
 
-    // 检查计划长度
     size_t plan_length = strlen(plan);
     if (plan_length > 10) {
         score += 20;

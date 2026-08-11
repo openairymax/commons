@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file refcounted.h
  * @brief P1.21: 所有权模型 + 引用计数规范
@@ -18,7 +19,6 @@
  *   @ownership release — refcount_release() 释放 1 个引用，归零时自动销毁
  *   @ownership borrow  — 裸指针访问不修改引用计数，调用者不能持有跨 scope
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_REFCOUNTED_H
@@ -35,23 +35,21 @@
 extern "C" {
 #endif
 
-/* ==================== 引用计数基础结构 ==================== */
 
 /**
  * @brief P1.21.1: 引用计数基础结构（嵌入到目标对象的首部）
  *
  * 使用方式：
  *   typedef struct {
- *       refcounted_t rc;          // 必须放第一个字段
- *       char data[];              // 实际数据
+ *       refcounted_t rc;
+ *       char data[];
  *   } my_shared_buf_t;
  */
 typedef struct {
-    _Atomic uint32_t refcount;     /**< 线程安全引用计数 */
-    void (*deleter)(void *obj);    /**< 归零时的销毁回调 */
+    _Atomic uint32_t refcount;
+    void (*deleter)(void *obj);
 } refcounted_t;
 
-/* ==================== 获取引用计数 ==================== */
 
 /**
  * @brief 获取当前引用计数值（仅供调试）
@@ -60,11 +58,11 @@ typedef struct {
  */
 static inline uint32_t refcount_get(const refcounted_t *rc)
 {
-    if (!rc) return 0;
+    if (!rc)
+        return 0;
     return atomic_load_explicit(&rc->refcount, memory_order_acquire);
 }
 
-/* ==================== 分配 API ==================== */
 
 /**
  * @brief P1.21.2: 分配带引用计数的对象
@@ -78,11 +76,12 @@ static inline uint32_t refcount_get(const refcounted_t *rc)
 static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
 {
     if (obj_size < sizeof(refcounted_t)) {
-        return NULL;  /* SEC-03: 大小不足 */
+        return NULL;
     }
 
     refcounted_t *rc = (refcounted_t *)AIRY_CALLOC(1, obj_size);
-    if (!rc) return NULL;
+    if (!rc)
+        return NULL;
 
     atomic_init(&rc->refcount, 1);
     rc->deleter = deleter;
@@ -90,7 +89,6 @@ static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
     return (void *)rc;
 }
 
-/* ==================== 引用计数操作 API ==================== */
 
 /**
  * @brief P1.21.2: 增加引用计数（retain）
@@ -105,7 +103,8 @@ static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
  */
 static inline void *refcount_retain(void *obj)
 {
-    if (!obj) return NULL;
+    if (!obj)
+        return NULL;
 
     refcounted_t *rc = (refcounted_t *)obj;
     /* V4.0 修复：使用 CAS 循环替代 fetch_add(relaxed) + 事后 old==0 检查。
@@ -120,8 +119,7 @@ static inline void *refcount_retain(void *obj)
     uint32_t cur = atomic_load_explicit(&rc->refcount, memory_order_acquire);
     while (cur != 0) {
         if (atomic_compare_exchange_weak_explicit(&rc->refcount, &cur, cur + 1,
-                                                   memory_order_acq_rel,
-                                                   memory_order_acquire)) {
+                                                  memory_order_acq_rel, memory_order_acquire)) {
             return obj;
         }
     }
@@ -141,13 +139,14 @@ static inline void *refcount_retain(void *obj)
  */
 static inline bool refcount_release(void *obj)
 {
-    if (!obj) return false;
+    if (!obj)
+        return false;
 
     refcounted_t *rc = (refcounted_t *)obj;
     uint32_t old = atomic_fetch_sub_explicit(&rc->refcount, 1, memory_order_acq_rel);
 
     if (old == 1) {
-        /* 最后一个引用，销毁对象 */
+
         if (rc->deleter) {
             rc->deleter(obj);
         } else {
@@ -157,14 +156,13 @@ static inline bool refcount_release(void *obj)
     }
 
     if (old == 0) {
-        /* 双重释放检测 */
+
         atomic_store_explicit(&rc->refcount, 0, memory_order_release);
     }
 
     return false;
 }
 
-/* ==================== 辅助宏 ==================== */
 
 /**
  * @brief 嵌入 refcounted_t 到结构体首部的便捷宏
@@ -194,16 +192,14 @@ static inline bool refcount_release(void *obj)
  * @param obj  对象指针
  * @return 同类型指针
  */
-#define REFCOUNT_RETAIN(obj) \
-    ((typeof(obj))refcount_retain((void *)(obj)))
+#define REFCOUNT_RETAIN(obj) ((typeof(obj))refcount_retain((void *)(obj)))
 
 /**
  * @brief 便捷 release 宏
  * @param obj  对象指针
  * @return true 已销毁
  */
-#define REFCOUNT_RELEASE(obj) \
-    refcount_release((void *)(obj))
+#define REFCOUNT_RELEASE(obj) refcount_release((void *)(obj))
 
 #ifdef __cplusplus
 }

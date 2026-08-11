@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file resource_guard.h
  * @brief 资源作用域守卫 - RAII模式实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 本模块提供资源自动释放机制，确保资源在作用域结束时正确释放。
@@ -31,7 +31,6 @@
 extern "C" {
 #endif
 
-/* ==================== 类型定义 ==================== */
 
 /**
  * @brief 资源释放函数类型
@@ -43,15 +42,14 @@ typedef void (*airy_resource_cleanup_t)(void *resource);
  * @brief 资源守卫结构
  */
 typedef struct airy_resource_guard {
-    void *resource;                     /**< 资源指针 */
-    airy_resource_cleanup_t cleanup; /**< 清理函数 */
-    const char *file;                   /**< 分配文件名 */
-    int line;                           /**< 分配行号 */
-    const char *name;                   /**< 资源名称 */
-    int active;                         /**< 是否激活（用于取消释放） */
+    void *resource;
+    airy_resource_cleanup_t cleanup;
+    const char *file;
+    int line;
+    const char *name;
+    int active;
 } airy_resource_guard_t;
 
-/* ==================== 核心接口 ==================== */
 
 /**
  * @brief 初始化资源守卫
@@ -63,8 +61,8 @@ typedef struct airy_resource_guard {
  * @param name [in] 资源名称
  */
 void airy_resource_guard_init(airy_resource_guard_t *guard, void *resource,
-                                 airy_resource_cleanup_t cleanup, const char *file, int line,
-                                 const char *name);
+                              airy_resource_cleanup_t cleanup, const char *file, int line,
+                              const char *name);
 
 /**
  * @brief 执行资源清理
@@ -78,7 +76,6 @@ void airy_resource_guard_cleanup(airy_resource_guard_t *guard);
  */
 void airy_resource_guard_dismiss(airy_resource_guard_t *guard);
 
-/* ==================== 资源追踪接口 ==================== */
 
 #ifdef AIRY_RESOURCE_TRACKING
 
@@ -86,12 +83,12 @@ void airy_resource_guard_dismiss(airy_resource_guard_t *guard);
  * @brief 资源追踪记录
  */
 typedef struct airy_resource_record {
-    void *resource;                       /**< 资源指针 */
-    const char *type;                     /**< 资源类型 */
-    const char *file;                     /**< 分配文件名 */
-    int line;                             /**< 分配行号 */
-    uint64_t timestamp_ns;                /**< 分配时间戳 */
-    struct airy_resource_record *next; /**< 下一条记录 */
+    void *resource;
+    const char *type;
+    const char *file;
+    int line;
+    uint64_t timestamp_ns;
+    struct airy_resource_record *next;
 } airy_resource_record_t;
 
 /**
@@ -123,42 +120,40 @@ void airy_resource_track_clear(void);
 
 #endif /* AIRY_RESOURCE_TRACKING */
 
-/* ==================== 便捷宏定义 ==================== */
-
 /**
  * @brief 创建作用域守卫（自动生成变量名）
  * @param resource 资源指针
  * @param cleanup 清理函数
  */
-#define AIRY_SCOPE_GUARD(resource, cleanup)                                                  \
+#define AIRY_SCOPE_GUARD(resource, cleanup)                                               \
     airy_resource_guard_t AIRY_UNIQUE_NAME(_guard)                                        \
         AIRY_ATTRIBUTE((cleanup(airy_resource_guard_cleanup))) = {.resource = (resource), \
-                                                                        .cleanup = (cleanup),   \
-                                                                        .file = __FILE__,       \
-                                                                        .line = __LINE__,       \
-                                                                        .name = #resource,      \
-                                                                        .active = 1}
+                                                                  .cleanup = (cleanup),   \
+                                                                  .file = __FILE__,       \
+                                                                  .line = __LINE__,       \
+                                                                  .name = #resource,      \
+                                                                  .active = 1}
 
 /**
  * @brief 创建作用域守卫（带自定义清理）
  * @param resource 资源指针
  * @param cleanup 清理函数
  */
-#define AIRY_SCOPE_EXIT(resource, cleanup)                                                   \
+#define AIRY_SCOPE_EXIT(resource, cleanup)                                                \
     airy_resource_guard_t AIRY_UNIQUE_NAME(_scope_exit)                                   \
         AIRY_ATTRIBUTE((cleanup(airy_resource_guard_cleanup))) = {.resource = (resource), \
-                                                                        .cleanup = (cleanup),   \
-                                                                        .file = __FILE__,       \
-                                                                        .line = __LINE__,       \
-                                                                        .name = #resource,      \
-                                                                        .active = 1}
+                                                                  .cleanup = (cleanup),   \
+                                                                  .file = __FILE__,       \
+                                                                  .line = __LINE__,       \
+                                                                  .name = #resource,      \
+                                                                  .active = 1}
 
 /**
  * @brief 取消作用域守卫（转移所有权）
  * @param resource 资源指针
  */
-#define AIRY_SCOPE_DISMISS(resource)                                    \
-    do {                                                                   \
+#define AIRY_SCOPE_DISMISS(resource)                                 \
+    do {                                                             \
         airy_resource_guard_dismiss(&AIRY_UNIQUE_NAME(_scope_exit)); \
     } while (0)
 
@@ -177,7 +172,6 @@ void airy_resource_track_clear(void);
 
 #define AIRY_CONCAT_IMPL(a, b) a##b
 
-/* ==================== 资源追踪宏 ==================== */
 
 #ifdef AIRY_RESOURCE_TRACKING
 
@@ -195,23 +189,23 @@ void airy_resource_track_clear(void);
  * @brief 追踪的内存分配
  */
 #define AIRY_TRACKED_MALLOC(size)             \
-    ({                                           \
+    ({                                        \
         void *_ptr = AIRY_MALLOC(size);       \
-        if (_ptr)                                \
+        if (_ptr)                             \
             AIRY_TRACK_ALLOC(_ptr, "memory"); \
-        _ptr;                                    \
+        _ptr;                                 \
     })
 
 /**
  * @brief 追踪的内存释放
  */
 #define AIRY_TRACKED_FREE(ptr)    \
-    do {                             \
-        if (ptr) {                   \
+    do {                          \
+        if (ptr) {                \
             AIRY_TRACK_FREE(ptr); \
             AIRY_FREE(ptr);       \
-            ptr = NULL;              \
-        }                            \
+            ptr = NULL;           \
+        }                         \
     } while (0)
 
 #else
@@ -222,7 +216,6 @@ void airy_resource_track_clear(void);
 #define AIRY_TRACKED_FREE(ptr) AIRY_FREE(ptr)
 
 #endif /* AIRY_RESOURCE_TRACKING */
-
 #ifdef _MSC_VER
 #define AIRY_ATTRIBUTE(x)
 #else
