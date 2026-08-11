@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file estimator.c
- * @brief 成本预估器实?
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 成本预估器实现
  *
  * @details
- * 本模块实现LLM调用成本预估功能?
- * - 基于模型配置的成本计?
- * - 支持自定义费率配?
- * - 提供成本分析和报告接?
+ * 本模块实现LLM调用成本预估功能：
+ * - 基于模型配置的成本计算
+ * - 支持自定义费率配置
+ * - 提供成本分析和报告接口
  */
 
 #include "../../platform/include/platform.h"
@@ -25,8 +25,6 @@
 #include <string_compat.h>
 #include "error.h"
 
-
-
 #define MAX_MODEL_NAME 64
 #define MAX_CONFIG_ENTRIES 16
 
@@ -34,24 +32,24 @@
  * @brief 模型成本配置
  */
 typedef struct {
-    char model_name[MAX_MODEL_NAME]; /**< 模型名称 */
-    double input_cost_per_1k;        /**< 输入成本（美?1K Token?*/
-    double output_cost_per_1k;       /**< 输出成本（美?1K Token?*/
-    int max_input_tokens;            /**< 最大输入Token */
-    int max_output_tokens;           /**< 最大输出Token */
+    char model_name[MAX_MODEL_NAME];
+    double input_cost_per_1k;
+    double output_cost_per_1k;
+    int max_input_tokens;
+    int max_output_tokens;
 } model_cost_config_t;
 
 /**
- * @brief 成本预估器内部结?
+ * @brief 成本预估器内部结构
  */
 struct airy_cost_estimator {
-    model_cost_config_t configs[MAX_CONFIG_ENTRIES]; /**< 模型配置数组 */
-    int config_count;                                /**< 配置数量 */
-    airy_mtx_t mutex;                           /**< 互斥?*/
-    double total_cost;                               /**< 累计成本 */
-    size_t total_input_tokens;                       /**< 累计输入Token */
-    size_t total_output_tokens;                      /**< 累计输出Token */
-    uint64_t request_count;                          /**< 请求计数 */
+    model_cost_config_t configs[MAX_CONFIG_ENTRIES];
+    int config_count;
+    airy_mtx_t mutex;
+    double total_cost;
+    size_t total_input_tokens;
+    size_t total_output_tokens;
+    uint64_t request_count;
 };
 
 /**
@@ -95,7 +93,7 @@ static const model_cost_config_t *find_model_config(airy_cost_estimator_t *estim
 }
 
 /**
- * @brief 规范化模型名?
+ * @brief 规范化模型名称
  */
 static void normalize_model_name(const char *input, char *output, size_t output_size)
 {
@@ -141,24 +139,30 @@ static int load_config_from_file(airy_cost_estimator_t *estimator, const char *c
 
         /* Manual parse: model,input_cost,output_cost,max_in,max_out */
         token = strtok_r(line, ",", &saveptr);
-        if (!token) continue;
+        if (!token)
+            continue;
         AIRY_STRNCPY_TERM(model, token, MAX_MODEL_NAME);
 
         token = strtok_r(NULL, ",", &saveptr);
-        if (token) input_cost = strtod(token, NULL);
+        if (token)
+            input_cost = strtod(token, NULL);
 
         token = strtok_r(NULL, ",", &saveptr);
-        if (token) output_cost = strtod(token, NULL);
+        if (token)
+            output_cost = strtod(token, NULL);
 
         token = strtok_r(NULL, ",", &saveptr);
-        if (token) max_in = (int)strtol(token, NULL, 10);
+        if (token)
+            max_in = (int)strtol(token, NULL, 10);
 
         token = strtok_r(NULL, ",", &saveptr);
-        if (token) max_out = (int)strtol(token, NULL, 10);
+        if (token)
+            max_out = (int)strtol(token, NULL, 10);
 
         if (model[0] != '\0') {
             if (estimator->config_count < MAX_CONFIG_ENTRIES) {
-                AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model, MAX_MODEL_NAME);
+                AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model,
+                                  MAX_MODEL_NAME);
                 estimator->configs[estimator->config_count].input_cost_per_1k = input_cost;
                 estimator->configs[estimator->config_count].output_cost_per_1k = output_cost;
                 estimator->configs[estimator->config_count].max_input_tokens =
@@ -198,7 +202,7 @@ airy_cost_estimator_t *airy_cost_estimator_create(const char *config_path)
     for (size_t i = 0; i < sizeof(default_configs) / sizeof(default_configs[0]); i++) {
         if (estimator->config_count < MAX_CONFIG_ENTRIES) {
             AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name,
-                    default_configs[i].model_name, MAX_MODEL_NAME);
+                              default_configs[i].model_name, MAX_MODEL_NAME);
             estimator->configs[estimator->config_count].input_cost_per_1k =
                 default_configs[i].input_cost_per_1k;
             estimator->configs[estimator->config_count].output_cost_per_1k =
@@ -229,7 +233,7 @@ void airy_cost_estimator_destroy(airy_cost_estimator_t *estimator)
 }
 
 double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char *model_name,
-                                       size_t input_tokens, size_t output_tokens)
+                                    size_t input_tokens, size_t output_tokens)
 {
     if (!estimator || !model_name) {
         return AIRY_EINVAL;
@@ -272,7 +276,7 @@ double airy_cost_estimator_get_total(airy_cost_estimator_t *estimator)
     return total;
 }
 
-size_t airy_cost_estimator_get_input_tokens(airy_cost_estimator_t *estimator)
+size_t airy_cest_get_input_tokens(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
@@ -285,7 +289,7 @@ size_t airy_cost_estimator_get_input_tokens(airy_cost_estimator_t *estimator)
     return tokens;
 }
 
-size_t airy_cost_estimator_get_output_tokens(airy_cost_estimator_t *estimator)
+size_t airy_cest_get_output_tokens(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
@@ -298,7 +302,7 @@ size_t airy_cost_estimator_get_output_tokens(airy_cost_estimator_t *estimator)
     return tokens;
 }
 
-uint64_t airy_cost_estimator_get_request_count(airy_cost_estimator_t *estimator)
+uint64_t airy_cest_get_request_count(airy_cost_estimator_t *estimator)
 {
     if (!estimator) {
         return 0;
@@ -328,7 +332,7 @@ void airy_cost_estimator_reset(airy_cost_estimator_t *estimator)
 }
 
 int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *model_name,
-                                     double input_cost_per_1k, double output_cost_per_1k)
+                                  double input_cost_per_1k, double output_cost_per_1k)
 {
     if (!estimator || !model_name) {
         return AIRY_EINVAL;
@@ -340,7 +344,8 @@ int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *
 
     airy_mtx_lock(&estimator->mutex);
 
-    AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model_name, MAX_MODEL_NAME);
+    AIRY_STRNCPY_TERM(estimator->configs[estimator->config_count].model_name, model_name,
+                      MAX_MODEL_NAME);
     estimator->configs[estimator->config_count].input_cost_per_1k = input_cost_per_1k;
     estimator->configs[estimator->config_count].output_cost_per_1k = output_cost_per_1k;
     estimator->configs[estimator->config_count].max_input_tokens = 4096;

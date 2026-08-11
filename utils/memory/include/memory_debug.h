@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file memory_debug.h
  * @brief 统一内存管理模块 - 内存调试功能
@@ -7,7 +8,6 @@
  * 提供高级内存调试功能，包括泄漏检测、边界检查、使用分析等。
  * 主要用于开发和测试阶段，帮助发现和修复内存相关错误。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_MEMORY_DEBUG_H
@@ -30,64 +30,64 @@ extern "C" {
  * @brief 内存调试选项
  */
 typedef struct {
-    bool enable_leak_check;           /**< 是否启用泄漏检查 */
-    bool enable_boundary_check;       /**< 是否启用边界检查 */
-    bool enable_use_after_free_check; /**< 是否启用释放后使用检查 */
-    bool enable_double_free_check;    /**< 是否启用双重释放检查 */
-    bool enable_invalid_free_check;   /**< 是否启用无效释放检查 */
-    bool track_allocations;           /**< 是否跟踪分配信息 */
-    bool fill_pattern_on_alloc;       /**< 分配时填充模式 */
-    bool fill_pattern_on_free;        /**< 释放时填充模式 */
-    unsigned char alloc_fill_pattern; /**< 分配填充模式值 */
-    unsigned char free_fill_pattern;  /**< 释放填充模式值 */
-    size_t redzone_size;              /**< 红区大小（用于边界检查） */
-    const char *log_file;             /**< 调试日志文件（NULL表示stderr） */
-    int verbosity_level;              /**< 详细级别（0-3） */
+    bool enable_leak_check;
+    bool enable_boundary_check;
+    bool enable_use_after_free_check;
+    bool enable_double_free_check;
+    bool enable_invalid_free_check;
+    bool track_allocations;
+    bool fill_pattern_on_alloc;
+    bool fill_pattern_on_free;
+    unsigned char alloc_fill_pattern;
+    unsigned char free_fill_pattern;
+    size_t redzone_size;
+    const char *log_file;
+    int verbosity_level;
 } memory_debug_options_t;
 
 /**
  * @brief 内存泄漏报告
  */
 typedef struct {
-    size_t leak_count;         /**< 泄漏数量 */
-    size_t total_leaked_bytes; /**< 总泄漏字节数 */
+    size_t leak_count;
+    size_t total_leaked_bytes;
     struct {
-        void *address;        /**< 泄漏地址 */
-        size_t size;          /**< 泄漏大小 */
-        const char *tag;      /**< 分配标签 */
-        const char *file;     /**< 分配位置文件 */
-        int line;             /**< 分配位置行号 */
-        const char *function; /**< 分配位置函数 */
-        uint64_t timestamp;   /**< 分配时间戳 */
-    } leaks[100];             /**< 泄漏详细信息（最多100个） */
+        void *address;
+        size_t size;
+        const char *tag;
+        const char *file;
+        int line;
+        const char *function;
+        uint64_t timestamp;
+    } leaks[100];
 } memory_leak_report_t;
 
 /**
  * @brief 内存错误类型
  */
 typedef enum {
-    MEMORY_ERROR_NONE = 0,       /**< 无错误 */
-    MEMORY_ERROR_OUT_OF_BOUNDS,  /**< 边界外访问 */
-    MEMORY_ERROR_USE_AFTER_FREE, /**< 释放后使用 */
-    MEMORY_ERROR_DOUBLE_FREE,    /**< 双重释放 */
-    MEMORY_ERROR_INVALID_FREE,   /**< 无效释放 */
-    MEMORY_ERROR_CORRUPTION,     /**< 内存损坏 */
-    MEMORY_ERROR_LEAK,           /**< 内存泄漏 */
-    MEMORY_ERROR_ALLOC_FAILED    /**< 分配失败 */
+    MEMORY_ERROR_NONE = 0,
+    MEMORY_ERROR_OUT_OF_BOUNDS,
+    MEMORY_ERROR_USE_AFTER_FREE,
+    MEMORY_ERROR_DOUBLE_FREE,
+    MEMORY_ERROR_INVALID_FREE,
+    MEMORY_ERROR_CORRUPTION,
+    MEMORY_ERROR_LEAK,
+    MEMORY_ERROR_ALLOC_FAILED
 } memory_error_type_t;
 
 /**
  * @brief 内存错误报告
  */
 typedef struct {
-    memory_error_type_t type; /**< 错误类型 */
-    void *address;            /**< 相关地址 */
-    size_t size;              /**< 相关大小 */
-    const char *description;  /**< 错误描述 */
-    const char *file;         /**< 错误位置文件 */
-    int line;                 /**< 错误位置行号 */
-    const char *function;     /**< 错误位置函数 */
-    uint64_t timestamp;       /**< 错误时间戳 */
+    memory_error_type_t type;
+    void *address;
+    size_t size;
+    const char *description;
+    const char *file;
+    int line;
+    const char *function;
+    uint64_t timestamp;
 } memory_error_report_t;
 
 /**
@@ -298,8 +298,7 @@ size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int c
 #define MEMORY_DEBUG_FREE(ptr) memory_free((ptr))
 #endif
 
-/** @} */  // end of memory_debug_api
-
+/** @} */ /* end of memory_debug_api */
 #ifdef __cplusplus
 }
 #endif

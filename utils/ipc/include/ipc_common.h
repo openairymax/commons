@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file ipc_common.h
  * @brief 进程间通信模块 - 跨平台 IPC 抽象层
@@ -71,25 +71,24 @@ extern "C" {
  * 常量定义
  * ============================================================================ */
 
-/** @brief IPC 魔数（P0-05: 收敛至 [SC] SSoT，值 = AIRY_IPC_MAGIC = 0x41524531 'ARE1'） */
+
 #define IPC_MAGIC AIRY_IPC_MAGIC
 
-/** @brief 默认超时时间（毫秒） */
+
 #define IPC_DEFAULT_TIMEOUT_MS 5000
 
-/** @brief 最大消息大小 */
+
 #define IPC_MAX_MESSAGE_SIZE (1024 * 1024) /* 1MB */
 
-/** @brief 默认缓冲区大小 */
 #define IPC_DEFAULT_BUFFER_SIZE 65536
 
-/** @brief 最大通道名称长度 */
+
 #define IPC_MAX_NAME_LEN 256
 
-/** @brief 最大连接数 */
+
 #define IPC_MAX_CONNECTIONS 128
 
-/** @brief 消息对齐 */
+
 #define IPC_MESSAGE_ALIGN 8
 
 /* ============================================================================
@@ -100,126 +99,122 @@ extern "C" {
  * @brief IPC 通道类型枚举
  */
 typedef enum {
-    IPC_TYPE_PIPE = 0,       /**< 匿名管道 */
-    IPC_TYPE_NAMED_PIPE = 1, /**< 命名管道 */
-    IPC_TYPE_SOCKET = 2,     /**< Unix Socket / Windows Named Pipe */
-    IPC_TYPE_SHM = 3,        /**< 共享内存 */
-    IPC_TYPE_MQ = 4,         /**< 消息队列 */
-    IPC_TYPE_RPC = 5         /**< RPC 调用 */
+    IPC_TYPE_PIPE = 0,
+    IPC_TYPE_NAMED_PIPE = 1,
+    IPC_TYPE_SOCKET = 2, /**< Unix Socket / Windows Named Pipe */
+    IPC_TYPE_SHM = 3,
+    IPC_TYPE_MQ = 4,
+    IPC_TYPE_RPC = 5
 } ipc_type_t;
 
 /**
  * @brief IPC 模式枚举
  */
-typedef enum {
-    IPC_MODE_READ = 1,      /**< 只读模式 */
-    IPC_MODE_WRITE = 2,     /**< 只写模式 */
-    IPC_MODE_READ_WRITE = 3 /**< 读写模式 */
-} ipc_mode_t;
+typedef enum { IPC_MODE_READ = 1, IPC_MODE_WRITE = 2, IPC_MODE_READ_WRITE = 3 } ipc_mode_t;
 
 /**
  * @brief IPC 状态枚举
  */
 typedef enum {
-    IPC_STATE_CLOSED = 0,  /**< 已关闭 */
-    IPC_STATE_OPENING = 1, /**< 打开中 */
-    IPC_STATE_OPEN = 2,    /**< 已打开 */
-    IPC_STATE_CLOSING = 3, /**< 关闭中 */
-    IPC_STATE_ERROR = 4    /**< 错误状态 */
+    IPC_STATE_CLOSED = 0,
+    IPC_STATE_OPENING = 1,
+    IPC_STATE_OPEN = 2,
+    IPC_STATE_CLOSING = 3,
+    IPC_STATE_ERROR = 4
 } ipc_state_t;
 
 /**
  * @brief IPC 消息标志
  */
 typedef enum {
-    IPC_FLAG_NONE = 0,       /**< 无标志 */
-    IPC_FLAG_NONBLOCK = 1,   /**< 非阻塞模式 */
-    IPC_FLAG_PRIORITY = 2,   /**< 优先级消息 */
-    IPC_FLAG_BROADCAST = 4,  /**< 广播消息 */
-    IPC_FLAG_EXCLUSIVE = 8,  /**< 独占模式 */
-    IPC_FLAG_PERSISTENT = 16 /**< 持久化消息 */
+    IPC_FLAG_NONE = 0,
+    IPC_FLAG_NONBLOCK = 1,
+    IPC_FLAG_PRIORITY = 2,
+    IPC_FLAG_BROADCAST = 4,
+    IPC_FLAG_EXCLUSIVE = 8,
+    IPC_FLAG_PERSISTENT = 16
 } ipc_flag_t;
 
 /**
  * @brief IPC 消息类型
  */
 typedef enum {
-    IPC_MSG_DATA = 0,         /**< 数据消息 */
-    IPC_MSG_REQUEST = 1,      /**< 请求消息 */
-    IPC_MSG_RESPONSE = 2,     /**< 响应消息 */
-    IPC_MSG_NOTIFICATION = 3, /**< 通知消息 */
-    IPC_MSG_ERROR = 4,        /**< 错误消息 */
-    IPC_MSG_CONTROL = 5       /**< 控制消息 */
+    IPC_MSG_DATA = 0,
+    IPC_MSG_REQUEST = 1,
+    IPC_MSG_RESPONSE = 2,
+    IPC_MSG_NOTIFICATION = 3,
+    IPC_MSG_ERROR = 4,
+    IPC_MSG_CONTROL = 5
 } ipc_msg_type_t;
 
 /**
  * @brief IPC 事件类型
  */
 typedef enum {
-    IPC_EVENT_CONNECTED = 1,    /**< 连接成功 */
-    IPC_EVENT_DISCONNECTED = 2, /**< 连接断开 */
-    IPC_EVENT_MESSAGE = 3,      /**< 消息到达 */
-    IPC_EVENT_ERROR = 4,        /**< 错误发生 */
-    IPC_EVENT_TIMEOUT = 5,      /**< 超时 */
-    IPC_EVENT_BUFFER_FULL = 6,  /**< 缓冲区满 */
-    IPC_EVENT_BUFFER_EMPTY = 7  /**< 缓冲区空 */
+    IPC_EVENT_CONNECTED = 1,
+    IPC_EVENT_DISCONNECTED = 2,
+    IPC_EVENT_MESSAGE = 3,
+    IPC_EVENT_ERROR = 4,
+    IPC_EVENT_TIMEOUT = 5,
+    IPC_EVENT_BUFFER_FULL = 6,
+    IPC_EVENT_BUFFER_EMPTY = 7
 } ipc_event_t;
 
 /**
  * @brief IPC 消息头结构
  */
 typedef struct {
-    uint32_t magic;                /**< 魔数 (IPC_MAGIC) */
-    uint32_t version;              /**< 协议版本 */
-    uint32_t type;                 /**< 消息类型 */
-    uint32_t flags;                /**< 消息标志 */
-    uint64_t msg_id;               /**< 消息 ID */
-    uint64_t correlation_id;       /**< 关联 ID（请求-响应模式） */
-    char source[64];               /**< 发送者标识 */
-    char target[64];               /**< 目标标识 */
-    uint64_t payload_len;          /**< 负载长度 */
-    uint32_t checksum;             /**< 校验和 (CRC32) */
-    airy_timestamp_t timestamp; /**< 时间戳 */
-    uint8_t reserved[32];          /**< 保留字段 */
+    uint32_t magic;
+    uint32_t version;
+    uint32_t type;
+    uint32_t flags;
+    uint64_t msg_id;
+    uint64_t correlation_id;
+    char source[64];
+    char target[64];
+    uint64_t payload_len;
+    uint32_t checksum;
+    airy_timestamp_t timestamp;
+    uint8_t reserved[32];
 } ipc_message_header_t;
 
 /**
  * @brief IPC 消息结构
  */
 typedef struct {
-    ipc_message_header_t header; /**< 消息头 */
-    void *payload;               /**< 负载数据 */
-    size_t payload_size;         /**< 负载大小 */
+    ipc_message_header_t header;
+    void *payload;
+    size_t payload_size;
 } ipc_message_t;
 
 /**
  * @brief IPC 通道配置
  */
 typedef struct {
-    ipc_type_t type;          /**< 通道类型 */
-    const char *name;         /**< 通道名称 */
-    ipc_mode_t mode;          /**< 读写模式 */
-    size_t buffer_size;       /**< 缓冲区大小 */
-    size_t max_message_size;  /**< 最大消息大小 */
-    uint32_t timeout_ms;      /**< 默认超时 */
-    uint32_t max_connections; /**< 最大连接数（服务端） */
-    bool nonblocking;         /**< 是否非阻塞 */
-    bool persistent;          /**< 是否持久化 */
-    const char *permissions;  /**< 权限设置（Unix 权限字符串） */
+    ipc_type_t type;
+    const char *name;
+    ipc_mode_t mode;
+    size_t buffer_size;
+    size_t max_message_size;
+    uint32_t timeout_ms;
+    uint32_t max_connections;
+    bool nonblocking;
+    bool persistent;
+    const char *permissions;
 } ipc_config_t;
 
 /**
  * @brief IPC 统计信息
  */
 typedef struct {
-    uint64_t messages_sent;     /**< 已发送消息数 */
-    uint64_t messages_received; /**< 已接收消息数 */
-    uint64_t bytes_sent;        /**< 已发送字节数 */
-    uint64_t bytes_received;    /**< 已接收字节数 */
-    uint64_t errors;            /**< 错误次数 */
-    uint64_t timeouts;          /**< 超时次数 */
-    uint64_t avg_latency_us;    /**< 平均延迟（微秒） */
-    uint64_t max_latency_us;    /**< 最大延迟（微秒） */
+    uint64_t messages_sent;
+    uint64_t messages_received;
+    uint64_t bytes_sent;
+    uint64_t bytes_received;
+    uint64_t errors;
+    uint64_t timeouts;
+    uint64_t avg_latency_us;
+    uint64_t max_latency_us;
 } ipc_stats_t;
 
 /**
@@ -348,8 +343,8 @@ airy_err_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms);
  * @param user_data 用户数据
  * @return 错误码
  */
-airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel,
-                                               ipc_event_callback_t callback, void *user_data);
+airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel, ipc_event_callback_t callback,
+                                          void *user_data);
 
 /**
  * @brief 获取统计信息
@@ -396,8 +391,8 @@ airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, s
  * @param timeout_ms 超时时间（毫秒）
  * @return 错误码
  */
-airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
-                                 ipc_message_t *response, uint32_t timeout_ms);
+airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_message_t *response,
+                            uint32_t timeout_ms);
 
 /**
  * @brief 发送广播消息
@@ -437,8 +432,7 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
  * @param received [out] 实际接收字节数
  * @return 错误码
  */
-airy_err_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len,
-                                 size_t *received);
+airy_err_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len, size_t *received);
 
 /**
  * @brief 尝试接收消息（非阻塞）
@@ -456,7 +450,7 @@ airy_err_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message);
  * @return 错误码
  */
 airy_err_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
-                                         void *user_data);
+                                    void *user_data);
 
 /* ============================================================================
  * 服务端 API
@@ -565,12 +559,12 @@ typedef struct ipc_shm ipc_shm_t;
  * @brief 共享内存配置
  */
 typedef struct {
-    const char *name;        /**< 共享内存名称 */
-    size_t size;             /**< 共享内存大小 */
-    bool read_only;          /**< 是否只读 */
-    bool create;             /**< 是否创建（不存在则创建） */
-    bool exclusive;          /**< 是否独占创建 */
-    const char *permissions; /**< 权限设置 */
+    const char *name;
+    size_t size;
+    bool read_only;
+    bool create;
+    bool exclusive;
+    const char *permissions;
 } ipc_shm_config_t;
 
 /**
@@ -627,12 +621,12 @@ typedef struct ipc_mq ipc_mq_t;
  * @brief 消息队列配置
  */
 typedef struct {
-    const char *name;        /**< 队列名称 */
-    size_t max_messages;     /**< 最大消息数 */
-    size_t max_message_size; /**< 最大消息大小 */
-    bool create;             /**< 是否创建 */
-    bool exclusive;          /**< 是否独占 */
-    const char *permissions; /**< 权限设置 */
+    const char *name;
+    size_t max_messages;
+    size_t max_message_size;
+    bool create;
+    bool exclusive;
+    const char *permissions;
 } ipc_mq_config_t;
 
 /**
@@ -669,7 +663,7 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
  * @return 错误码
  */
 airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
-                               unsigned int *priority, uint32_t timeout_ms);
+                          unsigned int *priority, uint32_t timeout_ms);
 
 /**
  * @brief 获取队列当前消息数
@@ -735,7 +729,7 @@ bool ipc_message_verify(const ipc_message_t *message);
  * @return 错误码
  */
 airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
-                                      size_t *written);
+                                 size_t *written);
 
 /**
  * @brief 从字节流反序列化消息
@@ -759,9 +753,8 @@ airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t
  * @param user_data 用户数据
  * @return 错误码
  */
-typedef airy_err_t (*rpc_method_handler_t)(const void *request, size_t request_len,
-                                                void *response, size_t *response_max,
-                                                void *user_data);
+typedef airy_err_t (*rpc_method_handler_t)(const void *request, size_t request_len, void *response,
+                                           size_t *response_max, void *user_data);
 
 /**
  * @brief RPC 服务端句柄
@@ -777,21 +770,21 @@ typedef struct ipc_rpc_client ipc_rpc_client_t;
  * @brief RPC 方法注册信息
  */
 typedef struct {
-    const char *method_name;      /**< 方法名称 */
-    rpc_method_handler_t handler; /**< 处理函数 */
-    void *user_data;              /**< 用户数据 */
+    const char *method_name;
+    rpc_method_handler_t handler;
+    void *user_data;
 } ipc_rpc_method_t;
 
 /**
  * @brief RPC 服务端配置
  */
 typedef struct {
-    ipc_channel_t *transport;  /**< 底层传输通道 */
-    const char *service_name;  /**< 服务名称 */
-    ipc_rpc_method_t *methods; /**< 方法数组 */
-    size_t method_count;       /**< 方法数量 */
-    size_t max_request_size;   /**< 最大请求大小 */
-    size_t max_response_size;  /**< 最大响应大小 */
+    ipc_channel_t *transport;
+    const char *service_name;
+    ipc_rpc_method_t *methods;
+    size_t method_count;
+    size_t max_request_size;
+    size_t max_response_size;
 } ipc_rpc_server_config_t;
 
 /**
@@ -833,8 +826,8 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
  * @brief RPC 客户端配置
  */
 typedef struct {
-    ipc_channel_t *transport; /**< 底层传输通道 */
-    uint32_t timeout_ms;      /**< 默认超时 */
+    ipc_channel_t *transport;
+    uint32_t timeout_ms;
 } ipc_rpc_client_config_t;
 
 /**
@@ -861,9 +854,9 @@ void ipc_rpc_client_destroy(ipc_rpc_client_t *client);
  * @param response_len [out] 实际响应长度
  * @return 错误码
  */
-airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
-                                  const void *request, size_t request_len, void *response,
-                                  size_t response_max, size_t *response_len);
+airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, const void *request,
+                             size_t request_len, void *response, size_t response_max,
+                             size_t *response_len);
 
 /**
  * @brief 注册单个 RPC 方法（服务端运行时添加）
@@ -871,8 +864,7 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
  * @param method 方法注册信息
  * @return 错误码
  */
-airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
-                                               const ipc_rpc_method_t *method);
+airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server, const ipc_rpc_method_t *method);
 
 /**
  * @brief 查找已注册的 RPC 方法
@@ -945,7 +937,7 @@ static inline airy_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
     case IPC_TYPE_PIPE:
         return AIRY_IPC_PIPE;
     case IPC_TYPE_NAMED_PIPE:
-        return AIRY_IPC_SOCKET; /* 命名管道映射到 Socket */
+        return AIRY_IPC_SOCKET;
     case IPC_TYPE_SOCKET:
         return AIRY_IPC_SOCKET;
     case IPC_TYPE_SHM:

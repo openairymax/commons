@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file file_utils.c
- * @brief 文件操作实现（跨平台?
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 文件操作实现（跨平台）
  */
 
 #include "../memory/include/airy_memory.h"
@@ -28,8 +28,6 @@
 #include <unistd.h>
 #endif
 
-
-
 /**
  * @brief 读取文件内容
  */
@@ -37,11 +35,11 @@ char *airy_io_read_file(const char *path, size_t *out_len)
 {
     if (!path) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     FILE *f = fopen(path, "rb");
     if (!f) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -221,28 +219,23 @@ int airy_io_mkdir_p(const char *path, int mode)
     if (!path)
         return AIRY_EINVAL;
 
-    // 检查目录是否已存在
     struct stat st = {0};
     if (stat(path, &st) == 0) {
         return S_ISDIR(st.st_mode) ? 0 : -1;
     }
 
-    // 复制路径以便修改
     char path_copy[1024];
     AIRY_STRNCPY_TERM(path_copy, path, sizeof(path_copy));
     path_copy[sizeof(path_copy) - 1] = '\0';
 
     size_t len = strlen(path_copy);
 
-// 处理根目录和驱动器前缀
 #ifdef _WIN32
-    // Windows: 跳过驱动器号（如 C:）
     size_t start_pos = 0;
     if (len >= 2 && path_copy[1] == ':') {
         start_pos = 2;
     }
 
-    // 将正斜杠转换为反斜杠
     for (size_t i = start_pos; i < len; i++) {
         if (path_copy[i] == '/') {
             path_copy[i] = '\\';
@@ -250,13 +243,11 @@ int airy_io_mkdir_p(const char *path, int mode)
     }
 #else
     size_t start_pos = 0;
-    // Unix: 跳过根目录
     if (path_copy[0] == '/') {
         start_pos = 1;
     }
 #endif
 
-    // 逐级创建目录
     for (size_t i = start_pos; i < len; i++) {
 #ifdef _WIN32
         if (path_copy[i] == '\\') {
@@ -266,7 +257,6 @@ int airy_io_mkdir_p(const char *path, int mode)
             char save_char = path_copy[i];
             path_copy[i] = '\0';
 
-            // 创建当前级目录（如果不存在）
             if (stat(path_copy, &st) == -1) {
 #ifdef _WIN32
                 if (_mkdir(path_copy) != 0) {
@@ -278,7 +268,6 @@ int airy_io_mkdir_p(const char *path, int mode)
                 }
 #endif
             } else if (!S_ISDIR(st.st_mode)) {
-                // 存在但不是目录
                 return AIRY_EINVAL;
             }
 
@@ -286,7 +275,6 @@ int airy_io_mkdir_p(const char *path, int mode)
         }
     }
 
-// 创建最后一级目录
 #ifdef _WIN32
     return _mkdir(path_copy) == 0 ? 0 : -1;
 #else

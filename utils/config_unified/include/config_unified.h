@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file config_unified.h
  * @brief 统一配置模块 - 主头文件
@@ -28,7 +28,7 @@
  *   config_file_source_options_t file_opts = {.file_path = "manager.yaml", .format = "yaml"};
  *   config_source_t *source = config_source_create_file(&file_opts);
  *   config_source_load(source, ctx);
- *   // 使用服务层功能
+ *
  *   config_hot_reload_manager_t *hot_reload = config_hot_reload_manager_create(ctx, NULL);
  *   config_hot_reload_start(hot_reload, 5000);
  */
@@ -38,16 +38,15 @@
 
 #include "atomic_compat.h"
 
-/* ==================== 核心层 ==================== */
+
 #include "core_config.h"
 
-/* ==================== 源适配层 ==================== */
+
 #include "config_source.h"
 
-/* ==================== 服务层 ==================== */
+
 #include "config_service.h"
 
-/* ==================== 简化宏定义 ==================== */
 
 /**
  * @brief 创建字符串配置值的简化宏
@@ -102,7 +101,7 @@
  * @return 配置值
  */
 #define CONFIG_GET_STRING_SAFE(ctx, key, default_value)                    \
-    __extension__({                                                                     \
+    __extension__({                                                        \
         const config_value_t *val = config_context_get(ctx, key);          \
         val ? config_value_get_string(val, default_value) : default_value; \
     })
@@ -115,7 +114,7 @@
  * @return 配置值
  */
 #define CONFIG_GET_INT_SAFE(ctx, key, default_value)                    \
-    __extension__({                                                                  \
+    __extension__({                                                     \
         const config_value_t *val = config_context_get(ctx, key);       \
         val ? config_value_get_int(val, default_value) : default_value; \
     })
@@ -128,7 +127,7 @@
  * @return 配置值
  */
 #define CONFIG_GET_BOOL_SAFE(ctx, key, default_value)                    \
-    __extension__({                                                                   \
+    __extension__({                                                      \
         const config_value_t *val = config_context_get(ctx, key);        \
         val ? config_value_get_bool(val, default_value) : default_value; \
     })
@@ -141,12 +140,11 @@
  * @return 配置值
  */
 #define CONFIG_GET_DOUBLE_SAFE(ctx, key, default_value)                    \
-    __extension__({                                                                     \
+    __extension__({                                                        \
         const config_value_t *val = config_context_get(ctx, key);          \
         val ? config_value_get_double(val, default_value) : default_value; \
     })
 
-/* ==================== 配置路径辅助宏 ==================== */
 
 /**
  * @brief 构建配置路径
@@ -184,7 +182,6 @@
  */
 #define CONFIG_SECURITY_PATH(key) CONFIG_PATH("security", key)
 
-/* ==================== 配置验证辅助宏 ==================== */
 
 /**
  * @brief 验证配置值是否为有效字符串
@@ -214,7 +211,6 @@
  */
 #define CONFIG_VALID_DOUBLE(value) (value && config_value_get_type(value) == CONFIG_TYPE_DOUBLE)
 
-/* ==================== 配置错误处理宏 ==================== */
 
 /**
  * @brief 检查配置操作是否成功
@@ -253,7 +249,6 @@
         }                                   \
     } while (0)
 
-/* ==================== 配置初始化宏 ==================== */
 
 /**
  * @brief 初始化配置上下文并设置默认值
@@ -263,7 +258,7 @@
  * @return 配置上下文
  */
 #define CONFIG_INIT_WITH_DEFAULTS(ctx_name, defaults, count)                         \
-    __extension__({                                                                               \
+    __extension__({                                                                  \
         config_context_t *ctx = config_context_create(ctx_name);                     \
         if (ctx) {                                                                   \
             for (size_t i = 0; i < (count); i += 2) {                                \
@@ -276,7 +271,6 @@
         ctx;                                                                         \
     })
 
-/* ==================== 配置类型转换宏 ==================== */
 
 /**
  * @brief 安全转换配置值为字符串
@@ -284,10 +278,10 @@
  * @param default_value 默认值
  * @return 字符串值
  */
-#define CONFIG_AS_STRING(value, default_value)           \
-    (config_value_get_type(value) == CONFIG_TYPE_STRING  \
-         ? config_value_get_string(value, default_value) \
-         : default_value)
+#define CONFIG_AS_STRING(value, default_value)            \
+    (config_value_get_type(value) == CONFIG_TYPE_STRING ? \
+         config_value_get_string(value, default_value) :  \
+         default_value)
 
 /**
  * @brief 安全转换配置值为整数
@@ -295,9 +289,10 @@
  * @param default_value 默认值
  * @return 整数值
  */
-#define CONFIG_AS_INT(value, default_value)                                                       \
-    (config_value_get_type(value) == CONFIG_TYPE_INT ? config_value_get_int(value, default_value) \
-                                                     : default_value)
+#define CONFIG_AS_INT(value, default_value)            \
+    (config_value_get_type(value) == CONFIG_TYPE_INT ? \
+         config_value_get_int(value, default_value) :  \
+         default_value)
 
 /**
  * @brief 安全转换配置值为布尔值
@@ -305,10 +300,10 @@
  * @param default_value 默认值
  * @return 布尔值
  */
-#define CONFIG_AS_BOOL(value, default_value)           \
-    (config_value_get_type(value) == CONFIG_TYPE_BOOL  \
-         ? config_value_get_bool(value, default_value) \
-         : default_value)
+#define CONFIG_AS_BOOL(value, default_value)            \
+    (config_value_get_type(value) == CONFIG_TYPE_BOOL ? \
+         config_value_get_bool(value, default_value) :  \
+         default_value)
 
 /**
  * @brief 安全转换配置值为浮点数
@@ -316,9 +311,9 @@
  * @param default_value 默认值
  * @return 浮点数值
  */
-#define CONFIG_AS_DOUBLE(value, default_value)           \
-    (config_value_get_type(value) == CONFIG_TYPE_DOUBLE  \
-         ? config_value_get_double(value, default_value) \
-         : default_value)
+#define CONFIG_AS_DOUBLE(value, default_value)            \
+    (config_value_get_type(value) == CONFIG_TYPE_DOUBLE ? \
+         config_value_get_double(value, default_value) :  \
+         default_value)
 
 #endif /* AIRY_RT_CONFIG_UNIFIED_H */

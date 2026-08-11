@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file daemon_bootstrap_sd.h
  * @brief P1.7 C-L08: daemon ServiceDiscovery 一键引导模块（commons 权威版本）
@@ -43,11 +44,9 @@
 extern "C" {
 #endif
 
-/* ==================== 引导句柄 ==================== */
 
 typedef struct daemon_bootstrap_sd_s daemon_bootstrap_sd_t;
 
-/* ==================== 生命周期 ==================== */
 
 /**
  * @brief 一键引导：初始化 SD + 注册服务 + 启动心跳
@@ -61,8 +60,8 @@ typedef struct daemon_bootstrap_sd_s daemon_bootstrap_sd_t;
  * @return 引导句柄，失败返回 NULL
  */
 daemon_bootstrap_sd_t *daemon_bootstrap_sd_start(const char *name, const char *type,
-                                                  const char *host, uint16_t port,
-                                                  const char *tags, uint32_t ttl_ms);
+                                                 const char *host, uint16_t port, const char *tags,
+                                                 uint32_t ttl_ms);
 
 /**
  * @brief 一键引导（Unix Socket 版本）
@@ -75,8 +74,8 @@ daemon_bootstrap_sd_t *daemon_bootstrap_sd_start(const char *name, const char *t
  * @return 引导句柄，失败返回 NULL
  */
 daemon_bootstrap_sd_t *daemon_bootstrap_sd_start_unix(const char *name, const char *type,
-                                                       const char *socket_path,
-                                                       const char *tags, uint32_t ttl_ms);
+                                                      const char *socket_path, const char *tags,
+                                                      uint32_t ttl_ms);
 
 /**
  * @brief 停止服务发现引导（注销服务 + 停止心跳 + 释放资源）
@@ -85,7 +84,6 @@ daemon_bootstrap_sd_t *daemon_bootstrap_sd_start_unix(const char *name, const ch
  */
 void daemon_bootstrap_sd_stop(daemon_bootstrap_sd_t *bsd);
 
-/* ==================== 查询 ==================== */
 
 /**
  * @brief 获取底层 sd_helper 句柄（用于高级操作如 sd_helper_find/select）

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file string_common.h
  * @brief 字符串工具公共库
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 提供统一的字符串操作接口，包括：
  * - 字符串复制和连接

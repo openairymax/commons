@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file input_validator.h
  * @brief 输入验证工具库 - 安全内生加固
@@ -37,19 +37,17 @@
 extern "C" {
 #endif
 
-/* ==================== 验证结果 ==================== */
 
 /**
  * @brief 验证结果结构
  */
 typedef struct {
-    int is_valid;              /**< 是否有效 */
-    const char *error_message; /**< 错误消息 */
-    int error_code;            /**< 错误码 */
-    const char *error_field;   /**< 错误字段 */
+    int is_valid;
+    const char *error_message;
+    int error_code;
+    const char *error_field;
 } airy_validation_result_t;
 
-/* ==================== 字符串验证 ==================== */
 
 /**
  * @brief 验证字符串长度
@@ -59,7 +57,7 @@ typedef struct {
  * @param result [out] 验证结果
  */
 void airy_validate_string_length(const char *str, size_t min_len, size_t max_len,
-                                    airy_validation_result_t *result);
+                                 airy_validation_result_t *result);
 
 /**
  * @brief 验证字符串是否只包含安全字符
@@ -68,7 +66,7 @@ void airy_validate_string_length(const char *str, size_t min_len, size_t max_len
  * @param result [out] 验证结果
  */
 void airy_validate_string_charset(const char *str, const char *allowed_chars,
-                                     airy_validation_result_t *result);
+                                  airy_validation_result_t *result);
 
 /**
  * @brief 验证标识符（字母、数字、下划线）
@@ -76,8 +74,7 @@ void airy_validate_string_charset(const char *str, const char *allowed_chars,
  * @param max_len 最大长度
  * @param result [out] 验证结果
  */
-void airy_validate_identifier(const char *str, size_t max_len,
-                                 airy_validation_result_t *result);
+void airy_validate_identifier(const char *str, size_t max_len, airy_validation_result_t *result);
 
 /**
  * @brief 验证JSON字符串
@@ -85,10 +82,8 @@ void airy_validate_identifier(const char *str, size_t max_len,
  * @param max_len 最大长度
  * @param result [out] 验证结果
  */
-void airy_validate_json_string(const char *str, size_t max_len,
-                                  airy_validation_result_t *result);
+void airy_validate_json_string(const char *str, size_t max_len, airy_validation_result_t *result);
 
-/* ==================== 路径验证 ==================== */
 
 /**
  * @brief 验证文件路径安全性
@@ -104,7 +99,7 @@ void airy_validate_json_string(const char *str, size_t max_len,
  * - 绝对路径限制
  */
 void airy_validate_file_path(const char *path, const char *allowed_root,
-                                airy_validation_result_t *result);
+                             airy_validation_result_t *result);
 
 /**
  * @brief 规范化路径
@@ -115,7 +110,6 @@ void airy_validate_file_path(const char *path, const char *allowed_root,
  */
 airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *out_len);
 
-/* ==================== 命令验证 ==================== */
 
 /**
  * @brief 验证Shell命令安全性
@@ -130,7 +124,7 @@ airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *
  * - 环境变量注入
  */
 void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
-                                    airy_validation_result_t *result);
+                                 airy_validation_result_t *result);
 
 /**
  * @brief 净化Shell参数
@@ -140,7 +134,6 @@ void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
  */
 airy_err_t airy_sanitize_shell_param(const char *param, char **out_sanitized);
 
-/* ==================== SQL验证 ==================== */
 
 /**
  * @brief 验证SQL查询安全性
@@ -163,7 +156,6 @@ void airy_validate_sql_query(const char *sql, airy_validation_result_t *result);
  */
 airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanitized);
 
-/* ==================== URL验证 ==================== */
 
 /**
  * @brief 验证URL安全性
@@ -178,7 +170,7 @@ airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanit
  * - 凭据泄露
  */
 void airy_validate_url(const char *url, const char **allowed_schemes,
-                          airy_validation_result_t *result);
+                       airy_validation_result_t *result);
 
 /**
  * @brief 解析URL组件
@@ -189,10 +181,9 @@ void airy_validate_url(const char *url, const char **allowed_schemes,
  * @param out_path [out] 输出路径（调用者负责释放）
  * @return airy_err_t 错误码
  */
-airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
-                                  uint16_t *out_port, char **out_path);
+airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host, uint16_t *out_port,
+                          char **out_path);
 
-/* ==================== 数值验证 ==================== */
 
 /**
  * @brief 验证整数范围
@@ -202,7 +193,7 @@ airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
  * @param result [out] 验证结果
  */
 void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
-                                airy_validation_result_t *result);
+                             airy_validation_result_t *result);
 
 /**
  * @brief 验证浮点数范围
@@ -212,9 +203,8 @@ void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
  * @param result [out] 验证结果
  */
 void airy_validate_float_range(double value, double min_val, double max_val,
-                                  airy_validation_result_t *result);
+                               airy_validation_result_t *result);
 
-/* ==================== 缓冲区验证 ==================== */
 
 /**
  * @brief 安全内存复制
@@ -244,27 +234,26 @@ airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src);
  */
 airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src);
 
-/* ==================== 便捷宏定义 ==================== */
 
 /**
  * @brief 验证并返回错误
  */
 #define AIRY_VALIDATE_OR_RETURN(result, error_code) \
-    do {                                               \
-        if (!(result).is_valid) {                      \
-            return error_code;                         \
-        }                                              \
+    do {                                            \
+        if (!(result).is_valid) {                   \
+            return error_code;                      \
+        }                                           \
     } while (0)
 
 /**
  * @brief 验证并跳转到错误处理
  */
 #define AIRY_VALIDATE_OR_GOTO(result, label, error_code) \
-    do {                                                    \
-        if (!(result).is_valid) {                           \
-            err = error_code;                               \
-            goto label;                                     \
-        }                                                   \
+    do {                                                 \
+        if (!(result).is_valid) {                        \
+            err = error_code;                            \
+            goto label;                                  \
+        }                                                \
     } while (0)
 
 /**

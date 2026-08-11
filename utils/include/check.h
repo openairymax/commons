@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file check.h
  * @brief 通用检查宏 - 减少重复的参数验证和错误处理代码
@@ -87,12 +87,12 @@
  * CHECK_ERR_RET(airy_init(), err);
  * @endcode
  */
-#define CHECK_ERR_RET(func_call, err_var)      \
-    do {                                       \
+#define CHECK_ERR_RET(func_call, err_var) \
+    do {                                  \
         airy_err_t err_var = (func_call); \
-        if (err_var != AIRY_SUCCESS) {      \
-            return err_var;                    \
-        }                                      \
+        if (err_var != AIRY_SUCCESS) {    \
+            return err_var;               \
+        }                                 \
     } while (0)
 
 /**
@@ -106,8 +106,8 @@
  */
 #define CHECK_ERR_GOTO(func_call, err_var, label) \
     do {                                          \
-        airy_err_t err_var = (func_call);    \
-        if (err_var != AIRY_SUCCESS) {         \
+        airy_err_t err_var = (func_call);         \
+        if (err_var != AIRY_SUCCESS) {            \
             goto label;                           \
         }                                         \
     } while (0)
@@ -137,12 +137,12 @@
  * SAFE_FREE(buffer);
  * @endcode
  */
-#define SAFE_FREE(ptr)         \
-    do {                       \
-        if ((ptr) != NULL) {   \
-            AIRY_FREE(ptr); \
-            (ptr) = NULL;      \
-        }                      \
+#define SAFE_FREE(ptr)       \
+    do {                     \
+        if ((ptr) != NULL) { \
+            AIRY_FREE(ptr);  \
+            (ptr) = NULL;    \
+        }                    \
     } while (0)
 
 /**
@@ -157,7 +157,7 @@
  */
 #define ALLOC_CHECK(ptr_var, size, label) \
     do {                                  \
-        (ptr_var) = AIRY_MALLOC(size); \
+        (ptr_var) = AIRY_MALLOC(size);    \
         CHECK_NULL_GOTO(ptr_var, label);  \
     } while (0)
 
@@ -174,7 +174,7 @@
  */
 #define CALLOC_CHECK(ptr_var, count, size, label) \
     do {                                          \
-        (ptr_var) = AIRY_CALLOC(count, size);  \
+        (ptr_var) = AIRY_CALLOC(count, size);     \
         CHECK_NULL_GOTO(ptr_var, label);          \
     } while (0)
 
@@ -190,7 +190,7 @@
  */
 #define STRDUP_CHECK(dest, src, label) \
     do {                               \
-        (dest) = AIRY_STRDUP(src);  \
+        (dest) = AIRY_STRDUP(src);     \
         CHECK_NULL_GOTO(dest, label);  \
     } while (0)
 
@@ -268,7 +268,7 @@
  */
 #define STRDUP_CHECK_ERR(dest, src, label, err_var, err_code) \
     do {                                                      \
-        (dest) = AIRY_STRDUP(src);                         \
+        (dest) = AIRY_STRDUP(src);                            \
         CHECK_NULL_GOTO_ERR(dest, label, err_var, err_code);  \
     } while (0)
 
@@ -286,7 +286,7 @@
  */
 #define MALLOC_CHECK_ERR(ptr_var, size, label, err_var, err_code) \
     do {                                                          \
-        (ptr_var) = AIRY_MALLOC(size);                         \
+        (ptr_var) = AIRY_MALLOC(size);                            \
         CHECK_NULL_GOTO_ERR(ptr_var, label, err_var, err_code);   \
     } while (0)
 
@@ -305,10 +305,9 @@
  */
 #define CALLOC_CHECK_ERR(ptr_var, count, size, label, err_var, err_code) \
     do {                                                                 \
-        (ptr_var) = AIRY_CALLOC(count, size);                         \
+        (ptr_var) = AIRY_CALLOC(count, size);                            \
         CHECK_NULL_GOTO_ERR(ptr_var, label, err_var, err_code);          \
     } while (0)
 
-/** @} */  // end of check_macros
-
+/** @} */ /* end of check_macros */
 #endif /* AIRY_RT_CHECK_H */

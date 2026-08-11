@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file sync_platform.h
  * @brief 同步模块平台抽象层 - 内部使用
@@ -7,7 +8,6 @@
  * 提供跨平台的同步原语底层实现抽象
  * 支持Windows和POSIX系统
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef SYNC_PLATFORM_H
@@ -26,32 +26,32 @@ extern "C" {
  * @{
  */
 
-/* Windows平台特定实现 */
+
 #ifdef _WIN32
 #include "atomic_compat.h"
 
 #include <synchapi.h>
 #include <windows.h>
 
-/** Windows平台互斥锁类型 */
+
 typedef CRITICAL_SECTION platform_mutex_t;
 
-/** Windows平台递归互斥锁类型 */
+
 typedef CRITICAL_SECTION platform_recursive_mutex_t;
 
-/** Windows平台读写锁类型 */
+
 typedef SRWLOCK platform_rwlock_t;
 
-/** Windows平台自旋锁类型 */
+
 typedef atomic_int platform_spinlock_t;
 
-/** Windows平台信号量类型 */
+
 typedef HANDLE platform_semaphore_t;
 
-/** Windows平台条件变量类型 */
+
 typedef CONDITION_VARIABLE platform_condition_t;
 
-/** Windows平台屏障类型（模拟实现） */
+
 typedef struct {
     CRITICAL_SECTION cs;
     CONDITION_VARIABLE cond;
@@ -60,10 +60,10 @@ typedef struct {
     unsigned int generation;
 } platform_barrier_t;
 
-/** Windows平台事件类型 */
+
 typedef HANDLE platform_event_t;
 
-/* POSIX平台特定实现 */
+
 #else
 #include <errno.h>
 #include <pthread.h>
@@ -71,28 +71,28 @@ typedef HANDLE platform_event_t;
 #include <sys/time.h>
 #include <unistd.h>
 
-/** POSIX平台互斥锁类型 */
+
 typedef pthread_mutex_t platform_mutex_t;
 
-/** POSIX平台递归互斥锁类型 */
+
 typedef pthread_mutex_t platform_recursive_mutex_t;
 
-/** POSIX平台读写锁类型 */
+
 typedef pthread_rwlock_t platform_rwlock_t;
 
-/** POSIX平台自旋锁类型 */
+
 typedef pthread_spinlock_t platform_spinlock_t;
 
-/** POSIX平台信号量类型 */
+
 typedef sem_t platform_semaphore_t;
 
-/** POSIX平台条件变量类型 */
+
 typedef pthread_cond_t platform_condition_t;
 
-/** POSIX平台屏障类型 */
+
 typedef pthread_barrier_t platform_barrier_t;
 
-/** POSIX平台事件类型（模拟实现） */
+
 typedef struct {
     pthread_cond_t cond;
     pthread_mutex_t mutex;
@@ -101,7 +101,6 @@ typedef struct {
 } platform_event_t;
 
 #endif /* _WIN32 */
-
 /**
  * @brief 平台互斥锁初始化
  * @return 0 成功，非0 失败
@@ -310,7 +309,8 @@ int platform_condition_wait(platform_condition_t *cond, platform_mutex_t *mutex)
  * @param[in] timeout_ms 超时时间（毫秒）
  * @return 0 成功，非0 失败/超时
  */
-int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *mutex, uint32_t timeout_ms);
+int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *mutex,
+                                 uint32_t timeout_ms);
 
 /**
  * @brief 平台条件变量唤醒一个线程
@@ -398,7 +398,6 @@ uint64_t platform_get_timestamp_ms(void);
 uint64_t platform_get_thread_id(void);
 
 /** @} */
-
 #ifdef __cplusplus
 }
 #endif

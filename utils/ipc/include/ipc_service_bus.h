@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file ipc_service_bus.h
  * @brief IPC服务总线 - 守护进程间统一通信框架（commons 权威版本）
@@ -33,7 +34,6 @@
 extern "C" {
 #endif
 
-/* ==================== 常量定义 ==================== */
 
 #define IPC_BUS_MAX_SERVICES 64
 #define IPC_BUS_MAX_CHANNELS 32
@@ -44,7 +44,6 @@ extern "C" {
 #define IPC_BUS_CHANNEL_NAME_LEN 128
 #define IPC_BUS_SERVICE_ID_LEN 64
 
-/* ==================== 服务总线消息类型 ==================== */
 
 typedef enum {
     IPC_BUS_MSG_REQUEST = 0,
@@ -56,7 +55,6 @@ typedef enum {
     IPC_BUS_MSG_CONTROL = 6
 } ipc_bus_msg_type_t;
 
-/* ==================== 服务总线协议类型 ==================== */
 
 typedef enum {
     IPC_BUS_PROTO_JSON_RPC = 0,
@@ -66,7 +64,6 @@ typedef enum {
     IPC_BUS_PROTO_AUTO = 4
 } ipc_bus_proto_t;
 
-/* ==================== 服务总线消息头 ==================== */
 
 typedef struct {
     uint32_t magic;
@@ -84,11 +81,10 @@ typedef struct {
     uint8_t reserved[16];
 } ipc_bus_message_header_t;
 
-/* P0-05: 收敛至 [SC] SSoT，值 = AIRY_IPC_MAGIC = 0x41524531 'ARE1' */
+
 #define IPC_BUS_MESSAGE_MAGIC AIRY_IPC_MAGIC
 #define IPC_BUS_MESSAGE_VERSION 1
 
-/* ==================== 服务总线消息 ==================== */
 
 typedef struct {
     ipc_bus_message_header_t header;
@@ -96,7 +92,6 @@ typedef struct {
     size_t payload_size;
 } ipc_bus_message_t;
 
-/* ==================== 服务总线通道配置 ==================== */
 
 typedef struct {
     char name[IPC_BUS_CHANNEL_NAME_LEN];
@@ -108,7 +103,6 @@ typedef struct {
     bool enable_encryption;
 } ipc_bus_channel_config_t;
 
-/* ==================== 服务总线服务端点 ==================== */
 
 typedef struct {
     char service_name[IPC_BUS_SERVICE_ID_LEN];
@@ -122,7 +116,6 @@ typedef struct {
     uint32_t max_connections;
 } ipc_bus_endpoint_t;
 
-/* ==================== 服务总线统计 ==================== */
 
 typedef struct {
     uint64_t messages_sent;
@@ -137,12 +130,10 @@ typedef struct {
     uint32_t active_endpoints;
 } ipc_bus_stats_t;
 
-/* ==================== 服务总线句柄 ==================== */
 
 typedef struct ipc_service_bus_s *ipc_service_bus_t;
 typedef struct ipc_bus_channel_s *ipc_bus_channel_t;
 
-/* ==================== 回调函数类型 ==================== */
 
 typedef int (*ipc_bus_message_handler_t)(ipc_bus_channel_t channel,
                                          const ipc_bus_message_t *message, void *user_data);
@@ -150,7 +141,6 @@ typedef int (*ipc_bus_message_handler_t)(ipc_bus_channel_t channel,
 typedef void (*ipc_bus_event_handler_t)(ipc_service_bus_t bus, const char *event_name,
                                         const void *event_data, size_t data_len, void *user_data);
 
-/* ==================== 服务总线生命周期 ==================== */
 
 /**
  * @brief 创建服务总线实例
@@ -159,7 +149,7 @@ typedef void (*ipc_bus_event_handler_t)(ipc_service_bus_t bus, const char *event
  * @return 总线句柄，失败返回NULL
  */
 AIRY_API ipc_service_bus_t ipc_service_bus_create(const char *bus_name,
-                                                     const ipc_bus_channel_config_t *config);
+                                                  const ipc_bus_channel_config_t *config);
 
 /**
  * @brief 销毁服务总线实例
@@ -181,7 +171,6 @@ AIRY_API airy_err_t ipc_service_bus_start(ipc_service_bus_t bus);
  */
 AIRY_API airy_err_t ipc_service_bus_stop(ipc_service_bus_t bus);
 
-/* ==================== 通道管理 ==================== */
 
 /**
  * @brief 创建通信通道
@@ -190,7 +179,7 @@ AIRY_API airy_err_t ipc_service_bus_stop(ipc_service_bus_t bus);
  * @return 通道句柄，失败返回NULL
  */
 AIRY_API ipc_bus_channel_t ipc_bus_channel_create(ipc_service_bus_t bus,
-                                                     const ipc_bus_channel_config_t *config);
+                                                  const ipc_bus_channel_config_t *config);
 
 /**
  * @brief 销毁通信通道
@@ -205,7 +194,6 @@ AIRY_API void ipc_bus_channel_destroy(ipc_bus_channel_t channel);
  */
 AIRY_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
 
-/* ==================== 消息发送 ==================== */
 
 /**
  * @brief 发送消息到指定服务
@@ -215,7 +203,7 @@ AIRY_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *target_service,
-                                                 const ipc_bus_message_t *message);
+                                         const ipc_bus_message_t *message);
 
 /**
  * @brief 发送请求并等待响应
@@ -226,11 +214,9 @@ AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *targ
  * @param timeout_ms 超时时间
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus,
-                                                    const char *target_service,
-                                                    const ipc_bus_message_t *request,
-                                                    ipc_bus_message_t *response,
-                                                    uint32_t timeout_ms);
+AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus, const char *target_service,
+                                            const ipc_bus_message_t *request,
+                                            ipc_bus_message_t *response, uint32_t timeout_ms);
 
 /**
  * @brief 广播消息到所有服务
@@ -239,7 +225,7 @@ AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
-                                                      const ipc_bus_message_t *message);
+                                              const ipc_bus_message_t *message);
 
 /**
  * @brief 发送通知消息
@@ -250,11 +236,10 @@ AIRY_API airy_err_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
  * @param protocol 协议类型
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus,
-                                                   const char *target_service, const void *payload,
-                                                   size_t payload_size, ipc_bus_proto_t protocol);
+AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus, const char *target_service,
+                                           const void *payload, size_t payload_size,
+                                           ipc_bus_proto_t protocol);
 
-/* ==================== 消息接收 ==================== */
 
 /**
  * @brief 注册消息处理器
@@ -264,8 +249,8 @@ AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
-                                                             ipc_bus_message_handler_t handler,
-                                                             void *user_data);
+                                                     ipc_bus_message_handler_t handler,
+                                                     void *user_data);
 
 /**
  * @brief 注销消息处理器
@@ -274,7 +259,7 @@ AIRY_API airy_err_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
-                                                               ipc_bus_message_handler_t handler);
+                                                       ipc_bus_message_handler_t handler);
 
 /**
  * @brief 注册事件处理器
@@ -285,11 +270,10 @@ AIRY_API airy_err_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus,
-                                                                   const char *event_name,
-                                                                   ipc_bus_event_handler_t handler,
-                                                                   void *user_data);
+                                                           const char *event_name,
+                                                           ipc_bus_event_handler_t handler,
+                                                           void *user_data);
 
-/* ==================== 服务端点管理 ==================== */
 
 /**
  * @brief 注册服务端点
@@ -298,7 +282,7 @@ AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
-                                                              const ipc_bus_endpoint_t *endpoint);
+                                                      const ipc_bus_endpoint_t *endpoint);
 
 /**
  * @brief 注销服务端点
@@ -307,7 +291,7 @@ AIRY_API airy_err_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
-                                                                const char *service_name);
+                                                        const char *service_name);
 
 /**
  * @brief 发现服务端点
@@ -319,11 +303,10 @@ AIRY_API airy_err_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
  * @param found_count [out] 实际找到数量
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus,
-                                                     const char *service_name,
-                                                     ipc_bus_proto_t protocol,
-                                                     ipc_bus_endpoint_t *endpoints,
-                                                     uint32_t max_count, uint32_t *found_count);
+AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus, const char *service_name,
+                                             ipc_bus_proto_t protocol,
+                                             ipc_bus_endpoint_t *endpoints, uint32_t max_count,
+                                             uint32_t *found_count);
 
 /**
  * @brief 选择最优端点（负载均衡）
@@ -333,10 +316,9 @@ AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus,
  * @param endpoint [out] 选中的端点
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus,
-                                                            const char *service_name,
-                                                            ipc_bus_proto_t protocol,
-                                                            ipc_bus_endpoint_t *endpoint);
+AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus, const char *service_name,
+                                                    ipc_bus_proto_t protocol,
+                                                    ipc_bus_endpoint_t *endpoint);
 
 /**
  * @brief 更新端点健康状态
@@ -346,10 +328,8 @@ AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus,
  * @return 0成功，非0失败
  */
 AIRY_API airy_err_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus,
-                                                                   const char *service_name,
-                                                                   bool healthy);
+                                                           const char *service_name, bool healthy);
 
-/* ==================== 消息辅助函数 ==================== */
 
 /**
  * @brief 创建服务总线消息
@@ -360,8 +340,8 @@ AIRY_API airy_err_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus
  * @return 消息结构，失败返回NULL
  */
 AIRY_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_type,
-                                                      ipc_bus_proto_t protocol, const void *payload,
-                                                      size_t payload_size);
+                                                   ipc_bus_proto_t protocol, const void *payload,
+                                                   size_t payload_size);
 
 /**
  * @brief 释放服务总线消息
@@ -390,7 +370,6 @@ AIRY_API const char *ipc_bus_proto_to_string(ipc_bus_proto_t proto);
  */
 AIRY_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
 
-/* ==================== 统计与诊断 ==================== */
 
 /**
  * @brief 获取服务总线统计信息
@@ -398,8 +377,7 @@ AIRY_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
  * @param stats [out] 统计信息
  * @return 0成功，非0失败
  */
-AIRY_API airy_err_t ipc_service_bus_get_stats(ipc_service_bus_t bus,
-                                                      ipc_bus_stats_t *stats);
+AIRY_API airy_err_t ipc_service_bus_get_stats(ipc_service_bus_t bus, ipc_bus_stats_t *stats);
 
 /**
  * @brief 重置统计信息

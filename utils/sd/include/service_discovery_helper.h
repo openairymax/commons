@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file service_discovery_helper.h
  * @brief C-L08: ServiceDiscovery → daemon 自动注册便捷层（commons 权威版本）
@@ -44,7 +45,6 @@
 extern "C" {
 #endif
 
-/* ==================== 便捷类型 ==================== */
 
 /**
  * @brief 服务发现助手句柄
@@ -53,7 +53,6 @@ extern "C" {
  */
 typedef struct sd_helper_s sd_helper_t;
 
-/* ==================== 生命周期 ==================== */
 
 /**
  * @brief 初始化服务发现助手
@@ -74,7 +73,6 @@ sd_helper_t *sd_helper_init(const sd_config_t *config);
  */
 void sd_helper_shutdown(sd_helper_t *sdh);
 
-/* ==================== 服务注册（P1.7.1） ==================== */
 
 /**
  * @brief 注册当前 daemon 到服务发现
@@ -90,9 +88,8 @@ void sd_helper_shutdown(sd_helper_t *sdh);
  * @param ttl_ms   心跳 TTL（毫秒），0 使用默认值 30000
  * @return 0 成功，非0 失败
  */
-int sd_helper_register(sd_helper_t *sdh, const char *name, const char *type,
-                       const char *host, uint16_t port, const char *tags,
-                       uint32_t ttl_ms);
+int sd_helper_register(sd_helper_t *sdh, const char *name, const char *type, const char *host,
+                       uint16_t port, const char *tags, uint32_t ttl_ms);
 
 /**
  * @brief 注册当前 daemon 到服务发现（Unix Socket 版本）
@@ -106,10 +103,8 @@ int sd_helper_register(sd_helper_t *sdh, const char *name, const char *type,
  * @return 0 成功，非0 失败
  */
 int sd_helper_register_unix(sd_helper_t *sdh, const char *name, const char *type,
-                            const char *socket_path, const char *tags,
-                            uint32_t ttl_ms);
+                            const char *socket_path, const char *tags, uint32_t ttl_ms);
 
-/* ==================== 心跳管理（P1.7.2） ==================== */
 
 /**
  * @brief 启动后台心跳线程
@@ -137,7 +132,6 @@ void sd_helper_stop_heartbeat(sd_helper_t *sdh);
  */
 int sd_helper_send_heartbeat(sd_helper_t *sdh);
 
-/* ==================== 服务发现（P1.7.3） ==================== */
 
 /**
  * @brief 发现可用服务实例
@@ -151,11 +145,9 @@ int sd_helper_send_heartbeat(sd_helper_t *sdh);
  * @param found_count  实际找到数量
  * @return 0 成功，非0 失败
  */
-int sd_helper_find(sd_helper_t *sdh, const char *service_name,
-                   sd_instance_t *instances, uint32_t max_count,
-                   uint32_t *found_count);
+int sd_helper_find(sd_helper_t *sdh, const char *service_name, sd_instance_t *instances,
+                   uint32_t max_count, uint32_t *found_count);
 
-/* ==================== 负载均衡选择（P1.7.4） ==================== */
 
 /**
  * @brief 选择最优服务实例
@@ -167,8 +159,7 @@ int sd_helper_find(sd_helper_t *sdh, const char *service_name,
  * @param instance     输出的选中实例
  * @return 0 成功，非0 失败
  */
-int sd_helper_select(sd_helper_t *sdh, const char *service_name,
-                     sd_instance_t *instance);
+int sd_helper_select(sd_helper_t *sdh, const char *service_name, sd_instance_t *instance);
 
 /**
  * @brief 选择最优服务实例（指定策略）
@@ -180,10 +171,8 @@ int sd_helper_select(sd_helper_t *sdh, const char *service_name,
  * @return 0 成功，非0 失败
  */
 int sd_helper_select_with_strategy(sd_helper_t *sdh, const char *service_name,
-                                   sd_lb_strategy_t strategy,
-                                   sd_instance_t *instance);
+                                   sd_lb_strategy_t strategy, sd_instance_t *instance);
 
-/* ==================== 状态查询 ==================== */
 
 /**
  * @brief 获取底层 service_discovery 句柄

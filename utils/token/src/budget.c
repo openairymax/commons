@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file budget.c
- * @brief Token预算管理实现（跨平台?
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief Token预算管理实现（跨平台）
  *
  * @details
- * 本模块实现Token预算管理功能?
+ * 本模块实现Token预算管理功能：
  * - 支持输入/输出Token分离统计
- * - 提供预算重置和查询接?
- * - 线程安全的预算操?
+ * - 提供预算重置和查询接口
+ * - 线程安全的预算操作
  */
 
 #include "error.h"
@@ -22,15 +22,12 @@
 #include <string.h>
 #include <time.h>
 
-/* 跨平台原子操作支持 - 使用统一的 atomic_compat.h */
 #include "atomic_compat.h"
 
 #ifdef _WIN32
 #else
 #include <unistd.h>
 #endif
-
-
 
 /**
  * @brief 跨平台互斥锁类型
@@ -94,19 +91,19 @@ static void budget_mutex_unlock(budget_mutex_t *mutex)
  * @brief Token预算内部结构
  */
 struct airy_token_budget {
-    size_t max_tokens;           /**< 最大Token配额 */
-    atomic_size_t used_tokens;   /**< 已使用Token?*/
-    atomic_size_t input_tokens;  /**< 输入Token?*/
-    atomic_size_t output_tokens; /**< 输出Token?*/
-    atomic_uint request_count;   /**< 请求计数 */
-    atomic_uint denied_count;    /**< 拒绝计数 */
-    budget_mutex_t mutex;        /**< 互斥?*/
-    time_t reset_time;           /**< 重置时间 */
-    size_t window_seconds;       /**< 时间窗口（秒?*/
+    size_t max_tokens;
+    atomic_size_t used_tokens;
+    atomic_size_t input_tokens;
+    atomic_size_t output_tokens;
+    atomic_uint request_count;
+    atomic_uint denied_count;
+    budget_mutex_t mutex;
+    time_t reset_time;
+    size_t window_seconds;
 };
 
 /**
- * @brief 检查预算是否充?
+ * @brief 检查预算是否充足
  */
 static int check_budget_available(airy_token_budget_t *budget, size_t input, size_t output)
 {
@@ -131,8 +128,7 @@ airy_token_budget_t *airy_token_budget_create(size_t max_tokens)
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    airy_token_budget_t *budget =
-        (airy_token_budget_t *)AIRY_MALLOC(sizeof(airy_token_budget_t));
+    airy_token_budget_t *budget = (airy_token_budget_t *)AIRY_MALLOC(sizeof(airy_token_budget_t));
     if (!budget) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -167,8 +163,7 @@ void airy_token_budget_destroy(airy_token_budget_t *budget)
     AIRY_FREE(budget);
 }
 
-int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens,
-                             size_t output_tokens)
+int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens, size_t output_tokens)
 {
     if (!budget) {
         return AIRY_EINVAL;

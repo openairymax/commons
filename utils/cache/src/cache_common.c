@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file cache_common.c
  * @brief 通用缓存库实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "cache_common.h"
@@ -15,8 +15,6 @@
 #include <string.h>
 #include <time.h>
 #include "error.h"
-
-
 
 #define HASH_SIZE 1024
 
@@ -380,7 +378,6 @@ void cache_put(cache_t cache, const void *key, const void *value)
 
     sync_mutex_lock(&impl->buckets[idx].lock);
 
-    // 查找并删除已存在的条目
     cache_entry_t **p = &impl->buckets[idx].head;
     while (*p) {
         if (impl->manager.compare_func((*p)->key, key) == 0) {
@@ -389,7 +386,6 @@ void cache_put(cache_t cache, const void *key, const void *value)
 
             sync_mutex_unlock(&impl->buckets[idx].lock);
 
-            // 从 LRU 链表中移除
             sync_mutex_lock(&impl->lru_lock);
             lru_remove(impl, entry);
             impl->size--;
@@ -403,26 +399,22 @@ void cache_put(cache_t cache, const void *key, const void *value)
         p = &(*p)->hnext;
     }
 
-    // 如果值为 NULL，只是删除操作
     if (!value) {
         sync_mutex_unlock(&impl->buckets[idx].lock);
         return;
     }
 
-    // 创建新条目
     cache_entry_t *entry = cache_entry_create(&impl->manager, key, value);
     if (!entry) {
         sync_mutex_unlock(&impl->buckets[idx].lock);
         return;
     }
 
-    // 添加到哈希表
     entry->hnext = impl->buckets[idx].head;
     impl->buckets[idx].head = entry;
 
     sync_mutex_unlock(&impl->buckets[idx].lock);
 
-    // 添加到 LRU 链表
     sync_mutex_lock(&impl->lru_lock);
     entry->next = impl->lru_head;
     if (impl->lru_head) {
@@ -435,7 +427,6 @@ void cache_put(cache_t cache, const void *key, const void *value)
     impl->size++;
     sync_mutex_unlock(&impl->lru_lock);
 
-    // 检查容量，必要时驱逐
     if (impl->size > impl->capacity) {
         sync_mutex_lock(&impl->lru_lock);
         evict_lru(impl);
@@ -524,7 +515,6 @@ void cache_set_capacity(cache_t cache, size_t capacity)
     cache_impl_t *impl = (cache_impl_t *)cache;
     impl->capacity = capacity;
 
-    // 如果容量变小，需要驱逐多余的条目
     sync_mutex_lock(&impl->lru_lock);
     while (impl->size > impl->capacity) {
         evict_lru(impl);

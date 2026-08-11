@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file svc_common.h
  * @brief 服务公共定义（commons 权威版本）
@@ -31,83 +32,77 @@
 extern "C" {
 #endif
 
-/* ==================== 服务状态 ==================== */
 
 /**
  * @brief 服务状态枚举
  */
 typedef enum {
-    AIRY_SVC_STATE_NONE = 0,     /**< 未初始化 */
-    AIRY_SVC_STATE_CREATED,      /**< 已创建 */
-    AIRY_SVC_STATE_INITIALIZING, /**< 初始化中 */
-    AIRY_SVC_STATE_READY,        /**< 就绪 */
-    AIRY_SVC_STATE_RUNNING,      /**< 运行中 */
-    AIRY_SVC_STATE_PAUSED,       /**< 已暂停 */
-    AIRY_SVC_STATE_STOPPING,     /**< 停止中 */
-    AIRY_SVC_STATE_STOPPED,      /**< 已停止 */
-    AIRY_SVC_STATE_ZOMBIE,       /**< 僵尸状态（stop超时/部分清理） */
-    AIRY_SVC_STATE_ERROR         /**< 错误状态 */
+    AIRY_SVC_STATE_NONE = 0,
+    AIRY_SVC_STATE_CREATED,
+    AIRY_SVC_STATE_INITIALIZING,
+    AIRY_SVC_STATE_READY,
+    AIRY_SVC_STATE_RUNNING,
+    AIRY_SVC_STATE_PAUSED,
+    AIRY_SVC_STATE_STOPPING,
+    AIRY_SVC_STATE_STOPPED,
+    AIRY_SVC_STATE_ZOMBIE,
+    AIRY_SVC_STATE_ERROR
 } airy_svc_state_t;
 
-/* ==================== 服务能力标志 ==================== */
 
 /**
  * @brief 服务能力标志
  */
 typedef enum {
-    AIRY_SVC_CAP_NONE = 0,            /**< 无特殊能力 */
-    AIRY_SVC_CAP_ASYNC = 1 << 0,      /**< 支持异步操作 */
-    AIRY_SVC_CAP_STREAMING = 1 << 1,  /**< 支持流式处理 */
-    AIRY_SVC_CAP_CANCELABLE = 1 << 2, /**< 支持取消操作 */
-    AIRY_SVC_CAP_PAUSEABLE = 1 << 3,  /**< 支持暂停/恢复 */
-    AIRY_SVC_CAP_THROTTLE = 1 << 4,   /**< 支持限流 */
-    AIRY_SVC_CAP_BATCH = 1 << 5,      /**< 支持批量处理 */
-    AIRY_SVC_CAP_PRIORITY = 1 << 6,   /**< 支持优先级 */
-    AIRY_SVC_CAP_TIMEOUT = 1 << 7,    /**< 支持超时控制 */
+    AIRY_SVC_CAP_NONE = 0,
+    AIRY_SVC_CAP_ASYNC = 1 << 0,
+    AIRY_SVC_CAP_STREAMING = 1 << 1,
+    AIRY_SVC_CAP_CANCELABLE = 1 << 2,
+    AIRY_SVC_CAP_PAUSEABLE = 1 << 3,
+    AIRY_SVC_CAP_THROTTLE = 1 << 4,
+    AIRY_SVC_CAP_BATCH = 1 << 5,
+    AIRY_SVC_CAP_PRIORITY = 1 << 6,
+    AIRY_SVC_CAP_TIMEOUT = 1 << 7,
 } airy_svc_capability_t;
 
-/* ==================== 服务配置 ==================== */
 
 /**
  * @brief 服务配置结构
  */
 typedef struct {
-    const char *name;        /**< 服务名称 */
-    const char *version;     /**< 服务版本 */
-    uint32_t capabilities;   /**< 能力标志 */
-    uint32_t max_concurrent; /**< 最大并发数 */
-    uint32_t timeout_ms;     /**< 默认超时（毫秒） */
-    int priority;            /**< 默认优先级 */
-    bool auto_start;         /**< 是否自动启动 */
-    bool enable_metrics;     /**< 是否启用指标收集 */
-    bool enable_tracing;     /**< 是否启用追踪 */
+    const char *name;
+    const char *version;
+    uint32_t capabilities;
+    uint32_t max_concurrent;
+    uint32_t timeout_ms;
+    int priority;
+    bool auto_start;
+    bool enable_metrics;
+    bool enable_tracing;
 } airy_svc_config_t;
 
-/* ==================== 服务统计 ==================== */
 
 /**
  * @brief 服务统计信息
  */
 typedef struct {
-    uint64_t request_count;      /**< 请求总数 */
-    uint64_t success_count;      /**< 成功数 */
-    uint64_t error_count;        /**< 错误数 */
-    uint64_t total_time_ms;      /**< 总处理时间（毫秒） */
-    uint64_t max_time_ms;        /**< 最大处理时间 */
-    uint64_t min_time_ms;        /**< 最小处理时间 */
-    uint32_t current_concurrent; /**< 当前并发数 */
-    uint32_t peak_concurrent;    /**< 峰值并发数 */
-    double avg_time_ms;          /**< 平均处理时间 */
+    uint64_t request_count;
+    uint64_t success_count;
+    uint64_t error_count;
+    uint64_t total_time_ms;
+    uint64_t max_time_ms;
+    uint64_t min_time_ms;
+    uint32_t current_concurrent;
+    uint32_t peak_concurrent;
+    double avg_time_ms;
 } airy_svc_stats_t;
 
-/* ==================== 服务句柄类型 ==================== */
 
 /**
  * @brief 服务句柄类型
  */
 typedef struct airy_svc_s *airy_svc_t;
 
-/* ==================== 服务接口定义 ==================== */
 
 /**
  * @brief 服务初始化函数类型
@@ -115,8 +110,7 @@ typedef struct airy_svc_s *airy_svc_t;
  * @param config [in] 配置参数 (BORROW - not stored, copied internally).
  * @return 0成功，非0失败
  */
-typedef airy_err_t (*airy_svc_init_fn)(airy_svc_t service,
-                                               const airy_svc_config_t *config);
+typedef airy_err_t (*airy_svc_init_fn)(airy_svc_t service, const airy_svc_config_t *config);
 
 /**
  * @brief 服务启动函数类型
@@ -155,10 +149,9 @@ typedef airy_err_t (*airy_svc_healthcheck_fn)(airy_svc_t service);
  * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
  * @return 错误码
  */
-typedef airy_err_t (*airy_svc_handle_request_fn)(airy_svc_t service,
-                                                         const char *method,
-                                                         const char *params_json,
-                                                         char **response_json, void *user_data);
+typedef airy_err_t (*airy_svc_handle_request_fn)(airy_svc_t service, const char *method,
+                                                 const char *params_json, char **response_json,
+                                                 void *user_data);
 
 /**
  * @brief 服务异步完成回调函数类型
@@ -169,8 +162,8 @@ typedef airy_err_t (*airy_svc_handle_request_fn)(airy_svc_t service,
  * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
  */
 typedef void (*airy_svc_async_complete_fn)(airy_svc_t service, const char *method,
-                                              airy_err_t error_code, char *response_json,
-                                              void *user_data);
+                                           airy_err_t error_code, char *response_json,
+                                           void *user_data);
 
 typedef struct {
     airy_svc_init_fn init;
@@ -181,7 +174,6 @@ typedef struct {
     airy_svc_handle_request_fn handle_request;
 } airy_svc_interface_t;
 
-/* ==================== 服务生命周期管理 ==================== */
 
 /**
  * @brief 创建服务实例
@@ -196,8 +188,8 @@ typedef struct {
  * @ownership service: OWNER, name: BORROW, iface: BORROW, config: BORROW
  */
 AIRY_API airy_err_t airy_svc_create(airy_svc_t *service, const char *name,
-                                                   const airy_svc_interface_t *iface,
-                                                   const airy_svc_config_t *config);
+                                    const airy_svc_interface_t *iface,
+                                    const airy_svc_config_t *config);
 
 /**
  * @brief 销毁服务实例
@@ -265,9 +257,8 @@ AIRY_API airy_err_t airy_svc_set_thread_pool(airy_svc_t service, void *pool);
  * @ownership service: BORROW, method: BORROW, params_json: BORROW, on_complete: BORROW, user_data: BORROW
  */
 AIRY_API int airy_svc_handle_request_async(airy_svc_t service, const char *method,
-                                                     const char *params_json,
-                                                     airy_svc_async_complete_fn on_complete,
-                                                     void *user_data);
+                                           const char *params_json,
+                                           airy_svc_async_complete_fn on_complete, void *user_data);
 
 /**
  * @brief 暂停服务
@@ -291,7 +282,6 @@ AIRY_API airy_err_t airy_svc_pause(airy_svc_t service);
  */
 AIRY_API airy_err_t airy_svc_resume(airy_svc_t service);
 
-/* ==================== 服务状态查询 ==================== */
 
 /**
  * @brief 获取服务状态
@@ -348,7 +338,6 @@ AIRY_API const char *airy_svc_get_name(airy_svc_t service);
  */
 AIRY_API const char *airy_svc_get_version(airy_svc_t service);
 
-/* ==================== 服务统计 ==================== */
 
 /**
  * @brief 获取服务统计信息
@@ -360,8 +349,7 @@ AIRY_API const char *airy_svc_get_version(airy_svc_t service);
  *
  * @ownership service: BORROW, stats: BORROW
  */
-AIRY_API airy_err_t airy_svc_get_stats(airy_svc_t service,
-                                                      airy_svc_stats_t *stats);
+AIRY_API airy_err_t airy_svc_get_stats(airy_svc_t service, airy_svc_stats_t *stats);
 
 /**
  * @brief 重置服务统计信息
@@ -373,7 +361,6 @@ AIRY_API airy_err_t airy_svc_get_stats(airy_svc_t service,
  */
 AIRY_API void airy_svc_reset_stats(airy_svc_t service);
 
-/* ==================== 服务健康检查 ==================== */
 
 /**
  * @brief 执行服务健康检查
@@ -386,7 +373,6 @@ AIRY_API void airy_svc_reset_stats(airy_svc_t service);
  */
 AIRY_API airy_err_t airy_svc_healthcheck(airy_svc_t service);
 
-/* ==================== 服务能力查询 ==================== */
 
 /**
  * @brief 检查服务是否支持指定能力
@@ -398,10 +384,8 @@ AIRY_API airy_err_t airy_svc_healthcheck(airy_svc_t service);
  *
  * @ownership service: BORROW
  */
-AIRY_API bool airy_svc_has_capability(airy_svc_t service,
-                                                airy_svc_capability_t capability);
+AIRY_API bool airy_svc_has_capability(airy_svc_t service, airy_svc_capability_t capability);
 
-/* ==================== 服务状态字符串转换 ==================== */
 
 /**
  * @brief 服务状态转字符串
@@ -425,7 +409,6 @@ AIRY_API const char *airy_svc_state_to_string(airy_svc_state_t state);
  */
 AIRY_API airy_svc_state_t airy_svc_state_from_string(const char *str);
 
-/* ==================== 服务注册表 ==================== */
 
 /**
  * @brief 注册服务
@@ -490,8 +473,7 @@ AIRY_API void airy_svc_foreach(airy_svc_enum_fn callback, void *user_data);
  *
  * @ownership service: BORROW, user_data: BORROW
  */
-AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service,
-                                                          void *user_data);
+AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service, void *user_data);
 
 /**
  * @brief 获取服务用户数据
@@ -504,7 +486,6 @@ AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service,
  */
 AIRY_API void *airy_svc_get_user_data(airy_svc_t service);
 
-/* ==================== 服务元数据（Phase 3.2） ==================== */
 
 #define AIRY_MAX_ENDPOINT_LEN 256
 #define AIRY_MAX_SERVICE_TYPE_LEN 32
@@ -530,11 +511,10 @@ typedef struct {
     uint32_t instance_id;
 } airy_svc_metadata_t;
 
-/* ==================== 跨进程服务注册中心（Phase 3.2） ==================== */
 
 /**
  * @brief 初始化服务注册中心客户端
- * @param registry_url [in] 注册中心URL（如 http://localhost:8080/registry） (BORROW - not stored, copied internally).
+ * @param registry_url [in] 注册中心URL（如 http:
  * @return 0成功，非0失败
  * @threadsafe 是
  *
@@ -551,8 +531,7 @@ AIRY_API airy_err_t airy_cross_registry_init(const char *registry_url);
  *
  * @ownership service: BORROW, metadata: BORROW
  */
-AIRY_API airy_err_t airy_registry_register(airy_svc_t service,
-                                                      const airy_svc_metadata_t *metadata);
+AIRY_API airy_err_t airy_registry_register(airy_svc_t service, const airy_svc_metadata_t *metadata);
 
 /**
  * @brief 从注册中心注销服务
@@ -574,8 +553,8 @@ AIRY_API airy_err_t airy_registry_deregister(airy_svc_t service);
  *
  * @ownership service_type: BORROW, filter_tags: BORROW, result_count: BORROW, return: OWNER
  */
-AIRY_API airy_svc_metadata_t *
-airy_registry_discover(const char *service_type, const char *filter_tags, size_t *result_count);
+AIRY_API airy_svc_metadata_t *airy_registry_discover(const char *service_type,
+                                                     const char *filter_tags, size_t *result_count);
 
 /**
  * @brief 释放服务发现结果
@@ -600,7 +579,6 @@ AIRY_API airy_err_t airy_registry_heartbeat(airy_svc_t service);
  */
 AIRY_API void airy_registry_cleanup(void);
 
-/* ==================== 配置管理（Phase 3.2） ==================== */
 
 #define AIRY_CONFIG_CHECKSUM_LEN 65
 
@@ -625,9 +603,8 @@ typedef struct {
  * @ownership service_name: BORROW, old_config: BORROW, new_config: BORROW, user_data: BORROW
  */
 typedef void (*airy_config_change_callback_t)(const char *service_name,
-                                                 const airy_config_t *old_config,
-                                                 const airy_config_t *new_config,
-                                                 void *user_data);
+                                              const airy_config_t *old_config,
+                                              const airy_config_t *new_config, void *user_data);
 
 /**
  * @brief 加载服务配置
@@ -638,8 +615,7 @@ typedef void (*airy_config_change_callback_t)(const char *service_name,
  *
  * @ownership service_name: BORROW, config: OWNER
  */
-AIRY_API airy_err_t airy_config_load(const char *service_name,
-                                                airy_config_t **config);
+AIRY_API airy_err_t airy_config_load(const char *service_name, airy_config_t **config);
 
 /**
  * @brief 监视配置变更
@@ -652,8 +628,7 @@ AIRY_API airy_err_t airy_config_load(const char *service_name,
  * @ownership service_name: BORROW, callback: BORROW, user_data: BORROW
  */
 AIRY_API airy_err_t airy_config_watch(const char *service_name,
-                                                 airy_config_change_callback_t callback,
-                                                 void *user_data);
+                                      airy_config_change_callback_t callback, void *user_data);
 
 /**
  * @brief 取消配置监视
@@ -665,7 +640,7 @@ AIRY_API airy_err_t airy_config_watch(const char *service_name,
  * @ownership service_name: BORROW, callback: BORROW
  */
 AIRY_API airy_err_t airy_config_unwatch(const char *service_name,
-                                                   airy_config_change_callback_t callback);
+                                        airy_config_change_callback_t callback);
 
 /**
  * @brief 释放配置资源
@@ -675,7 +650,6 @@ AIRY_API airy_err_t airy_config_unwatch(const char *service_name,
  */
 AIRY_API void airy_config_free(airy_config_t *config);
 
-/* ==================== 故障恢复（Phase 3.3） ==================== */
 
 /**
  * @brief 监控配置结构
@@ -699,8 +673,8 @@ typedef struct {
  *
  * @ownership service: BORROW, reason: BORROW, user_data: BORROW
  */
-typedef airy_err_t (*airy_degradation_handler_t)(airy_svc_t service,
-                                                         const char *reason, void *user_data);
+typedef airy_err_t (*airy_degradation_handler_t)(airy_svc_t service, const char *reason,
+                                                 void *user_data);
 
 /**
  * @brief 启动服务监控
@@ -711,8 +685,7 @@ typedef airy_err_t (*airy_degradation_handler_t)(airy_svc_t service,
  *
  * @ownership service: BORROW, config: BORROW
  */
-AIRY_API airy_err_t airy_svc_monitor_start(airy_svc_t service,
-                                                          const airy_monitor_config_t *config);
+AIRY_API airy_err_t airy_svc_monitor_start(airy_svc_t service, const airy_monitor_config_t *config);
 
 /**
  * @brief 停止服务监控
@@ -734,10 +707,10 @@ AIRY_API airy_err_t airy_svc_monitor_stop(airy_svc_t service);
  *
  * @ownership service: BORROW, handler: BORROW, user_data: BORROW
  */
-AIRY_API airy_err_t airy_svc_set_degradation_handler(
-    airy_svc_t service, airy_degradation_handler_t handler, void *user_data);
+AIRY_API airy_err_t airy_svc_set_degradation_handler(airy_svc_t service,
+                                                     airy_degradation_handler_t handler,
+                                                     void *user_data);
 
-/* ==================== 服务间通信客户端（Phase 3.2） ==================== */
 
 /**
  * @brief 流式回调函数类型
@@ -769,9 +742,9 @@ typedef enum {
  */
 typedef struct {
     airy_err_t (*call)(const char *service_name, const char *method, const char *params_json,
-                            char **response_json, uint32_t timeout_ms);
+                       char **response_json, uint32_t timeout_ms);
     airy_err_t (*stream)(const char *service_name, const char *method, const char *params_json,
-                              airy_stream_callback_t callback, void *user_data);
+                         airy_stream_callback_t callback, void *user_data);
     void *internal;
 } airy_svc_client_t;
 
@@ -784,9 +757,8 @@ typedef struct {
  *
  * @ownership config: BORROW, client: OWNER
  */
-AIRY_API airy_err_t airy_svc_client_create(airy_svc_protocol_type_t protocol,
-                                                          const char *config,
-                                                          airy_svc_client_t **client);
+AIRY_API airy_err_t airy_svc_client_create(airy_svc_protocol_type_t protocol, const char *config,
+                                           airy_svc_client_t **client);
 
 /**
  * @brief 销毁服务通信客户端

@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file arena.c
  * @brief P1.19: Arena 线性分配器实现
@@ -7,7 +8,6 @@
  * 实现 arena_create/destroy/alloc/calloc/reset/mark/release API。
  * 使用链表串联多个 chunk，bump 指针线性分配，O(1) 整体释放。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "arena.h"
@@ -21,37 +21,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ==================== Chunk 结构 ==================== */
-
 typedef struct arena_chunk {
-    struct arena_chunk *next;    /**< 下一个 chunk */
-    uint8_t            *start;   /**< chunk 内存起始地址 */
-    uint8_t            *bump;    /**< 当前 bump 指针 */
-    uint8_t            *end;     /**< chunk 内存结束地址 */
-    size_t              size;    /**< chunk 总大小 */
+    struct arena_chunk *next;
+    uint8_t *start;
+    uint8_t *bump;
+    uint8_t *end;
+    size_t size;
 } arena_chunk_t;
 
-/* ==================== Arena 结构 ==================== */
-
 struct airy_arena {
-    arena_chunk_t *first_chunk;  /**< 第一个 chunk（链表头） */
-    arena_chunk_t *current;      /**< 当前活跃 chunk */
-    size_t         chunk_size;   /**< 默认 chunk 大小 */
-    size_t         max_chunks;   /**< 最大 chunk 数量（0=无限制） */
-    size_t         num_chunks;   /**< 当前 chunk 数量 */
+    arena_chunk_t *first_chunk;
+    arena_chunk_t *current;
+    size_t chunk_size;
+    size_t max_chunks;
+    size_t num_chunks;
 
-    /* 统计 */
-    size_t         total_allocated;
-    uint64_t       alloc_count;
-    uint64_t       reset_count;
-    uint64_t       fallback_count;
+    size_t total_allocated;
+    uint64_t alloc_count;
+    uint64_t reset_count;
+    uint64_t fallback_count;
 
-    /* 线程同步 */
     airy_mtx_t lock;
-    bool            thread_safe;
+    bool thread_safe;
 };
-
-/* ==================== 辅助函数 ==================== */
 
 static arena_chunk_t *chunk_create(size_t size)
 {
@@ -69,12 +61,12 @@ static arena_chunk_t *chunk_create(size_t size)
     }
 
     chunk->bump = chunk->start;
-    chunk->end  = chunk->start + size;
+    chunk->end = chunk->start + size;
     chunk->size = size;
     chunk->next = NULL;
 
-    LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)",
-                      size, (void *)chunk->start, (void *)chunk->end);
+    LOG_DEBUG("arena: chunk_create ok (size=%zu, start=%p, end=%p)", size, (void *)chunk->start,
+              (void *)chunk->end);
     return chunk;
 }
 
@@ -88,8 +80,6 @@ static void chunk_destroy(arena_chunk_t *chunk)
     }
 }
 
-/* ==================== 公共 API 实现 ==================== */
-
 airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
 {
     if (chunk_size == 0) {
@@ -99,8 +89,7 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
         chunk_size = ARENA_MAX_CHUNK_SIZE;
     }
 
-    LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)",
-                     chunk_size, max_chunks);
+    LOG_INFO("arena: arena_create (chunk_size=%zu, max_chunks=%zu)", chunk_size, max_chunks);
 
     airy_arena_t *arena = (airy_arena_t *)AIRY_CALLOC(1, sizeof(airy_arena_t));
     if (!arena) {
@@ -112,7 +101,6 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
     arena->max_chunks = max_chunks;
     arena->thread_safe = true;
 
-    /* 创建第一个 chunk */
     arena->first_chunk = chunk_create(chunk_size);
     if (!arena->first_chunk) {
         LOG_ERROR("arena: arena_create failed to create first chunk");
@@ -124,17 +112,17 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks)
 
     airy_mtx_init(&arena->lock);
 
-    LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)",
-                     chunk_size, (void *)arena);
+    LOG_INFO("arena: arena_create ok (chunk_size=%zu, arena=%p)", chunk_size, (void *)arena);
     return arena;
 }
 
 void arena_destroy(airy_arena_t *arena)
 {
-    if (!arena) return;
+    if (!arena)
+        return;
 
     LOG_INFO("arena: arena_destroy (arena=%p, chunks=%zu, total_alloc=%zu, allocs=%" PRIu64 ")",
-                     (void *)arena, arena->num_chunks, arena->total_allocated, arena->alloc_count);
+             (void *)arena, arena->num_chunks, arena->total_allocated, arena->alloc_count);
 
     airy_mtx_destroy(&arena->lock);
     chunk_destroy(arena->first_chunk);
@@ -145,44 +133,43 @@ void arena_destroy(airy_arena_t *arena)
 
 void *arena_alloc(airy_arena_t *arena, size_t size)
 {
-    if (!arena || size == 0) return NULL;
+    if (!arena || size == 0)
+        return NULL;
 
-    /* 对齐到 ARENA_ALIGNMENT */
     size_t aligned = (size + ARENA_ALIGNMENT - 1) & ~((size_t)ARENA_ALIGNMENT - 1);
 
     airy_mtx_lock(&arena->lock);
 
-    /* 超大分配直接回退到 AIRY_MALLOC */
     if (aligned > arena->chunk_size / 2) {
         arena->fallback_count++;
         arena->total_allocated += aligned;
         arena->alloc_count++;
         airy_mtx_unlock(&arena->lock);
         void *ptr = AIRY_MALLOC(aligned);
-        LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64 ")",
-                          size, aligned, ptr, arena->fallback_count);
+        LOG_DEBUG("arena: arena_alloc FALLBACK (size=%zu, aligned=%zu, ptr=%p, fallback#=%" PRIu64
+                  ")",
+                  size, aligned, ptr, arena->fallback_count);
         return ptr;
     }
 
-    /* 当前 chunk 空间不足，分配新 chunk */
     if (arena->current->bump + aligned > arena->current->end) {
-        /* 检查 chunk 数量限制 */
+
         if (arena->max_chunks > 0 && arena->num_chunks >= arena->max_chunks) {
             airy_mtx_unlock(&arena->lock);
-            LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)",
-                             size, aligned, arena->num_chunks, arena->max_chunks);
-            return NULL;  /* 达到 chunk 上限 */
+            LOG_WARN("arena: arena_alloc OOM (size=%zu, aligned=%zu, chunks=%zu/%zu)", size,
+                     aligned, arena->num_chunks, arena->max_chunks);
+            return NULL;
         }
 
-        /* 分配新 chunk（每次翻倍，直到最大） */
         size_t new_size = arena->chunk_size;
         if (arena->num_chunks > 0 && new_size < ARENA_MAX_CHUNK_SIZE) {
             new_size = arena->chunk_size * (1 << (arena->num_chunks > 4 ? 4 : arena->num_chunks));
-            if (new_size > ARENA_MAX_CHUNK_SIZE) new_size = ARENA_MAX_CHUNK_SIZE;
+            if (new_size > ARENA_MAX_CHUNK_SIZE)
+                new_size = ARENA_MAX_CHUNK_SIZE;
         }
 
         LOG_INFO("arena: arena_alloc NEW_CHUNK (chunk#=%zu→%zu, new_size=%zu, aligned=%zu)",
-                         arena->num_chunks, arena->num_chunks + 1, new_size, aligned);
+                 arena->num_chunks, arena->num_chunks + 1, new_size, aligned);
 
         arena_chunk_t *new_chunk = chunk_create(new_size);
         if (!new_chunk) {
@@ -191,13 +178,11 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
             return NULL;
         }
 
-        /* 追加到链表尾部 */
         arena->current->next = new_chunk;
         arena->current = new_chunk;
         arena->num_chunks++;
     }
 
-    /* Bump 分配 */
     void *ptr = arena->current->bump;
     arena->current->bump += aligned;
 
@@ -206,8 +191,9 @@ void *arena_alloc(airy_arena_t *arena, size_t size)
 
     airy_mtx_unlock(&arena->lock);
 
-    LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64 ")",
-                      size, aligned, ptr, arena->num_chunks, arena->alloc_count);
+    LOG_DEBUG("arena: arena_alloc ok (size=%zu, aligned=%zu, ptr=%p, chunk#=%zu, alloc#=%" PRIu64
+              ")",
+              size, aligned, ptr, arena->num_chunks, arena->alloc_count);
     return ptr;
 }
 
@@ -215,28 +201,27 @@ void *arena_calloc(airy_arena_t *arena, size_t size)
 {
     void *ptr = arena_alloc(arena, size);
     if (ptr) {
-        AIRY_MEMSET(ptr, 0, size);  /* BAN-154 */
+        AIRY_MEMSET(ptr, 0, size); /* BAN-154 */
     }
     return ptr;
 }
 
 void arena_reset(airy_arena_t *arena)
 {
-    if (!arena) return;
+    if (!arena)
+        return;
 
     LOG_INFO("arena: arena_reset (arena=%p, chunks=%zu, reset#=%" PRIu64 "→%" PRIu64 ")",
-                     (void *)arena, arena->num_chunks, arena->reset_count, arena->reset_count + 1);
+             (void *)arena, arena->num_chunks, arena->reset_count, arena->reset_count + 1);
 
     airy_mtx_lock(&arena->lock);
 
-    /* 将所有 chunk 的 bump 指针回退到起始位置 */
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
         c->bump = c->start;
-        /* 清零内存以辅助调试（检测 use-after-reset） */
-        AIRY_MEMSET(c->start, 0, c->size);  /* BAN-154 */
+
+        AIRY_MEMSET(c->start, 0, c->size); /* BAN-154 */
     }
 
-    /* 重置当前 chunk 为第一个 */
     arena->current = arena->first_chunk;
 
     arena->reset_count++;
@@ -246,54 +231,52 @@ void arena_reset(airy_arena_t *arena)
     LOG_DEBUG("arena: arena_reset done");
 }
 
-/* ==================== 标记 / 回退 API ==================== */
-
 void arena_mark(airy_arena_t *arena, arena_mark_t *mark)
 {
-    if (!arena || !mark) return;
+    if (!arena || !mark)
+        return;
 
     airy_mtx_lock(&arena->lock);
 
     mark->arena = arena;
-    mark->bump  = arena->current->bump;
+    mark->bump = arena->current->bump;
     mark->chunk = (airy_arena_t *)arena->current;
 
     airy_mtx_unlock(&arena->lock);
 
-    LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)",
-                      (void *)arena, (void *)mark->bump, (void *)mark->chunk);
+    LOG_DEBUG("arena: arena_mark (arena=%p, bump=%p, chunk=%p)", (void *)arena, (void *)mark->bump,
+              (void *)mark->chunk);
 }
 
 void arena_release(arena_mark_t *mark)
 {
-    if (!mark || !mark->arena || !mark->chunk) return;
+    if (!mark || !mark->arena || !mark->chunk)
+        return;
 
     airy_arena_t *arena = mark->arena;
     arena_chunk_t *target = (arena_chunk_t *)mark->chunk;
 
-    LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)",
-                     (void *)arena, (void *)target, mark->bump);
+    LOG_INFO("arena: arena_release (arena=%p, target_chunk=%p, bump=%p)", (void *)arena,
+             (void *)target, mark->bump);
 
     airy_mtx_lock(&arena->lock);
 
-    /* 从目标 chunk 开始，回退所有后续 chunk */
     arena_chunk_t *c = arena->first_chunk;
     while (c && c != target) {
-        c->bump = c->start;  /* 回退较早的 chunk */
-        AIRY_MEMSET(c->start, 0, c->size);  /* BAN-154 */
+        c->bump = c->start;
+        AIRY_MEMSET(c->start, 0, c->size); /* BAN-154 */
         c = c->next;
     }
 
     if (c == target) {
-        c->bump = (uint8_t *)mark->bump;  /* 回退到标记位置 */
-        if (c->bump < c->start) c->bump = c->start;
+        c->bump = (uint8_t *)mark->bump;
+        if (c->bump < c->start)
+            c->bump = c->start;
 
-        /* 清零已释放区域 */
         if (c->bump < c->end) {
-            AIRY_MEMSET(c->bump, 0, (size_t)(c->end - c->bump));  /* BAN-154 */
+            AIRY_MEMSET(c->bump, 0, (size_t)(c->end - c->bump)); /* BAN-154 */
         }
 
-        /* 后续 chunk 也回退 */
         for (arena_chunk_t *nc = c->next; nc; nc = nc->next) {
             nc->bump = nc->start;
             AIRY_MEMSET(nc->start, 0, nc->size);
@@ -307,21 +290,19 @@ void arena_release(arena_mark_t *mark)
     LOG_DEBUG("arena: arena_release done");
 }
 
-/* ==================== 查询 API ==================== */
-
 bool arena_get_stats(airy_arena_t *arena, arena_stats_t *stats)
 {
-    if (!arena || !stats) return false;
+    if (!arena || !stats)
+        return false;
 
     airy_mtx_lock(&arena->lock);
 
     stats->total_allocated = arena->total_allocated;
-    stats->alloc_count     = arena->alloc_count;
-    stats->reset_count     = arena->reset_count;
-    stats->fallback_count  = arena->fallback_count;
-    stats->chunk_count     = arena->num_chunks;
+    stats->alloc_count = arena->alloc_count;
+    stats->reset_count = arena->reset_count;
+    stats->fallback_count = arena->fallback_count;
+    stats->chunk_count = arena->num_chunks;
 
-    /* 计算当前使用量 */
     stats->current_used = 0;
     stats->total_chunk_bytes = 0;
     for (arena_chunk_t *c = arena->first_chunk; c; c = c->next) {
@@ -335,7 +316,8 @@ bool arena_get_stats(airy_arena_t *arena, arena_stats_t *stats)
 
 bool arena_contains(airy_arena_t *arena, const void *ptr)
 {
-    if (!arena || !ptr) return false;
+    if (!arena || !ptr)
+        return false;
 
     airy_mtx_lock(&arena->lock);
 
@@ -352,7 +334,8 @@ bool arena_contains(airy_arena_t *arena, const void *ptr)
 
 size_t arena_capacity(airy_arena_t *arena)
 {
-    if (!arena) return 0;
+    if (!arena)
+        return 0;
 
     airy_mtx_lock(&arena->lock);
     size_t cap = 0;
@@ -365,7 +348,8 @@ size_t arena_capacity(airy_arena_t *arena)
 
 size_t arena_used(airy_arena_t *arena)
 {
-    if (!arena) return 0;
+    if (!arena)
+        return 0;
 
     airy_mtx_lock(&arena->lock);
     size_t used = 0;
@@ -375,8 +359,6 @@ size_t arena_used(airy_arena_t *arena)
     airy_mtx_unlock(&arena->lock);
     return used;
 }
-
-/* ==================== 线程局部 Arena (TLS) ==================== */
 
 static _Thread_local airy_arena_t *g_tls_arena = NULL;
 

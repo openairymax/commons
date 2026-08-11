@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_platform.c
  * @brief platform.h 单元测试
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include <stdio.h>
@@ -15,12 +15,10 @@
 #include "mem.h"
 #include "platform.h"
 #include "string_compat.h"
-#include "cancel_token.h" /* 改进1：可取消命令执行（run_capture_ex 取消测试） */
+#include "cancel_token.h"
 
 #include <assert.h>
 #include <string.h>
-
-/* ==================== 测试辅助宏 ===================== */
 
 #define TEST_ASSERT(condition, message)              \
     do {                                             \
@@ -45,8 +43,6 @@
 static int passed_tests = 0;
 static int failed_tests = 0;
 
-/* ==================== 测试用例 ==================== */
-
 /**
  * @brief 测试平台检测宏
  */
@@ -69,7 +65,6 @@ static int test_time_functions(void)
 {
     uint64_t time1 = airy_time_ns();
 
-    /* 等待一小段时间 */
 #ifdef _WIN32
     Sleep(10);
 #else
@@ -94,16 +89,13 @@ static int test_memory_allocation(void)
     void *ptr1 = airy_mem_alloc(1024);
     TEST_ASSERT(ptr1 != NULL, "Memory allocation should succeed");
 
-    /* 测试重复分配 */
     void *ptr2 = airy_mem_alloc(512);
     TEST_ASSERT(ptr2 != NULL, "Second allocation should succeed");
 
-    /* 测试零大小分?*/
     void *ptr3 = airy_mem_alloc(0);
     TEST_ASSERT(ptr3 == NULL || ptr3 != NULL,
                 "Zero-size allocation: implementation-defined (NULL or unique pointer)");
 
-    /* 清理 */
     airy_mem_free(ptr1);
     airy_mem_free(ptr2);
 
@@ -112,25 +104,22 @@ static int test_memory_allocation(void)
 }
 
 /**
- * @brief 测试字符串函?
+ * @brief 测试字符串函数
  */
 static int test_string_functions(void)
 {
     char buffer[64];
 
-    /* 测试 airy_strlcpy */
     const char *src = "Hello, World!";
     int ret = airy_strlcpy(buffer, src, sizeof(buffer));
     TEST_ASSERT(ret == 13, "strlcpy should return length of copied string");
     TEST_ASSERT(strcmp(buffer, src) == 0, "String should be copied correctly");
 
-    /* 测试截断 */
     char small_buffer[8];
     airy_strlcpy(small_buffer, "This is a long string", sizeof(small_buffer));
     TEST_ASSERT(strlen(small_buffer) < sizeof(small_buffer), "String should be truncated");
     TEST_ASSERT(small_buffer[sizeof(small_buffer) - 1] == '\0', "String should be null-terminated");
 
-    /* 测试 airy_strlcat */
     char concat_buffer[32] = "Hello";
     airy_strlcat(concat_buffer, ", World!", sizeof(concat_buffer));
     TEST_ASSERT(strcmp(concat_buffer, "Hello, World!") == 0, "String should be concatenated");
@@ -144,7 +133,7 @@ static int test_string_functions(void)
  */
 static int test_file_operations(void)
 {
-    /* 测试文件大小获取 */
+
     const char *test_file = "test_temp_file.txt";
     FILE *f = fopen(test_file, "w");
     if (f) {
@@ -154,7 +143,6 @@ static int test_file_operations(void)
         int64_t size = airy_file_size(test_file);
         TEST_ASSERT(size > 0, "File size should be positive");
 
-        /* 清理 */
         remove(test_file);
 
         printf("  File operations: OK (size=%lld bytes)\n", (long long)size);
@@ -204,40 +192,31 @@ static int test_network_functions(void)
     return 0;
 }
 
-/* ==================== 事件源驱动子进程执行（改进1） ==================== */
-
 #if !defined(_WIN32)
 #include <signal.h>
 #include <unistd.h>
 
-/* 正常退出：捕获输出 + 退出码 */
 static int test_run_capture_exit(void)
 {
     printf("  test_run_capture_exit...\n");
-    char *argv[] = {(char *)"/bin/sh", (char *)"-c",
-                    (char *)"printf 'hello-event-source'", NULL};
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c", (char *)"printf 'hello-event-source'", NULL};
     char output[256] = {0};
-    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 5000,
-                                         output, sizeof(output), NULL);
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 5000, output, sizeof(output), NULL);
     TEST_ASSERT(rc == 0, "exit code should be 0");
-    TEST_ASSERT(strstr(output, "hello-event-source") != NULL,
-                "output should be captured");
+    TEST_ASSERT(strstr(output, "hello-event-source") != NULL, "output should be captured");
     return 0;
 }
 
-/* 超时：SIGKILL 后非阻塞回收，返回 -2 */
 static int test_run_capture_timeout(void)
 {
     printf("  test_run_capture_timeout...\n");
     char *argv[] = {(char *)"/bin/sh", (char *)"-c", (char *)"sleep 30", NULL};
     char output[256] = {0};
-    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 300,
-                                         output, sizeof(output), NULL);
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 300, output, sizeof(output), NULL);
     TEST_ASSERT(rc == -2, "should return timeout -2");
     return 0;
 }
 
-/* 取消：令牌命中 → SIGKILL → 返回 -3（AIRY_PROCESS_RC_CANCELED） */
 static void *cancel_proc_thread(void *arg)
 {
     airy_sleep_ms(150);
@@ -257,8 +236,7 @@ static int test_run_capture_cancel(void)
     TEST_ASSERT(airy_platform_thread_create(&th, cancel_proc_thread, &token) == 0,
                 "cancel thread create");
 
-    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 0,
-                                         output, sizeof(output), &token);
+    int rc = airy_process_run_capture_ex(argv[0], argv, NULL, 0, output, sizeof(output), &token);
     TEST_ASSERT(airy_platform_thread_join(th, NULL) == 0, "cancel thread join");
     TEST_ASSERT(rc == AIRY_PROCESS_RC_CANCELED, "should return cancel -3");
 
@@ -266,8 +244,6 @@ static int test_run_capture_cancel(void)
     return 0;
 }
 #endif /* !_WIN32 */
-
-/* ==================== 主函?==================== */
 
 int main(void)
 {
@@ -283,7 +259,7 @@ int main(void)
     TEST_RUN(test_thread_primitives);
     TEST_RUN(test_network_functions);
 #if !defined(_WIN32)
-    /* 改进1（tool_d 事件源驱动）：run_capture_ex 正常/超时/取消 */
+
     TEST_RUN(test_run_capture_exit);
     TEST_RUN(test_run_capture_timeout);
     TEST_RUN(test_run_capture_cancel);

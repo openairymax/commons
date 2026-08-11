@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
-// Copyright (c) 2026 SPHARX Ltd. All Rights Reserved.
 
 /**
  * @file memory_stats_reporter.c
@@ -19,16 +18,14 @@
 #include <string.h>
 
 /* ==================== Internal state ==================== */
-
 static airy_mem_stats_t g_stats;
 static airy_mtx_t g_stats_mutex;
 static airy_thread_t g_reporter_thread;
-static volatile int g_shutdown_flag = 1;  /* 1 = not running, 0 = running */
+static volatile int g_shutdown_flag = 1; /* 1 = not running, 0 = running */
 static unsigned int g_interval_seconds = 60;
 static int g_initialized = 0;
 
 /* ==================== Background thread ==================== */
-
 static void *reporter_thread_func(void *arg)
 {
     (void)arg;
@@ -57,13 +54,9 @@ static void *reporter_thread_func(void *arg)
         /* Log the stats */
         SVC_LOG_INFO("memory_stats: allocs=%zu deallocs=%zu current_bytes=%zu "
                      "peak_bytes=%zu active_blocks=%zu oom_events=%zu pressure=%zu",
-                     snapshot.total_allocations,
-                     snapshot.total_deallocations,
-                     snapshot.current_bytes_allocated,
-                     snapshot.peak_bytes_allocated,
-                     snapshot.active_blocks,
-                     snapshot.oom_events,
-                     snapshot.pressure_level);
+                     snapshot.total_allocations, snapshot.total_deallocations,
+                     snapshot.current_bytes_allocated, snapshot.peak_bytes_allocated,
+                     snapshot.active_blocks, snapshot.oom_events, snapshot.pressure_level);
     }
 
     SVC_LOG_INFO("memory_stats_reporter: background thread stopped");
@@ -71,11 +64,10 @@ static void *reporter_thread_func(void *arg)
 }
 
 /* ==================== Public API ==================== */
-
 int airy_mem_stats_reporter_init(void)
 {
     if (g_initialized) {
-        return 0;  /* already initialized */
+        return 0; /* already initialized */
     }
 
     /* Zero out stats */
@@ -103,7 +95,7 @@ int airy_mem_stats_reporter_init(void)
     return 0;
 }
 
-void airy_mem_stats_reporter_shutdown(void)
+void airy_msrep_shutdown(void)
 {
     if (!g_initialized) {
         return;
@@ -177,7 +169,7 @@ void airy_mem_stats_record_oom(void)
 void airy_mem_stats_set_interval(unsigned int seconds)
 {
     if (seconds == 0) {
-        seconds = 60;  /* enforce minimum */
+        seconds = 60; /* enforce minimum */
     }
 
     airy_mtx_lock(&g_stats_mutex);

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file input_validator.c
- * @brief 输入验证工具库实?
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 输入验证工具库实现
  */
 
 #include "input_validator.h"
@@ -27,30 +27,25 @@
 #include <unistd.h>
 #endif
 
-/* ==================== 内部常量 ==================== */
-
-/** @brief 危险Shell命令 */
 static const char *DANGEROUS_COMMANDS[] = {"rm -rf", "dd",      "mkfs",     "fdisk",  "format",
                                            "del /",  "erase",   "shutdown", "reboot", "chmod 777",
                                            "chown",  "> /dev/", "mkfs",     NULL};
 
-/** @brief SQL危险关键?*/
-static const char *SQL_DANGEROUS_KEYWORDS[] = {
-    "DROP", "TRUNCATE",     "ALTER",  "DELETE FROM", "--",    "/*",       "*/",
-    "; --", "UNION SELECT", "OR 1=1", "OR '1'='1",   "EXEC(", "EXECUTE(", NULL};
+static const char *SQL_DANGEROUS_KEYWORDS[] = {"DROP",        "TRUNCATE",  "ALTER",
+                                               "DELETE FROM", "--",        "/*",
+                                               "*/",          "; --",      "UNION SELECT",
+                                               "OR 1=1",      "OR '1'='1", "EXEC(",
+                                               "EXECUTE(",    NULL};
 
-/** @brief 危险URL协议 */
 static const char *DANGEROUS_URL_SCHEMES[] = {"javascript", "data", "vbscript",   "file",
                                               "about",      "blob", "filesystem", NULL};
 
-/** @brief 内网IP范围 */
-static const char *PRIVATE_IP_PREFIXES[] = {
-    "10.",     "172.16.", "172.17.", "172.18.",  "172.19.", "172.20.", "172.21.",
-    "172.22.", "172.23.", "172.24.", "172.25.",  "172.26.", "172.27.", "172.28.",
-    "172.29.", "172.30.", "172.31.", "192.168.", "127.",    "0.",      "169.254.",
-    "::1",     "fc",      "fd",      "fe",       "ff",      NULL};
-
-/* ==================== 辅助函数 ==================== */
+static const char *PRIVATE_IP_PREFIXES[] = {"10.",      "172.16.", "172.17.",  "172.18.", "172.19.",
+                                            "172.20.",  "172.21.", "172.22.",  "172.23.", "172.24.",
+                                            "172.25.",  "172.26.", "172.27.",  "172.28.", "172.29.",
+                                            "172.30.",  "172.31.", "192.168.", "127.",    "0.",
+                                            "169.254.", "::1",     "fc",       "fd",      "fe",
+                                            "ff",       NULL};
 
 /**
  * @brief 跨平台不区分大小写字符串比较（前n个字符）
@@ -62,7 +57,7 @@ static const char *PRIVATE_IP_PREFIXES[] = {
 #endif
 
 /**
- * @brief 检查字符串是否以指定前缀开头（不区分大小写?
+ * @brief 检查字符串是否以指定前缀开头（不区分大小写）
  */
 static int starts_with_case(const char *str, const char *prefix)
 {
@@ -96,13 +91,11 @@ static int contains_case(const char *str, const char *substr)
     return 0;
 }
 
-/* ==================== 字符串验证实?==================== */
-
 /**
- * @brief 验证字符串长?
+ * @brief 验证字符串长度
  */
 void airy_validate_string_length(const char *str, size_t min_len, size_t max_len,
-                                    airy_validation_result_t *result)
+                                 airy_validation_result_t *result)
 {
 
     if (!result)
@@ -143,7 +136,7 @@ void airy_validate_string_length(const char *str, size_t min_len, size_t max_len
  * @brief 验证字符串是否只包含安全字符
  */
 void airy_validate_string_charset(const char *str, const char *allowed_chars,
-                                     airy_validation_result_t *result)
+                                  airy_validation_result_t *result)
 {
 
     if (!result)
@@ -181,10 +174,9 @@ void airy_validate_string_charset(const char *str, const char *allowed_chars,
 }
 
 /**
- * @brief 验证标识?
+ * @brief 验证标识符
  */
-void airy_validate_identifier(const char *str, size_t max_len,
-                                 airy_validation_result_t *result)
+void airy_validate_identifier(const char *str, size_t max_len, airy_validation_result_t *result)
 {
 
     if (!result)
@@ -238,10 +230,9 @@ void airy_validate_identifier(const char *str, size_t max_len,
 }
 
 /**
- * @brief 验证JSON字符?
+ * @brief 验证JSON字符串
  */
-void airy_validate_json_string(const char *str, size_t max_len,
-                                  airy_validation_result_t *result)
+void airy_validate_json_string(const char *str, size_t max_len, airy_validation_result_t *result)
 {
 
     if (!result)
@@ -327,13 +318,11 @@ void airy_validate_json_string(const char *str, size_t max_len,
     result->is_valid = 1;
 }
 
-/* ==================== 路径验证实现 ==================== */
-
 /**
- * @brief 验证文件路径安全?
+ * @brief 验证文件路径安全性
  */
 void airy_validate_file_path(const char *path, const char *allowed_root,
-                                airy_validation_result_t *result)
+                             airy_validation_result_t *result)
 {
 
     if (!result)
@@ -395,7 +384,7 @@ void airy_validate_file_path(const char *path, const char *allowed_root,
 }
 
 /**
- * @brief 规范化路?
+ * @brief 规范化路径
  */
 airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *out_len)
 {
@@ -429,13 +418,11 @@ airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *
 #endif
 }
 
-/* ==================== 命令验证实现 ==================== */
-
 /**
- * @brief 验证Shell命令安全?
+ * @brief 验证Shell命令安全性
  */
 void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
-                                    airy_validation_result_t *result)
+                                 airy_validation_result_t *result)
 {
 
     if (!result)
@@ -529,10 +516,8 @@ airy_err_t airy_sanitize_shell_param(const char *param, char **out_sanitized)
     return AIRY_SUCCESS;
 }
 
-/* ==================== SQL验证实现 ==================== */
-
 /**
- * @brief 验证SQL查询安全?
+ * @brief 验证SQL查询安全性
  */
 void airy_validate_sql_query(const char *sql, airy_validation_result_t *result)
 {
@@ -578,7 +563,7 @@ void airy_validate_sql_query(const char *sql, airy_validation_result_t *result)
 }
 
 /**
- * @brief 净化SQL标识?
+ * @brief 净化SQL标识符
  */
 airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanitized)
 {
@@ -607,13 +592,11 @@ airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanit
     return AIRY_SUCCESS;
 }
 
-/* ==================== URL验证实现 ==================== */
-
 /**
- * @brief 验证URL安全?
+ * @brief 验证URL安全性
  */
 void airy_validate_url(const char *url, const char **allowed_schemes,
-                          airy_validation_result_t *result)
+                       airy_validation_result_t *result)
 {
 
     if (!result)
@@ -678,8 +661,8 @@ void airy_validate_url(const char *url, const char **allowed_schemes,
 /**
  * @brief 解析URL组件
  */
-airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
-                                  uint16_t *out_port, char **out_path)
+airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host, uint16_t *out_port,
+                          char **out_path)
 {
 
     if (!url)
@@ -746,13 +729,11 @@ airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host,
     return AIRY_SUCCESS;
 }
 
-/* ==================== 数值验证实?==================== */
-
 /**
  * @brief 验证整数范围
  */
 void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
-                                airy_validation_result_t *result)
+                             airy_validation_result_t *result)
 {
 
     if (!result)
@@ -781,10 +762,10 @@ void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
 }
 
 /**
- * @brief 验证浮点数范?
+ * @brief 验证浮点数范围
  */
 void airy_validate_float_range(double value, double min_val, double max_val,
-                                  airy_validation_result_t *result)
+                               airy_validation_result_t *result)
 {
 
     if (!result)
@@ -811,8 +792,6 @@ void airy_validate_float_range(double value, double min_val, double max_val,
 
     result->is_valid = 1;
 }
-
-/* ==================== 缓冲区验证实?==================== */
 
 /**
  * @brief 安全内存复制
@@ -830,7 +809,7 @@ airy_err_t airy_safe_memcpy(void *dest, size_t dest_size, const void *src, size_
 }
 
 /**
- * @brief 安全字符串复?
+ * @brief 安全字符串复制
  */
 airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src)
 {
@@ -849,7 +828,7 @@ airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src)
 }
 
 /**
- * @brief 安全字符串拼?
+ * @brief 安全字符串拼接
  */
 airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src)
 {

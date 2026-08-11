@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 #ifndef AIRY_RT_COMPAT_DIRENT_H
 #define AIRY_RT_COMPAT_DIRENT_H
 
@@ -55,11 +56,11 @@ static inline struct dirent *readdir(DIR *dir)
     return &dir->ent;
 }
 
-/* BAN-073 exempt: POSIX closedir 兼容层，须返回 -1 以匹配 POSIX 语义 */
+
 static inline int closedir(DIR *dir)
 {
     if (!dir)
-        return -1;  /* BAN-073 exempt: POSIX API contract */
+        return -1; /* BAN-073 exempt: POSIX API contract */
     FindClose(dir->hFind);
     AIRY_FREE(dir);
     return 0;

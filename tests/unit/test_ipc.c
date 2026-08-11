@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file test_ipc.c
  * @brief 进程间通信模块单元测试
@@ -147,7 +147,7 @@ static void test_channel_destroy_null(void **state)
 {
     (void)state;
 
-    ipc_channel_destroy(NULL); /* 不应崩溃 */
+    ipc_channel_destroy(NULL);
 }
 
 /* ============================================================================
@@ -182,7 +182,6 @@ static void test_channel_close_already_closed(void **state)
     ipc_config_t config = ipc_create_default_config(IPC_TYPE_PIPE);
     ipc_channel_t *channel = ipc_channel_create(&config);
 
-    /* 关闭未打开的通道应返回成功 */
     airy_err_t err = ipc_channel_close(channel);
     assert_int_equal(err, AIRY_SUCCESS);
 
@@ -281,7 +280,6 @@ static void test_channel_set_event_callback(void **state)
     airy_err_t err = ipc_channel_set_event_callback(channel, test_event_cb, &callback_called);
     assert_int_equal(err, AIRY_SUCCESS);
 
-    /* 打开通道会触发 CONNECTED 事件 */
     ipc_channel_open(channel);
     assert_true(callback_called > 0);
 
@@ -305,7 +303,6 @@ static void test_channel_stats(void **state)
     assert_int_equal(stats.messages_sent, 0);
     assert_int_equal(stats.bytes_sent, 0);
 
-    /* 重置统计 */
     err = ipc_channel_reset_stats(channel);
     assert_int_equal(err, AIRY_SUCCESS);
 
@@ -445,11 +442,9 @@ static void test_send_error_cases(void **state)
 
     ipc_message_t msg = {0};
 
-    /* NULL 通道 */
     assert_int_equal(ipc_send(NULL, &msg), AIRY_EINVAL);
     assert_int_equal(ipc_send_data(NULL, "data", 4, NULL), AIRY_EINVAL);
 
-    /* 未打开的通道 */
     ipc_config_t config = ipc_create_default_config(IPC_TYPE_PIPE);
     ipc_channel_t *closed_channel = ipc_channel_create(&config);
 
@@ -494,7 +489,7 @@ static void test_try_receive_message(void **state)
 
     ipc_message_t msg;
     airy_err_t err = ipc_try_receive(channel, &msg);
-    /* 超时或忙都是可接受的 */
+
     assert_true(err == AIRY_SUCCESS || err == AIRY_EBUSY);
 
     ipc_channel_close(channel);
@@ -516,7 +511,7 @@ static void test_set_message_callback(void **state)
         (void)ch;
         (void)msg;
         (void)user_data;
-        return 0; /* 返回 0 表示成功处理 */
+        return 0;
     }
 
     airy_err_t err = ipc_set_message_callback(channel, test_msg_cb, NULL);
@@ -588,7 +583,7 @@ static void test_server_accept(void **state)
     ipc_server_start(server);
 
     ipc_channel_t *client = ipc_server_accept(server, 1000);
-    /* 可能返回 NULL（超时）或有效通道 */
+
     if (client) {
         ipc_channel_destroy(client);
     }
@@ -646,7 +641,6 @@ static void test_client_connect_disconnect(void **state)
     if (err == AIRY_SUCCESS) {
         ipc_client_disconnect(client);
     } else {
-        /* 连接失败也是可接受的（没有真实的服务器） */
     }
 
     ipc_client_destroy(client);
@@ -663,7 +657,7 @@ static void test_client_get_channel(void **state)
     ipc_client_t *client = ipc_client_create(&config);
 
     ipc_channel_t *ch = ipc_client_get_channel(client);
-    /* 未连接时应为 NULL */
+
     assert_null(ch);
 
     ipc_client_destroy(client);
@@ -826,7 +820,7 @@ static void test_message_free_null(void **state)
 {
     (void)state;
 
-    ipc_message_free(NULL); /* 不应崩溃 */
+    ipc_message_free(NULL);
 }
 
 /**
@@ -873,7 +867,7 @@ static void test_message_checksum(void **state)
     ipc_message_t *msg = ipc_message_create(IPC_MSG_DATA, payload, strlen(payload));
 
     uint32_t checksum = ipc_message_checksum(msg);
-    assert_true(checksum != 0); /* 校验和不应为 0 */
+    assert_true(checksum != 0);
 
     ipc_message_free(msg);
 }
@@ -916,7 +910,6 @@ static void test_message_serialize_deserialize(void **state)
     ipc_message_t *original =
         ipc_message_create(IPC_MSG_DATA, original_payload, strlen(original_payload));
 
-    /* 序列化 */
     size_t buffer_size = sizeof(ipc_message_header_t) + original->payload_size + 1024;
     void *buffer = malloc(buffer_size);
     size_t written = 0;
@@ -925,7 +918,6 @@ static void test_message_serialize_deserialize(void **state)
     assert_int_equal(err, AIRY_SUCCESS);
     assert_true(written > 0);
 
-    /* 反序列化 */
     ipc_message_t deserialized;
     err = ipc_message_deserialize(buffer, written, &deserialized);
     assert_int_equal(err, AIRY_SUCCESS);
@@ -933,7 +925,6 @@ static void test_message_serialize_deserialize(void **state)
     assert_int_equal(deserialized.header.type, original->header.type);
     assert_int_equal(deserialized.payload_size, original->payload_size);
 
-    /* 清理 */
     free(deserialized.payload);
     free(buffer);
     ipc_message_free(original);
@@ -999,10 +990,8 @@ static void test_is_valid(void **state)
     ipc_config_t config = ipc_create_default_config(IPC_TYPE_PIPE);
     ipc_channel_t *channel = ipc_channel_create(&config);
 
-    /* 关闭的通道无效 */
     assert_false(ipc_is_valid(channel));
 
-    /* 打开后有效 */
     ipc_channel_open(channel);
     assert_true(ipc_is_valid(channel));
 
@@ -1043,33 +1032,28 @@ static void test_flush(void **state)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        /* 初始化与清理测试 */
+
         cmocka_unit_test(test_ipc_init_success),
         cmocka_unit_test(test_ipc_init_multiple),
 
-        /* 默认配置测试 */
         cmocka_unit_test(test_create_default_config_pipe),
         cmocka_unit_test(test_create_default_config_socket),
         cmocka_unit_test(test_create_default_config_shm),
 
-        /* 通道创建与销毁测试 */
         cmocka_unit_test(test_channel_create_success),
         cmocka_unit_test(test_channel_create_null_config),
         cmocka_unit_test(test_channel_destroy_null),
 
-        /* 通道打开与关闭测试 */
         cmocka_unit_test(test_channel_open_success),
         cmocka_unit_test(test_channel_close_already_closed),
         cmocka_unit_test(test_channel_operations_null),
 
-        /* 通道属性测试 */
         cmocka_unit_test(test_channel_get_name),
         cmocka_unit_test(test_channel_get_type),
         cmocka_unit_test(test_channel_set_timeout),
         cmocka_unit_test(test_channel_set_event_callback),
         cmocka_unit_test(test_channel_stats),
 
-        /* 消息发送测试 */
         cmocka_unit_test(test_send_message_success),
         cmocka_unit_test(test_send_data_success),
         cmocka_unit_test(test_send_request_response),
@@ -1077,33 +1061,27 @@ int main(void)
         cmocka_unit_test(test_notify_message),
         cmocka_unit_test(test_send_error_cases),
 
-        /* 消息接收测试 */
         cmocka_unit_test(test_receive_message),
         cmocka_unit_test(test_try_receive_message),
         cmocka_unit_test(test_set_message_callback),
 
-        /* 服务端测试 */
         cmocka_unit_test(test_server_create),
         cmocka_unit_test(test_server_create_null_config),
         cmocka_unit_test(test_server_start_stop),
         cmocka_unit_test(test_server_accept),
         cmocka_unit_test(test_server_connection_count),
 
-        /* 客户端测试 */
         cmocka_unit_test(test_client_create),
         cmocka_unit_test(test_client_connect_disconnect),
         cmocka_unit_test(test_client_get_channel),
 
-        /* 共享内存测试 */
         cmocka_unit_test(test_shm_create),
         cmocka_unit_test(test_shm_get_size),
 
-        /* 消息队列测试 */
         cmocka_unit_test(test_mq_create),
         cmocka_unit_test(test_mq_count),
         cmocka_unit_test(test_mq_clear),
 
-        /* 消息辅助函数测试 */
         cmocka_unit_test(test_message_create),
         cmocka_unit_test(test_message_create_empty),
         cmocka_unit_test(test_message_free_null),
@@ -1115,7 +1093,6 @@ int main(void)
         cmocka_unit_test(test_message_serialize_deserialize),
         cmocka_unit_test(test_serialize_buffer_too_small),
 
-        /* 工具函数测试 */
         cmocka_unit_test(test_get_error_message),
         cmocka_unit_test(test_get_error_message_null),
         cmocka_unit_test(test_is_valid),

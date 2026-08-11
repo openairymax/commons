@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file strategy_common.h
  * @brief 策略模式共享工具 - 消除策略相关代码重复
@@ -10,7 +11,6 @@
  * - 规划策略通用结构
  * - 跨模块共享的策略工具函数
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_STRATEGY_COMMON_H
@@ -29,29 +29,29 @@
  * @brief 加权评分配置
  */
 typedef struct weighted_config {
-    float cost_weight;  /**< 成本权重 */
-    float perf_weight;  /**< 性能权重 */
-    float trust_weight; /**< 信任度权重 */
+    float cost_weight;
+    float perf_weight;
+    float trust_weight;
 } weighted_config_t;
 
 /**
  * @brief 代理信息结构（策略通用）
  */
 typedef struct strategy_agent_info {
-    float cost_estimate; /**< 成本估计 */
-    float success_rate;  /**< 成功率 */
-    float trust_score;   /**< 信任度评分 */
-    const char *name;    /**< 代理名称 */
-    void *user_data;     /**< 用户数据 */
+    float cost_estimate;
+    float success_rate;
+    float trust_score;
+    const char *name;
+    void *user_data;
 } strategy_agent_info_t;
 
 /**
  * @brief 策略结果结构
  */
 typedef struct strategy_result {
-    int selected_index; /**< 选中的索引 */
-    float best_score;   /**< 最佳评分 */
-    bool success;       /**< 是否成功 */
+    int selected_index;
+    float best_score;
+    bool success;
 } strategy_result_t;
 
 /**

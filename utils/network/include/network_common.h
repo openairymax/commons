@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file network_common.h
  * @brief 网络通信模块 - 跨平台网络抽象层
@@ -41,24 +41,23 @@ extern "C" {
  * 常量定义
  * ============================================================================ */
 
-/** @brief 默认连接超时（毫秒） */
+
 #define NETWORK_DEFAULT_TIMEOUT_MS 30000
 
-/** @brief 默认最大重试次数 */
+
 #define NETWORK_DEFAULT_MAX_RETRIES 3
 
-/** @brief 默认重试间隔（毫秒） */
+
 #define NETWORK_DEFAULT_RETRY_INTERVAL 1000
 
-/** @brief 默认缓冲区大小 */
+
 #define NETWORK_DEFAULT_BUFFER_SIZE 8192
 
-/** @brief 最大连接池大小 */
+
 #define NETWORK_MAX_POOL_SIZE 32
 
-/** @brief 网络魔数 */
-#define NETWORK_MAGIC 0x4E455457 /* "NETW" */
 
+#define NETWORK_MAGIC 0x4E455457 /* "NETW" */
 /* ============================================================================
  * 类型定义
  * ============================================================================ */
@@ -67,75 +66,75 @@ extern "C" {
  * @brief 网络连接状态枚举
  */
 typedef enum {
-    NETWORK_STATUS_DISCONNECTED = 0,  /**< 已断开 */
-    NETWORK_STATUS_CONNECTING = 1,    /**< 连接中 */
-    NETWORK_STATUS_CONNECTED = 2,     /**< 已连接 */
-    NETWORK_STATUS_DISCONNECTING = 3, /**< 断开中 */
-    NETWORK_STATUS_ERROR = 4          /**< 错误状态 */
+    NETWORK_STATUS_DISCONNECTED = 0,
+    NETWORK_STATUS_CONNECTING = 1,
+    NETWORK_STATUS_CONNECTED = 2,
+    NETWORK_STATUS_DISCONNECTING = 3,
+    NETWORK_STATUS_ERROR = 4
 } network_status_t;
 
 /**
  * @brief Socket 类型枚举
  */
 typedef enum {
-    NETWORK_SOCK_STREAM = 1, /**< TCP 流式 Socket */
-    NETWORK_SOCK_DGRAM = 2,  /**< UDP 数据报 Socket */
-    NETWORK_SOCK_RAW = 3     /**< 原始 Socket */
+    NETWORK_SOCK_STREAM = 1,
+    NETWORK_SOCK_DGRAM = 2,
+    NETWORK_SOCK_RAW = 3
 } network_sock_type_t;
 
 /**
  * @brief 地址族枚举
  */
 typedef enum {
-    NETWORK_AF_UNSPEC = 0, /**< 未指定 */
-    NETWORK_AF_INET = 2,   /**< IPv4 */
-    NETWORK_AF_INET6 = 10  /**< IPv6 */
+    NETWORK_AF_UNSPEC = 0,
+    NETWORK_AF_INET = 2, /**< IPv4 */
+    NETWORK_AF_INET6 = 10 /**< IPv6 */
 } network_af_t;
 
 /**
  * @brief SSL/TLS 验证模式
  */
 typedef enum {
-    NETWORK_SSL_VERIFY_NONE = 0,                 /**< 不验证 */
-    NETWORK_SSL_VERIFY_PEER = 1,                 /**< 验证对端证书 */
-    NETWORK_SSL_VERIFY_FAIL_IF_NO_PEER_CERT = 2, /**< 无证书则失败 */
-    NETWORK_SSL_VERIFY_CLIENT_ONCE = 4           /**< 客户端仅验证一次 */
+    NETWORK_SSL_VERIFY_NONE = 0,
+    NETWORK_SSL_VERIFY_PEER = 1,
+    NETWORK_SSL_VERIFY_FAIL_IF_NO_PEER_CERT = 2,
+    NETWORK_SSL_VERIFY_CLIENT_ONCE = 4
 } network_ssl_verify_t;
 
 /**
  * @brief 网络配置结构体
  */
 typedef struct {
-    const char *host;                /**< 主机名或 IP 地址 */
-    int port;                        /**< 端口号 */
-    int timeout_ms;                  /**< 连接超时（毫秒） */
-    int read_timeout_ms;             /**< 读取超时（毫秒） */
-    int write_timeout_ms;            /**< 写入超时（毫秒） */
-    int max_retries;                 /**< 最大重试次数 */
-    int retry_interval_ms;           /**< 重试间隔（毫秒） */
-    network_sock_type_t sock_type;   /**< Socket 类型 */
-    network_af_t af;                 /**< 地址族 */
-    bool keepalive;                  /**< 是否启用保活 */
-    bool nonblocking;                /**< 是否非阻塞模式 */
-    bool ssl_enable;                 /**< 是否启用 SSL/TLS */
-    network_ssl_verify_t ssl_verify; /**< SSL 验证模式 */
-    const char *ssl_cert_path;       /**< SSL 证书路径 */
-    const char *ssl_key_path;        /**< SSL 私钥路径 */
-    const char *ssl_ca_path;         /**< CA 证书路径 */
+    const char *host;
+    int port;
+    int timeout_ms;
+    int read_timeout_ms;
+    int write_timeout_ms;
+    int max_retries;
+    int retry_interval_ms;
+    network_sock_type_t sock_type;
+    network_af_t af;
+    bool keepalive;
+    bool nonblocking;
+    bool ssl_enable;
+    network_ssl_verify_t ssl_verify;
+    const char *ssl_cert_path;
+    const char *ssl_key_path;
+    const char *ssl_ca_path;
 } network_config_t;
 
 /**
  * @brief 网络统计信息结构体
  */
 typedef struct {
-    uint64_t bytes_sent;       /**< 已发送字节数 */
-    uint64_t bytes_received;   /**< 已接收字节数 */
-    uint64_t packets_sent;     /**< 已发送包数 */
-    uint64_t packets_received; /**< 已接收包数 */
-    uint64_t connect_count;    /**< 连接次数 */
-    uint64_t error_count;      /**< 错误次数 */
-    uint64_t retry_count;      /**< 重试次数 */
-    uint64_t avg_latency_us;   /**< 平均延迟（微秒） */
+    uint64_t bytes_sent;
+    uint64_t bytes_received;
+    uint64_t packets_sent;
+    uint64_t packets_received;
+    uint64_t connect_count;
+    uint64_t error_count;
+    uint64_t retry_count;
+    uint64_t avg_latency_us;
 } network_stats_t;
 
 /**
@@ -152,43 +151,43 @@ typedef struct network_pool network_pool_t;
  * @brief HTTP 请求结构体
  */
 typedef struct {
-    const char *method;       /**< HTTP 方法 (GET/POST/PUT/DELETE等) */
-    const char *path;         /**< 请求路径 */
+    const char *method;
+    const char *path;
     const char *content_type; /**< Content-Type */
-    const void *body;         /**< 请求体 */
-    size_t body_len;          /**< 请求体长度 */
-    const char **headers;     /**< 请求头数组 (key:value 格式) */
-    size_t header_count;      /**< 请求头数量 */
-    int timeout_ms;           /**< 超时时间 */
-    bool follow_redirects;    /**< 是否跟随重定向 */
-    int max_redirects;        /**< 最大重定向次数 */
+    const void *body;
+    size_t body_len;
+    const char **headers;
+    size_t header_count;
+    int timeout_ms;
+    bool follow_redirects;
+    int max_redirects;
 } network_http_request_t;
 
 /**
  * @brief HTTP 响应结构体
  */
 typedef struct {
-    int status_code;       /**< HTTP 状态码 */
-    char *status_text;     /**< 状态文本 */
-    char **headers;        /**< 响应头数组 */
-    size_t header_count;   /**< 响应头数量 */
-    void *body;            /**< 响应体 */
-    size_t body_len;       /**< 响应体长度 */
-    airy_err_t error; /**< 错误码 */
-    char *error_message;   /**< 错误消息 */
-    uint64_t latency_us;   /**< 响应延迟（微秒） */
+    int status_code;
+    char *status_text;
+    char **headers;
+    size_t header_count;
+    void *body;
+    size_t body_len;
+    airy_err_t error;
+    char *error_message;
+    uint64_t latency_us;
 } network_http_response_t;
 
 /**
  * @brief 网络事件回调类型
  */
 typedef enum {
-    NETWORK_EVENT_CONNECTED = 1,     /**< 连接成功 */
-    NETWORK_EVENT_DISCONNECTED = 2,  /**< 连接断开 */
-    NETWORK_EVENT_DATA_RECEIVED = 3, /**< 数据接收 */
-    NETWORK_EVENT_DATA_SENT = 4,     /**< 数据发送 */
-    NETWORK_EVENT_ERROR = 5,         /**< 错误发生 */
-    NETWORK_EVENT_TIMEOUT = 6        /**< 超时 */
+    NETWORK_EVENT_CONNECTED = 1,
+    NETWORK_EVENT_DISCONNECTED = 2,
+    NETWORK_EVENT_DATA_RECEIVED = 3,
+    NETWORK_EVENT_DATA_SENT = 4,
+    NETWORK_EVENT_ERROR = 5,
+    NETWORK_EVENT_TIMEOUT = 6
 } network_event_t;
 
 /**
@@ -249,7 +248,7 @@ airy_err_t network_disconnect(network_connection_t *connection);
  * @return 错误码
  */
 airy_err_t network_send(network_connection_t *connection, const void *data, size_t length,
-                             size_t *sent);
+                        size_t *sent);
 
 /**
  * @brief 接收数据
@@ -260,7 +259,7 @@ airy_err_t network_send(network_connection_t *connection, const void *data, size
  * @return 错误码
  */
 airy_err_t network_receive(network_connection_t *connection, void *buffer, size_t length,
-                                size_t *received);
+                           size_t *received);
 
 /**
  * @brief 发送全部数据（循环发送直到完成）
@@ -278,8 +277,7 @@ airy_err_t network_send_all(network_connection_t *connection, const void *data, 
  * @param length 期望接收的长度
  * @return 错误码
  */
-airy_err_t network_receive_exact(network_connection_t *connection, void *buffer,
-                                      size_t length);
+airy_err_t network_receive_exact(network_connection_t *connection, void *buffer, size_t length);
 
 /**
  * @brief 获取连接状态
@@ -304,7 +302,7 @@ airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
  * @return 错误码
  */
 airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
-                                       int write_timeout_ms);
+                                  int write_timeout_ms);
 
 /**
  * @brief 获取统计信息
@@ -329,7 +327,7 @@ airy_err_t network_reset_stats(network_connection_t *connection);
  * @return 错误码
  */
 airy_err_t network_set_event_callback(network_connection_t *connection,
-                                           network_event_callback_t callback, void *user_data);
+                                      network_event_callback_t callback, void *user_data);
 
 /**
  * @brief 获取错误消息
@@ -350,8 +348,8 @@ const char *network_get_error_message(const network_connection_t *connection);
  * @return 错误码
  */
 airy_err_t network_http_request(network_connection_t *connection,
-                                     const network_http_request_t *request,
-                                     network_http_response_t *response);
+                                const network_http_request_t *request,
+                                network_http_response_t *response);
 
 /**
  * @brief 执行 HTTP GET 请求
@@ -361,7 +359,7 @@ airy_err_t network_http_request(network_connection_t *connection,
  * @return 错误码
  */
 airy_err_t network_http_get(network_connection_t *connection, const char *path,
-                                 network_http_response_t *response);
+                            network_http_response_t *response);
 
 /**
  * @brief 执行 HTTP POST 请求
@@ -374,8 +372,8 @@ airy_err_t network_http_get(network_connection_t *connection, const char *path,
  * @return 错误码
  */
 airy_err_t network_http_post(network_connection_t *connection, const char *path,
-                                  const char *content_type, const void *body, size_t body_len,
-                                  network_http_response_t *response);
+                             const char *content_type, const void *body, size_t body_len,
+                             network_http_response_t *response);
 
 /**
  * @brief 释放 HTTP 响应资源
@@ -446,9 +444,9 @@ size_t network_pool_health_check(network_pool_t *pool);
  * @brief DNS 解析结果结构体
  */
 typedef struct {
-    char **addresses; /**< IP 地址数组 */
-    size_t count;     /**< 地址数量 */
-    int *ports;       /**< 端口数组 */
+    char **addresses;
+    size_t count;
+    int *ports;
 } network_dns_result_t;
 
 /**
@@ -458,8 +456,7 @@ typedef struct {
  * @param result [out] 解析结果
  * @return 错误码
  */
-airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
-                                    network_dns_result_t *result);
+airy_err_t network_dns_resolve(const char *hostname, network_af_t af, network_dns_result_t *result);
 
 /**
  * @brief 释放 DNS 解析结果
@@ -497,7 +494,7 @@ airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len
  * @return 错误码
  */
 airy_err_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
-                                       size_t buffer_len);
+                                  size_t buffer_len);
 
 /**
  * @brief 初始化网络子系统

@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file error.h
  * @brief 统一错误处理框架
@@ -33,11 +33,6 @@
 extern "C" {
 #endif
 
-/* ==================== 错误码类型 ==================== */
-
-/* airy_err_t 已在 airy_types.h 中定义（BAN-196 权威源），此处不再重复定义 */
-
-/* ==================== 成功/失败基础 ==================== */
 
 /*
  * AIRY_OK 兼容宏（v4.0 修复 v3.0 副作用）：
@@ -53,7 +48,7 @@ extern "C" {
 #define AIRY_ERR_UNKNOWN (-99)
 #endif
 
-/* ==================== 向后兼容别名 ==================== */
+
 /*
  * 权威源说明（v3.0 SSoT 统一收敛，方案 A：POSIX errno 负值）：
  *
@@ -86,7 +81,7 @@ extern "C" {
 #ifndef AIRY_ECANCELED
 #define AIRY_ECANCELED AIRY_ERR_CANCELED
 #endif
-/* AIRY_EINTR 已在 airy_types.h 中硬定义为 (-4)（POSIX EINTR=4），本别名已成死代码，保留仅为向后兼容 */
+
 #ifndef AIRY_EINTR
 #define AIRY_EINTR AIRY_ERR_INTERRUPTED
 #endif
@@ -102,15 +97,15 @@ extern "C" {
 #ifndef AIRY_ESANITIZE
 #define AIRY_ESANITIZE AIRY_ERR_ESANITIZE
 #endif
-/* AIRY_EPERM 不再重定义：airy_types.h 的 AIRY_EPERM=(-1)（POSIX EPERM）为权威值 */
+
 #ifndef AIRY_ENOTDIR
-#define AIRY_ENOTDIR (-20)          /* POSIX ENOTDIR=20 */
+#define AIRY_ENOTDIR (-20) /* POSIX ENOTDIR=20 */
 #endif
 #ifndef AIRY_ENAMETOOLONG
-#define AIRY_ENAMETOOLONG (-36)     /* POSIX ENAMETOOLONG=36 */
+#define AIRY_ENAMETOOLONG (-36) /* POSIX ENAMETOOLONG=36 */
 #endif
 
-/* ==================== 错误码分段 ==================== */
+
 /*
  * 错误码分段规划：
  *   -1 到 -99:      通用基础错误
@@ -136,22 +131,22 @@ extern "C" {
  * -36~-40（5 个）和 -55~-60（6 个）两个子区间，彻底消除碰撞。
  * 未冲突的保留原值。 */
 #ifndef AIRY_ERR_INVALID_PARAM
-#define AIRY_ERR_INVALID_PARAM (-36)   /* 原 -2→-40→-36，迁移避免与 AIRY_ENOENT(-2) 及 IPC 码空间冲突 */
+#define AIRY_ERR_INVALID_PARAM (-36)
 #endif
 #ifndef AIRY_ERR_NULL_POINTER
 #define AIRY_ERR_NULL_POINTER (-3)
 #endif
 #ifndef AIRY_ERR_OUT_OF_MEMORY
-#define AIRY_ERR_OUT_OF_MEMORY (-59)   /* 原 -4→-49→-59，迁移避免与 AIRY_EINTR(-4) 及 IPC 码空间冲突 */
+#define AIRY_ERR_OUT_OF_MEMORY (-59)
 #endif
 #ifndef AIRY_ERR_BUFFER_TOO_SMALL
-#define AIRY_ERR_BUFFER_TOO_SMALL (-37) /* 原 -5→-41→-37，迁移避免与 AIRY_EIO(-5) 及 IPC 码空间冲突 */
+#define AIRY_ERR_BUFFER_TOO_SMALL (-37)
 #endif
 #ifndef AIRY_ERR_NOT_FOUND
 #define AIRY_ERR_NOT_FOUND (-6)
 #endif
 #ifndef AIRY_ERR_ALREADY_EXISTS
-#define AIRY_ERR_ALREADY_EXISTS (-38)  /* 原 -7→-42→-38，迁移避免与 AIRY_E2BIG(-7) 及 IPC 码空间冲突 */
+#define AIRY_ERR_ALREADY_EXISTS (-38)
 #endif
 #ifndef AIRY_ERR_TIMEOUT
 #define AIRY_ERR_TIMEOUT (-8)
@@ -160,28 +155,28 @@ extern "C" {
 #define AIRY_ERR_NOT_SUPPORTED (-9)
 #endif
 #ifndef AIRY_ERR_PERMISSION_DENIED
-#define AIRY_ERR_PERMISSION_DENIED (-39) /* 原 -10→-43→-39，迁移避免与 AIRY_ECANCELLED(-10) 及 IPC 码空间冲突 */
+#define AIRY_ERR_PERMISSION_DENIED (-39)
 #endif
 #ifndef AIRY_ERR_IO
-#define AIRY_ERR_IO (-40)            /* 原 -11→-44→-40，迁移避免与 AIRY_EAGAIN(-11) 及 IPC 码空间冲突 */
+#define AIRY_ERR_IO (-40)
 #endif
 #ifndef AIRY_ERR_PARSE_ERROR
-#define AIRY_ERR_PARSE_ERROR (-55)   /* 原 -12→-45→-55，迁移避免与 AIRY_ENOMEM(-12) 及 IPC 码空间冲突 */
+#define AIRY_ERR_PARSE_ERROR (-55)
 #endif
 #ifndef AIRY_ERR_STATE_ERROR
-#define AIRY_ERR_STATE_ERROR (-56)   /* 原 -13→-46→-56，迁移避免与 AIRY_EACCES(-13) 及 IPC 码空间冲突 */
+#define AIRY_ERR_STATE_ERROR (-56)
 #endif
 #ifndef AIRY_ERR_OVERFLOW
-#define AIRY_ERR_OVERFLOW (-60)        /* 原 -14→-50→-60，迁移避免与 AIRY_EFAULT(-14) 及 IPC 码空间冲突 */
+#define AIRY_ERR_OVERFLOW (-60)
 #endif
 #ifndef AIRY_ERR_UNDERFLOW
 #define AIRY_ERR_UNDERFLOW (-15)
 #endif
 #ifndef AIRY_ERR_CANCELED
-#define AIRY_ERR_CANCELED (-57)      /* 原 -16→-47→-57，迁移避免与 AIRY_EBUSY(-16) 及 IPC 码空间冲突 */
+#define AIRY_ERR_CANCELED (-57)
 #endif
 #ifndef AIRY_ERR_BUSY
-#define AIRY_ERR_BUSY (-58)          /* 原 -17→-48→-58，迁移避免与 AIRY_EEXIST(-17) 及 IPC 码空间冲突 */
+#define AIRY_ERR_BUSY (-58)
 #endif
 #ifndef AIRY_ERR_WOULD_BLOCK
 #define AIRY_ERR_WOULD_BLOCK (-18)
@@ -215,7 +210,7 @@ extern "C" {
 #define AIRY_ERR_SYS_DEADLOCK (-103)
 #endif
 #ifndef AIRY_ERR_SYS_THREAD
-#define AIRY_ERR_SYS_THREAD (-120)    /* 原 -104，迁移避免与 AIRY_ECONNRESET(-104) 冲突 */
+#define AIRY_ERR_SYS_THREAD (-120)
 #endif
 #ifndef AIRY_ERR_SYS_MUTEX
 #define AIRY_ERR_SYS_MUTEX (-105)
@@ -224,7 +219,7 @@ extern "C" {
 #define AIRY_ERR_SYS_SEMAPHORE (-106)
 #endif
 #ifndef AIRY_ERR_SYS_CONDITION
-#define AIRY_ERR_SYS_CONDITION (-121) /* 原 -107，迁移避免与 AIRY_ENOTCONN(-107) 冲突 */
+#define AIRY_ERR_SYS_CONDITION (-121)
 #endif
 #ifndef AIRY_ERR_SYS_ATOMIC
 #define AIRY_ERR_SYS_ATOMIC (-108)
@@ -233,10 +228,10 @@ extern "C" {
 #define AIRY_ERR_SYS_SOCKET (-109)
 #endif
 #ifndef AIRY_ERR_SYS_PIPE
-#define AIRY_ERR_SYS_PIPE (-122)      /* 原 -110，迁移避免与 AIRY_ETIMEDOUT(-110) 冲突 */
+#define AIRY_ERR_SYS_PIPE (-122)
 #endif
 #ifndef AIRY_ERR_SYS_PROCESS
-#define AIRY_ERR_SYS_PROCESS (-123)   /* 原 -111，迁移避免与 AIRY_ECONNREFUSED(-111) 冲突 */
+#define AIRY_ERR_SYS_PROCESS (-123)
 #endif
 #ifndef AIRY_ERR_SYS_FILE
 #define AIRY_ERR_SYS_FILE (-112)
@@ -245,7 +240,7 @@ extern "C" {
 #define AIRY_ERR_SYS_TIME (-113)
 #endif
 
-/* 内核层错误 (-200 到 -299) */
+
 #ifndef AIRY_ERR_KERN_BASE
 #define AIRY_ERR_KERN_BASE (-200)
 #endif
@@ -274,7 +269,7 @@ extern "C" {
 #define AIRY_ERR_KERN_INTERRUPT (-208)
 #endif
 
-/* 服务层错误 (-300 到 -399) */
+
 #ifndef AIRY_ERR_SVC_BASE
 #define AIRY_ERR_SVC_BASE (-300)
 #endif
@@ -300,11 +295,11 @@ extern "C" {
 #define AIRY_ERR_SVC_LOADBALANCE (-307)
 #endif
 #ifndef AIRY_ERR_SVC_CYCLE
-#define AIRY_ERR_SVC_CYCLE (-308) /* DAG 任务图存在依赖环 */
+#define AIRY_ERR_SVC_CYCLE (-308)
 #endif
-#define AIRY_ERR_CYCLE_DETECTED AIRY_ERR_SVC_CYCLE /* 别名：DAG 环检测 */
+#define AIRY_ERR_CYCLE_DETECTED AIRY_ERR_SVC_CYCLE
 
-/* LLM/AI服务错误 (-400 到 -499) */
+
 #ifndef AIRY_ERR_LLM_BASE
 #define AIRY_ERR_LLM_BASE (-400)
 #endif
@@ -339,7 +334,7 @@ extern "C" {
 #define AIRY_ERR_LLM_COST_EXCEED (-410)
 #endif
 
-/* 执行/工具错误 (-500 到 -599) */
+
 #ifndef AIRY_ERR_EXEC_BASE
 #define AIRY_ERR_EXEC_BASE (-500)
 #endif
@@ -368,7 +363,7 @@ extern "C" {
 #define AIRY_ERR_EXEC_ENV (-508)
 #endif
 
-/* 记忆/存储错误 (-600 到 -699) */
+
 #ifndef AIRY_ERR_MEM_BASE
 #define AIRY_ERR_MEM_BASE (-600)
 #endif
@@ -394,7 +389,7 @@ extern "C" {
 #define AIRY_ERR_MEM_NOT_INIT (-607)
 #endif
 
-/* 安全/沙箱错误 (-700 到 -799) */
+
 #ifndef AIRY_ERR_SEC_BASE
 #define AIRY_ERR_SEC_BASE (-700)
 #endif
@@ -502,7 +497,7 @@ extern "C" {
 #define AIRY_ERR_CUPOLAS_CERT_EXPIRED (-726)
 #endif
 
-/* 协调/规划错误 (-800 到 -899) */
+
 #ifndef AIRY_ERR_COORD_BASE
 #define AIRY_ERR_COORD_BASE (-800)
 #endif
@@ -562,42 +557,42 @@ extern "C" {
  *     此处定义仅为 [SC] 契约对齐与单元测试断言使用。
  * ============================================================================ */
 
-/* ---- IPC 协议错误码 (-41..-70, v1.1) ---- */
+
 #ifndef AIRY_EIPC_MAGIC
-#define AIRY_EIPC_MAGIC        (-41)   /* C-S1: magic 不匹配 (期望 0x41524531 'ARE1') */
+#define AIRY_EIPC_MAGIC (-41)
 #endif
 #ifndef AIRY_EIPC_OPCODE
-#define AIRY_EIPC_OPCODE       (-42)   /* C-S2: opcode 非法或未注册 */
+#define AIRY_EIPC_OPCODE (-42)
 #endif
 #ifndef AIRY_EIPC_PAYLOAD
-#define AIRY_EIPC_PAYLOAD      (-43)   /* C-S3: payload_len 超过 registered buffer */
+#define AIRY_EIPC_PAYLOAD (-43)
 #endif
 #ifndef AIRY_EIPC_HDRSIZE
-#define AIRY_EIPC_HDRSIZE      (-44)   /* C-S0: header 总长不等于 128 字节 */
+#define AIRY_EIPC_HDRSIZE (-44)
 #endif
 #ifndef AIRY_EIPC_RESERVED
-#define AIRY_EIPC_RESERVED     (-45)   /* C-S4: reserved 字段非零 */
+#define AIRY_EIPC_RESERVED (-45)
 #endif
 #ifndef AIRY_EIPC_FLAGS
-#define AIRY_EIPC_FLAGS        (-46)   /* C-S10: flags 非法组合 */
+#define AIRY_EIPC_FLAGS (-46)
 #endif
 #ifndef AIRY_EIPC_NOTSUPP
-#define AIRY_EIPC_NOTSUPP      (-47)   /* C-S11: opcode 不支持 */
+#define AIRY_EIPC_NOTSUPP (-47)
 #endif
 #ifndef AIRY_EIPC_KFIFO
-#define AIRY_EIPC_KFIFO        (-48)   /* kfifo 投递失败 */
+#define AIRY_EIPC_KFIFO (-48)
 #endif
 #ifndef AIRY_EIPC_RECLAIM
-#define AIRY_EIPC_RECLAIM      (-49)   /* registered buffer 回收失败 */
+#define AIRY_EIPC_RECLAIM (-49)
 #endif
 #ifndef AIRY_EIPC_CONTEXT
-#define AIRY_EIPC_CONTEXT      (-50)   /* IPC 上下文非法 */
+#define AIRY_EIPC_CONTEXT (-50)
 #endif
 #ifndef AIRY_EIPC_CRC32
-#define AIRY_EIPC_CRC32        (-51)   /* C-S12: CRC32 校验失败（覆盖 header[0:52)+payload） */
+#define AIRY_EIPC_CRC32 (-51)
 #endif
 #ifndef AIRY_EIPC_TIMEOUT
-#define AIRY_EIPC_TIMEOUT      (-52)   /* IPC 操作超时 */
+#define AIRY_EIPC_TIMEOUT (-52)
 #endif
 
 /* ---- Capability / Badge 错误码 (-71..-100, v1.1) ----
@@ -607,40 +602,40 @@ extern "C" {
  * agentrt 侧定义仅为 [SC] 契约对齐与跨端错误码翻译使用。
  */
 #ifndef AIRY_ECAP_MISSING
-#define AIRY_ECAP_MISSING      (-71)   /* capability 不存在 */
+#define AIRY_ECAP_MISSING (-71)
 #endif
 #ifndef AIRY_ECAP_REVOKED
-#define AIRY_ECAP_REVOKED      (-72)   /* capability 已被撤销（atomic_inc 触发） */
+#define AIRY_ECAP_REVOKED (-72)
 #endif
 #ifndef AIRY_ECAP_EXPIRED
-#define AIRY_ECAP_EXPIRED      (-73)   /* capability lease 已过期 */
+#define AIRY_ECAP_EXPIRED (-73)
 #endif
 #ifndef AIRY_ECAP_MISMATCH
-#define AIRY_ECAP_MISMATCH     (-74)   /* capability 派生链不匹配 */
+#define AIRY_ECAP_MISMATCH (-74)
 #endif
 #ifndef AIRY_ECAP_LSM_DENIED
-#define AIRY_ECAP_LSM_DENIED   (-75)   /* LSM 钩子拒绝操作 */
+#define AIRY_ECAP_LSM_DENIED (-75)
 #endif
 #ifndef AIRY_ECAP_RADIX_MISS
-#define AIRY_ECAP_RADIX_MISS   (-76)   /* radix tree 查找失败（遗留，v1.1 改用静态数组） */
+#define AIRY_ECAP_RADIX_MISS (-76)
 #endif
 #ifndef AIRY_ECAP_STATIC_KEY
-#define AIRY_ECAP_STATIC_KEY   (-77)   /* 静态密钥校验失败 */
+#define AIRY_ECAP_STATIC_KEY (-77)
 #endif
 #ifndef AIRY_ECAP_BADGE
-#define AIRY_ECAP_BADGE        (-78)   /* Badge 字段非法 */
+#define AIRY_ECAP_BADGE (-78)
 #endif
 #ifndef AIRY_ECAP_EPOCH
-#define AIRY_ECAP_EPOCH        (-79)   /* C-S9: Badge Epoch 与全局 Epoch 不匹配 */
+#define AIRY_ECAP_EPOCH (-79)
 #endif
 #ifndef AIRY_ECAP_FORGED
-#define AIRY_ECAP_FORGED       (-80)   /* C-S9: Badge Random Tag 不匹配（防伪造）→ 触发 Fault */
+#define AIRY_ECAP_FORGED (-80)
 #endif
 #ifndef AIRY_ECAP_PERM
-#define AIRY_ECAP_PERM         (-81)   /* C-S9: Badge Perms 权限位不满足 */
+#define AIRY_ECAP_PERM (-81)
 #endif
 #ifndef AIRY_ECAP_FROZEN
-#define AIRY_ECAP_FROZEN       (-82)   /* capability 已冻结（FREEZE opcode） */
+#define AIRY_ECAP_FROZEN (-82)
 #endif
 
 /* ---- Fault 故障码 (0x1000+, v1.1, 非可恢复) ----
@@ -650,16 +645,15 @@ extern "C" {
  * [SC] 契约对齐与文档引用使用。
  */
 #ifndef AIRY_FAULT_CAP_FORGED
-#define AIRY_FAULT_CAP_FORGED     (0x1001u)   /* Badge 伪造检测（C-S9 RandomTag 不匹配） */
+#define AIRY_FAULT_CAP_FORGED (0x1001u)
 #endif
 #ifndef AIRY_FAULT_CAP_LEAK
-#define AIRY_FAULT_CAP_LEAK       (0x1002u)   /* capability 泄漏检测 */
+#define AIRY_FAULT_CAP_LEAK (0x1002u)
 #endif
 #ifndef AIRY_FAULT_RING_CORRUPT
-#define AIRY_FAULT_RING_CORRUPT   (0x1003u)   /* IPC ring buffer 损坏 */
+#define AIRY_FAULT_RING_CORRUPT (0x1003u)
 #endif
 
-/* ==================== 错误上下文 ==================== */
 
 /**
  * @brief 错误上下文最大深度
@@ -697,7 +691,6 @@ typedef struct {
     airy_err_context_entry_t contexts[AIRY_ERROR_CONTEXT_MAX_DEPTH];
 } airy_err_chain_t;
 
-/* ==================== 错误处理接口 ==================== */
 
 /**
  * @brief 获取错误码的可读描述
@@ -740,7 +733,7 @@ void airy_err_thread_cleanup(void);
  * @param ... 可变参数
  */
 void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *func,
-                           const char *fmt, ...);
+                      const char *fmt, ...);
 
 /**
  * @brief 打印错误链（用于调试）
@@ -755,7 +748,6 @@ void airy_err_print_chain(const airy_err_chain_t *chain);
  */
 char *airy_err_chain_to_json(const airy_err_chain_t *chain);
 
-/* ==================== 便捷宏 ==================== */
 
 /**
  * @brief 设置错误并返回（自动使用错误码字符串）
@@ -763,29 +755,28 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
  * 统一替代各模块自定义的 *_RET_ERR 宏（ATM_RET_ERR / CUP_RET_ERR / RQ_RET_ERR 等）。
  * 等价于 AIRY_ERROR(code, airy_err_str(code))。
  */
-#define AIRY_RET_ERR(code)                                                     \
-    do {                                                                          \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s",         \
-                         airy_err_str(code));                                 \
-        return (code);                                                            \
+#define AIRY_RET_ERR(code)                                                                \
+    do {                                                                                  \
+        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", airy_err_str(code)); \
+        return (code);                                                                    \
     } while (0)
 
 /**
  * @brief 设置错误并返回
  */
-#define AIRY_ERROR(code, msg)                                                  \
-    do {                                                                          \
+#define AIRY_ERROR(code, msg)                                                \
+    do {                                                                     \
         airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        return (code);                                                            \
+        return (code);                                                       \
     } while (0)
 
 /**
  * @brief 设置格式化错误并返回
  */
-#define AIRY_ERROR_FMT(code, fmt, ...)                                                \
-    do {                                                                                 \
+#define AIRY_ERROR_FMT(code, fmt, ...)                                              \
+    do {                                                                            \
         airy_err_push_ex((code), __FILE__, __LINE__, __func__, (fmt), __VA_ARGS__); \
-        return (code);                                                                   \
+        return (code);                                                              \
     } while (0)
 
 /**
@@ -794,27 +785,26 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
  * 与 AIRY_ERROR 的区别：返回 NULL 而非错误码，适用于函数返回类型为指针的场景。
  * 错误码通过 error stack 传递，调用者可通过 airy_err_last() 获取。
  */
-#define AIRY_ERROR_NULL(code, msg)                                             \
-    do {                                                                          \
+#define AIRY_ERROR_NULL(code, msg)                                           \
+    do {                                                                     \
         airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        return NULL;                                                              \
+        return NULL;                                                         \
     } while (0)
 
 /**
  * @brief 条件检查，失败时返回错误
  */
 #define AIRY_CHECK(cond, code, msg)    \
-    do {                                  \
-        if (!(cond)) {                    \
+    do {                               \
+        if (!(cond)) {                 \
             AIRY_ERROR((code), (msg)); \
-        }                                 \
+        }                              \
     } while (0)
 
 /**
  * @brief 空指针检查
  */
-#define AIRY_CHECK_NULL(ptr, name) \
-    AIRY_CHECK((ptr) != NULL, AIRY_ERR_NULL_POINTER, name " is NULL")
+#define AIRY_CHECK_NULL(ptr, name) AIRY_CHECK((ptr) != NULL, AIRY_ERR_NULL_POINTER, name " is NULL")
 
 /**
  * @brief 内存分配检查
@@ -825,28 +815,26 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
 /**
  * @brief 错误传播宏
  */
-#define AIRY_PROPAGATE(expr)                                                              \
-    do {                                                                                     \
-        airy_err_t __err = (expr);                                                      \
-        if (__err != AIRY_EOK) {                                                           \
-            airy_err_push_ex(__err, __FILE__, __LINE__, __func__, "Propagated from %s", \
-                                  #expr);                                                    \
-            return __err;                                                                    \
-        }                                                                                    \
+#define AIRY_PROPAGATE(expr)                                                                    \
+    do {                                                                                        \
+        airy_err_t __err = (expr);                                                              \
+        if (__err != AIRY_EOK) {                                                                \
+            airy_err_push_ex(__err, __FILE__, __LINE__, __func__, "Propagated from %s", #expr); \
+            return __err;                                                                       \
+        }                                                                                       \
     } while (0)
 
 /**
  * @brief 错误检查宏（返回错误码而非直接返回）
  */
-#define AIRY_TRY(expr)               \
-    do {                                \
+#define AIRY_TRY(expr)             \
+    do {                           \
         airy_err_t __err = (expr); \
-        if (__err != AIRY_EOK) {      \
-            return __err;               \
-        }                               \
+        if (__err != AIRY_EOK) {   \
+            return __err;          \
+        }                          \
     } while (0)
 
-/* ==================== 向后兼容接口（已废弃） ==================== */
 
 #ifndef AIRY_ERROR_CONTEXT_T_DEFINED
 #define AIRY_ERROR_CONTEXT_T_DEFINED
@@ -868,8 +856,7 @@ typedef struct airy_err_context {
  * @brief 错误处理回调函数类型
  * @deprecated 请使用新的错误链接口
  */
-typedef void (*airy_err_handler_t)(airy_err_t err,
-                                        const airy_err_context_t *context);
+typedef void (*airy_err_handler_t)(airy_err_t err, const airy_err_context_t *context);
 
 /**
  * @brief 设置错误处理回调（兼容旧代码）
@@ -881,8 +868,8 @@ void airy_err_set_handler(airy_err_handler_t handler);
  * @brief 兼容旧代码的错误处理宏
  * @deprecated 请使用 AIRY_ERROR
  */
-#define AIRY_ERROR_HANDLE(code, msg)                                           \
-    do {                                                                          \
+#define AIRY_ERROR_HANDLE(code, msg)                                         \
+    do {                                                                     \
         airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
     } while (0)
 
@@ -892,13 +879,12 @@ void airy_err_set_handler(airy_err_handler_t handler);
  * @brief 兼容旧代码的错误处理宏（带上下文）
  * @deprecated
  */
-#define AIRY_ERROR_HANDLE_CONTEXT(code, user_data, msg)                        \
-    do {                                                                          \
+#define AIRY_ERROR_HANDLE_CONTEXT(code, user_data, msg)                      \
+    do {                                                                     \
         airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        (void)(user_data);                                                        \
+        (void)(user_data);                                                   \
     } while (0)
 
-/* ==================== 错误统计 ==================== */
 
 /**
  * @brief 错误统计信息
@@ -921,28 +907,27 @@ void airy_err_get_stats(airy_err_stats_t *stats);
  */
 void airy_err_reset_stats(void);
 
-/* ==================== 多语言支持 ==================== */
 
 /**
  * @brief 支持的语言
  */
 typedef enum {
-    AIRY_LANG_EN_US = 0, /**< 英语（美国） */
-    AIRY_LANG_ZH_CN = 1, /**< 简体中文 */
-    AIRY_LANG_ZH_TW = 2, /**< 繁体中文 */
-    AIRY_LANG_JA_JP = 3, /**< 日语 */
-    AIRY_LANG_KO_KR = 4, /**< 韩语 */
-    AIRY_LANG_DE_DE = 5, /**< 德语 */
-    AIRY_LANG_FR_FR = 6, /**< 法语 */
-    AIRY_LANG_ES_ES = 7  /**< 西班牙语 */
+    AIRY_LANG_EN_US = 0,
+    AIRY_LANG_ZH_CN = 1,
+    AIRY_LANG_ZH_TW = 2,
+    AIRY_LANG_JA_JP = 3,
+    AIRY_LANG_KO_KR = 4,
+    AIRY_LANG_DE_DE = 5,
+    AIRY_LANG_FR_FR = 6,
+    AIRY_LANG_ES_ES = 7
 } airy_language_t;
 
 /**
  * @brief 多语言错误描述结构
  */
 typedef struct {
-    airy_err_t error_code;  /**< 错误码 */
-    const char *descriptions[8]; /**< 各语言描述（按airy_language_t顺序） */
+    airy_err_t error_code;
+    const char *descriptions[8];
 } airy_err_i18n_entry_t;
 
 /**
@@ -976,8 +961,7 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang);
  * @param[in] count 条目数量
  * @return 成功返回AIRY_EOK，失败返回错误码
  */
-airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries,
-                                            size_t count);
+airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t count);
 
 /**
  * @brief 获取错误链的本地化JSON表示
@@ -988,14 +972,13 @@ airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries,
  */
 char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t lang);
 
-/* ==================== 错误链增强功能 ==================== */
 
 /**
  * @brief 错误链迭代器
  */
 typedef struct {
-    const airy_err_chain_t *chain; /**< 错误链 */
-    size_t current_index;               /**< 当前索引 */
+    const airy_err_chain_t *chain;
+    size_t current_index;
 } airy_err_chain_iterator_t;
 
 /**
@@ -1004,8 +987,7 @@ typedef struct {
  * @param[in] chain 错误链
  * @param[out] iter 迭代器
  */
-void airy_err_chain_iter_init(const airy_err_chain_t *chain,
-                                   airy_err_chain_iterator_t *iter);
+void airy_err_chain_iter_init(const airy_err_chain_t *chain, airy_err_chain_iterator_t *iter);
 
 /**
  * @brief 获取下一个错误上下文条目
@@ -1013,8 +995,7 @@ void airy_err_chain_iter_init(const airy_err_chain_t *chain,
  * @param[inout] iter 迭代器
  * @return 下一个条目指针，如果没有更多条目返回NULL
  */
-const airy_err_context_entry_t *
-airy_err_chain_iter_next(airy_err_chain_iterator_t *iter);
+const airy_err_context_entry_t *airy_err_chain_iter_next(airy_err_chain_iterator_t *iter);
 
 /**
  * @brief 重置错误链迭代器

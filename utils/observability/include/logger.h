@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file logger.h
  * @brief AgentRT 统一日志接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 日志级别值定义（与 logging.h 统一）：
  *   DEBUG=0, INFO=1, WARN=2, ERROR=3, FATAL=4
@@ -67,10 +67,10 @@ void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
 #endif
 
 #ifndef AIRY_LOG_FATAL
-#define AIRY_LOG_FATAL(fmt, ...)                                                         \
-    do {                                                                                    \
+#define AIRY_LOG_FATAL(fmt, ...)                                                      \
+    do {                                                                              \
         airy_log_write(AIRY_LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
-        abort();                                                                            \
+        abort();                                                                      \
     } while (0)
 #endif
 

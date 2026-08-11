@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file token_standard.h
  * @brief Token 计算标准化接口 - 统一 C/Python Token 计算算法
@@ -30,40 +31,41 @@ extern "C" {
  * @brief Token 计算模型类型
  */
 typedef enum {
-    AIRY_TOKEN_MODEL_GENERIC = 0,  ///< 通用模型（默认）
-    AIRY_TOKEN_MODEL_GPT4,         ///< GPT-4 系列模型
-    AIRY_TOKEN_MODEL_GPT35,        ///< GPT-3.5 系列模型
-    AIRY_TOKEN_MODEL_CLAUDE,       ///< Claude 系列模型
-    AIRY_TOKEN_MODEL_LLAMA,        ///< LLaMA 系列模型
-    AIRY_TOKEN_MODEL_CUSTOM        ///< 自定义模型
+    AIRY_TOKEN_MODEL_GENERIC = 0,
+    AIRY_TOKEN_MODEL_GPT4,
+    AIRY_TOKEN_MODEL_GPT35,
+    AIRY_TOKEN_MODEL_CLAUDE,
+    AIRY_TOKEN_MODEL_LLAMA,
+    AIRY_TOKEN_MODEL_CUSTOM
 } airy_token_model_t;
 
 /**
  * @brief Token 计算配置
  */
 typedef struct {
-    airy_token_model_t model_type;  ///< 模型类型
-    const char *model_name;            ///< 模型名称（可选）
-    float cjk_ratio;                   ///< 中日韩字符比例阈值（默认 0.3）
-    float alpha_ratio;                 ///< 字母字符比例阈值（默认 0.5）
-    uint32_t flags;                    ///< 计算标志位
+    airy_token_model_t model_type;
+    const char *model_name;
+    float cjk_ratio;
+    float alpha_ratio;
+    uint32_t flags;
 } airy_token_config_t;
 
 /**
  * @brief Token 计算标志位
  */
-#define AIRY_TOKEN_FLAG_ACCURATE 0x01     ///< 高精度模式（较慢）
-#define AIRY_TOKEN_FLAG_ESTIMATE 0x02     ///< 估算模式（较快）
-#define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04  ///< 包含 BOM 字符
+#define AIRY_TOKEN_FLAG_ACCURATE 0x01
+#define AIRY_TOKEN_FLAG_ESTIMATE 0x02
+#define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04
 
 /**
  * @brief 默认 Token 计算配置
  */
-#define AIRY_TOKEN_CONFIG_DEFAULT                                                           \
-    {                                                                                          \
-        .model_type = AIRY_TOKEN_MODEL_GENERIC, .model_name = "generic", .cjk_ratio = 0.3f, \
-        .alpha_ratio = 0.5f, .flags = AIRY_TOKEN_FLAG_ESTIMATE                              \
-    }
+#define AIRY_TOKEN_CONFIG_DEFAULT            \
+    {.model_type = AIRY_TOKEN_MODEL_GENERIC, \
+     .model_name = "generic",                \
+     .cjk_ratio = 0.3f,                      \
+     .alpha_ratio = 0.5f,                    \
+     .flags = AIRY_TOKEN_FLAG_ESTIMATE}
 
 /**
  * @brief 标准化 Token 计算函数
@@ -76,7 +78,7 @@ typedef struct {
  * @return Token 数量，如果出错返回 (size_t)-1
  */
 size_t airy_token_standard_count(const char *text, size_t length,
-                                    const airy_token_config_t *config);
+                                 const airy_token_config_t *config);
 
 /**
  * @brief 批量 Token 计算
@@ -91,7 +93,7 @@ size_t airy_token_standard_count(const char *text, size_t length,
  * @return 成功返回 0，失败返回错误码
  */
 int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
-                                       size_t *out_counts, const airy_token_config_t *config);
+                                    size_t *out_counts, const airy_token_config_t *config);
 
 /**
  * @brief 检测文本语言特征
@@ -106,7 +108,7 @@ int airy_token_standard_count_batch(const char **texts, const size_t *lengths, s
  * @return 成功返回 0，失败返回错误码
  */
 int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
-                               size_t *out_alpha_chars, size_t *out_total_chars);
+                            size_t *out_alpha_chars, size_t *out_total_chars);
 
 /**
  * @brief 获取 Token 计算算法信息
@@ -127,9 +129,9 @@ int airy_token_validate_config(const airy_token_config_t *config);
  * @brief Token 计算精度级别
  */
 typedef enum {
-    AIRY_TOKEN_PRECISION_LOW = 0,  ///< 低精度（快速估算）
-    AIRY_TOKEN_PRECISION_MEDIUM,   ///< 中等精度
-    AIRY_TOKEN_PRECISION_HIGH      ///< 高精度（准确但较慢）
+    AIRY_TOKEN_PRECISION_LOW = 0,
+    AIRY_TOKEN_PRECISION_MEDIUM,
+    AIRY_TOKEN_PRECISION_HIGH
 } airy_token_precision_t;
 
 /**
@@ -139,43 +141,43 @@ typedef enum {
  * @param config 输出配置（可选）
  * @return 成功返回 0，失败返回错误码
  */
-int airy_token_set_precision(airy_token_precision_t precision,
-                                airy_token_config_t *config);
+int airy_token_set_precision(airy_token_precision_t precision, airy_token_config_t *config);
 
 /**
  * @brief 资源配额限制
  */
 typedef struct {
-    size_t max_tokens_per_request;   ///< 单次请求最大 Token 数
-    size_t max_tokens_per_minute;    ///< 每分钟最大 Token 数
-    size_t max_tokens_per_hour;      ///< 每小时最大 Token 数
-    size_t max_tokens_per_day;       ///< 每天最大 Token 数
-    size_t max_requests_per_minute;  ///< 每分钟最大请求数
-    size_t max_requests_per_hour;    ///< 每小时最大请求数
-    size_t max_requests_per_day;     ///< 每天最大请求数
+    size_t max_tokens_per_request;
+    size_t max_tokens_per_minute;
+    size_t max_tokens_per_hour;
+    size_t max_tokens_per_day;
+    size_t max_requests_per_minute;
+    size_t max_requests_per_hour;
+    size_t max_requests_per_day;
 } airy_token_quota_t;
 
 /**
  * @brief 默认资源配额
  */
-#define AIRY_TOKEN_QUOTA_DEFAULT                                     \
-    {                                                                   \
-        .max_tokens_per_request = 8000, .max_tokens_per_minute = 60000, \
-        .max_tokens_per_hour = 360000, .max_tokens_per_day = 2000000,   \
-        .max_requests_per_minute = 60, .max_requests_per_hour = 3600,   \
-        .max_requests_per_day = 10000                                   \
-    }
+#define AIRY_TOKEN_QUOTA_DEFAULT     \
+    {.max_tokens_per_request = 8000, \
+     .max_tokens_per_minute = 60000, \
+     .max_tokens_per_hour = 360000,  \
+     .max_tokens_per_day = 2000000,  \
+     .max_requests_per_minute = 60,  \
+     .max_requests_per_hour = 3600,  \
+     .max_requests_per_day = 10000}
 
 /**
  * @brief 资源使用情况
  */
 typedef struct {
-    size_t tokens_used_per_minute;    ///< 当前分钟已使用Token数
-    size_t tokens_used_per_hour;      ///< 当前小时已使用Token数
-    size_t tokens_used_per_day;       ///< 当前天已使用Token数
-    size_t requests_used_per_minute;  ///< 当前分钟已使用请求数
-    size_t requests_used_per_hour;    ///< 当前小时已使用请求数
-    size_t requests_used_per_day;     ///< 当前天已使用请求数
+    size_t tokens_used_per_minute;
+    size_t tokens_used_per_hour;
+    size_t tokens_used_per_day;
+    size_t requests_used_per_minute;
+    size_t requests_used_per_hour;
+    size_t requests_used_per_day;
 } airy_token_usage_t;
 
 /**
@@ -192,7 +194,7 @@ typedef struct {
  *         5 超出分钟请求限制，6 超出小时请求限制，7 超出日请求限制
  */
 int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
-                              const airy_token_usage_t *current_usage);
+                           const airy_token_usage_t *current_usage);
 
 #ifdef __cplusplus
 }

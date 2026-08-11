@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file token_standard.c
  * @brief Token 计算标准化实现 - 统一 C/Python Token 计算算法
@@ -18,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-
 
 /**
  * @brief 算法信息字符串
@@ -154,7 +154,7 @@ static int is_cjk_code_point(uint32_t code_point)
  * @brief 分析文本语言特征
  */
 int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
-                               size_t *out_alpha_chars, size_t *out_total_chars)
+                            size_t *out_alpha_chars, size_t *out_total_chars)
 {
     if (!text || !out_cjk_chars || !out_alpha_chars || !out_total_chars) {
         return AIRY_EINVAL;
@@ -192,14 +192,12 @@ int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_cha
 /**
  * @brief 标准化 Token 计算函数
  */
-size_t airy_token_standard_count(const char *text, size_t length,
-                                    const airy_token_config_t *config)
+size_t airy_token_standard_count(const char *text, size_t length, const airy_token_config_t *config)
 {
     if (!text) {
         return (size_t)-1;
     }
 
-    // 使用默认配置如果未提供
     airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
     const airy_token_config_t *cfg = config ? config : &default_config;
 
@@ -208,64 +206,49 @@ size_t airy_token_standard_count(const char *text, size_t length,
         return (size_t)-1;
     }
 
-    // 自动计算长度如果未提供
     size_t text_len = length;
     if (text_len == 0) {
         text_len = strlen(text);
     }
 
-    // 分析文本特征
     size_t cjk_chars = 0, alpha_chars = 0, total_chars = 0;
     if (airy_token_analyze_text(text, text_len, &cjk_chars, &alpha_chars, &total_chars) != 0) {
         return (size_t)-1;
     }
 
-    // 根据配置选择计算策略
     size_t token_count = 0;
 
     if (cfg->flags & AIRY_TOKEN_FLAG_ACCURATE) {
-        // 高精度模式：根据模型类型使用不同算法
         switch (cfg->model_type) {
         case AIRY_TOKEN_MODEL_GPT4:
         case AIRY_TOKEN_MODEL_GPT35:
-            // GPT 系列：中文字符 1.5 字符/Token，英文 4 字符/Token
             token_count = (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f);
             break;
 
         case AIRY_TOKEN_MODEL_CLAUDE:
-            // Claude 系列：统一 3.5 字符/Token
             token_count = (size_t)(total_chars / 3.5f);
             break;
 
         case AIRY_TOKEN_MODEL_LLAMA:
-            // LLaMA 系列：中文字符 2 字符/Token，英文 4 字符/Token
             token_count = (size_t)(cjk_chars / 2.0f + (total_chars - cjk_chars) / 4.0f);
             break;
 
         default:
-            // 通用模型：自适应算法
             if (cjk_chars > total_chars * cfg->cjk_ratio) {
-                // 主要为中文文本
                 token_count = (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f);
             } else if (alpha_chars > total_chars * cfg->alpha_ratio) {
-                // 主要为英文文本
                 token_count = (size_t)(total_chars / 4.0f);
             } else {
-                // 混合文本
                 token_count = (size_t)(total_chars / 3.0f);
             }
             break;
         }
     } else {
-        // 估算模式（默认）：快速估算
         if (cjk_chars > total_chars * cfg->cjk_ratio) {
-            // 主要为中文文本：1.5 字符/Token
             token_count = (size_t)(total_chars / 1.5f);
         } else if (alpha_chars > total_chars * cfg->alpha_ratio) {
-            // 主要为英文文本：4 字符/Token
             token_count = (size_t)(total_chars / 4.0f);
         } else {
-            // 混合文本：3 字符/Token
             token_count = (size_t)(total_chars / 3.0f);
         }
     }
@@ -281,14 +264,13 @@ size_t airy_token_standard_count(const char *text, size_t length,
 /**
  * @brief 批量 Token 计算
  */
-int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
-                                       size_t *out_counts, const airy_token_config_t *config)
+int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t count,
+                               size_t *out_counts, const airy_token_config_t *config)
 {
     if (!texts || !out_counts || count == 0) {
         return AIRY_EINVAL;
     }
 
-    // 使用默认配置如果未提供
     airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
     const airy_token_config_t *cfg = config ? config : &default_config;
 
@@ -297,7 +279,6 @@ int airy_token_standard_count_batch(const char **texts, const size_t *lengths, s
         return AIRY_EINVAL;
     }
 
-    // 逐个计算 Token 数量
     for (size_t i = 0; i < count; i++) {
         if (!texts[i]) {
             out_counts[i] = 0;
@@ -333,13 +314,11 @@ int airy_token_validate_config(const airy_token_config_t *config)
         return AIRY_EINVAL;
     }
 
-    // 检查模型类型有效性
     if (config->model_type < AIRY_TOKEN_MODEL_GENERIC ||
         config->model_type > AIRY_TOKEN_MODEL_CUSTOM) {
         return AIRY_EINVAL;
     }
 
-    // 检查比例阈值有效性
     if (config->cjk_ratio <= 0.0f || config->cjk_ratio >= 1.0f) {
         return AIRY_EINVAL;
     }
@@ -348,9 +327,7 @@ int airy_token_validate_config(const airy_token_config_t *config)
         return AIRY_EINVAL;
     }
 
-    // 检查标志位有效性
-    if ((config->flags & AIRY_TOKEN_FLAG_ACCURATE) &&
-        (config->flags & AIRY_TOKEN_FLAG_ESTIMATE)) {
+    if ((config->flags & AIRY_TOKEN_FLAG_ACCURATE) && (config->flags & AIRY_TOKEN_FLAG_ESTIMATE)) {
         // 不能同时设置准确和估算标志
         return AIRY_EINVAL;
     }
@@ -397,7 +374,7 @@ int airy_token_set_precision(airy_token_precision_t precision, airy_token_config
  * @brief 检查资源配额是否足够
  */
 int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
-                              const airy_token_usage_t *current_usage)
+                           const airy_token_usage_t *current_usage)
 {
     if (!quota) {
         return AIRY_EINVAL;

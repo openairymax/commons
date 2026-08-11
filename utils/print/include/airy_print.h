@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file airy_print.h
  * @brief P3.25: 运行时统一打印 API — 与 CMake 层 airy_print.cmake 命名对齐
@@ -37,10 +40,6 @@
  * airy_print_no("health check failed: %s", check_name);
  * airy_print_debug("trace: %s entered", __func__);
  * @endcode
- *
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  */
 
@@ -91,16 +90,14 @@ extern "C" {
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define airy_print_info(fmt, ...) \
-    log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define airy_print_info(fmt, ...) log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief WARN 级别打印 — 警告
  * @param fmt  printf 风格格式字符串
  * @param ...  格式参数
  */
-#define airy_print_warn(fmt, ...) \
-    log_write(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define airy_print_warn(fmt, ...) log_write(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief ERROR 级别打印 — 错误（不终止）

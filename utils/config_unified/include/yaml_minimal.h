@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file yaml_minimal.h
  * @brief YAML 1.1 parser for AgentRT configuration files
@@ -15,7 +16,6 @@
  * yaml_minimal 仅依赖 commons 层的 airy_memory.h 与 error.h，迁移后
  * cupolas 与 coreloopthree 均通过 airy_common PUBLIC include 路径获取本头文件。
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_YAML_MINIMAL_H

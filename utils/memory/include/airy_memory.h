@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file airy_memory.h
  * @brief 统一内存管理模块 - 核心层API
@@ -20,7 +20,7 @@
 #ifndef AIRY_RT_MEMORY_H
 #define AIRY_RT_MEMORY_H
 
-/* d9 合并：从 airy_memory.h 迁移的 includes（兼容层消除，统一为 airy_memory.h） */
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -44,22 +44,22 @@ extern "C" {
  * @brief 内存分配失败处理策略
  */
 typedef enum {
-    MEMORY_FAIL_STRATEGY_RETURN_NULL, /**< 返回NULL指针 */
-    MEMORY_FAIL_STRATEGY_ABORT,       /**< 终止程序 */
-    MEMORY_FAIL_STRATEGY_CALLBACK,    /**< 调用用户回调函数 */
-    MEMORY_FAIL_STRATEGY_RETRY        /**< 重试分配（有限次数） */
+    MEMORY_FAIL_STRATEGY_RETURN_NULL,
+    MEMORY_FAIL_STRATEGY_ABORT,
+    MEMORY_FAIL_STRATEGY_CALLBACK,
+    MEMORY_FAIL_STRATEGY_RETRY
 } memory_fail_strategy_t;
 
 /**
  * @brief 内存分配选项
  */
 typedef struct {
-    size_t alignment;                     /**< 内存对齐要求（0表示默认） */
-    bool zero_memory;                     /**< 是否将分配的内存清零 */
-    const char *tag;                      /**< 内存分配标签（用于调试） */
-    memory_fail_strategy_t fail_strategy; /**< 分配失败处理策略 */
-    void (*fail_callback)(size_t size, const char *tag, void *user_data); /**< 失败回调 */
-    void *fail_callback_user_data; /**< 失败回调用户数据 */
+    size_t alignment;
+    bool zero_memory;
+    const char *tag;
+    memory_fail_strategy_t fail_strategy;
+    void (*fail_callback)(size_t size, const char *tag, void *user_data);
+    void *fail_callback_user_data;
 } memory_options_t;
 
 /**
@@ -67,28 +67,28 @@ typedef struct {
  */
 #define AIRY_MEMORY_STATS_T_DEFINED
 typedef struct {
-    size_t total_allocated;   /**< 总分配内存（字节） */
-    size_t total_freed;       /**< 总释放内存（字节） */
-    size_t current_allocated; /**< 当前分配内存（字节） */
-    size_t peak_allocated;    /**< 峰值分配内存（字节） */
-    size_t allocation_count;  /**< 分配次数 */
-    size_t free_count;        /**< 释放次数 */
-    size_t leak_count;        /**< 泄漏次数（如果启用调试） */
+    size_t total_allocated;
+    size_t total_freed;
+    size_t current_allocated;
+    size_t peak_allocated;
+    size_t allocation_count;
+    size_t free_count;
+    size_t leak_count;
 } memory_stats_t;
 
 /**
  * @brief 内存调试信息
  */
 typedef struct memory_debug_info {
-    void *address;                  /**< 内存地址 */
-    size_t size;                    /**< 分配大小 */
-    size_t alignment;               /**< 分配时的对齐要求（Windows _aligned_* 系列必需） */
-    const char *tag;                /**< 分配标签 */
-    const char *file;               /**< 分配位置文件 */
-    int line;                       /**< 分配位置行号 */
-    const char *function;           /**< 分配位置函数 */
-    uint64_t timestamp;             /**< 分配时间戳 */
-    struct memory_debug_info *next; /**< 下一个调试信息节点 */
+    void *address;
+    size_t size;
+    size_t alignment;
+    const char *tag;
+    const char *file;
+    int line;
+    const char *function;
+    uint64_t timestamp;
+    struct memory_debug_info *next;
 } memory_debug_info_t;
 
 /**
@@ -256,9 +256,8 @@ size_t memory_get_current_usage(void);
  */
 size_t memory_get_peak_usage(void);
 
-/** @} */  // end of memory_api
+/** @} */ /* end of memory_api */
 
-/* ==================== d9 合并：从 airy_memory.h 迁移的工程工具 ==================== */
 /* IRON-8 合规：消除 airy_memory.h 兼容层定位，所有 API 统一为 airy_memory.h 正式 API。
  * 原 airy_memory.h 已删除，404 个引用文件批量替换为 #include "airy_memory.h"。 */
 
@@ -278,29 +277,29 @@ extern void airy_mem_stats_record_dealloc(size_t bytes);
  * 用于区分不同生命周期的内存分配
  */
 typedef enum {
-    ALLOC_SHORT_LIVED = 0,  /**< 请求作用域，函数返回前释放 */
-    ALLOC_LONG_LIVED  = 1,  /**< 会话作用域，可能跨多个请求 */
-    ALLOC_CRITICAL    = 2,  /**< 进程作用域，永不释放（配置、密钥） */
+    ALLOC_SHORT_LIVED = 0,
+    ALLOC_LONG_LIVED = 1,
+    ALLOC_CRITICAL = 2,
 } alloc_category_t;
 
 /**
  * @brief 内存水位级别（SEC-15 合规）
  */
 typedef enum {
-    WATERMARK_NORMAL   = 0,  /**< < 60% 正常 */
-    WATERMARK_WARNING  = 1,  /**< 60-75% 警告 */
-    WATERMARK_HIGH     = 2,  /**< 75-90% 高 */
-    WATERMARK_CRITICAL = 3,  /**< > 90% 临界 */
+    WATERMARK_NORMAL = 0,
+    WATERMARK_WARNING = 1,
+    WATERMARK_HIGH = 2,
+    WATERMARK_CRITICAL = 3,
 } watermark_level_t;
 
 /**
  * @brief OOM 响应级别（SEC-15 合规）
  */
 typedef enum {
-    OOM_RESPONSE_WARNING   = 0,  /**< 记录日志，继续运行 */
-    OOM_RESPONSE_DEGRADED  = 1,  /**< 关闭非关键功能 */
-    OOM_RESPONSE_CRITICAL  = 2,  /**< 拒绝新请求，完成现有请求 */
-    OOM_RESPONSE_FATAL     = 3,  /**< 立即终止进程 */
+    OOM_RESPONSE_WARNING = 0,
+    OOM_RESPONSE_DEGRADED = 1,
+    OOM_RESPONSE_CRITICAL = 2,
+    OOM_RESPONSE_FATAL = 3,
 } oom_response_level_t;
 
 /**
@@ -309,13 +308,13 @@ typedef enum {
  * 环形缓冲区中的每个条目跟踪一次分配的内存块
  */
 typedef struct {
-    void    *ptr;              /**< 分配的内存块指针 */
-    size_t   size;             /**< 分配大小（字节） */
-    alloc_category_t category; /**< 分配类别 */
-    uint64_t alloc_time;       /**< 分配时间（毫秒时间戳） */
-    const char *file;          /**< 分配源文件 */
-    int       line;            /**< 分配行号 */
-    bool      freed;           /**< 是否已释放 */
+    void *ptr;
+    size_t size;
+    alloc_category_t category;
+    uint64_t alloc_time;
+    const char *file;
+    int line;
+    bool freed;
 } alloc_track_entry_t;
 
 /**
@@ -327,28 +326,26 @@ typedef struct {
  * @param new_level 当前的水位级别
  * @param context   回调注册时的用户上下文
  */
-typedef void (*watermark_callback_t)(watermark_level_t old_level,
-                                     watermark_level_t new_level,
+typedef void (*watermark_callback_t)(watermark_level_t old_level, watermark_level_t new_level,
                                      void *context);
 
 /**
  * @brief 水位回调注册槽位（SEC-15 合规）
  */
 typedef struct {
-    watermark_callback_t callback;  /**< 回调函数指针 */
-    void                *context;   /**< 用户上下文 */
-    bool                 active;    /**< 是否激活 */
+    watermark_callback_t callback;
+    void *context;
+    bool active;
 } watermark_callback_slot_t;
 
-#define MAX_WATERMARK_CALLBACKS 8  /**< 最大回调注册数 */
-
+#define MAX_WATERMARK_CALLBACKS 8
 /**
  * @brief 扩展内存统计结构体（SEC-15 合规）
  *
  * 在 memory_stats_t 基础上增加实时追踪能力
  */
 typedef struct {
-    /* 基础统计（与 memory_stats_t 对齐） */
+
     size_t total_allocated;
     size_t total_freed;
     size_t current_allocated;
@@ -357,33 +354,29 @@ typedef struct {
     size_t free_count;
     size_t leak_count;
 
-    /* v0.1.0 新增字段（SEC-15） */
-    size_t leak_suspected;           /**< 疑似泄漏字节数 */
-    size_t short_lived_high_water;   /**< SHORT_LIVED 分配高水位（超过此值告警） */
-    uint64_t last_gc_time;           /**< 上次 GC 时间 */
-    size_t gc_freed_bytes;           /**< GC 累计释放字节数 */
 
-    /* 按类别的分配计数 */
-    size_t alloc_count_by_category[3];  /**< 按 category 统计分配次数 */
-    size_t bytes_by_category[3];        /**< 按 category 统计分配字节 */
+    size_t leak_suspected;
+    size_t short_lived_high_water;
+    uint64_t last_gc_time;
+    size_t gc_freed_bytes;
 
-    /* OOM 事件统计 */
-    uint64_t oom_event_count;        /**< OOM 事件总数 */
-    uint64_t last_oom_time;          /**< 上次 OOM 时间 */
-    size_t   last_oom_requested;     /**< 上次 OOM 请求大小 */
+    size_t alloc_count_by_category[3];
+    size_t bytes_by_category[3];
 
-    /* 内存压力 */
-    watermark_level_t current_watermark; /**< 当前水位级别 */
-    size_t   total_system_memory;        /**< 系统总内存（字节） */
+    uint64_t oom_event_count;
+    uint64_t last_oom_time;
+    size_t last_oom_requested;
 
-    /* 水位回调注册表 */
+    watermark_level_t current_watermark;
+    size_t total_system_memory;
+
     watermark_callback_slot_t watermark_callbacks[MAX_WATERMARK_CALLBACKS];
 
-    /* 分配跟踪环形缓冲区 */
-    alloc_track_entry_t *allocation_tracker;  /**< 环形缓冲区 */
-    size_t   tracker_capacity;               /**< 环形缓冲区容量 */
-    size_t   tracker_index;                  /**< 环形缓冲区写入索引 */
-    size_t   tracker_count;                  /**< 环形缓冲区有效条目数 */
+
+    alloc_track_entry_t *allocation_tracker;
+    size_t tracker_capacity;
+    size_t tracker_index;
+    size_t tracker_count;
 } memory_stats_extended_t;
 
 /**
@@ -536,11 +529,14 @@ static inline char *airy_strndup(const char *str, size_t n)
  * @def AIRY_MALLOC(size)
  * @brief 安全内存分配宏
  */
-#define AIRY_MALLOC(size) __extension__({ \
-    void *__ptr = airy_malloc(size); \
-    if (__ptr) { airy_mem_stats_record_alloc(size); } \
-    __ptr; \
-})
+#define AIRY_MALLOC(size)                      \
+    __extension__({                            \
+        void *__ptr = airy_malloc(size);       \
+        if (__ptr) {                           \
+            airy_mem_stats_record_alloc(size); \
+        }                                      \
+        __ptr;                                 \
+    })
 
 /**
  * @def AIRY_CALLOC(num, size)
@@ -562,12 +558,12 @@ static inline char *airy_strndup(const char *str, size_t n)
  * track individual block sizes at free time. The dealloc counter is
  * incremented but no bytes are subtracted from current_bytes_allocated.
  */
-#define AIRY_FREE(ptr) do { \
-    airy_mem_stats_record_dealloc(0); \
-    airy_free(ptr); \
-} while (0)
+#define AIRY_FREE(ptr)                    \
+    do {                                  \
+        airy_mem_stats_record_dealloc(0); \
+        airy_free(ptr);                   \
+    } while (0)
 
-/* ==================== P0.11: AUTO_FREE 自动清理宏 ==================== */
 
 /**
  * @defgroup auto_free AUTO_FREE 自动清理（P0.11.2）
@@ -578,7 +574,7 @@ static inline char *airy_strndup(const char *str, size_t n)
  *
  * 用法：
  *   AUTO_FREE char *buf = AIRY_MALLOC(1024);
- *   // buf 在离开作用域时自动释放
+ *
  *
  * MSVC 不支持 cleanup 属性，回退到手动释放。
  */
@@ -626,9 +622,7 @@ static inline void airy_auto_free_impl(void *p)
 
 #endif
 
-/** @} */  // end of auto_free
-
-/* ==================== P0.11: AIRY_SECURE_FREE 安全清零释放 ==================== */
+/** @} */ /* end of auto_free */
 
 /**
  * @defgroup secure_free 安全内存释放（P0.11.3）
@@ -639,36 +633,34 @@ static inline void airy_auto_free_impl(void *p)
  */
 
 #if defined(_MSC_VER)
-/* MSVC 使用 SecureZeroMemory */
+
 #include <windows.h>
-#define AIRY_SECURE_FREE(ptr, size) do { \
-    if ((ptr) && (size) > 0) { \
-        SecureZeroMemory((ptr), (size)); \
-    } \
-    AIRY_FREE(ptr); \
-    (ptr) = NULL; \
-} while (0)
+#define AIRY_SECURE_FREE(ptr, size)          \
+    do {                                     \
+        if ((ptr) && (size) > 0) {           \
+            SecureZeroMemory((ptr), (size)); \
+        }                                    \
+        AIRY_FREE(ptr);                      \
+        (ptr) = NULL;                        \
+    } while (0)
 #else
-/* GCC/Clang/Linux: 使用 volatile + 内存屏障 */
-#define AIRY_SECURE_FREE(ptr, size) do { \
-    if ((ptr) && (size) > 0) { \
-        volatile char *__airy_sf_ptr = (volatile char *)(ptr); \
-        for (size_t __airy_sf_i = 0; \
-             __airy_sf_i < (size); \
-             __airy_sf_i++) { \
-            __airy_sf_ptr[__airy_sf_i] = 0; \
-        } \
-        /* 内存屏障：防止编译器优化掉清零操作 */ \
-        __asm__ __volatile__("" : : "r"(__airy_sf_ptr) : "memory"); \
-    } \
-    AIRY_FREE(ptr); \
-    (ptr) = NULL; \
-} while (0)
+
+#define AIRY_SECURE_FREE(ptr, size)                                             \
+    do {                                                                        \
+        if ((ptr) && (size) > 0) {                                              \
+            volatile char *__airy_sf_ptr = (volatile char *)(ptr);              \
+            for (size_t __airy_sf_i = 0; __airy_sf_i < (size); __airy_sf_i++) { \
+                __airy_sf_ptr[__airy_sf_i] = 0;                                 \
+            }                                                                   \
+            /* 内存屏障：防止编译器优化掉清零操作 */                            \
+            __asm__ __volatile__("" : : "r"(__airy_sf_ptr) : "memory");         \
+        }                                                                       \
+        AIRY_FREE(ptr);                                                         \
+        (ptr) = NULL;                                                           \
+    } while (0)
 #endif
 
-/** @} */  // end of secure_free
-
-/* ==================== Arena 短生命周期分配 ==================== */
+/** @} */ /* end of secure_free */
 
 /**
  * @defgroup arena_alloc Arena 短生命周期分配
@@ -677,7 +669,7 @@ static inline void airy_auto_free_impl(void *p)
  * P1.19: ALLOC_SHORT_LIVED 类别使用 Arena 分配器。
  */
 
-/* 前向声明：airy_arena_alloc 由 corekern/arena.h 提供 */
+
 void *airy_arena_alloc(airy_arena_t *arena, size_t size);
 
 /**
@@ -686,10 +678,9 @@ void *airy_arena_alloc(airy_arena_t *arena, size_t size);
  *
  * 如果当前线程没有设置 Arena，回退到 AIRY_MALLOC。
  */
-#define AIRY_ARENA_ALLOC(size) \
-    (airy_arena_get_current() ? \
-     airy_arena_alloc(airy_arena_get_current(), size) : \
-     AIRY_MALLOC(size))
+#define AIRY_ARENA_ALLOC(size)                                                     \
+    (airy_arena_get_current() ? airy_arena_alloc(airy_arena_get_current(), size) : \
+                                AIRY_MALLOC(size))
 
 /**
  * @brief 获取当前线程的 Arena（线程局部存储）
@@ -703,9 +694,7 @@ airy_arena_t *airy_arena_get_current(void);
  */
 void airy_arena_set_current(airy_arena_t *arena);
 
-/** @} */  // end of arena_alloc
-
-/* ==================== 安全内存分配宏（SEC-016合规） ==================== */
+/** @} */ /* end of arena_alloc */
 
 /**
  * @defgroup safe_memory_alloc 安全内存分配宏（SEC-016合规）
@@ -716,52 +705,50 @@ void airy_arena_set_current(airy_arena_t *arena);
  * @def SAFE_MALLOC(ptr, size)
  * @brief 安全内存分配，失败时记录日志并返回AIRY_ENOMEM
  */
-#define SAFE_MALLOC(ptr, size)                                                                  \
-    do {                                                                                        \
-        (ptr) = AIRY_MALLOC(size);                                                           \
-        if (!(ptr)) {                                                                           \
-            (ptr) = NULL;                                                                        \
-        }                                                                                       \
+#define SAFE_MALLOC(ptr, size)     \
+    do {                           \
+        (ptr) = AIRY_MALLOC(size); \
+        if (!(ptr)) {              \
+            (ptr) = NULL;          \
+        }                          \
     } while (0)
 
 /**
  * @def SAFE_CALLOC(ptr, num, size)
  * @brief 安全内存清零分配，失败时记录日志并返回AIRY_ENOMEM
  */
-#define SAFE_CALLOC(ptr, num, size)                                                       \
-    do {                                                                                  \
-        (ptr) = AIRY_CALLOC(num, size);                                                \
-        if (!(ptr)) {                                                                     \
-            (ptr) = NULL;                                                                  \
-        }                                                                                 \
+#define SAFE_CALLOC(ptr, num, size)     \
+    do {                                \
+        (ptr) = AIRY_CALLOC(num, size); \
+        if (!(ptr)) {                   \
+            (ptr) = NULL;               \
+        }                               \
     } while (0)
 
 /**
  * @def CHECK_ALLOC(ptr)
  * @brief 检查指针是否为NULL，如果是则记录错误并返回AIRY_ENOMEM
  */
-#define CHECK_ALLOC(ptr)                                                      \
-    do {                                                                      \
-        if (!(ptr)) {                                                         \
-            (ptr) = NULL;                                                      \
-        }                                                                     \
+#define CHECK_ALLOC(ptr)  \
+    do {                  \
+        if (!(ptr)) {     \
+            (ptr) = NULL; \
+        }                 \
     } while (0)
 
 /**
  * @def AIRY_STRNCPY_TERM(dst, src, size)
  * @brief 安全字符串复制宏，确保目标缓冲区始终以 null 终止
  */
-#define AIRY_STRNCPY_TERM(dst, src, size) \
-    do {                                     \
-        size_t _len = __builtin_strlen(src); \
+#define AIRY_STRNCPY_TERM(dst, src, size)                               \
+    do {                                                                \
+        size_t _len = __builtin_strlen(src);                            \
         size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
-        __builtin_memcpy((dst), (src), _copy); \
-        (dst)[_copy] = '\0';                 \
+        __builtin_memcpy((dst), (src), _copy);                          \
+        (dst)[_copy] = '\0';                                            \
     } while (0)
 
-/** @} */  // end of safe_memory_alloc
-
-/* ==================== 安全缓冲区操作宏（SEC-01/02/03 合规） ==================== */
+/** @} */ /* end of safe_memory_alloc */
 
 /**
  * @defgroup safe_buffer_ops 安全缓冲区操作宏（SEC-01/02/03 合规）
@@ -772,41 +759,39 @@ void airy_arena_set_current(airy_arena_t *arena);
  * @def AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)
  * @brief 带边界检查的安全 memcpy
  */
-#define AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)              \
-    do {                                                               \
-        if ((size_t)(size) > (size_t)(dst_capacity)) {                 \
-            break;  /* overflow: skip copy */                          \
-        }                                                              \
-        __builtin_memcpy((dst), (src), (size));                                  \
+#define AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity) \
+    do {                                               \
+        if ((size_t)(size) > (size_t)(dst_capacity)) { \
+            break; /* overflow: skip copy */           \
+        }                                              \
+        __builtin_memcpy((dst), (src), (size));        \
     } while (0)
 
 /**
  * @def SAFE_MALLOC_ARRAY(ptr, count, element_size)
  * @brief 安全数组分配，带整数溢出检查
  */
-#define SAFE_MALLOC_ARRAY(ptr, count, element_size)                              \
-    do {                                                                         \
-        (ptr) = airy_malloc_array((size_t)(count), (size_t)(element_size));   \
-        if (!(ptr)) {                                                             \
-            (ptr) = NULL;                                                         \
-        }                                                                         \
+#define SAFE_MALLOC_ARRAY(ptr, count, element_size)                         \
+    do {                                                                    \
+        (ptr) = airy_malloc_array((size_t)(count), (size_t)(element_size)); \
+        if (!(ptr)) {                                                       \
+            (ptr) = NULL;                                                   \
+        }                                                                   \
     } while (0)
 
 /**
  * @def SAFE_CALLOC_ARRAY(ptr, count, element_size)
  * @brief 安全数组清零分配，带整数溢出检查
  */
-#define SAFE_CALLOC_ARRAY(ptr, count, element_size)                               \
-    do {                                                                          \
-        (ptr) = airy_calloc_array((size_t)(count), (size_t)(element_size));    \
-        if (!(ptr)) {                                                              \
-            (ptr) = NULL;                                                          \
-        }                                                                          \
+#define SAFE_CALLOC_ARRAY(ptr, count, element_size)                         \
+    do {                                                                    \
+        (ptr) = airy_calloc_array((size_t)(count), (size_t)(element_size)); \
+        if (!(ptr)) {                                                       \
+            (ptr) = NULL;                                                   \
+        }                                                                   \
     } while (0)
 
-/** @} */  // end of safe_buffer_ops
-
-/* ==================== 内存操作宏（绕过 BAN poison） ==================== */
+/** @} */ /* end of safe_buffer_ops */
 
 /**
  * @def AIRY_MEMSET(ptr, value, size)
@@ -814,9 +799,9 @@ void airy_arena_set_current(airy_arena_t *arena);
  *
  * 编码契约 SEC-04: 当 size == 0 时不执行任何操作，避免空指针解引用。
  */
-#define AIRY_MEMSET(ptr, value, size) \
-    do {                                 \
-        if ((size) > 0)                  \
+#define AIRY_MEMSET(ptr, value, size)                 \
+    do {                                              \
+        if ((size) > 0)                               \
             __builtin_memset((ptr), (value), (size)); \
     } while (0)
 
@@ -824,9 +809,9 @@ void airy_arena_set_current(airy_arena_t *arena);
  * @def AIRY_MEMCPY(dst, src, size)
  * @brief 安全内存复制宏（绕过 BAN poison，调用者需确保边界安全）
  */
-#define AIRY_MEMCPY(dst, src, size) \
-    do { \
-        if ((size) > 0) \
+#define AIRY_MEMCPY(dst, src, size)                 \
+    do {                                            \
+        if ((size) > 0)                             \
             __builtin_memcpy((dst), (src), (size)); \
     } while (0)
 
@@ -834,9 +819,9 @@ void airy_arena_set_current(airy_arena_t *arena);
  * @def AIRY_MEMMOVE(dst, src, size)
  * @brief 安全内存移动宏（处理重叠区域，绕过 BAN poison）
  */
-#define AIRY_MEMMOVE(dst, src, size) \
-    do { \
-        if ((size) > 0) \
+#define AIRY_MEMMOVE(dst, src, size)                 \
+    do {                                             \
+        if ((size) > 0)                              \
             __builtin_memmove((dst), (src), (size)); \
     } while (0)
 
@@ -874,13 +859,12 @@ static inline bool airy_get_memory_stats(memory_stats_t *stats)
     return memory_get_stats(stats);
 }
 
-/* ==================== SEC-15 扩展内存统计 API ==================== */
 
 /**
  * @brief 初始化扩展内存统计跟踪器（SEC-15）
  */
-static inline int airy_memory_stats_extended_init(
-    memory_stats_extended_t *ext_stats, size_t tracker_capacity)
+static inline int airy_memory_stats_extended_init(memory_stats_extended_t *ext_stats,
+                                                  size_t tracker_capacity)
 {
     if (!ext_stats || tracker_capacity == 0) {
         return AIRY_EINVAL;
@@ -899,68 +883,63 @@ static inline int airy_memory_stats_extended_init(
 
 /* 前向声明 — airy_memory_check_watermark 在下方定义，
  * 但 airy_memory_track_alloc 需要调用它 */
-static inline void airy_memory_check_watermark(
-    memory_stats_extended_t *ext_stats);
+static inline void airy_memory_check_watermark(memory_stats_extended_t *ext_stats);
 
 /**
  * @brief 记录一次内存分配到环形缓冲区（SEC-15）
  */
-static inline void airy_memory_track_alloc(
-    memory_stats_extended_t *ext_stats,
-    void *ptr, size_t size, alloc_category_t category,
-    const char *file, int line)
+static inline void airy_memory_track_alloc(memory_stats_extended_t *ext_stats, void *ptr,
+                                           size_t size, alloc_category_t category, const char *file,
+                                           int line)
 {
-    if (!ext_stats || !ext_stats->allocation_tracker || !ptr) return;
+    if (!ext_stats || !ext_stats->allocation_tracker || !ptr)
+        return;
 
-    alloc_track_entry_t *entry =
-        &ext_stats->allocation_tracker[ext_stats->tracker_index];
-    entry->ptr        = ptr;
-    entry->size       = size;
-    entry->category   = category;
+    alloc_track_entry_t *entry = &ext_stats->allocation_tracker[ext_stats->tracker_index];
+    entry->ptr = ptr;
+    entry->size = size;
+    entry->category = category;
     entry->alloc_time = airy_time_ms();
-    entry->file       = file;
-    entry->line       = line;
-    entry->freed      = false;
+    entry->file = file;
+    entry->line = line;
+    entry->freed = false;
 
-    /* 更新统计 */
+
     ext_stats->alloc_count_by_category[category]++;
     ext_stats->bytes_by_category[category] += size;
     ext_stats->total_allocated += size;
     ext_stats->allocation_count++;
-    ext_stats->current_allocated =
-        ext_stats->total_allocated - ext_stats->total_freed;
+    ext_stats->current_allocated = ext_stats->total_allocated - ext_stats->total_freed;
     if (ext_stats->current_allocated > ext_stats->peak_allocated) {
         ext_stats->peak_allocated = ext_stats->current_allocated;
     }
 
-    /* 环形缓冲区前进 */
-    ext_stats->tracker_index =
-        (ext_stats->tracker_index + 1) % ext_stats->tracker_capacity;
+
+    ext_stats->tracker_index = (ext_stats->tracker_index + 1) % ext_stats->tracker_capacity;
     if (ext_stats->tracker_count < ext_stats->tracker_capacity) {
         ext_stats->tracker_count++;
     }
 
-    /* 检查水位变化并触发回调 */
+
     airy_memory_check_watermark(ext_stats);
 }
 
 /**
  * @brief 记录一次内存释放（SEC-15）
  */
-static inline void airy_memory_track_free(
-    memory_stats_extended_t *ext_stats, void *ptr)
+static inline void airy_memory_track_free(memory_stats_extended_t *ext_stats, void *ptr)
 {
-    if (!ext_stats || !ext_stats->allocation_tracker || !ptr) return;
+    if (!ext_stats || !ext_stats->allocation_tracker || !ptr)
+        return;
 
-    /* 在环形缓冲区中查找对应的分配条目 */
+
     for (size_t i = 0; i < ext_stats->tracker_count; i++) {
         alloc_track_entry_t *entry = &ext_stats->allocation_tracker[i];
         if (entry->ptr == ptr && !entry->freed) {
             entry->freed = true;
             ext_stats->total_freed += entry->size;
             ext_stats->free_count++;
-            ext_stats->current_allocated =
-                ext_stats->total_allocated - ext_stats->total_freed;
+            ext_stats->current_allocated = ext_stats->total_allocated - ext_stats->total_freed;
             return;
         }
     }
@@ -969,18 +948,18 @@ static inline void airy_memory_track_free(
 /**
  * @brief 检测疑似内存泄漏（SEC-15）
  */
-static inline size_t airy_check_leaks_scheduled(
-    memory_stats_extended_t *ext_stats, uint64_t max_age_ms)
+static inline size_t airy_check_leaks_scheduled(memory_stats_extended_t *ext_stats,
+                                                uint64_t max_age_ms)
 {
-    if (!ext_stats || !ext_stats->allocation_tracker) return 0;
+    if (!ext_stats || !ext_stats->allocation_tracker)
+        return 0;
 
     size_t suspected = 0;
     uint64_t now = airy_time_ms();
 
     for (size_t i = 0; i < ext_stats->tracker_count; i++) {
         alloc_track_entry_t *entry = &ext_stats->allocation_tracker[i];
-        if (!entry->freed && entry->ptr &&
-            (now - entry->alloc_time) > max_age_ms) {
+        if (!entry->freed && entry->ptr && (now - entry->alloc_time) > max_age_ms) {
             suspected += entry->size;
         }
     }
@@ -991,27 +970,27 @@ static inline size_t airy_check_leaks_scheduled(
 /**
  * @brief 计算当前内存水位级别（SEC-15）
  */
-static inline watermark_level_t airy_memory_calc_watermark(
-    memory_stats_extended_t *ext_stats)
+static inline watermark_level_t airy_memory_calc_watermark(memory_stats_extended_t *ext_stats)
 {
     if (!ext_stats || ext_stats->total_system_memory == 0) {
         return WATERMARK_NORMAL;
     }
-    double usage = (double)ext_stats->current_allocated /
-                   (double)ext_stats->total_system_memory;
-    if (usage > 0.90)      return WATERMARK_CRITICAL;
-    else if (usage > 0.75) return WATERMARK_HIGH;
-    else if (usage > 0.60) return WATERMARK_WARNING;
-    else                   return WATERMARK_NORMAL;
+    double usage = (double)ext_stats->current_allocated / (double)ext_stats->total_system_memory;
+    if (usage > 0.90)
+        return WATERMARK_CRITICAL;
+    else if (usage > 0.75)
+        return WATERMARK_HIGH;
+    else if (usage > 0.60)
+        return WATERMARK_WARNING;
+    else
+        return WATERMARK_NORMAL;
 }
 
 /**
  * @brief 注册水位变化回调（SEC-15）
  */
-static inline int airy_register_watermark_callback(
-    memory_stats_extended_t *ext_stats,
-    watermark_callback_t callback,
-    void *context)
+static inline int airy_register_watermark_callback(memory_stats_extended_t *ext_stats,
+                                                   watermark_callback_t callback, void *context)
 {
     if (!ext_stats || !callback) {
         return AIRY_EINVAL;
@@ -1020,23 +999,23 @@ static inline int airy_register_watermark_callback(
     for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
         if (!ext_stats->watermark_callbacks[i].active) {
             ext_stats->watermark_callbacks[i].callback = callback;
-            ext_stats->watermark_callbacks[i].context  = context;
-            ext_stats->watermark_callbacks[i].active   = true;
+            ext_stats->watermark_callbacks[i].context = context;
+            ext_stats->watermark_callbacks[i].active = true;
             return 0; /* AIRY_SUCCESS */
         }
     }
 
-    return AIRY_ERR_BUSY; /* 回调槽位已满 */
+    return AIRY_ERR_BUSY;
 }
 
 /**
  * @brief 注销水位变化回调（SEC-15）
  */
-static inline void airy_unregister_watermark_callback(
-    memory_stats_extended_t *ext_stats,
-    watermark_callback_t callback)
+static inline void airy_unregister_watermark_callback(memory_stats_extended_t *ext_stats,
+                                                      watermark_callback_t callback)
 {
-    if (!ext_stats || !callback) return;
+    if (!ext_stats || !callback)
+        return;
 
     for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
         if (ext_stats->watermark_callbacks[i].callback == callback) {
@@ -1048,10 +1027,10 @@ static inline void airy_unregister_watermark_callback(
 /**
  * @brief 检查水位变化并触发回调（SEC-15）
  */
-static inline void airy_memory_check_watermark(
-    memory_stats_extended_t *ext_stats)
+static inline void airy_memory_check_watermark(memory_stats_extended_t *ext_stats)
 {
-    if (!ext_stats || ext_stats->total_system_memory == 0) return;
+    if (!ext_stats || ext_stats->total_system_memory == 0)
+        return;
 
     watermark_level_t old_level = ext_stats->current_watermark;
     watermark_level_t new_level = airy_memory_calc_watermark(ext_stats);
@@ -1059,15 +1038,13 @@ static inline void airy_memory_check_watermark(
     if (new_level != old_level) {
         ext_stats->current_watermark = new_level;
 
-        ((void)0)  /* fprintf suppressed in strict compliance mode */;
+        ((void)0) /* fprintf suppressed in strict compliance mode */;
 
-        /* 触发所有已注册的回调 */
         for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
             if (ext_stats->watermark_callbacks[i].active &&
                 ext_stats->watermark_callbacks[i].callback) {
                 ext_stats->watermark_callbacks[i].callback(
-                    old_level, new_level,
-                    ext_stats->watermark_callbacks[i].context);
+                    old_level, new_level, ext_stats->watermark_callbacks[i].context);
             }
         }
     }
@@ -1084,45 +1061,43 @@ oom_response_level_t airy_oom_determine_response(watermark_level_t level);
 /**
  * @brief 内存统计定期上报（SEC-15 核心功能）
  */
-static inline void airy_memory_stats_report(
-    memory_stats_extended_t *ext_stats, const char *tag)
+static inline void airy_memory_stats_report(memory_stats_extended_t *ext_stats, const char *tag)
 {
-    if (!ext_stats) return;
-    (void)tag;  /* tag reserved for future logging integration */
+    if (!ext_stats)
+        return;
+    (void)tag; /* tag reserved for future logging integration */
 
-    /* 更新水位 */
+
     ext_stats->current_watermark = airy_memory_calc_watermark(ext_stats);
 
-    /* 计算碎片率（已释放但未归还系统的估计比例） */
+
     double fragment_ratio = 0.0;
     if (ext_stats->total_allocated > 0) {
-        fragment_ratio = (double)ext_stats->leak_suspected /
-                         (double)ext_stats->total_allocated;
+        fragment_ratio = (double)ext_stats->leak_suspected / (double)ext_stats->total_allocated;
     }
-    (void)fragment_ratio;  /* suppressed: fprintf removed in strict mode */
+    (void)fragment_ratio; /* suppressed: fprintf removed in strict mode */
 
-    /* 计算使用率 */
+
     double usage_pct = 0.0;
     if (ext_stats->total_system_memory > 0) {
-        usage_pct = 100.0 * (double)ext_stats->current_allocated /
-                         (double)ext_stats->total_system_memory;
+        usage_pct =
+            100.0 * (double)ext_stats->current_allocated / (double)ext_stats->total_system_memory;
     }
 
-    /* 输出 6 项关键指标 */
-    ((void)0)  /* fprintf suppressed in strict compliance mode */;
-    (void)usage_pct;  /* suppressed: fprintf removed in strict mode */
 
-    /* 按类别明细 */
-    ((void)0)  /* fprintf suppressed in strict compliance mode */;
+    ((void)0) /* fprintf suppressed in strict compliance mode */;
+    (void)usage_pct; /* suppressed: fprintf removed in strict mode */
+
+    ((void)0) /* fprintf suppressed in strict compliance mode */;
 }
 
 /**
  * @brief 销毁扩展内存统计跟踪器（SEC-15）
  */
-static inline void airy_memory_stats_extended_destroy(
-    memory_stats_extended_t *ext_stats)
+static inline void airy_memory_stats_extended_destroy(memory_stats_extended_t *ext_stats)
 {
-    if (!ext_stats) return;
+    if (!ext_stats)
+        return;
     airy_free(ext_stats->allocation_tracker);
     ext_stats->allocation_tracker = NULL;
     ext_stats->tracker_capacity = 0;
@@ -1130,10 +1105,8 @@ static inline void airy_memory_stats_extended_destroy(
     ext_stats->tracker_count = 0;
 }
 
-/** @} */  // end of airy_memory_tools_api
-
+/** @} */ /* end of airy_memory_tools_api */
 /* ==================== P0.18.3: AIRY_MALLOC_GUARD / AIRY_CALLOC_GUARD ==================== */
-
 /**
  * @defgroup malloc_guard RAII 内存分配守卫（P0.18.3）
  * @{
@@ -1149,16 +1122,20 @@ static inline void airy_memory_stats_extended_destroy(
  * @brief RAII 内存分配守卫：malloc + NULL 检查 + 自动释放
  */
 #define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
-    AUTO_FREE void *ptr = AIRY_MALLOC(size); \
-    if (!(ptr)) { on_fail; }
+    AUTO_FREE void *ptr = AIRY_MALLOC(size);  \
+    if (!(ptr)) {                             \
+        on_fail;                              \
+    }
 
 /**
  * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
  * @brief RAII 内存分配守卫：calloc + NULL 检查 + 自动释放
  */
 #define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
-    AUTO_FREE void *ptr = AIRY_CALLOC(num, size); \
-    if (!(ptr)) { on_fail; }
+    AUTO_FREE void *ptr = AIRY_CALLOC(num, size);  \
+    if (!(ptr)) {                                  \
+        on_fail;                                   \
+    }
 
 #elif defined(_MSC_VER)
 
@@ -1167,16 +1144,20 @@ static inline void airy_memory_stats_extended_destroy(
  * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
-    void *ptr = AIRY_MALLOC(size); \
-    if (!(ptr)) { on_fail; }
+    void *ptr = AIRY_MALLOC(size);            \
+    if (!(ptr)) {                             \
+        on_fail;                              \
+    }
 
 /**
  * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
  * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
-    void *ptr = AIRY_CALLOC(num, size); \
-    if (!(ptr)) { on_fail; }
+    void *ptr = AIRY_CALLOC(num, size);            \
+    if (!(ptr)) {                                  \
+        on_fail;                                   \
+    }
 
 #else
 
@@ -1185,21 +1166,24 @@ static inline void airy_memory_stats_extended_destroy(
  * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
-    void *ptr = AIRY_MALLOC(size); \
-    if (!(ptr)) { on_fail; }
+    void *ptr = AIRY_MALLOC(size);            \
+    if (!(ptr)) {                             \
+        on_fail;                              \
+    }
 
 /**
  * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
  * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
-    void *ptr = AIRY_CALLOC(num, size); \
-    if (!(ptr)) { on_fail; }
+    void *ptr = AIRY_CALLOC(num, size);            \
+    if (!(ptr)) {                                  \
+        on_fail;                                   \
+    }
 
 #endif
 
-/** @} */  // end of malloc_guard
-
+/** @} */ /* end of malloc_guard */
 #ifdef __cplusplus
 }
 #endif

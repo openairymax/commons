@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file sync_platform.c
  * @brief Platform abstraction layer implementation for sync primitives
@@ -7,7 +8,6 @@
  * Provides cross-platform implementations of mutex, condition variable,
  * semaphore, rwlock, spinlock, barrier, and event primitives.
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "sync_platform.h"
@@ -28,9 +28,6 @@
 #endif
 
 #include "error.h"
-
-
-
 
 int platform_mutex_init(platform_mutex_t *mutex)
 {
@@ -339,7 +336,8 @@ int platform_condition_wait(platform_condition_t *cond, platform_mutex_t *mutex)
 #endif
 }
 
-int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *mutex, uint32_t timeout_ms)
+int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *mutex,
+                                 uint32_t timeout_ms)
 {
 #ifdef _WIN32
     return SleepConditionVariableCS(cond, mutex, timeout_ms) ? 0 : -1;

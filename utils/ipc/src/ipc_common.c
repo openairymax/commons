@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file ipc_common.c
  * @brief 进程间通信模块 - 跨平台 IPC 抽象层实现
@@ -88,107 +88,106 @@
  * @brief IPC 通道内部结构
  */
 struct ipc_channel {
-    ipc_config_t config;           /**< 通道配置 */
-    ipc_state_t state;             /**< 当前状态 */
-    uint64_t msg_id_counter;       /**< 消息 ID 计数器 */
-    ipc_stats_t stats;             /**< 统计信息 */
-    ipc_event_callback_t event_cb; /**< 事件回调 */
-    void *event_user_data;         /**< 事件回调用户数据 */
-    ipc_message_callback_t msg_cb; /**< 消息回调 */
-    void *msg_user_data;           /**< 消息回调用户数据 */
-    char error_msg[256];           /**< 错误消息缓冲区 */
+    ipc_config_t config;
+    ipc_state_t state;
+    uint64_t msg_id_counter;
+    ipc_stats_t stats;
+    ipc_event_callback_t event_cb;
+    void *event_user_data;
+    ipc_message_callback_t msg_cb;
+    void *msg_user_data;
+    char error_msg[256];
 
-    /* 平台特定句柄 */
 #ifdef _WIN32
-    HANDLE hPipe;       /**< Windows 管道句柄或 Socket 句柄 */
-    HANDLE hReadEvent;  /**< 读事件对象 */
-    HANDLE hWriteEvent; /**< 写事件对象 */
+    HANDLE hPipe;
+    HANDLE hReadEvent;
+    HANDLE hWriteEvent;
 #else
-    int fd_read;   /**< 读端文件描述符 */
-    int fd_write;  /**< 写端文件描述符 */
-    int socket_fd; /**< Socket 文件描述符 */
+    int fd_read;
+    int fd_write;
+    int socket_fd;
 #endif
-    void *internal_buffer; /**< 内部缓冲区（用于非阻塞模式） */
-    size_t buffer_used;    /**< 缓冲区已使用大小 */
+    void *internal_buffer;
+    size_t buffer_used;
 };
 
 /**
  * @brief IPC 服务端内部结构
  */
 struct ipc_server {
-    ipc_config_t config;         /**< 服务端配置 */
-    ipc_state_t state;           /**< 当前状态 */
-    size_t connection_count;     /**< 当前连接数 */
-    ipc_channel_t **connections; /**< 连接数组 */
-    size_t max_connections;      /**< 最大连接数 */
-    char error_msg[256];         /**< 错误消息缓冲区 */
+    ipc_config_t config;
+    ipc_state_t state;
+    size_t connection_count;
+    ipc_channel_t **connections;
+    size_t max_connections;
+    char error_msg[256];
 };
 
 /**
  * @brief IPC 客户端内部结构
  */
 struct ipc_client {
-    ipc_config_t config;    /**< 客户端配置 */
-    ipc_channel_t *channel; /**< 关联的通道 */
-    ipc_state_t state;      /**< 当前状态 */
-    char error_msg[256];    /**< 错误消息缓冲区 */
+    ipc_config_t config;
+    ipc_channel_t *channel;
+    ipc_state_t state;
+    char error_msg[256];
 };
 
 /**
  * @brief 共享内存内部结构
  */
 struct ipc_shm {
-    ipc_shm_config_t config; /**< 配置信息 */
-    void *mapped_addr;       /**< 映射地址 */
-    size_t actual_size;      /**< 实际大小 */
+    ipc_shm_config_t config;
+    void *mapped_addr;
+    size_t actual_size;
 #ifdef _WIN32
-    HANDLE hMapFile; /**< Windows 内存映射句柄 */
+    HANDLE hMapFile;
 #else
-    int shm_fd; /**< Unix 共享内存描述符 */
+    int shm_fd;
 #endif
-    bool is_mapped;      /**< 是否已映射 */
-    char error_msg[256]; /**< 错误消息缓冲区 */
+    bool is_mapped;
+    char error_msg[256];
 };
 
 /**
  * @brief 消息队列内部消息结构
  */
 typedef struct ipc_mq_message {
-    void *data;                  /**< 消息数据 */
-    size_t len;                  /**< 消息长度 */
-    unsigned int priority;       /**< 优先级 */
-    uint64_t timestamp;          /**< 时间戳 */
-    struct ipc_mq_message *next; /**< 下一个消息指针 */
+    void *data;
+    size_t len;
+    unsigned int priority;
+    uint64_t timestamp;
+    struct ipc_mq_message *next;
 } ipc_mq_message_t;
 
 /**
  * @brief 消息队列内部结构
  */
 struct ipc_mq {
-    ipc_mq_config_t config; /**< 配置信息 */
-    size_t current_count;   /**< 当前消息数 */
-    size_t total_enqueued;  /**< 总入队消息数 */
-    size_t total_dequeued;  /**< 总出队消息数 */
-    ipc_mq_message_t *head; /**< 队列头（高优先级） */
-    ipc_mq_message_t *tail; /**< 队列尾（低优先级） */
+    ipc_mq_config_t config;
+    size_t current_count;
+    size_t total_enqueued;
+    size_t total_dequeued;
+    ipc_mq_message_t *head;
+    ipc_mq_message_t *tail;
 #ifdef _WIN32
-    HANDLE hMutex;    /**< Windows 互斥锁 */
-    HANDLE hNotEmpty; /**< 非空条件变量 */
+    HANDLE hMutex;
+    HANDLE hNotEmpty;
 #else
-    airy_mtx_t mutex;    /**< POSIX 互斥锁 */
-    airy_cond_t not_empty; /**< 非空条件变量 */
+    airy_mtx_t mutex;
+    airy_cond_t not_empty;
 #endif
-    char error_msg[256]; /**< 错误消息缓冲区 */
+    char error_msg[256];
 };
 
 /**
  * @brief RPC 方法节点
  */
 typedef struct rpc_method_node {
-    char *method_name;            /**< 方法名称 */
-    rpc_method_handler_t handler; /**< 处理函数 */
-    void *user_data;              /**< 用户数据 */
-    struct rpc_method_node *next; /**< 下一个方法 */
+    char *method_name;
+    rpc_method_handler_t handler;
+    void *user_data;
+    struct rpc_method_node *next;
 } rpc_method_node_t;
 
 /**
@@ -205,30 +204,29 @@ typedef struct {
 } ipc_rpc_header_t;
 
 #define IPC_RPC_MAGIC 0x52504300 /* "RPC\0" */
-
 /**
  * @brief RPC 服务端内部结构
  */
 struct ipc_rpc_server {
-    char *service_name;          /**< 服务名称 */
-    rpc_method_node_t *methods;  /**< 方法链表 */
-    size_t method_count;         /**< 方法数量 */
-    ipc_channel_t *transport;    /**< 底层传输通道 */
-    size_t max_request_size;     /**< 最大请求大小 */
-    size_t max_response_size;    /**< 最大响应大小 */
-    uint64_t request_id_counter; /**< 请求 ID 计数器 */
-    bool running;                /**< 是否运行中 */
-    char error_msg[256];         /**< 错误消息缓冲区 */
+    char *service_name;
+    rpc_method_node_t *methods;
+    size_t method_count;
+    ipc_channel_t *transport;
+    size_t max_request_size;
+    size_t max_response_size;
+    uint64_t request_id_counter;
+    bool running;
+    char error_msg[256];
 };
 
 /**
  * @brief RPC 客户端内部结构
  */
 struct ipc_rpc_client {
-    ipc_channel_t *transport;    /**< 底层传输通道 */
-    uint32_t timeout_ms;         /**< 默认超时 */
-    uint64_t request_id_counter; /**< 请求 ID 计数器 */
-    char error_msg[256];         /**< 错误消息缓冲区 */
+    ipc_channel_t *transport;
+    uint32_t timeout_ms;
+    uint64_t request_id_counter;
+    char error_msg[256];
 };
 
 /* ============================================================================
@@ -383,7 +381,6 @@ ipc_channel_t *ipc_channel_create(const ipc_config_t *config)
     channel->msg_user_data = NULL;
     AIRY_MEMSET(channel->error_msg, 0, sizeof(channel->error_msg));
 
-    /* 初始化平台特定句柄为无效值 */
 #ifdef _WIN32
     channel->hPipe = INVALID_HANDLE_VALUE;
     channel->hReadEvent = NULL;
@@ -428,7 +425,7 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
 
     switch (channel->config.type) {
     case IPC_TYPE_PIPE:
-        /* 创建匿名管道 */
+
 #ifdef _WIN32
     {
         SECURITY_ATTRIBUTES sa = {0};
@@ -443,14 +440,13 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
             return AIRY_EUNKNOWN;
         }
 
-        /* 设置非阻塞模式（如果需要） */
         if (channel->config.nonblocking) {
             DWORD mode = PIPE_NOWAIT;
             SetNamedPipeHandleState(hReadPipe, &mode, NULL, NULL);
             SetNamedPipeHandleState(hWritePipe, &mode, NULL, NULL);
         }
 
-        channel->hPipe = hWritePipe; /* 写端作为主句柄 */
+        channel->hPipe = hWritePipe;
         channel->hReadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
         channel->hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     }
@@ -467,7 +463,6 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
         channel->fd_read = pipefd[0];
         channel->fd_write = pipefd[1];
 
-        /* 设置非阻塞模式（如果需要） */
         if (channel->config.nonblocking) {
             int flags = fcntl(channel->fd_read, F_GETFL, 0);
             fcntl(channel->fd_read, F_SETFL, flags | O_NONBLOCK);
@@ -479,7 +474,7 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
     break;
 
     case IPC_TYPE_NAMED_PIPE:
-        /* 命名管道在服务端/客户端 API 中处理 */
+
         break;
 
     case IPC_TYPE_SOCKET:
@@ -497,15 +492,15 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
         break;
 
     case IPC_TYPE_SHM:
-        /* 共享内存通过专用 API 处理 */
+
         break;
 
     case IPC_TYPE_MQ:
-        /* 消息队列通过专用 API 处理 */
+
         break;
 
     case IPC_TYPE_RPC:
-        /* RPC 通过专用客户端/服务端 API 处理 */
+
         break;
 
     default:
@@ -515,13 +510,12 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
         return AIRY_EINVAL;
     }
 
-    /* 分配内部缓冲区 */
     if (channel->config.buffer_size > 0) {
         channel->internal_buffer = AIRY_MALLOC(channel->config.buffer_size);
         if (!channel->internal_buffer) {
             snprintf(channel->error_msg, sizeof(channel->error_msg),
                      "Failed to allocate internal buffer");
-            /* 清理已创建的资源 */
+
             ipc_channel_close(channel);
             return AIRY_ENOMEM;
         }
@@ -548,12 +542,10 @@ airy_err_t ipc_channel_close(ipc_channel_t *channel)
 
     channel->state = IPC_STATE_CLOSING;
 
-    /* 触发断开事件 */
     if (channel->event_cb) {
         channel->event_cb(channel, IPC_EVENT_DISCONNECTED, NULL, 0, channel->event_user_data);
     }
 
-    /* 清理平台特定资源 */
 #ifdef _WIN32
     if (channel->hPipe != INVALID_HANDLE_VALUE) {
         CloseHandle(channel->hPipe);
@@ -582,7 +574,6 @@ airy_err_t ipc_channel_close(ipc_channel_t *channel)
     }
 #endif
 
-    /* 释放内部缓冲区 */
     if (channel->internal_buffer) {
         AIRY_FREE(channel->internal_buffer);
         channel->internal_buffer = NULL;
@@ -628,8 +619,8 @@ airy_err_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms)
     return AIRY_SUCCESS;
 }
 
-airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel,
-                                               ipc_event_callback_t callback, void *user_data)
+airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel, ipc_event_callback_t callback,
+                                          void *user_data)
 {
     if (!channel) {
         return AIRY_EINVAL;
@@ -684,23 +675,19 @@ airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
         return AIRY_EOVERFLOW;
     }
 
-    /* 序列化消息并写入管道/Socket */
     size_t total_size = sizeof(ipc_message_header_t) + message->payload_size;
     void *send_buffer = AIRY_MALLOC(total_size);
     if (!send_buffer) {
         return AIRY_ENOMEM;
     }
 
-    /* 复制消息头 */
     __builtin_memcpy(send_buffer, &message->header, sizeof(ipc_message_header_t));
 
-    /* 复制负载（如果有） */
     if (message->payload && message->payload_size > 0) {
         __builtin_memcpy((char *)send_buffer + sizeof(ipc_message_header_t), message->payload,
-               message->payload_size);
+                         message->payload_size);
     }
 
-    /* 使用平台特定的写操作 */
 #ifdef _WIN32
     DWORD bytes_written = 0;
     BOOL success = FALSE;
@@ -732,7 +719,6 @@ airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
 
     AIRY_FREE(send_buffer);
 
-    /* 检查写入结果 */
 #ifdef _WIN32
     if (!success || bytes_written < total_size) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Write failed: %lu",
@@ -785,8 +771,8 @@ airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, s
     return err;
 }
 
-airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
-                                 ipc_message_t *response, uint32_t timeout_ms)
+airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_message_t *response,
+                            uint32_t timeout_ms)
 {
     if (!channel || !request || !response) {
         return AIRY_EINVAL;
@@ -822,8 +808,8 @@ airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request,
             }
             if (channel->internal_buffer) {
                 n = recv(channel->socket_fd, channel->internal_buffer,
-                         payload_len > channel->config.buffer_size ? channel->config.buffer_size
-                                                                   : payload_len,
+                         payload_len > channel->config.buffer_size ? channel->config.buffer_size :
+                                                                     payload_len,
                          MSG_WAITALL);
                 if (n > 0) {
                     AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
@@ -896,13 +882,12 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
 
     AIRY_MEMSET(message, 0, sizeof(ipc_message_t));
 
-    /* 首先读取消息头 */
 #ifdef _WIN32
     DWORD bytes_read = 0;
     BOOL success = FALSE;
 
     if (channel->hPipe != INVALID_HANDLE_VALUE) {
-        /* Windows: 使用 ReadFile 读取 */
+
         success = ReadFile(channel->hPipe, &message->header, sizeof(ipc_message_header_t),
                            &bytes_read, NULL);
 
@@ -922,7 +907,7 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
     int fd = (channel->fd_read >= 0) ? channel->fd_read : channel->socket_fd;
 
     if (fd >= 0) {
-        /* Unix: 使用 read() 读取 */
+
         bytes_read = read(fd, &message->header, sizeof(ipc_message_header_t));
 
         if (bytes_read <= 0) {
@@ -937,7 +922,7 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         }
 
         if ((size_t)bytes_read < sizeof(ipc_message_header_t)) {
-            /* 不完整的消息头 */
+
             snprintf(channel->error_msg, sizeof(channel->error_msg),
                      "Incomplete header: got %zd bytes", bytes_read);
             return AIRY_EINVAL;
@@ -945,7 +930,6 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
     }
 #endif
 
-    /* 验证魔数 */
     if (message->header.magic != IPC_MAGIC) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Invalid magic: 0x%08X",
                  message->header.magic);
@@ -953,7 +937,6 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         return AIRY_EINVAL;
     }
 
-    /* 如果有负载，继续读取负载 */
     if (message->header.payload_len > 0 &&
         message->header.payload_len <= channel->config.max_message_size) {
 
@@ -992,11 +975,10 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         message->payload_size = message->header.payload_len;
     }
 
-    /* 调用消息回调（如果设置） */
     if (channel->msg_cb) {
         int result = channel->msg_cb(channel, message, channel->msg_user_data);
         if (result != 0) {
-            /* 回调拒绝了消息，但数据已接收 */
+
             return AIRY_ECANCELLED;
         }
     }
@@ -1046,7 +1028,7 @@ airy_err_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message)
 }
 
 airy_err_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
-                                         void *user_data)
+                                    void *user_data)
 {
     if (!channel) {
         return AIRY_EINVAL;
@@ -1468,9 +1450,10 @@ void *ipc_shm_map(ipc_shm_t *shm)
     }
 
 #ifdef _WIN32
-    shm->hMapFile = CreateFileMappingA(
-        INVALID_HANDLE_VALUE, NULL, shm->config.read_only ? PAGE_READONLY : PAGE_READWRITE,
-        (DWORD)(shm->config.size >> 32), (DWORD)(shm->config.size & 0xFFFFFFFF), shm->config.name);
+    shm->hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL,
+                                       shm->config.read_only ? PAGE_READONLY : PAGE_READWRITE,
+                                       (DWORD)(shm->config.size >> 32),
+                                       (DWORD)(shm->config.size & 0xFFFFFFFF), shm->config.name);
 
     if (shm->hMapFile == NULL) {
         snprintf(shm->error_msg, sizeof(shm->error_msg), "CreateFileMapping failed");
@@ -1614,14 +1597,13 @@ static void ipc_mq_unlock(ipc_mq_t *mq)
 static bool ipc_mq_wait_for_message(ipc_mq_t *mq, uint32_t timeout_ms)
 {
     if (mq->current_count > 0) {
-        return true;  // 已有消息，无需等待
+        return true;
     }
 
     if (timeout_ms == 0) {
-        return false;  // 非阻塞模式，立即返回
+        return false;
     }
 
-    // 释放锁并等待新消息通知
     ipc_mq_unlock(mq);
 
 #ifdef _WIN32
@@ -1629,7 +1611,6 @@ static bool ipc_mq_wait_for_message(ipc_mq_t *mq, uint32_t timeout_ms)
     if (wait_result == WAIT_TIMEOUT) {
         return false;
     }
-    // 重新获取锁
     WaitForSingleObject(mq->hMutex, INFINITE);
 #else
     airy_mtx_lock(&mq->mutex);
@@ -1654,15 +1635,14 @@ static bool ipc_mq_wait_for_message(ipc_mq_t *mq, uint32_t timeout_ms)
  * @param priority [out] 消息优先级
  * @return AIRY_SUCCESS 成功，AIRY_EINVAL 参数无效
  */
-static airy_err_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len,
-                                              size_t *received, unsigned int *priority)
+static airy_err_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
+                                         unsigned int *priority)
 {
     ipc_mq_message_t *msg = mq->head;
     if (!msg) {
         return AIRY_EINVAL;
     }
 
-    // 复制数据到缓冲区（截断保护）
     size_t copy_len = (len < msg->len) ? len : msg->len;
     __builtin_memcpy(buffer, msg->data, copy_len);
 
@@ -1674,7 +1654,6 @@ static airy_err_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len,
         *priority = msg->priority;
     }
 
-    // 更新队列头指针
     mq->head = msg->next;
     if (mq->head == NULL) {
         mq->tail = NULL;
@@ -1683,7 +1662,6 @@ static airy_err_t ipc_mq_dequeue_message(ipc_mq_t *mq, void *buffer, size_t len,
     mq->current_count--;
     mq->total_dequeued++;
 
-    // 释放消息内存
     AIRY_FREE(msg->data);
     AIRY_FREE(msg);
 
@@ -1749,7 +1727,6 @@ void ipc_mq_destroy(ipc_mq_t *mq)
         return;
     }
 
-    // 清空所有消息
     ipc_mq_clear(mq);
 
     // 销毁同步原语
@@ -1778,7 +1755,6 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
     airy_mtx_lock(&mq->mutex);
 #endif
 
-    // 检查队列是否已满
     if (mq->current_count >= mq->config.max_messages) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Message queue full (count=%zu, max=%zu)",
                  mq->current_count, mq->config.max_messages);
@@ -1790,7 +1766,6 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
         return AIRY_EBUSY;
     }
 
-    // 创建新消息
     ipc_mq_message_t *msg = (ipc_mq_message_t *)AIRY_MALLOC(sizeof(ipc_mq_message_t));
     if (!msg) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to allocate memory for message");
@@ -1863,18 +1838,14 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
      * ════════════════════════════════════════════════════════════════
      */
     if (mq->tail == NULL) {
-        // 空队列
         mq->head = mq->tail = msg;
     } else if (priority >= mq->tail->priority) {
-        // 插入队尾（优先级最低）
         mq->tail->next = msg;
         mq->tail = msg;
     } else if (priority > mq->head->priority) {
-        // 插入队头（优先级最高）
         msg->next = mq->head;
         mq->head = msg;
     } else {
-        // 在中间查找合适位置
         ipc_mq_message_t *current = mq->head;
         while (current->next && current->next->priority > priority) {
             current = current->next;
@@ -1886,7 +1857,6 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
     mq->current_count++;
     mq->total_enqueued++;
 
-    // 通知等待的消费者
 #ifdef _WIN32
     SetEvent(mq->hNotEmpty);
     ReleaseMutex(mq->hMutex);
@@ -1899,7 +1869,7 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
 }
 
 airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
-                               unsigned int *priority, uint32_t timeout_ms)
+                          unsigned int *priority, uint32_t timeout_ms)
 {
     if (!mq || !buffer) {
         return AIRY_EINVAL;
@@ -1916,16 +1886,13 @@ airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *receiv
         return AIRY_EUNKNOWN;
     }
 
-    // 步骤2: 等待消息可用（处理空队列情况）
     if (!ipc_mq_wait_for_message(mq, timeout_ms)) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "No message available after timeout");
         return AIRY_EBUSY;
     }
 
-    // 步骤3: 从队头取出消息（最高优先级）
     airy_err_t err = ipc_mq_dequeue_message(mq, buffer, len, received, priority);
 
-    // 步骤4: 释放锁并返回结果
     ipc_mq_unlock(mq);
 
     return err;
@@ -1951,7 +1918,6 @@ airy_err_t ipc_mq_clear(ipc_mq_t *mq)
     airy_mtx_lock(&mq->mutex);
 #endif
 
-    // 释放所有消息
     ipc_mq_message_t *current = mq->head;
     while (current != NULL) {
         ipc_mq_message_t *next = current->next;
@@ -2081,7 +2047,7 @@ bool ipc_message_verify(const ipc_message_t *message)
 }
 
 airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
-                                      size_t *written)
+                                 size_t *written)
 {
     if (!message || !buffer) {
         return AIRY_EINVAL;
@@ -2097,7 +2063,7 @@ airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, siz
 
     if (message->payload && message->payload_size > 0) {
         __builtin_memcpy((char *)buffer + sizeof(ipc_message_header_t), message->payload,
-               message->payload_size);
+                         message->payload_size);
     }
 
     if (written) {
@@ -2130,7 +2096,7 @@ airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t
         }
 
         __builtin_memcpy(message->payload, (const char *)buffer + sizeof(ipc_message_header_t),
-               message->header.payload_len);
+                         message->header.payload_len);
         message->payload_size = message->header.payload_len;
     } else {
         message->payload = NULL;
@@ -2200,12 +2166,12 @@ ipc_rpc_server_t *ipc_rpc_server_create(const ipc_rpc_server_config_t *config)
 {
     if (!config || !config->transport) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     ipc_rpc_server_t *server = (ipc_rpc_server_t *)AIRY_CALLOC(1, sizeof(ipc_rpc_server_t));
     if (!server) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     server->transport = config->transport;
     server->max_request_size =
@@ -2267,8 +2233,7 @@ airy_err_t ipc_rpc_server_stop(ipc_rpc_server_t *server)
     return AIRY_SUCCESS;
 }
 
-airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server,
-                                               const ipc_rpc_method_t *method)
+airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server, const ipc_rpc_method_t *method)
 {
     if (!server || !method || !method->method_name || !method->handler)
         return AIRY_EINVAL;
@@ -2298,7 +2263,7 @@ rpc_method_handler_t ipc_rpc_server_find_method(ipc_rpc_server_t *server, const 
 {
     if (!server || !method_name) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     rpc_method_node_t *node = rpc_find_method_node(server, method_name);
     return node ? node->handler : NULL;
 }
@@ -2315,19 +2280,16 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     if (err != AIRY_SUCCESS)
         return err;
 
-    /* 验证 RPC 消息 */
     if (msg.header.magic != IPC_MAGIC) {
         ipc_message_free(&msg);
         return AIRY_EINVAL;
     }
 
-    /* 解析方法名称（从负载中提取） */
     if (msg.payload == NULL || msg.payload_size == 0) {
         ipc_message_free(&msg);
         return AIRY_EINVAL;
     }
 
-    /* 负载格式：[method_name\0][request_payload] */
     char *method_name = (char *)msg.payload;
     size_t name_len = strnlen(method_name, msg.payload_size);
     if (name_len >= msg.payload_size) {
@@ -2340,7 +2302,7 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
 
     rpc_method_node_t *node = rpc_find_method_node(server, method_name);
     if (!node) {
-        /* 方法未找到，返回错误响应 */
+
         ipc_rpc_header_t rsp_hdr = {0};
         rsp_hdr.magic = IPC_RPC_MAGIC;
         rsp_hdr.version = 1;
@@ -2361,7 +2323,6 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
         return AIRY_ENOENT;
     }
 
-    /* 调用处理函数 */
     size_t response_max = server->max_response_size;
     void *response_buf = AIRY_CALLOC(1, response_max);
     if (!response_buf) {
@@ -2373,7 +2334,6 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     airy_err_t handler_err =
         node->handler(request_payload, request_len, response_buf, &response_len, node->user_data);
 
-    /* 构建响应消息 */
     ipc_rpc_header_t rsp_hdr = {0};
     rsp_hdr.magic = IPC_RPC_MAGIC;
     rsp_hdr.version = 1;
@@ -2383,19 +2343,18 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     rsp_hdr.payload_len = response_len;
     __builtin_memcpy(rsp_hdr.method_name, method_name, strlen(method_name));
 
-    /* 发送响应 */
     ipc_message_t rsp_msg = {0};
     rsp_msg.header = msg.header;
     rsp_msg.header.type = IPC_MSG_RESPONSE;
     rsp_msg.header.payload_len = sizeof(rsp_hdr) + response_len;
 
-    /* 将 header 和 response_buf 合并 */
     size_t total_payload = sizeof(rsp_hdr) + response_len;
     void *combined_payload = AIRY_MALLOC(total_payload);
     if (combined_payload) {
         __builtin_memcpy(combined_payload, &rsp_hdr, sizeof(rsp_hdr));
         if (response_len > 0) {
-            __builtin_memcpy((char *)combined_payload + sizeof(rsp_hdr), response_buf, response_len);
+            __builtin_memcpy((char *)combined_payload + sizeof(rsp_hdr), response_buf,
+                             response_len);
         }
         rsp_msg.payload = combined_payload;
         rsp_msg.payload_size = total_payload;
@@ -2412,12 +2371,12 @@ ipc_rpc_client_t *ipc_rpc_client_create(const ipc_rpc_client_config_t *config)
 {
     if (!config || !config->transport) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     ipc_rpc_client_t *client = (ipc_rpc_client_t *)AIRY_CALLOC(1, sizeof(ipc_rpc_client_t));
     if (!client) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     client->transport = config->transport;
     client->timeout_ms = config->timeout_ms > 0 ? config->timeout_ms : IPC_DEFAULT_TIMEOUT_MS;
@@ -2432,9 +2391,9 @@ void ipc_rpc_client_destroy(ipc_rpc_client_t *client)
     AIRY_FREE(client);
 }
 
-airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
-                                  const void *request, size_t request_len, void *response,
-                                  size_t response_max, size_t *response_len)
+airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, const void *request,
+                             size_t request_len, void *response, size_t response_max,
+                             size_t *response_len)
 {
     if (!client || !method_name || !request)
         return AIRY_EINVAL;
@@ -2447,7 +2406,6 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
     if (total_payload > UINT32_MAX)
         return AIRY_EOVERFLOW;
 
-    /* 构建请求负载: [method_name\0][request_data] */
     void *request_buf = AIRY_MALLOC(total_payload);
     if (!request_buf)
         return AIRY_ENOMEM;
@@ -2458,7 +2416,6 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
         __builtin_memcpy((char *)request_buf + name_len + 1, request, request_len);
     }
 
-    /* 发送请求 */
     ipc_message_t req_msg = {0};
     req_msg.header.magic = IPC_MAGIC;
     req_msg.header.version = 1;
@@ -2474,13 +2431,11 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
     if (err != AIRY_SUCCESS)
         return err;
 
-    /* 等待响应 */
     ipc_message_t rsp_msg = {0};
     err = ipc_receive(client->transport, &rsp_msg, client->timeout_ms);
     if (err != AIRY_SUCCESS)
         return err;
 
-    /* 验证响应 */
     if (rsp_msg.payload == NULL || rsp_msg.payload_size < sizeof(ipc_rpc_header_t)) {
         ipc_message_free(&rsp_msg);
         return AIRY_EINVAL;
@@ -2493,12 +2448,11 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name,
     }
 
     if (rsp_hdr->status != 0) {
-        /* RPC 调用失败 */
+
         ipc_message_free(&rsp_msg);
         return (airy_err_t)rsp_hdr->status;
     }
 
-    /* 提取响应负载 */
     size_t actual_response_len = rsp_hdr->payload_len;
     if (actual_response_len > response_max) {
         actual_response_len = response_max;

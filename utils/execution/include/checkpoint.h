@@ -1,10 +1,9 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file checkpoint.h
  * @brief AgentRT 任务检查点接口
- *
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  */
 
@@ -54,25 +53,24 @@ typedef struct airy_checkpoint_stats {
 } airy_checkpoint_stats_t;
 
 typedef void (*airy_checkpoint_hook_fn)(const char *task_id, const char *state_json,
-                                           void *user_data);
+                                        void *user_data);
 
 AIRY_API airy_err_t airy_checkpoint_create(const char *task_id, const char *session_id,
-                                                      uint64_t sequence_num, const char *state_json,
-                                                      char **completed_nodes,
-                                                      size_t completed_count, char **pending_nodes,
-                                                      size_t pending_count,
-                                                      airy_task_checkpoint_t **out_checkpoint);
+                                           uint64_t sequence_num, const char *state_json,
+                                           char **completed_nodes, size_t completed_count,
+                                           char **pending_nodes, size_t pending_count,
+                                           airy_task_checkpoint_t **out_checkpoint);
 
 AIRY_API airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *checkpoint);
 AIRY_API airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
-                                                       airy_task_checkpoint_t **out_checkpoint);
+                                            airy_task_checkpoint_t **out_checkpoint);
 AIRY_API airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t sequence_num);
 AIRY_API airy_err_t airy_checkpoint_list(const char *task_id,
-                                                    airy_task_checkpoint_t ***out_checkpoints,
-                                                    size_t *out_count);
+                                         airy_task_checkpoint_t ***out_checkpoints,
+                                         size_t *out_count);
 AIRY_API airy_err_t airy_checkpoint_get_stats(airy_checkpoint_stats_t *out_stats);
 AIRY_API airy_err_t airy_checkpoint_verify(const airy_task_checkpoint_t *checkpoint,
-                                                      bool *is_valid);
+                                           bool *is_valid);
 AIRY_API airy_err_t airy_checkpoint_destroy(airy_task_checkpoint_t *checkpoint);
 AIRY_API airy_err_t airy_checkpoint_init(const char *storage_path);
 AIRY_API airy_err_t airy_checkpoint_shutdown(void);
@@ -80,8 +78,8 @@ AIRY_API airy_err_t airy_checkpoint_cleanup(uint64_t max_age_seconds, size_t max
 AIRY_API airy_err_t airy_snapshot_create(const char *task_id, const char *snapshot_path);
 AIRY_API airy_err_t airy_snapshot_restore(const char *snapshot_path, char **task_id);
 
-AIRY_API airy_err_t airy_checkpoint_set_auto_hook(airy_checkpoint_hook_fn hook,
-                                                             void *user_data, uint64_t interval_ms);
+AIRY_API airy_err_t airy_checkpoint_set_auto_hook(airy_checkpoint_hook_fn hook, void *user_data,
+                                                  uint64_t interval_ms);
 
 AIRY_API airy_err_t airy_checkpoint_trigger_auto(const char *task_id);
 

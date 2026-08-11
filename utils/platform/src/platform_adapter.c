@@ -1,23 +1,20 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file platform_adapter.c
  * @brief 平台适配器 - 实现
  *
  * 实现跨平台抽象层，消除平台相关代码重复。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 /* _POSIX_C_SOURCE: defined via CMakeLists.txt target_compile_definitions (BAN-182) */
 /* _XOPEN_SOURCE: defined via CMakeLists.txt target_compile_definitions (BAN-182) */
 /* _GNU_SOURCE: defined via CMakeLists.txt target_compile_definitions (BAN-182) */
-
-/* 1. POSIX标准头文件（必须最先包含） */
 #include <time.h>
 #include <unistd.h>
 
-/* 2. C标准库头文件 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +38,6 @@
 
 #include "platform_adapter.h"
 
-/* 确保系统头文件声明在项目头文件之后仍然可用 */
 #include "platform.h"
 
 #include <string.h>

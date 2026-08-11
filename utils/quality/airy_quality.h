@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file airy_quality.h
  * @brief AgentRT 代码质量保证框架
@@ -12,7 +13,6 @@
  *
  * 遵循E-1安全内生、E-3资源确定性、E-6错误可追溯原则。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_QUALITY_H
@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include "error.h"
 
-/* 前向声明安全内存函数（避免裸 malloc/calloc/free 触发 BAN 合规违规） */
+
 void *airy_malloc(size_t size);
 void *airy_calloc(size_t num, size_t size);
 void airy_free(const void *ptr);
@@ -37,17 +37,16 @@ extern "C" {
  * @{
  */
 
-/* ==================== 输入验证宏 ==================== */
 
 /**
  * @brief 检查指针是否为NULL，如果为NULL则返回错误码
  */
 #ifndef AIRY_CHECK_NULL
 #define AIRY_CHECK_NULL(ptr, error_code) \
-    do {                                    \
-        if ((ptr) == NULL) {                \
-            return (error_code);            \
-        }                                   \
+    do {                                 \
+        if ((ptr) == NULL) {             \
+            return (error_code);         \
+        }                                \
     } while (0)
 #endif
 
@@ -55,88 +54,88 @@ extern "C" {
  * @brief 检查指针是否为NULL，如果为NULL则跳转到错误标签
  */
 #define AIRY_CHECK_NULL_GOTO(ptr, label, error_code) \
-    do {                                                \
-        if ((ptr) == NULL) {                            \
-            err = (error_code);                         \
-            goto label;                                 \
-        }                                               \
+    do {                                             \
+        if ((ptr) == NULL) {                         \
+            err = (error_code);                      \
+            goto label;                              \
+        }                                            \
     } while (0)
 
 /**
  * @brief 检查条件是否成立，如果不成立则返回错误码
  */
 #define AIRY_CHECK_CONDITION(cond, error_code) \
-    do {                                          \
-        if (!(cond)) {                            \
-            return (error_code);                  \
-        }                                         \
+    do {                                       \
+        if (!(cond)) {                         \
+            return (error_code);               \
+        }                                      \
     } while (0)
 
 /**
  * @brief 检查条件是否成立，如果不成立则跳转到错误标签
  */
 #define AIRY_CHECK_CONDITION_GOTO(cond, label, error_code) \
-    do {                                                      \
-        if (!(cond)) {                                        \
-            err = (error_code);                               \
-            goto label;                                       \
-        }                                                     \
+    do {                                                   \
+        if (!(cond)) {                                     \
+            err = (error_code);                            \
+            goto label;                                    \
+        }                                                  \
     } while (0)
 
 /**
  * @brief 检查值是否在范围内 [min, max]
  */
 #define AIRY_CHECK_RANGE(value, min_val, max_val, error_code) \
-    do {                                                         \
-        if ((value) < (min_val) || (value) > (max_val)) {        \
-            return (error_code);                                 \
-        }                                                        \
+    do {                                                      \
+        if ((value) < (min_val) || (value) > (max_val)) {     \
+            return (error_code);                              \
+        }                                                     \
     } while (0)
 
 /**
  * @brief 检查值是否大于等于最小值
  */
 #define AIRY_CHECK_MIN(value, min_val, error_code) \
-    do {                                              \
-        if ((value) < (min_val)) {                    \
-            return (error_code);                      \
-        }                                             \
+    do {                                           \
+        if ((value) < (min_val)) {                 \
+            return (error_code);                   \
+        }                                          \
     } while (0)
 
 /**
  * @brief 检查值是否小于等于最大值
  */
 #define AIRY_CHECK_MAX(value, max_val, error_code) \
-    do {                                              \
-        if ((value) > (max_val)) {                    \
-            return (error_code);                      \
-        }                                             \
+    do {                                           \
+        if ((value) > (max_val)) {                 \
+            return (error_code);                   \
+        }                                          \
     } while (0)
 
 /**
  * @brief 检查字符串长度是否在允许范围内
  */
 #define AIRY_CHECK_STR_LEN(str, max_len, error_code) \
-    do {                                                \
-        if (!(str) || strlen((str)) > (max_len)) {      \
-            return (error_code);                        \
-        }                                               \
+    do {                                             \
+        if (!(str) || strlen((str)) > (max_len)) {   \
+            return (error_code);                     \
+        }                                            \
     } while (0)
 
 /**
  * @brief 检查数组索引是否有效
  */
 #define AIRY_CHECK_ARRAY_INDEX(index, array_size, error_code) \
-    do {                                                         \
-        if ((index) >= (array_size)) {                           \
-            return (error_code);                                 \
-        }                                                        \
+    do {                                                      \
+        if ((index) >= (array_size)) {                        \
+            return (error_code);                              \
+        }                                                     \
     } while (0)
 
 /**
  * @brief 检查字符串是否为空或NULL
  */
-#define AIRY_CHECK_EMPTY(str, error_code)     \
+#define AIRY_CHECK_EMPTY(str, error_code)        \
     do {                                         \
         if ((str) == NULL || (str)[0] == '\0') { \
             return (error_code);                 \
@@ -146,57 +145,54 @@ extern "C" {
 /**
  * @brief 检查数组索引是否越界（兼容宏）
  */
-#define AIRY_CHECK_BOUNDS(idx, size, error_code) \
-    AIRY_CHECK_ARRAY_INDEX((idx), (size), (error_code))
+#define AIRY_CHECK_BOUNDS(idx, size, error_code) AIRY_CHECK_ARRAY_INDEX((idx), (size), (error_code))
 
-/* ==================== 错误处理宏 ==================== */
 
 /**
  * @brief 安全执行操作，失败时跳转到清理标签
  */
 #define AIRY_SAFE_EXEC(expr, cleanup_label, error_var) \
-    do {                                                  \
-        int _ret = (expr);                                \
-        if (_ret != 0) {                                  \
-            (error_var) = _ret;                           \
-            goto cleanup_label;                           \
-        }                                                 \
+    do {                                               \
+        int _ret = (expr);                             \
+        if (_ret != 0) {                               \
+            (error_var) = _ret;                        \
+            goto cleanup_label;                        \
+        }                                              \
     } while (0)
 
 /**
  * @brief 安全分配内存，失败时跳转到清理标签
  */
 #define AIRY_SAFE_ALLOC(var, size, cleanup_label, error_var) \
-    do {                                                        \
-        (var) = airy_malloc((size));                          \
-        if (!(var)) {                                           \
-            (error_var) = -1;                                   \
-            goto cleanup_label;                                 \
-        }                                                       \
+    do {                                                     \
+        (var) = airy_malloc((size));                         \
+        if (!(var)) {                                        \
+            (error_var) = -1;                                \
+            goto cleanup_label;                              \
+        }                                                    \
     } while (0)
 
 /**
  * @brief 安全分配内存并清零，失败时跳转到清理标签
  */
 #define AIRY_SAFE_CALLOC(var, size, cleanup_label, error_var) \
-    do {                                                         \
-        (var) = airy_calloc(1, (size));                      \
-        if (!(var)) {                                            \
-            (error_var) = -1;                                    \
-            goto cleanup_label;                                  \
-        }                                                        \
+    do {                                                      \
+        (var) = airy_calloc(1, (size));                       \
+        if (!(var)) {                                         \
+            (error_var) = -1;                                 \
+            goto cleanup_label;                               \
+        }                                                     \
     } while (0)
 
 /**
  * @brief 记录错误并返回
  */
 #define AIRY_LOG_ERROR_AND_RETURN(error_code, fmt, ...) \
-    do {                                                   \
-        /* 日志记录 */                                 \
-        return (error_code);                               \
+    do {                                                \
+        /* 日志记录 */                                  \
+        return (error_code);                            \
     } while (0)
 
-/* ==================== 资源管理宏 ==================== */
 
 /**
  * @brief 定义RAII风格的资源守卫作用域开始
@@ -224,12 +220,12 @@ extern "C" {
 /**
  * @brief 安全释放内存并置为NULL
  */
-#define AIRY_SAFE_FREE(ptr) \
-    do {                       \
-        if ((ptr) != NULL) {   \
+#define AIRY_SAFE_FREE(ptr)   \
+    do {                      \
+        if ((ptr) != NULL) {  \
             airy_free((ptr)); \
-            (ptr) = NULL;      \
-        }                      \
+            (ptr) = NULL;     \
+        }                     \
     } while (0)
 
 /**
@@ -244,15 +240,15 @@ extern "C" {
  * BAN-247: 敏感数据释放前必须清零
  */
 #ifndef AIRY_SECURE_FREE
-#define AIRY_SECURE_FREE(ptr, size)                    \
-    do {                                                  \
-        if ((ptr) != NULL) {                              \
-            if ((size) > 0) {                             \
-                airy_explicit_bzero((ptr), (size));    \
-            }                                             \
-            free((ptr));                                  \
-            (ptr) = NULL;                                 \
-        }                                                 \
+#define AIRY_SECURE_FREE(ptr, size)                 \
+    do {                                            \
+        if ((ptr) != NULL) {                        \
+            if ((size) > 0) {                       \
+                airy_explicit_bzero((ptr), (size)); \
+            }                                       \
+            free((ptr));                            \
+            (ptr) = NULL;                           \
+        }                                           \
     } while (0)
 #endif
 
@@ -261,8 +257,7 @@ extern "C" {
  *
  * 用法: AIRY_SECURE_FREE_T(my_struct_ptr, my_struct_t)
  */
-#define AIRY_SECURE_FREE_T(ptr, type) \
-    AIRY_SECURE_FREE((ptr), sizeof(type))
+#define AIRY_SECURE_FREE_T(ptr, type) AIRY_SECURE_FREE((ptr), sizeof(type))
 
 /**
  * @brief 显式内存清零（防止编译器优化掉 memset）
@@ -270,15 +265,16 @@ extern "C" {
  * 使用 volatile 函数指针确保编译器不会将清零操作优化掉。
  * 这对于安全敏感数据的擦除至关重要。
  */
-static inline void airy_explicit_bzero(void *s, size_t n) {
-    if (s == NULL || n == 0) return;
+static inline void airy_explicit_bzero(void *s, size_t n)
+{
+    if (s == NULL || n == 0)
+        return;
     volatile unsigned char *p = (volatile unsigned char *)s;
     while (n--) {
         *p++ = 0;
     }
 }
 
-/* ==================== 数值验证函数 ==================== */
 
 /**
  * @brief 验证数值是否非负
@@ -320,7 +316,6 @@ static inline bool airy_validate_priority(int priority, int min_val, int max_val
     return priority >= min_val && priority <= max_val;
 }
 
-/* ==================== 边界检查函数 ==================== */
 
 /**
  * @brief 安全的整数加法（检测溢出）
@@ -456,7 +451,6 @@ static inline bool is_safe_str_copy(const char *src, char *dest, size_t dest_siz
     return true;
 }
 
-/* ==================== 内存安全辅助函数 ==================== */
 
 /**
  * @brief 安全的内存复制（带边界检查）
@@ -571,13 +565,12 @@ static inline int safe_strcmp(const char *str1, const char *str2)
     if (!str1 && !str2)
         return 0;
     if (!str1)
-        return -1;  /* BAN-073 exempt: strcmp 比较语义 */
+        return -1;
     if (!str2)
         return 1;
     return strcmp(str1, str2);
 }
 
-/* ==================== 类型转换安全函数 ==================== */
 
 /**
  * @brief 安全的int到size_t转换（检查负数）
@@ -627,7 +620,6 @@ static inline int safe_double_to_int(double value, int *result)
     return AIRY_SUCCESS;
 }
 
-/* ==================== 兼容别名 ==================== */
 
 /**
  * @brief airy_safe_strcpy 兼容别名
@@ -642,7 +634,6 @@ static inline int safe_double_to_int(double value, int *result)
 #define airy_safe_strcat(dest, dest_size, src) safe_strcat((dest), (dest_size), (src))
 
 /** @} */
-
 #ifdef __cplusplus
 }
 #endif

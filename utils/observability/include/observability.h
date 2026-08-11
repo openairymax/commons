@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file observability.h
  * @brief 可观测性工具（日志、指标、追踪）
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_UTILS_OBSERVABILITY_H
@@ -17,9 +17,8 @@
 extern "C" {
 #endif
 
-/* ==================== 日志 ==================== */
-/* Note: AIRY_LOG_LEVEL_* constants defined as enum in types.h (airy_log_level_t) */
 
+/* Note: AIRY_LOG_LEVEL_* constants defined as enum in types.h (airy_log_level_t) */
 #ifndef AIRY_LOG_LEVEL
 #define AIRY_LOG_LEVEL AIRY_LOG_LEVEL_INFO
 #endif
@@ -64,7 +63,6 @@ void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
     airy_log_write(AIRY_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
 
-/* ==================== 指标 ==================== */
 
 /**
  * @brief 指标收集器句柄
@@ -114,7 +112,6 @@ void airy_metrics_timing(airy_metrics_t *metrics, const char *name, double durat
  */
 char *airy_metrics_export(airy_metrics_t *metrics);
 
-/* ==================== 追踪 ==================== */
 
 /**
  * @brief 追踪跨度句柄
@@ -149,7 +146,6 @@ void airy_trace_add_event(airy_trace_span_t *span, const char *name, const char 
  */
 char *airy_trace_export(void);
 
-/* ==================== 时间工具 ==================== */
 
 /**
  * @brief 获取单调时钟时间（纳秒）

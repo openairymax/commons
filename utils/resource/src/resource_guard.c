@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file resource_guard.c
- * @brief 资源作用域守卫实?- RAII 模式
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 资源作用域守卫实现 - RAII 模式
  */
 
 #include "resource_guard.h"
@@ -17,11 +17,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ==================== 核心接口实现 ==================== */
-
 void airy_resource_guard_init(airy_resource_guard_t *guard, void *resource,
-                                 airy_resource_cleanup_t cleanup, const char *file, int line,
-                                 const char *name)
+                              airy_resource_cleanup_t cleanup, const char *file, int line,
+                              const char *name)
 {
     if (!guard) {
         return;
@@ -58,8 +56,6 @@ void airy_resource_guard_dismiss(airy_resource_guard_t *guard)
 
     guard->active = 0;
 }
-
-/* ==================== 资源追踪实现 ==================== */
 
 #ifdef AIRY_RESOURCE_TRACKING
 
@@ -100,8 +96,8 @@ void airy_resource_track_alloc(void *resource, const char *type, const char *fil
         return;
     }
 
-    airy_resource_record_t *record = (airy_resource_record_t *)memory_alloc(
-        sizeof(airy_resource_record_t), "resource_record");
+    airy_resource_record_t *record =
+        (airy_resource_record_t *)memory_alloc(sizeof(airy_resource_record_t), "resource_record");
     if (!record) {
         return;
     }
@@ -173,17 +169,17 @@ int airy_resource_track_report(char **out_report)
              * 巨大值，使 snprintf 写入越界。每次写入前必须检查剩余空间，并正确处理
              * 截断情况。
              */
-#define AIRY_REPORT_APPEND(fmt, ...)                                            \
-    do {                                                                        \
-        if (offset >= buf_size)                                                 \
-            break;                                                              \
-        n = snprintf(buf + offset, buf_size - offset, fmt, ##__VA_ARGS__);      \
-        if (n < 0)                                                              \
-            break;                                                              \
-        if ((size_t)n >= buf_size - offset)                                     \
-            offset = buf_size;  /* 已截断，标记缓冲区已满 */                       \
-        else                                                                    \
-            offset += (size_t)n;                                                 \
+#define AIRY_REPORT_APPEND(fmt, ...)                                       \
+    do {                                                                   \
+        if (offset >= buf_size)                                            \
+            break;                                                         \
+        n = snprintf(buf + offset, buf_size - offset, fmt, ##__VA_ARGS__); \
+        if (n < 0)                                                         \
+            break;                                                         \
+        if ((size_t)n >= buf_size - offset)                                \
+            offset = buf_size; /* 已截断，标记缓冲区已满 */                \
+        else                                                               \
+            offset += (size_t)n;                                           \
     } while (0)
 
             AIRY_REPORT_APPEND("Resource leak report:\n");
@@ -193,8 +189,8 @@ int airy_resource_track_report(char **out_report)
             curr = g_resource_head;
             int i = 0;
             while (curr && i < 100) {
-                AIRY_REPORT_APPEND("[%d] Type: %s, Ptr: %p, File: %s:%d, Time: %lu ns\n",
-                                   i + 1, curr->type, curr->resource, curr->file, curr->line,
+                AIRY_REPORT_APPEND("[%d] Type: %s, Ptr: %p, File: %s:%d, Time: %lu ns\n", i + 1,
+                                   curr->type, curr->resource, curr->file, curr->line,
                                    curr->timestamp_ns);
                 curr = curr->next;
                 i++;

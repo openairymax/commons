@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file metrics.c
  * @brief 指标收集实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "metrics.h"
@@ -21,8 +21,6 @@
 #endif
 #include <stdint.h>
 #include "error.h"
-
-
 
 typedef struct metric_counter {
     char *name;
@@ -152,12 +150,12 @@ char *airy_metrics_export(airy_metrics_t *metrics)
 {
     if (!metrics) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 #ifndef AIRY_NO_CJSON
     cJSON *root = cJSON_CreateObject();
     if (!root) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     cJSON *counters = cJSON_CreateObject();
     cJSON *gauges = cJSON_CreateObject();
@@ -213,17 +211,17 @@ static int sanitize_metric_name(const char *name, char *out, size_t out_size)
     return (j > 0) ? 0 : -1;
 }
 
-char *airy_metrics_export_prometheus_filtered(airy_metrics_t *metrics, const char *prefix)
+char *airy_metrics_export_prom_filt(airy_metrics_t *metrics, const char *prefix)
 {
     if (!metrics) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     size_t buf_size = 4096;
     char *buf = (char *)AIRY_MALLOC(buf_size);
     if (!buf) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     size_t pos = 0;
 
 #define APPEND(fmt, ...)                                                                           \
@@ -232,24 +230,24 @@ char *airy_metrics_export_prometheus_filtered(airy_metrics_t *metrics, const cha
             snprintf(buf + pos, buf_size - pos, fmt,                                               \
                      ##__VA_ARGS__); /* flawfinder: ignore - bounded snprintf in APPEND macro */   \
         if (written < 0) {                                                                         \
-            AIRY_FREE(buf);                                                                     \
+            AIRY_FREE(buf);                                                                        \
             return NULL;                                                                           \
         }                                                                                          \
         if ((size_t)written >= buf_size - pos) {                                                   \
             buf_size *= 2;                                                                         \
-            char *new_buf = (char *)AIRY_MALLOC(buf_size);                                      \
+            char *new_buf = (char *)AIRY_MALLOC(buf_size);                                         \
             if (!new_buf) {                                                                        \
-                AIRY_FREE(buf);                                                                 \
+                AIRY_FREE(buf);                                                                    \
                 return NULL;                                                                       \
             }                                                                                      \
-            __builtin_memcpy(new_buf, buf, pos);                                                             \
-            AIRY_FREE(buf);                                                                     \
+            __builtin_memcpy(new_buf, buf, pos);                                                   \
+            AIRY_FREE(buf);                                                                        \
             buf = new_buf;                                                                         \
             written =                                                                              \
                 snprintf(buf + pos, buf_size - pos, fmt,                                           \
                          ##__VA_ARGS__); /* flawfinder: ignore - bounded realloc+snprintf retry */ \
             if (written < 0 || (size_t)written >= buf_size - pos) {                                \
-                AIRY_FREE(buf);                                                                 \
+                AIRY_FREE(buf);                                                                    \
                 return NULL;                                                                       \
             }                                                                                      \
         }                                                                                          \
@@ -308,5 +306,5 @@ char *airy_metrics_export_prometheus_filtered(airy_metrics_t *metrics, const cha
 
 char *airy_metrics_export_prometheus(airy_metrics_t *metrics)
 {
-    return airy_metrics_export_prometheus_filtered(metrics, NULL);
+    return airy_metrics_export_prom_filt(metrics, NULL);
 }

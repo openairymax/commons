@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file types.h
  * @brief AgentRT 统一类型定义 - 核心基础类型
@@ -76,70 +76,70 @@ typedef int32_t airy_err_t;
  * 让权威源生效；仅 AIRY_ENOTFOUND 为 airy_types.h 未定义的补充宏。
  */
 #ifndef AIRY_EINVAL
-#define AIRY_EINVAL (-1) /**< @deprecated 兼容值，airy_types.h 权威值为 -22 */
+#define AIRY_EINVAL (-1)
 #endif
 #ifndef AIRY_ENOMEM
-#define AIRY_ENOMEM (-2) /**< @deprecated 兼容值，airy_types.h 权威值为 -12 */
+#define AIRY_ENOMEM (-2)
 #endif
 #ifndef AIRY_EBUSY
-#define AIRY_EBUSY (-3)  /**< @deprecated 兼容值，airy_types.h 权威值为 -16 */
+#define AIRY_EBUSY (-3)
 #endif
 #ifndef AIRY_ENOENT
-#define AIRY_ENOENT (-4) /**< @deprecated 兼容值，airy_types.h 权威值为 -2 */
+#define AIRY_ENOENT (-4)
 #endif
 #ifndef AIRY_EPERM
-#define AIRY_EPERM (-5) /**< @deprecated 兼容值，airy_types.h 权威值为 -1 */
+#define AIRY_EPERM (-5)
 #endif
 #ifndef AIRY_ETIMEDOUT
-#define AIRY_ETIMEDOUT (-6)   /**< @deprecated 兼容值，airy_types.h 权威值为 -110 */
+#define AIRY_ETIMEDOUT (-6)
 #endif
 #ifndef AIRY_EIO
-#define AIRY_EIO (-7)         /**< @deprecated 兼容值，airy_types.h 权威值为 -5 */
+#define AIRY_EIO (-7)
 #endif
 #ifndef AIRY_EEXIST
-#define AIRY_EEXIST (-8)      /**< @deprecated 兼容值，airy_types.h 权威值为 -17 */
+#define AIRY_EEXIST (-8)
 #endif
 #ifndef AIRY_ENOTINIT
-#define AIRY_ENOTINIT (-9)    /**< 引擎未初始化 */
+#define AIRY_ENOTINIT (-9)
 #endif
 #ifndef AIRY_ECANCELLED
-#define AIRY_ECANCELLED (-10) /**< 操作已取消 */
+#define AIRY_ECANCELLED (-10)
 #endif
 #ifndef AIRY_ENOTSUP
-#define AIRY_ENOTSUP (-11)    /**< @deprecated 兼容值，airy_types.h 权威值为 -95 */
+#define AIRY_ENOTSUP (-11)
 #endif
 #ifndef AIRY_EOVERFLOW
-#define AIRY_EOVERFLOW (-12)  /**< @deprecated 兼容值，airy_types.h 权威值为 -75 */
+#define AIRY_EOVERFLOW (-12)
 #endif
 #ifndef AIRY_EPROTO
-#define AIRY_EPROTO (-13)     /**< @deprecated 兼容值，airy_types.h 权威值为 -71 */
+#define AIRY_EPROTO (-13)
 #endif
 #ifndef AIRY_ENOTCONN
-#define AIRY_ENOTCONN (-14)   /**< @deprecated 兼容值，airy_types.h 权威值为 -107 */
+#define AIRY_ENOTCONN (-14)
 #endif
 #ifndef AIRY_ECONNRESET
-#define AIRY_ECONNRESET (-15) /**< @deprecated 兼容值，airy_types.h 权威值为 -104 */
+#define AIRY_ECONNRESET (-15)
 #endif
 #ifndef AIRY_ENOSYS
-#define AIRY_ENOSYS (-16) /**< @deprecated 兼容值，airy_types.h 权威值为 -38 */
+#define AIRY_ENOSYS (-16)
 #endif
 #ifndef AIRY_EFAIL
-#define AIRY_EFAIL (-17) /**< @deprecated 兼容值，airy_types.h 权威值为 -31 */
+#define AIRY_EFAIL (-17)
 #endif
 #ifndef AIRY_ENOTFOUND
-#define AIRY_ENOTFOUND (-18) /**< 资源未找到（airy_types.h 无对应宏，建议使用 AIRY_ENOENT） */
+#define AIRY_ENOTFOUND (-18)
 #endif
 #ifndef AIRY_EPLATFORM
-#define AIRY_EPLATFORM (-27) /**< 平台未初始化 */
+#define AIRY_EPLATFORM (-27)
 #endif
 #ifndef AIRY_EPROTONOSUPPORT
-#define AIRY_EPROTONOSUPPORT (-28) /**< @deprecated 兼容值，airy_types.h 权威值为 -93 */
+#define AIRY_EPROTONOSUPPORT (-28)
 #endif
 #ifndef AIRY_ESERVICE
-#define AIRY_ESERVICE (-29) /**< 服务不可用 */
+#define AIRY_ESERVICE (-29)
 #endif
 #ifndef AIRY_EUNKNOWN
-#define AIRY_EUNKNOWN (-99) /**< 未知错误 */
+#define AIRY_EUNKNOWN (-99)
 #endif
 
 /**
@@ -163,10 +163,10 @@ typedef char airy_uuid_t[37];
  * @brief 优先级枚举
  */
 typedef enum {
-    AIRY_PRIORITY_LOW = 0,     /**< 低优先级 */
-    AIRY_PRIORITY_NORMAL = 1,  /**< 普通优先级 */
-    AIRY_PRIORITY_HIGH = 2,    /**< 高优先级 */
-    AIRY_PRIORITY_CRITICAL = 3 /**< 关键优先级 */
+    AIRY_PRIORITY_LOW = 0,
+    AIRY_PRIORITY_NORMAL = 1,
+    AIRY_PRIORITY_HIGH = 2,
+    AIRY_PRIORITY_CRITICAL = 3
 } airy_priority_t;
 
 /**
@@ -174,13 +174,12 @@ typedef enum {
  * @details 用于返回操作结果和错误信息
  */
 typedef struct {
-    airy_err_t code; /**< 错误码 */
-    const char *message;  /**< 错误消息 */
-    const char *detail;   /**< 详细信息 */
+    airy_err_t code;
+    const char *message;
+    const char *detail;
 } airy_result_t;
 
 /** @} */ /* end of BasicTypes */
-
 /* ============================================================================
  * 第二部分：任务类型定义
  * ============================================================================ */
@@ -207,23 +206,23 @@ typedef enum {
     AIRY_TASK_RETRYING = 6
 } airy_task_status_t;
 
-/* 向后兼容别名 */
-#define TASK_STATUS_PENDING    AIRY_TASK_PENDING
-#define TASK_STATUS_RUNNING    AIRY_TASK_RUNNING
-#define TASK_STATUS_SUCCEEDED  AIRY_TASK_SUCCEEDED
-#define TASK_STATUS_FAILED     AIRY_TASK_FAILED
-#define TASK_STATUS_CANCELLED  AIRY_TASK_CANCELLED
-#define TASK_STATUS_TIMEOUT   AIRY_TASK_TIMEOUT
-#define TASK_STATUS_RETRYING   AIRY_TASK_RETRYING
+
+#define TASK_STATUS_PENDING AIRY_TASK_PENDING
+#define TASK_STATUS_RUNNING AIRY_TASK_RUNNING
+#define TASK_STATUS_SUCCEEDED AIRY_TASK_SUCCEEDED
+#define TASK_STATUS_FAILED AIRY_TASK_FAILED
+#define TASK_STATUS_CANCELLED AIRY_TASK_CANCELLED
+#define TASK_STATUS_TIMEOUT AIRY_TASK_TIMEOUT
+#define TASK_STATUS_RETRYING AIRY_TASK_RETRYING
 #endif
 
 /**
  * @brief 任务类型枚举
  */
 typedef enum {
-    AIRY_TASKTYPE_ONESHOT = 0,    /**< 单次任务 */
-    AIRY_TASKTYPE_RECURRING = 1,  /**< 周期任务 */
-    AIRY_TASKTYPE_CONDITIONAL = 2 /**< 条件触发任务 */
+    AIRY_TASKTYPE_ONESHOT = 0,
+    AIRY_TASKTYPE_RECURRING = 1,
+    AIRY_TASKTYPE_CONDITIONAL = 2
 } airy_task_type_t;
 
 /**
@@ -239,34 +238,33 @@ typedef struct airy_task airy_task_t;
  * @brief 任务配置结构
  */
 typedef struct {
-    const char *input;           /**< 任务输入（自然语言描述） */
-    size_t input_len;            /**< 输入长度 */
-    uint32_t timeout_ms;         /**< 超时时间（毫秒） */
-    airy_priority_t priority; /**< 任务优先级 */
-    airy_task_type_t type;    /**< 任务类型 */
-    const char *agent_id;        /**< 指定执行的 Agent ID（可选） */
-    const char *session_id;      /**< 关联的会话 ID（可选） */
-    const char *parent_task_id;  /**< 父任务 ID（用于子任务） */
+    const char *input;
+    size_t input_len;
+    uint32_t timeout_ms;
+    airy_priority_t priority;
+    airy_task_type_t type;
+    const char *agent_id;
+    const char *session_id;
+    const char *parent_task_id;
 } airy_task_config_t;
 
 /**
  * @brief 任务结果结构
  */
 typedef struct {
-    char *task_id;                  /**< 任务 ID */
-    airy_task_status_t status;   /**< 任务状态 */
-    char *output;                   /**< 输出结果（JSON 字符串） */
-    size_t output_len;              /**< 输出长度 */
-    airy_timestamp_t start_time; /**< 开始时间 */
-    airy_timestamp_t end_time;   /**< 结束时间 */
-    uint32_t tokens_used;           /**< 消耗的 Token 数 */
-    double cost_usd;                /**< 成本（美元） */
-    airy_err_t error_code;     /**< 错误码 */
-    char *error_message;            /**< 错误消息 */
+    char *task_id;
+    airy_task_status_t status;
+    char *output;
+    size_t output_len;
+    airy_timestamp_t start_time;
+    airy_timestamp_t end_time;
+    uint32_t tokens_used;
+    double cost_usd;
+    airy_err_t error_code;
+    char *error_message;
 } airy_task_result_t;
 
 /** @} */ /* end of TaskTypes */
-
 /* ============================================================================
  * 第三部分：记忆类型定义
  * ============================================================================ */
@@ -282,10 +280,10 @@ typedef struct {
  * @details 四层记忆卷载结构
  */
 typedef enum {
-    AIRY_MEM_LAYER1_RAW = 0,      /**< Layer1: 原始记忆 */
-    AIRY_MEM_LAYER2_WORKING = 1,  /**< Layer2: 工作记忆 */
-    AIRY_MEM_LAYER3_EPISODIC = 2, /**< Layer3: 情景记忆 */
-    AIRY_MEM_LAYER4_SEMANTIC = 3  /**< Layer4: 语义记忆 */
+    AIRY_MEM_LAYER1_RAW = 0,
+    AIRY_MEM_LAYER2_WORKING = 1,
+    AIRY_MEM_LAYER3_EPISODIC = 2,
+    AIRY_MEM_LAYER4_SEMANTIC = 3
 } airy_memory_layer_t;
 
 /**
@@ -311,35 +309,35 @@ typedef struct airy_memory airy_memory_t;
  * @brief 记忆条目结构
  */
 typedef struct {
-    char *memory_id;                 /**< 记忆 ID */
-    airy_memory_layer_t layer;    /**< 记忆层级 */
-    airy_memory_type_t type;      /**< 记忆类型 */
-    char *content;                   /**< 记忆内容 */
-    size_t content_len;              /**< 内容长度 */
-    float *embedding;                /**< 向量嵌入（可选） */
-    size_t embedding_dim;            /**< 嵌入维度 */
-    float importance;                /**< 重要性分数 (0-1) */
-    float decay_rate;                /**< 衰减率 */
-    uint32_t access_count;           /**< 访问次数 */
-    airy_timestamp_t created_at;  /**< 创建时间 */
-    airy_timestamp_t last_access; /**< 最后访问时间 */
-    char *session_id;                /**< 关联会话 ID */
-    char *task_id;                   /**< 关联任务 ID */
-    char **tags;                     /**< 标签列表 */
-    size_t tag_count;                /**< 标签数量 */
+    char *memory_id;
+    airy_memory_layer_t layer;
+    airy_memory_type_t type;
+    char *content;
+    size_t content_len;
+    float *embedding;
+    size_t embedding_dim;
+    float importance;
+    float decay_rate;
+    uint32_t access_count;
+    airy_timestamp_t created_at;
+    airy_timestamp_t last_access;
+    char *session_id;
+    char *task_id;
+    char **tags;
+    size_t tag_count;
 } airy_memory_entry_t;
 
 /**
  * @brief 记忆搜索配置
  */
 typedef struct {
-    const char *query;            /**< 搜索查询 */
-    size_t query_len;             /**< 查询长度 */
-    airy_memory_layer_t layer; /**< 搜索层级（可选） */
-    uint32_t top_k;               /**< 返回数量 */
-    float threshold;              /**< 相似度阈值 */
-    const char **tags;            /**< 过滤标签 */
-    size_t tag_count;             /**< 标签数量 */
+    const char *query;
+    size_t query_len;
+    airy_memory_layer_t layer;
+    uint32_t top_k;
+    float threshold;
+    const char **tags;
+    size_t tag_count;
 } airy_memory_search_t;
 
 /**
@@ -355,7 +353,6 @@ typedef struct {
 #endif
 
 /** @} */ /* end of MemoryTypes */
-
 /* ============================================================================
  * 第四部分：会话类型定义
  * ============================================================================ */
@@ -370,10 +367,10 @@ typedef struct {
  * @brief 会话状态枚举
  */
 typedef enum {
-    AIRY_SESSION_ACTIVE = 0, /**< 活跃状态 */
-    AIRY_SESSION_IDLE = 1,   /**< 空闲状态 */
-    AIRY_SESSION_CLOSED = 2, /**< 已关闭 */
-    AIRY_SESSION_EXPIRED = 3 /**< 已过期 */
+    AIRY_SESSION_ACTIVE = 0,
+    AIRY_SESSION_IDLE = 1,
+    AIRY_SESSION_CLOSED = 2,
+    AIRY_SESSION_EXPIRED = 3
 } airy_session_status_t;
 
 /**
@@ -385,28 +382,28 @@ typedef struct airy_session *airy_session_t;
  * @brief 会话配置结构
  */
 typedef struct {
-    const char *user_id;         /**< 用户 ID */
-    const char *project_id;      /**< 项目 ID（可选） */
-    const char *context;         /**< 初始上下文（可选） */
-    uint32_t ttl_seconds;        /**< 会话 TTL（秒） */
-    airy_priority_t priority; /**< 默认优先级 */
+    const char *user_id;
+    const char *project_id;
+    const char *context;
+    uint32_t ttl_seconds;
+    airy_priority_t priority;
 } airy_session_config_t;
 
 /**
  * @brief 会话信息结构
  */
 typedef struct {
-    char *session_id;                /**< 会话 ID */
-    airy_session_status_t status; /**< 会话状态 */
-    char *user_id;                   /**< 用户 ID */
-    char *project_id;                /**< 项目 ID */
-    airy_timestamp_t created_at;  /**< 创建时间 */
-    airy_timestamp_t last_active; /**< 最后活跃时间 */
-    uint32_t ttl_seconds;            /**< TTL */
-    uint32_t task_count;             /**< 任务数量 */
-    uint32_t memory_count;           /**< 记忆数量 */
-    uint64_t tokens_used;            /**< 总 Token 消耗 */
-    double cost_usd;                 /**< 总成本 */
+    char *session_id;
+    airy_session_status_t status;
+    char *user_id;
+    char *project_id;
+    airy_timestamp_t created_at;
+    airy_timestamp_t last_active;
+    uint32_t ttl_seconds; /**< TTL */
+    uint32_t task_count;
+    uint32_t memory_count;
+    uint64_t tokens_used;
+    double cost_usd;
 } airy_session_info_t;
 
 /**
@@ -414,19 +411,18 @@ typedef struct {
  * @details 用于传递请求链路的上下文信息
  */
 typedef struct {
-    char *agent_id;                /**< Agent ID */
-    char *session_id;              /**< 会话 ID */
-    char *trace_id;                /**< 追踪 ID */
-    char *parent_span_id;          /**< 父 Span ID */
-    airy_timestamp_t timestamp; /**< 时间戳 */
-    airy_priority_t priority;   /**< 优先级 */
-    char *user_id;                 /**< 用户 ID */
-    char *project_id;              /**< 项目 ID */
-    void *user_data;               /**< 用户自定义数据 */
+    char *agent_id; /**< Agent ID */
+    char *session_id;
+    char *trace_id;
+    char *parent_span_id;
+    airy_timestamp_t timestamp;
+    airy_priority_t priority;
+    char *user_id;
+    char *project_id;
+    void *user_data;
 } airy_context_t;
 
 /** @} */ /* end of SessionTypes */
-
 /* ============================================================================
  * 第五部分：Agent 类型定义
  * ============================================================================ */
@@ -441,9 +437,9 @@ typedef struct {
  * @brief Agent 维护级别枚举
  */
 typedef enum {
-    AIRY_AGENT_COMMUNITY = 0, /**< 社区维护 */
-    AIRY_AGENT_VERIFIED = 1,  /**< 已验证 */
-    AIRY_AGENT_OFFICIAL = 2   /**< 官方维护 */
+    AIRY_AGENT_COMMUNITY = 0,
+    AIRY_AGENT_VERIFIED = 1,
+    AIRY_AGENT_OFFICIAL = 2
 } airy_agent_level_t;
 
 #ifndef AIRY_CAPABILITY_T_DEFINED
@@ -452,13 +448,13 @@ typedef enum {
  * @brief Agent 能力结构
  */
 typedef struct {
-    char *name;                /**< 能力名称 */
-    char *description;         /**< 能力描述 */
-    char *input_schema;        /**< 输入 Schema（JSON） */
-    char *output_schema;       /**< 输出 Schema（JSON） */
-    uint32_t estimated_tokens; /**< 预估 Token 数 */
-    uint32_t avg_duration_ms;  /**< 平均执行时间 */
-    float success_rate;        /**< 成功率 */
+    char *name;
+    char *description;
+    char *input_schema;
+    char *output_schema;
+    uint32_t estimated_tokens;
+    uint32_t avg_duration_ms;
+    float success_rate;
 } airy_capability_t;
 #endif
 
@@ -466,27 +462,27 @@ typedef struct {
  * @brief Agent 模型配置
  */
 typedef struct {
-    char *system1; /**< System 1 模型（快速） */
-    char *system2; /**< System 2 模型（深度） */
+    char *system1;
+    char *system2;
 } airy_models_t;
 
 /**
  * @brief Agent 成本概览
  */
 typedef struct {
-    uint32_t token_per_task_avg; /**< 单任务平均 Token */
-    double api_cost_per_task;    /**< 单任务 API 成本 */
-    airy_agent_level_t level; /**< 维护级别 */
+    uint32_t token_per_task_avg;
+    double api_cost_per_task;
+    airy_agent_level_t level;
 } airy_cost_profile_t;
 
 /**
  * @brief Agent 信任指标
  */
 typedef struct {
-    uint32_t install_count; /**< 安装次数 */
-    float rating;           /**< 用户评分 (1-5) */
-    bool verified_provider; /**< 是否认证提供商 */
-    char *last_audit;       /**< 上次审计日期 */
+    uint32_t install_count;
+    float rating;
+    bool verified_provider;
+    char *last_audit;
 } airy_trust_metrics_t;
 
 /**
@@ -494,24 +490,23 @@ typedef struct {
  * @details 完整的 Agent 元数据定义
  */
 typedef struct {
-    char *schema_version;               /**< 契约版本 */
-    char *agent_id;                     /**< Agent ID */
-    char *agent_name;                   /**< Agent 名称 */
-    char *version;                      /**< Agent 版本 */
-    char *role;                         /**< 角色分类 */
-    char *description;                  /**< 描述 */
-    airy_capability_t *capabilities; /**< 能力列表 */
-    size_t capability_count;            /**< 能力数量 */
-    airy_models_t models;            /**< 模型配置 */
-    char **required_permissions;        /**< 所需权限 */
-    size_t permission_count;            /**< 权限数量 */
-    airy_cost_profile_t cost;        /**< 成本概览 */
-    airy_trust_metrics_t trust;      /**< 信任指标 */
-    char *extensions;                   /**< 扩展字段（JSON） */
+    char *schema_version;
+    char *agent_id; /**< Agent ID */
+    char *agent_name;
+    char *version;
+    char *role;
+    char *description;
+    airy_capability_t *capabilities;
+    size_t capability_count;
+    airy_models_t models;
+    char **required_permissions;
+    size_t permission_count;
+    airy_cost_profile_t cost;
+    airy_trust_metrics_t trust;
+    char *extensions;
 } airy_agent_contract_t;
 
 /** @} */ /* end of AgentTypes */
-
 /* ============================================================================
  * 第六部分：可观测性类型定义
  * ============================================================================ */
@@ -542,10 +537,10 @@ typedef enum {
 #ifndef AIRY_METRIC_TYPE_T_DEFINED
 #define AIRY_METRIC_TYPE_T_DEFINED
 typedef enum {
-    AIRY_METRIC_COUNTER_E = 0,   /**< 计数器 */
-    AIRY_METRIC_GAUGE_E = 1,     /**< 仪表 */
-    AIRY_METRIC_HISTOGRAM_E = 2, /**< 直方图 */
-    AIRY_METRIC_SUMMARY_E = 3    /**< 摘要 */
+    AIRY_METRIC_COUNTER_E = 0,
+    AIRY_METRIC_GAUGE_E = 1,
+    AIRY_METRIC_HISTOGRAM_E = 2,
+    AIRY_METRIC_SUMMARY_E = 3
 } airy_metric_type_t;
 #endif
 
@@ -553,67 +548,62 @@ typedef enum {
  * @brief Span 类型枚举
  */
 typedef enum {
-    AIRY_SPAN_INTERNAL = 0, /**< 内部操作 */
-    AIRY_SPAN_CLIENT = 1,   /**< 客户端调用 */
-    AIRY_SPAN_SERVER = 2,   /**< 服务端处理 */
-    AIRY_SPAN_PRODUCER = 3, /**< 消息生产者 */
-    AIRY_SPAN_CONSUMER = 4  /**< 消息消费者 */
+    AIRY_SPAN_INTERNAL = 0,
+    AIRY_SPAN_CLIENT = 1,
+    AIRY_SPAN_SERVER = 2,
+    AIRY_SPAN_PRODUCER = 3,
+    AIRY_SPAN_CONSUMER = 4
 } airy_span_kind_t;
 
 /**
  * @brief Span 状态枚举
  */
-typedef enum {
-    AIRY_SPAN_UNSET = 0, /**< 未设置 */
-    AIRY_SPAN_OK = 1,    /**< 成功 */
-    AIRY_SPAN_ERROR = 2  /**< 错误 */
-} airy_span_status_t;
+typedef enum { AIRY_SPAN_UNSET = 0, AIRY_SPAN_OK = 1, AIRY_SPAN_ERROR = 2 } airy_span_status_t;
 
 /**
  * @brief 指标数据结构
  */
 typedef struct {
-    char *name;                    /**< 指标名称 */
-    airy_metric_type_t type;    /**< 指标类型 */
-    char *description;             /**< 描述 */
-    char *unit;                    /**< 单位 */
-    double value;                  /**< 当前值 */
-    char **labels;                 /**< 标签键值对 */
-    size_t label_count;            /**< 标签数量 */
-    airy_timestamp_t timestamp; /**< 时间戳 */
+    char *name;
+    airy_metric_type_t type;
+    char *description;
+    char *unit;
+    double value;
+    char **labels;
+    size_t label_count;
+    airy_timestamp_t timestamp;
 } airy_metric_t;
 
 /**
  * @brief Span 数据结构
  */
 typedef struct {
-    char *trace_id;                 /**< 追踪 ID */
-    char *span_id;                  /**< Span ID */
-    char *parent_span_id;           /**< 父 Span ID */
-    char *name;                     /**< Span 名称 */
-    airy_span_kind_t kind;       /**< Span 类型 */
-    airy_timestamp_t start_time; /**< 开始时间 */
-    airy_timestamp_t end_time;   /**< 结束时间 */
-    airy_span_status_t status;   /**< Span 状态 */
-    char *status_message;           /**< 状态消息 */
-    char **attributes;              /**< 属性键值对 */
-    size_t attribute_count;         /**< 属性数量 */
-    char *events;                   /**< 事件列表（JSON） */
+    char *trace_id;
+    char *span_id; /**< Span ID */
+    char *parent_span_id;
+    char *name;
+    airy_span_kind_t kind;
+    airy_timestamp_t start_time;
+    airy_timestamp_t end_time;
+    airy_span_status_t status;
+    char *status_message;
+    char **attributes;
+    size_t attribute_count;
+    char *events;
 } airy_span_t;
 
 /**
  * @brief 遥测数据结构
  */
 typedef struct {
-    airy_metric_t *metrics; /**< 指标数组 */
-    size_t metric_count;       /**< 指标数量 */
-    airy_span_t *spans;     /**< Span 数组 */
-    size_t span_count;         /**< Span 数量 */
-    char *logs;                /**< 日志数据（JSON） */
+    airy_metric_t *metrics;
+    size_t metric_count;
+    airy_span_t *spans;
+    size_t span_count;
+    char *logs;
 } airy_telemetry_t;
 
 /** @} */ /* end of ObservabilityTypes */
-
 /* ============================================================================
  * 第七部分：IPC 类型定义
  * ============================================================================ */
@@ -628,26 +618,23 @@ typedef struct {
  * @brief IPC 通道类型枚举
  */
 typedef enum {
-    AIRY_IPC_PIPE = 0,   /**< 管道 */
+    AIRY_IPC_PIPE = 0,
     AIRY_IPC_SOCKET = 1, /**< Unix Socket / Named Pipe */
-    AIRY_IPC_SHM = 2,    /**< 共享内存 */
-    AIRY_IPC_MQ = 3,     /**< 消息队列 */
-    AIRY_IPC_RPC = 4     /**< RPC 调用 */
+    AIRY_IPC_SHM = 2,
+    AIRY_IPC_MQ = 3,
+    AIRY_IPC_RPC = 4
 } airy_ipc_type_t;
 
 /**
  * @brief IPC 消息标志
  */
 typedef enum {
-    AIRY_IPC_FLAG_NONE = 0,     /**< 无标志 */
-    AIRY_IPC_FLAG_NONBLOCK = 1, /**< 非阻塞 */
-    AIRY_IPC_FLAG_PRIORITY = 2, /**< 优先级消息 */
-    AIRY_IPC_FLAG_BROADCAST = 4 /**< 广播消息 */
+    AIRY_IPC_FLAG_NONE = 0,
+    AIRY_IPC_FLAG_NONBLOCK = 1,
+    AIRY_IPC_FLAG_PRIORITY = 2,
+    AIRY_IPC_FLAG_BROADCAST = 4
 } airy_ipc_flag_t;
 
-/* airy_ipc_header_t 现在由 airy_types.h 提供 */
-
-/* airy_ipc_message_t 现在由 airy_types.h 提供 */
 
 /**
  * @brief IPC 通道句柄类型
@@ -659,16 +646,15 @@ typedef enum {
  * @brief IPC 通道配置
  */
 typedef struct {
-    airy_ipc_type_t type;   /**< 通道类型 */
-    const char *name;          /**< 通道名称 */
-    uint32_t buffer_size;      /**< 缓冲区大小 */
-    uint32_t max_message_size; /**< 最大消息大小 */
-    uint32_t timeout_ms;       /**< 默认超时 */
-    bool nonblocking;          /**< 是否非阻塞 */
+    airy_ipc_type_t type;
+    const char *name;
+    uint32_t buffer_size;
+    uint32_t max_message_size;
+    uint32_t timeout_ms;
+    bool nonblocking;
 } airy_ipc_config_t;
 
 /** @} */ /* end of IPCTypes */
-
 /* ============================================================================
  * 第八部分：网络类型定义
  * ============================================================================ */
@@ -683,84 +669,83 @@ typedef struct {
  * @brief 协议类型枚举
  */
 typedef enum {
-    AIRY_PROTO_TCP = 0,   /**< TCP 协议 */
-    AIRY_PROTO_UDP = 1,   /**< UDP 协议 */
-    AIRY_PROTO_HTTP = 2,  /**< HTTP 协议 */
-    AIRY_PROTO_HTTPS = 3, /**< HTTPS 协议 */
-    AIRY_PROTO_WS = 4,    /**< WebSocket 协议 */
-    AIRY_PROTO_WSS = 5    /**< WebSocket Secure 协议 */
+    AIRY_PROTO_TCP = 0,
+    AIRY_PROTO_UDP = 1,
+    AIRY_PROTO_HTTP = 2,
+    AIRY_PROTO_HTTPS = 3,
+    AIRY_PROTO_WS = 4,
+    AIRY_PROTO_WSS = 5
 } airy_protocol_t;
 
 /**
  * @brief 连接状态枚举
  */
 typedef enum {
-    AIRY_CONN_DISCONNECTED = 0, /**< 已断开 */
-    AIRY_CONN_CONNECTING = 1,   /**< 连接中 */
-    AIRY_CONN_CONNECTED = 2,    /**< 已连接 */
-    AIRY_CONN_CLOSING = 3,      /**< 关闭中 */
-    AIRY_CONN_ERROR = 4         /**< 错误状态 */
+    AIRY_CONN_DISCONNECTED = 0,
+    AIRY_CONN_CONNECTING = 1,
+    AIRY_CONN_CONNECTED = 2,
+    AIRY_CONN_CLOSING = 3,
+    AIRY_CONN_ERROR = 4
 } airy_conn_state_t;
 
 /**
  * @brief Socket 句柄类型
  * 定义在 platform.h 中
  */
-// typedef struct airy_socket* airy_sock_t;
+/* typedef struct airy_socket* airy_sock_t; */
 
 /**
  * @brief 连接端点结构
  */
 typedef struct {
-    char *host;                  /**< 主机名或 IP */
-    uint16_t port;               /**< 端口号 */
-    airy_protocol_t protocol; /**< 协议类型 */
-    char *path;                  /**< 路径（用于 HTTP/WebSocket） */
+    char *host;
+    uint16_t port;
+    airy_protocol_t protocol;
+    char *path;
 } airy_endpoint_t;
 
 /**
  * @brief 连接配置结构
  */
 typedef struct {
-    airy_endpoint_t remote; /**< 远程端点 */
-    uint32_t timeout_ms;       /**< 连接超时 */
-    uint32_t read_timeout_ms;  /**< 读取超时 */
-    uint32_t write_timeout_ms; /**< 写入超时 */
-    uint32_t max_retries;      /**< 最大重试次数 */
-    uint32_t retry_delay_ms;   /**< 重试延迟 */
-    bool keepalive;            /**< 是否保持连接 */
-    bool verify_ssl;           /**< 是否验证 SSL */
-    char *ssl_cert_path;       /**< SSL 证书路径 */
-    char *ssl_key_path;        /**< SSL 密钥路径 */
+    airy_endpoint_t remote;
+    uint32_t timeout_ms;
+    uint32_t read_timeout_ms;
+    uint32_t write_timeout_ms;
+    uint32_t max_retries;
+    uint32_t retry_delay_ms;
+    bool keepalive;
+    bool verify_ssl;
+    char *ssl_cert_path;
+    char *ssl_key_path;
 } airy_conn_config_t;
 
 /**
  * @brief HTTP 请求结构
  */
 typedef struct {
-    const char *method;   /**< HTTP 方法 */
-    const char *path;     /**< 请求路径 */
-    const char **headers; /**< 请求头 */
-    size_t header_count;  /**< 请求头数量 */
-    const void *body;     /**< 请求体 */
-    size_t body_len;      /**< 请求体长度 */
-    uint32_t timeout_ms;  /**< 超时时间 */
+    const char *method;
+    const char *path;
+    const char **headers;
+    size_t header_count;
+    const void *body;
+    size_t body_len;
+    uint32_t timeout_ms;
 } airy_http_request_t;
 
 /**
  * @brief HTTP 响应结构
  */
 typedef struct {
-    int status_code;       /**< 状态码 */
-    char **headers;        /**< 响应头 */
-    size_t header_count;   /**< 响应头数量 */
-    void *body;            /**< 响应体 */
-    size_t body_len;       /**< 响应体长度 */
-    airy_err_t error; /**< 错误码 */
+    int status_code;
+    char **headers;
+    size_t header_count;
+    void *body;
+    size_t body_len;
+    airy_err_t error;
 } airy_http_response_t;
 
 /** @} */ /* end of NetworkTypes */
-
 /* ============================================================================
  * 第九部分：辅助宏定义
  * ============================================================================ */
@@ -827,7 +812,6 @@ typedef struct {
 #define AIRY_SEC_TO_NS(s) ((uint64_t)(s) * 1000000000ULL)
 
 /** @} */ /* end of HelperMacros */
-
 #ifdef __cplusplus
 }
 #endif

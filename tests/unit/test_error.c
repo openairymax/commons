@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_error.c
  * @brief error.h 单元测试
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "airy_memory.h"
@@ -13,8 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* ==================== 测试辅助?==================== */
 
 #define TEST_ASSERT(condition, message)              \
     do {                                             \
@@ -39,10 +37,8 @@
 static int passed_tests = 0;
 static int failed_tests = 0;
 
-/* ==================== 测试用例 ==================== */
-
 /**
- * @brief 测试错误码定?
+ * @brief 测试错误码定义
  */
 static int test_error_codes(void)
 {
@@ -56,7 +52,7 @@ static int test_error_codes(void)
 }
 
 /**
- * @brief 测试错误字符串转?
+ * @brief 测试错误字符串转换
  */
 static int test_error_strings(void)
 {

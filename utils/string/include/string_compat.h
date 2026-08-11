@@ -1,19 +1,19 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 #ifndef STRING_COMPAT_H
 #define STRING_COMPAT_H
 
-/* 字符串兼容性头文件 */
 
 #ifdef _WIN32
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-/* 定义 ssize_t 类型 */
+
 typedef intptr_t ssize_t;
 
-/* Windows 平台 snprintf 定义（必须在 stdio.h 之后） */
+
 /* flawfinder: ignore - Windows compat macro, format is always const */
 #ifndef snprintf
 #define snprintf _snprintf

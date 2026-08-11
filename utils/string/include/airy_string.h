@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file airy_string.h
  * @brief 统一字符串处理模块 - 核心层API
@@ -45,13 +45,13 @@ extern "C" {
  * @brief 字符串编码类型
  */
 typedef enum {
-    STRING_ENCODING_ASCII,       /**< ASCII编码 */
-    STRING_ENCODING_UTF8,        /**< UTF-8编码 */
-    STRING_ENCODING_UTF16_LE,    /**< UTF-16小端序 */
-    STRING_ENCODING_UTF16_BE,    /**< UTF-16大端序 */
-    STRING_ENCODING_UTF32_LE,    /**< UTF-32小端序 */
-    STRING_ENCODING_UTF32_BE,    /**< UTF-32大端序 */
-    STRING_ENCODING_LATIN1,      /**< Latin-1 (ISO-8859-1) */
+    STRING_ENCODING_ASCII,
+    STRING_ENCODING_UTF8,
+    STRING_ENCODING_UTF16_LE,
+    STRING_ENCODING_UTF16_BE,
+    STRING_ENCODING_UTF32_LE,
+    STRING_ENCODING_UTF32_BE,
+    STRING_ENCODING_LATIN1, /**< Latin-1 (ISO-8859-1) */
     STRING_ENCODING_WINDOWS_1252 /**< Windows-1252 */
 } string_encoding_t;
 
@@ -59,59 +59,59 @@ typedef enum {
  * @brief 字符串比较选项
  */
 typedef enum {
-    STRING_COMPARE_CASE_SENSITIVE = 0,   /**< 区分大小写 */
-    STRING_COMPARE_CASE_INSENSITIVE = 1, /**< 不区分大小写 */
-    STRING_COMPARE_NATURAL = 2,          /**< 自然排序（如"file10" > "file2"） */
-    STRING_COMPARE_LOCALE_AWARE = 4      /**< 区域感知比较 */
+    STRING_COMPARE_CASE_SENSITIVE = 0,
+    STRING_COMPARE_CASE_INSENSITIVE = 1,
+    STRING_COMPARE_NATURAL = 2,
+    STRING_COMPARE_LOCALE_AWARE = 4
 } string_compare_option_t;
 
 /**
  * @brief 字符串分割选项
  */
 typedef enum {
-    STRING_SPLIT_KEEP_EMPTY = 1,      /**< 保留空子串 */
-    STRING_SPLIT_TRIM_WHITESPACE = 2, /**< 修剪空白字符 */
-    STRING_SPLIT_LIMIT_COUNT = 4      /**< 限制分割次数 */
+    STRING_SPLIT_KEEP_EMPTY = 1,
+    STRING_SPLIT_TRIM_WHITESPACE = 2,
+    STRING_SPLIT_LIMIT_COUNT = 4
 } string_split_option_t;
 
 /**
  * @brief 字符串缓冲区结构
  */
 typedef struct {
-    char *data;                 /**< 缓冲区数据 */
-    size_t capacity;            /**< 缓冲区容量（包括空字符） */
-    size_t length;              /**< 当前字符串长度（不包括空字符） */
-    string_encoding_t encoding; /**< 字符串编码 */
-    bool gateway;               /**< 是否为动态分配 */
+    char *data;
+    size_t capacity;
+    size_t length;
+    string_encoding_t encoding;
+    bool gateway;
 } string_buffer_t;
 
 /**
  * @brief 字符串视图结构（不拥有数据）
  */
 typedef struct {
-    const char *data;           /**< 字符串数据 */
-    size_t length;              /**< 字符串长度 */
-    string_encoding_t encoding; /**< 字符串编码 */
+    const char *data;
+    size_t length;
+    string_encoding_t encoding;
 } string_view_t;
 
 /**
  * @brief 字符串列表结构
  */
 typedef struct {
-    string_view_t *items; /**< 字符串项数组 */
-    size_t count;         /**< 项数 */
-    size_t capacity;      /**< 数组容量 */
+    string_view_t *items;
+    size_t count;
+    size_t capacity;
 } string_list_t;
 
 /**
  * @brief 字符串格式化选项
  */
 typedef struct {
-    size_t initial_buffer_size; /**< 初始缓冲区大小 */
-    size_t max_buffer_size;     /**< 最大缓冲区大小（0表示无限制） */
-    bool locale_aware;          /**< 是否区域感知格式化 */
-    const char *null_string;    /**< NULL指针的替代字符串 */
-    const char *error_string;   /**< 错误时的替代字符串 */
+    size_t initial_buffer_size;
+    size_t max_buffer_size;
+    bool locale_aware;
+    const char *null_string;
+    const char *error_string;
 } string_format_options_t;
 
 /**
@@ -647,8 +647,7 @@ size_t string_utf8_next_char(const char *str, uint32_t *ch);
  */
 bool string_utf8_validate(const char *str, size_t len);
 
-/** @} */  // end of string_api
-
+/** @} */ /* end of string_api */
 #ifdef __cplusplus
 }
 #endif

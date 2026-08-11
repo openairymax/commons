@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file arena.h
  * @brief P1.19: Arena 短生命周期线性分配器
@@ -18,7 +19,6 @@
  *   - 线程局部存储：Per-thread Arena 减少锁竞争
  *   - mark/release：支持临时回退点（bump 指针快照）
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_ARENA_H
@@ -32,37 +32,31 @@
 extern "C" {
 #endif
 
-/* ==================== 默认配置 ==================== */
 
-#define ARENA_DEFAULT_CHUNK_SIZE (64 * 1024)   /**< 默认 chunk 大小 64KB */
-#define ARENA_MAX_CHUNK_SIZE     (1024 * 1024) /**< 最大 chunk 大小 1MB */
-#define ARENA_ALIGNMENT          16            /**< 默认对齐 16 字节 */
-
-/* ==================== Arena 句柄 ==================== */
+#define ARENA_DEFAULT_CHUNK_SIZE (64 * 1024)
+#define ARENA_MAX_CHUNK_SIZE (1024 * 1024)
+#define ARENA_ALIGNMENT 16
 
 typedef struct airy_arena airy_arena_t;
 
-/* ==================== Arena 统计 ==================== */
 
 typedef struct {
-    size_t total_allocated;    /**< 累计分配字节数 */
-    size_t current_used;       /**< 当前已使用字节数 */
-    size_t chunk_count;        /**< chunk 数量 */
-    size_t total_chunk_bytes;  /**< 所有 chunk 总字节数 */
-    uint64_t alloc_count;      /**< 分配次数 */
-    uint64_t reset_count;      /**< reset 次数 */
-    uint64_t fallback_count;   /**< 回退到 malloc 的次数（超大分配） */
+    size_t total_allocated;
+    size_t current_used;
+    size_t chunk_count;
+    size_t total_chunk_bytes;
+    uint64_t alloc_count;
+    uint64_t reset_count;
+    uint64_t fallback_count;
 } arena_stats_t;
 
-/* ==================== Arena 标记（回退点） ==================== */
 
 typedef struct {
-    airy_arena_t *arena;  /**< 所属 Arena */
-    void            *bump;   /**< bump 指针快照 */
-    airy_arena_t *chunk;  /**< 当前 chunk 快照 */
+    airy_arena_t *arena;
+    void *bump;
+    airy_arena_t *chunk;
 } arena_mark_t;
 
-/* ==================== 生命周期 API ==================== */
 
 /**
  * @brief P1.19.2: 创建 Arena 分配器
@@ -84,7 +78,6 @@ airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks);
  */
 void arena_destroy(airy_arena_t *arena);
 
-/* ==================== 分配 API ==================== */
 
 /**
  * @brief P1.19.2: 从 Arena 线性分配内存（bump 指针前进）
@@ -111,7 +104,6 @@ void *arena_alloc(airy_arena_t *arena, size_t size);
  */
 void *arena_calloc(airy_arena_t *arena, size_t size);
 
-/* ==================== 释放 / 重置 API ==================== */
 
 /**
  * @brief P1.19.2: 整体重置 Arena（O(1)）
@@ -123,7 +115,6 @@ void *arena_calloc(airy_arena_t *arena, size_t size);
  */
 void arena_reset(airy_arena_t *arena);
 
-/* ==================== 标记 / 回退 API ==================== */
 
 /**
  * @brief P1.19.2: 创建回退标记（保存当前 bump 指针位置）
@@ -144,7 +135,6 @@ void arena_mark(airy_arena_t *arena, arena_mark_t *mark);
  */
 void arena_release(arena_mark_t *mark);
 
-/* ==================== 查询 API ==================== */
 
 /**
  * @brief 获取 Arena 统计信息

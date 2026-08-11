@@ -1,17 +1,19 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file config_source.c
- * @brief 统一配置模块 - 源适配层实? * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 统一配置模块 - 源适配层实现
  *
- * 本文件实现统一配置模块的源适配层功能，提供? * 1. 多种配置源的统一适配接口
- * 2. 文件、环境变量、命令行参数、内存等配置源实? * 3. 配置源管理器和监控功? * 4.
- * 统一的错误处理和资源管理
- *
- * ? */
+ * 本文件实现统一配置模块的源适配层功能，提供：
+ * 1. 多种配置源的统一适配接口
+ * 2. 文件、环境变量、命令行参数、内存等配置源实现
+ * 3. 配置源管理器和监控功能
+ * 4. 统一的错误处理和资源管理
+ */
 
 #include "config_source.h"
-#include "logging_compat.h"  /* LOG-06: AIRY_LOG_* 宏唯一定义源 */
+#include "logging_compat.h"
 #include "core_config.h"
 
 #include <ctype.h>
@@ -32,46 +34,37 @@
 #include "string_compat.h"
 #include "error.h"
 
-
-
-/* ==================== 内部数据结构 ==================== */
-
-/** 配置源基础结构?*/
 struct config_source {
-    /** 配置源适配器接?*/
+
     const config_source_adapter_t *adapter;
 
-    /** 配置源私有数?*/
     void *priv_data;
 
-    /** 配置源属?*/
     config_source_attr_t attributes;
 };
 
-/** 文件配置源私有数?*/
 typedef struct {
-    char *file_path;              // 文件路径
-    char *format;                 // 文件格式
-    char *encoding;               // 文件编码
-    bool auto_reload;             // 是否自动重载
-    uint32_t reload_interval_ms;  // 重载间隔
-    uint64_t last_modified;       // 最后修改时间
-    FILE *file_handle;            // 文件句柄（如果需要保持打开）
+    char *file_path;
+    char *format;
+    char *encoding;
+    bool auto_reload;
+    uint32_t reload_interval_ms;
+    uint64_t last_modified;
+    FILE *file_handle;
 #ifdef __linux__
-    int inotify_fd;        // inotify 文件描述符
-    int inotify_wd;        // inotify 监视描述符
-    bool inotify_enabled;  // inotify 是否启用
+    int inotify_fd;
+    int inotify_wd;
+    bool inotify_enabled;
 #elif defined(__APPLE__)
-    int kqueue_fd;        // kqueue 文件描述符
-    bool kqueue_enabled;  // kqueue 是否启用
+    int kqueue_fd;
+    bool kqueue_enabled;
 #elif defined(_WIN32)
-    void *dir_handle;           // Windows 目录句柄
-    uint8_t rdcw_buffer[4096];  // ReadDirectoryChangesW 缓冲区
-    bool rdcw_enabled;          // ReadDirectoryChangesW 是否启用
+    void *dir_handle;
+    uint8_t rdcw_buffer[4096];
+    bool rdcw_enabled;
 #endif
 } file_source_priv_t;
 
-/** 环境变量配置源私有数?*/
 typedef struct {
     char *prefix;
     bool case_sensitive;
@@ -82,80 +75,59 @@ typedef struct {
     uint64_t env_hash;
 } env_source_priv_t;
 
-/** 命令行配置源私有数据 */
 typedef struct {
-    int argc;               // 参数数量
-    char **argv;            // 参数数组（不拥有所有权）
-    char *prefix;           // 参数前缀
-    char *assign_char;      // 赋值字符
-    bool allow_positional;  // 是否允许位置参数
+    int argc;
+    char **argv;
+    char *prefix;
+    char *assign_char;
+    bool allow_positional;
 } args_source_priv_t;
 
-/** 内存配置源私有数?*/
 typedef struct {
-    char *data;       // 配置数据
-    size_t data_len;  // 数据长度
-    char *format;     // 数据格式
-    bool owns_data;   // 是否拥有数据所有权
+    char *data;
+    size_t data_len;
+    char *format;
+    bool owns_data;
 } memory_source_priv_t;
 
-/** 默认值配置源私有数据 */
 typedef struct {
     char **keys;
     char **vals;
     size_t num_entries;
 } defaults_source_priv_t;
 
-/** 配置源管理器结构?*/
 struct config_source_manager {
-    /** 配置源数?*/
+
     config_source_t **sources;
 
-    /** 配置源数?*/
     size_t count;
 
-    /** 配置源容?*/
     size_t capacity;
 
-    /** 变化回调函数 */
     void (*change_callback)(config_source_t *source, void *user_data);
 
-    /** 回调用户数据 */
     void *callback_user_data;
 
-    /** 是否正在监控 */
     bool watching;
 
-    /** 互斥锁保护管理器 */
     airy_mtx_t internal_mutex;
 
-    /** 防抖上次通知时间（毫秒，CLOCK_MONOTONIC） */
     uint64_t last_notify_time_ms;
 
-    /** 防抖间隔（毫秒，默认500） */
     uint64_t debounce_ms;
 };
 
-/* ==================== 内部辅助函数 ==================== */
-
-/**
- * @brief 创建配置源基础对象
- *
- * 创建配置源基础对象并初始化属性? *
- * @param type 配置源类? * @param name 配置源名? * @param adapter 适配器接? * @return
- * 配置源对象，失败返回NULL
- */
 static config_source_t *config_source_create_base(config_source_type_t type, const char *name,
                                                   const config_source_adapter_t *adapter)
 {
     config_source_t *source = (config_source_t *)AIRY_CALLOC(1, sizeof(config_source_t));
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 初始化属
     source->adapter = adapter;
     source->attributes.type = type;
     source->attributes.name = name ? AIRY_STRDUP(name) : NULL;
-    source->attributes.priority = 50;  // 默认优先
+    source->attributes.priority = 50;
     source->attributes.read_only = false;
     source->attributes.watchable = false;
     source->attributes.timestamp = (uint64_t)time(NULL);
@@ -164,11 +136,6 @@ static config_source_t *config_source_create_base(config_source_type_t type, con
     return source;
 }
 
-/**
- * @brief 释放配置源基础资源
- *
- * 释放配置源名称等基础资源? *
- * @param source 配置源对? */
 static void config_source_free_base(config_source_t *source)
 {
     if (!source)
@@ -182,15 +149,10 @@ static void config_source_free_base(config_source_t *source)
     AIRY_FREE(source);
 }
 
-/**
- * @brief 复制字符? *
- * 安全复制字符串，处理NULL情况? *
- * @param str 源字符串
- * @return 新分配的字符串，失败返回NULL
- */
 static char *duplicate_string(const char *str)
 {
-    if (!str) return NULL;
+    if (!str)
+        return NULL;
     size_t len = strlen(str);
     char *copy = (char *)AIRY_MALLOC(len + 1);
     if (copy) {
@@ -200,13 +162,6 @@ static char *duplicate_string(const char *str)
     return copy;
 }
 
-/**
- * @brief 解析JSON配置
- *
- * 使用cJSON库进行JSON配置解析。
- * @param data JSON数据
- * @param data_len 数据长度
- * @param ctx 配置上下? * @return 错误? */
 static config_error_t parse_json_value(const char **pp, const char *end, config_value_t **out);
 static config_error_t parse_json_object(const char **pp, const char *end, config_context_t *ctx,
                                         const char *prefix);
@@ -462,13 +417,6 @@ static config_error_t parse_json_full(const char *data, size_t data_len, config_
     return CONFIG_ERROR_PARSE;
 }
 
-/**
- * @brief 解析INI配置
- *
- * 支持基本的键值对和节(section)解析。
- * @param data INI数据
- * @param data_len 数据长度
- * @param ctx 配置上下? * @return 错误? */
 static config_error_t parse_ini_simple(const char *data, size_t data_len, config_context_t *ctx)
 {
     if (!data || data_len == 0 || !ctx)
@@ -584,8 +532,7 @@ static void yaml_ps_skip_ws(yaml_parse_state_t *s)
     }
 }
 
-__attribute__((unused))
-static void yaml_ps_skip_ws_nl(yaml_parse_state_t *s)
+__attribute__((unused)) static void yaml_ps_skip_ws_nl(yaml_parse_state_t *s)
 {
     while (s->pos < s->len) {
         int c = yaml_ps_peek(s);
@@ -634,11 +581,7 @@ static config_error_t yaml_parse_mapping(yaml_parse_state_t *s, int base_indent,
     char full_key[1024];
 
     while (s->pos < s->len) {
-        /* v0.1.1 修复（YAML 解析 Bug C）：只跳过空行，保留行首缩进空格。
-         * 此前 yaml_ps_skip_ws_nl(s) 在 yaml_ps_count_indent(s) 之前调用，
-         * 会消耗行首缩进空格，导致 indent 始终为 0，嵌套 YAML 层级丢失。
-         * 例如 "kernel:\n  max_alloc_mb: 2048" 的 key 存储为 "max_alloc_mb"
-         * 而非 "kernel.max_alloc_mb"。修复后只跳过纯换行行，保留缩进供 count_indent。 */
+        // 只跳过空行：行首缩进必须保留给 count_indent，否则嵌套 YAML 层级丢失
         while (s->pos < s->len) {
             if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
                 yaml_ps_skip_eol(s);
@@ -705,7 +648,7 @@ static config_error_t yaml_parse_mapping(yaml_parse_state_t *s, int base_indent,
 
         if (s->pos >= s->len || yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
             yaml_ps_skip_eol(s);
-            /* v0.1.1 修复（YAML 解析 Bug C 同类问题）：只跳过空行 */
+
             while (s->pos < s->len) {
                 if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
                     yaml_ps_skip_eol(s);
@@ -736,7 +679,7 @@ static config_error_t yaml_parse_sequence(yaml_parse_state_t *s, int base_indent
 {
     int idx = 0;
     while (s->pos < s->len) {
-        /* v0.1.1 修复（YAML 解析 Bug C 同类问题）：只跳过空行，保留行首缩进 */
+
         while (s->pos < s->len) {
             if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
                 yaml_ps_skip_eol(s);
@@ -766,7 +709,7 @@ static config_error_t yaml_parse_sequence(yaml_parse_state_t *s, int base_indent
 
         if (s->pos >= s->len || yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
             yaml_ps_skip_eol(s);
-            /* v0.1.1 修复（YAML 解析 Bug C 同类问题）：只跳过空行 */
+
             while (s->pos < s->len) {
                 if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
                     yaml_ps_skip_eol(s);
@@ -930,11 +873,9 @@ static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, c
         yaml_ps_advance(s);
         yaml_ps_skip_ws(s);
         int idx = 0;
-        /* v0.1.1 修复（YAML 解析 Bug D）：未闭合 `[` 导致无限循环。
-         * 原外层 while 条件仅检查 `!= ']'`，遇到 `[unclosed\n` 时
-         * 内层 while 因 `\n` break，外层 while 因不是 `,`/`]` 继续，
-         * 进入死循环。修复：遇到换行符视为语法错误，终止解析。 */
-        while (s->pos < s->len && yaml_ps_peek(s) != ']' && yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r') {
+        // 未闭合的 '[' 视为语法错误：遇到换行符终止解析，避免死循环
+        while (s->pos < s->len && yaml_ps_peek(s) != ']' && yaml_ps_peek(s) != '\n' &&
+               yaml_ps_peek(s) != '\r') {
             if (yaml_ps_peek(s) == ',') {
                 yaml_ps_advance(s);
                 yaml_ps_skip_ws(s);
@@ -1036,14 +977,9 @@ static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, c
 
     yaml_ps_skip_ws(s);
     if (s->pos < s->len && yaml_ps_peek(s) == ':') {
-        /* v0.1.1 修复（YAML 解析 Bug C 根因）：val_buf 是 key 名，
-         * 应作为 yaml_parse_mapping 的 prefix 传入，而非使用外部 prefix。
-         * 此前传 prefix（通常为空），导致 "kernel:\n  max_alloc_mb: 2048"
-         * 的 key 存储为 "max_alloc_mb" 而非 "kernel.max_alloc_mb"。
-         * 同时需要先消耗 ':' 和后续空白/换行，否则 yaml_parse_mapping
-         * 第一次迭代会在 ':' 处读到空 key_buf，产生 "prefix." 这样的错误 key。 */
-        yaml_ps_advance(s); /* 消耗 ':' */
-        yaml_ps_skip_ws(s); /* 跳过冒号后空格 */
+        // 嵌套 mapping 的 key 名须作为 prefix 递归传入，否则 dotted path 丢失
+        yaml_ps_advance(s);
+        yaml_ps_skip_ws(s);
         yaml_parse_mapping(s, base_indent, val_buf, ctx);
         return CONFIG_SUCCESS;
     }
@@ -1093,12 +1029,6 @@ static config_error_t parse_yaml_full(const char *data, size_t data_len, config_
     return yaml_parse_value(&state, -1, "", ctx);
 }
 
-/**
- * @brief 检查文件是否修? *
- * 通过文件修改时间检查文件是否修改? *
- * @param file_path 文件路径
- * @param last_modified 上次修改时间
- * @return 是否已修? */
 static bool check_file_modified(const char *file_path, uint64_t last_modified)
 {
     if (!file_path)
@@ -1260,13 +1190,15 @@ static int file_source_init_rdcw(file_source_priv_t *priv)
         last_sep = strrchr(dir_path, '/');
     if (last_sep) {
         *last_sep = '\0';
-        priv->dir_handle = CreateFileA(
-            dir_path, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+        priv->dir_handle =
+            CreateFileA(dir_path, FILE_LIST_DIRECTORY,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
     } else {
-        priv->dir_handle = CreateFileA(
-            ".", FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
-            OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+        priv->dir_handle =
+            CreateFileA(".", FILE_LIST_DIRECTORY,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+                        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
     }
 
     if (priv->dir_handle == INVALID_HANDLE_VALUE) {
@@ -1285,9 +1217,10 @@ static bool file_source_check_rdcw(file_source_priv_t *priv)
         return false;
     DWORD bytes_returned = 0;
     uint8_t buf[4096];
-    BOOL success = ReadDirectoryChangesW(
-        priv->dir_handle, buf, sizeof(buf), FALSE,
-        FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME, &bytes_returned, NULL, NULL);
+    BOOL success =
+        ReadDirectoryChangesW(priv->dir_handle, buf, sizeof(buf), FALSE,
+                              FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME,
+                              &bytes_returned, NULL, NULL);
     if (success && bytes_returned > 0) {
         return true;
     }
@@ -1306,12 +1239,6 @@ static void file_source_close_rdcw(file_source_priv_t *priv)
 }
 #endif
 
-/* ==================== 文件配置源适配?==================== */
-
-/**
- * @brief 文件配置源加载函? *
- * 从文件加载配置? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t file_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1321,12 +1248,10 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
     if (!priv || !priv->file_path)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 打开文件
     FILE *file = fopen(priv->file_path, "r");
     if (!file)
         return CONFIG_ERROR_IO;
 
-    // 获取文件大小
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -1336,7 +1261,6 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
         return CONFIG_ERROR_IO;
     }
 
-    // 读取文件内容
     char *buffer = (char *)AIRY_MALLOC(file_size + 1);
     if (!buffer) {
         fclose(file);
@@ -1371,10 +1295,6 @@ static config_error_t file_source_load(config_source_t *source, config_context_t
     return error;
 }
 
-/**
- * @brief 文件配置源保存函? *
- * 保存配置到文件? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t file_source_save(config_source_t *source, const config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1425,10 +1345,6 @@ static config_error_t file_source_save(config_source_t *source, const config_con
     return CONFIG_SUCCESS;
 }
 
-/**
- * @brief 文件配置源检查变化函? *
- * 检查文件是否已修改? *
- * @param source 配置? * @return 是否已修? */
 static bool file_source_has_changed(config_source_t *source)
 {
     if (!source)
@@ -1454,20 +1370,13 @@ static bool file_source_has_changed(config_source_t *source)
     return check_file_modified(priv->file_path, priv->last_modified);
 }
 
-/**
- * @brief 文件配置源获取属性函? *
- * 获取文件配置源属性? *
- * @param source 配置? * @return 配置源属? */
 static const config_source_attr_t *file_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
-/**
- * @brief 文件配置源销毁函? *
- * 销毁文件配置源资源? *
- * @param source 配置? */
 static void file_source_destroy(config_source_t *source)
 {
     if (!source)
@@ -1496,7 +1405,6 @@ static void file_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-/** 文件配置源适配?*/
 static const config_source_adapter_t file_source_adapter = {.load = file_source_load,
                                                             .save = file_source_save,
                                                             .has_changed = file_source_has_changed,
@@ -1504,14 +1412,8 @@ static const config_source_adapter_t file_source_adapter = {.load = file_source_
                                                                 file_source_get_attributes,
                                                             .destroy = file_source_destroy};
 
-/* ==================== 环境变量配置源适配器 ===================== */
-
 static uint64_t compute_env_hash(env_source_priv_t *priv);
 
-/**
- * @brief 环境变量配置源加载函? *
- * 从环境变量加载配置? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t env_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1546,29 +1448,19 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
         }
         key[key_len] = '\0';
 
-        /* v0.1.1 修复（BEHAVIOR_DIFF）：环境变量 key 映射对齐 YAML dotted path。
-         * 修复三个缺陷：
-         * 1. 未使用 case_sensitive 选项：当 case_sensitive=false 时应对 key 做 tolower
-         * 2. 替换所有 _ 为 .：应使用双分隔符（如 __）作为层级分隔符，
-         *    单分隔符保留为键内词边界（Viper/Django 等配置系统通用惯例）
-         * 3. 未使用 separator 选项值：硬编码替换 _ 而非使用 priv->separator
-         * 修复后语义示例：AIRY_KERNEL__MAX_ALLOC_MB → kernel.max_alloc_mb
-         *   （双 __ 分隔层级，单 _ 保留为词边界，与 YAML dotted path 对齐） */
+        // key 映射：双分隔符（如 __）映射为层级 .，单 _ 保留为词边界，对齐 YAML dotted path
 
-        /* 1. 大小写处理 */
         if (!priv->case_sensitive) {
             for (char *p = key; *p; p++)
                 *p = (char)tolower((unsigned char)*p);
         }
 
-        /* 2. 构建双分隔符模式（若 separator="_" 则 double_sep="__"） */
         const char *sep = priv->separator ? priv->separator : "_";
         size_t sep_len = strlen(sep);
         char double_sep[64];
         snprintf(double_sep, sizeof(double_sep), "%s%s", sep, sep);
         size_t dsep_len = sep_len * 2;
 
-        /* 3. 将双分隔符替换为 '.'，单分隔符保留为词边界 */
         char mapped_key[512];
         size_t mi = 0;
         const char *src = key;
@@ -1582,14 +1474,13 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
         }
         mapped_key[mi] = '\0';
 
-        /* 4. 尝试 int/bool 解析，回退 string（与 YAML 解析器的标量推断语义一致） */
         config_value_t *cv = NULL;
         char *endptr;
         long int_val = strtol(val, &endptr, 10);
         if (*endptr == '\0' && endptr != val) {
             cv = config_value_create_int((int32_t)int_val);
         } else {
-            /* 大小写不敏感的 bool 检测 */
+
             char lower_val[64];
             size_t vlen = strlen(val);
             if (vlen < sizeof(lower_val)) {
@@ -1611,10 +1502,6 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
     return CONFIG_SUCCESS;
 }
 
-/**
- * @brief 环境变量配置源保存函? *
- * 保存配置到环境变量? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t env_source_save(config_source_t *source, const config_context_t *ctx)
 {
     (void)source;
@@ -1623,10 +1510,6 @@ static config_error_t env_source_save(config_source_t *source, const config_cont
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
-/**
- * @brief 环境变量配置源检查变化函? *
- * 环境变量通常不会变化? *
- * @param source 配置? * @return 是否已修? */
 static uint64_t compute_env_hash(env_source_priv_t *priv)
 {
     char **env = environ;
@@ -1666,20 +1549,13 @@ static bool env_source_has_changed(config_source_t *source)
     return false;
 }
 
-/**
- * @brief 环境变量配置源获取属性函? *
- * 获取环境变量配置源属性? *
- * @param source 配置? * @return 配置源属? */
 static const config_source_attr_t *env_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
-/**
- * @brief 环境变量配置源销毁函? *
- * 销毁环境变量配置源资源? *
- * @param source 配置? */
 static void env_source_destroy(config_source_t *source)
 {
     if (!source)
@@ -1704,7 +1580,6 @@ static void env_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-/** 环境变量配置源适配?*/
 static const config_source_adapter_t env_source_adapter = {.load = env_source_load,
                                                            .save = env_source_save,
                                                            .has_changed = env_source_has_changed,
@@ -1712,13 +1587,6 @@ static const config_source_adapter_t env_source_adapter = {.load = env_source_lo
                                                                env_source_get_attributes,
                                                            .destroy = env_source_destroy};
 
-/* ==================== 命令行配置源适配?==================== */
-
-/**
- * @brief 命令行配置源加载函数
- *
- * 从命令行参数加载配置? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t args_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1751,11 +1619,6 @@ static config_error_t args_source_load(config_source_t *source, config_context_t
     return CONFIG_SUCCESS;
 }
 
-/**
- * @brief 命令行配置源保存函数
- *
- * 命令行配置源不支持保存? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t args_source_save(config_source_t *source, const config_context_t *ctx)
 {
     (void)source;
@@ -1764,31 +1627,19 @@ static config_error_t args_source_save(config_source_t *source, const config_con
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
-/**
- * @brief 命令行配置源检查变化函? *
- * 命令行参数不会变化? *
- * @param source 配置? * @return 是否已修? */
 static bool args_source_has_changed(config_source_t *source)
 {
-    // 命令行参数不会变
     (void)source;
     return false;
 }
 
-/**
- * @brief 命令行配置源获取属性函? *
- * 获取命令行配置源属性? *
- * @param source 配置? * @return 配置源属? */
 static const config_source_attr_t *args_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
-/**
- * @brief 命令行配置源销毁函? *
- * 销毁命令行配置源资源? *
- * @param source 配置? */
 static void args_source_destroy(config_source_t *source)
 {
     if (!source)
@@ -1807,7 +1658,6 @@ static void args_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-/** 命令行配置源适配?*/
 static const config_source_adapter_t args_source_adapter = {.load = args_source_load,
                                                             .save = args_source_save,
                                                             .has_changed = args_source_has_changed,
@@ -1815,12 +1665,6 @@ static const config_source_adapter_t args_source_adapter = {.load = args_source_
                                                                 args_source_get_attributes,
                                                             .destroy = args_source_destroy};
 
-/* ==================== 内存配置源适配?==================== */
-
-/**
- * @brief 内存配置源加载函? *
- * 从内存数据加载配置? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t memory_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1830,9 +1674,6 @@ static config_error_t memory_source_load(config_source_t *source, config_context
     if (!priv || !priv->data)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 根据格式解析配置（v0.1.1 修复：补全 yaml 分支 + 未知格式回退，
-    // 此前 memory_source_load 漏接 yaml，导致 format="yaml" 落入 else
-    // 走 parse_json_full 对非 JSON 内容返回 CONFIG_ERROR_PARSE）
     config_error_t error = CONFIG_SUCCESS;
     if (priv->format && strcmp(priv->format, "json") == 0) {
         error = parse_json_full(priv->data, priv->data_len, ctx);
@@ -1841,7 +1682,6 @@ static config_error_t memory_source_load(config_source_t *source, config_context
     } else if (priv->format && strcmp(priv->format, "ini") == 0) {
         error = parse_ini_simple(priv->data, priv->data_len, ctx);
     } else {
-        // 默认尝试JSON格式，失败则回退YAML（与 file_source_load 行为一致）
         error = parse_json_full(priv->data, priv->data_len, ctx);
         if (error != CONFIG_SUCCESS) {
             error = parse_yaml_full(priv->data, priv->data_len, ctx);
@@ -1851,10 +1691,6 @@ static config_error_t memory_source_load(config_source_t *source, config_context
     return error;
 }
 
-/**
- * @brief 内存配置源保存函? *
- * 内存配置源不支持保存? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t memory_source_save(config_source_t *source, const config_context_t *ctx)
 {
     if (!source)
@@ -1867,31 +1703,19 @@ static config_error_t memory_source_save(config_source_t *source, const config_c
     return CONFIG_SUCCESS;
 }
 
-/**
- * @brief 内存配置源检查变化函? *
- * 内存配置源不会自动变化? *
- * @param source 配置? * @return 是否已修? */
 static bool memory_source_has_changed(config_source_t *source)
 {
-    // 内存配置源需要外部触发变
     (void)source;
     return false;
 }
 
-/**
- * @brief 内存配置源获取属性函? *
- * 获取内存配置源属性? *
- * @param source 配置? * @return 配置源属? */
 static const config_source_attr_t *memory_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
-/**
- * @brief 内存配置源销毁函? *
- * 销毁内存配置源资源? *
- * @param source 配置? */
 static void memory_source_destroy(config_source_t *source)
 {
     if (!source)
@@ -1909,21 +1733,14 @@ static void memory_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-/** 内存配置源适配?*/
-static const config_source_adapter_t memory_source_adapter = {
-    .load = memory_source_load,
-    .save = memory_source_save,
-    .has_changed = memory_source_has_changed,
-    .get_attributes = memory_source_get_attributes,
-    .destroy = memory_source_destroy};
+static const config_source_adapter_t memory_source_adapter = {.load = memory_source_load,
+                                                              .save = memory_source_save,
+                                                              .has_changed =
+                                                                  memory_source_has_changed,
+                                                              .get_attributes =
+                                                                  memory_source_get_attributes,
+                                                              .destroy = memory_source_destroy};
 
-/* ==================== 默认值配置源适配?==================== */
-
-/**
- * @brief 默认值配置源加载函数
- *
- * 从默认值加载配置? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t defaults_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -1941,11 +1758,6 @@ static config_error_t defaults_source_load(config_source_t *source, config_conte
     return CONFIG_SUCCESS;
 }
 
-/**
- * @brief 默认值配置源保存函数
- *
- * 默认值配置源不支持保存? *
- * @param source 配置? * @param ctx 配置上下? * @return 错误? */
 static config_error_t defaults_source_save(config_source_t *source, const config_context_t *ctx)
 {
     (void)source;
@@ -1954,31 +1766,19 @@ static config_error_t defaults_source_save(config_source_t *source, const config
     return CONFIG_ERROR_UNSUPPORTED;
 }
 
-/**
- * @brief 默认值配置源检查变化函? *
- * 默认值不会变化? *
- * @param source 配置? * @return 是否已修? */
 static bool defaults_source_has_changed(config_source_t *source)
 {
-    // 默认值不会变
     (void)source;
     return false;
 }
 
-/**
- * @brief 默认值配置源获取属性函? *
- * 获取默认值配置源属性? *
- * @param source 配置? * @return 配置源属? */
 static const config_source_attr_t *defaults_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
-/**
- * @brief 默认值配置源销毁函? *
- * 销毁默认值配置源资源? *
- * @param source 配置? */
 static void defaults_source_destroy(config_source_t *source)
 {
     if (!source)
@@ -2006,13 +1806,13 @@ static void defaults_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-/** 默认值配置源适配?*/
-static const config_source_adapter_t defaults_source_adapter = {
-    .load = defaults_source_load,
-    .save = defaults_source_save,
-    .has_changed = defaults_source_has_changed,
-    .get_attributes = defaults_source_get_attributes,
-    .destroy = defaults_source_destroy};
+static const config_source_adapter_t defaults_source_adapter = {.load = defaults_source_load,
+                                                                .save = defaults_source_save,
+                                                                .has_changed =
+                                                                    defaults_source_has_changed,
+                                                                .get_attributes =
+                                                                    defaults_source_get_attributes,
+                                                                .destroy = defaults_source_destroy};
 
 /** remote source private data */
 typedef struct {
@@ -2079,7 +1879,8 @@ static bool remote_source_has_changed(config_source_t *source)
 
 static const config_source_attr_t *remote_source_get_attributes(config_source_t *source)
 {
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
     return &source->attributes;
 }
 
@@ -2102,32 +1903,30 @@ static void remote_source_destroy(config_source_t *source)
     config_source_free_base(source);
 }
 
-static const config_source_adapter_t remote_source_adapter = {
-    .load = remote_source_load,
-    .save = remote_source_save,
-    .has_changed = remote_source_has_changed,
-    .get_attributes = remote_source_get_attributes,
-    .destroy = remote_source_destroy};
-
-/* ==================== 公共API实现 ==================== */
+static const config_source_adapter_t remote_source_adapter = {.load = remote_source_load,
+                                                              .save = remote_source_save,
+                                                              .has_changed =
+                                                                  remote_source_has_changed,
+                                                              .get_attributes =
+                                                                  remote_source_get_attributes,
+                                                              .destroy = remote_source_destroy};
 
 config_source_t *config_source_create_file(const config_file_source_options_t *options)
 {
-    if (!options || !options->file_path) return NULL;
+    if (!options || !options->file_path)
+        return NULL;
 
-    // 创建配置源基础对象
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_FILE, options->file_path, &file_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 创建私有数据
     file_source_priv_t *priv = (file_source_priv_t *)AIRY_CALLOC(1, sizeof(file_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 复制选项数据
     priv->file_path = duplicate_string(options->file_path);
     priv->format = options->format ? duplicate_string(options->format) : duplicate_string("json");
     priv->encoding =
@@ -2137,7 +1936,6 @@ config_source_t *config_source_create_file(const config_file_source_options_t *o
     priv->last_modified = 0;
     priv->file_handle = NULL;
 
-    // 检查资源分配是否成功
     if (!priv->file_path || !priv->format || !priv->encoding) {
         if (priv->file_path)
             AIRY_FREE(priv->file_path);
@@ -2150,10 +1948,9 @@ config_source_t *config_source_create_file(const config_file_source_options_t *o
         AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
     }
 
-    // 更新属
     source->priv_data = priv;
     source->attributes.watchable = options->auto_reload;
-    source->attributes.read_only = false;  // 文件配置源可以保?
+    source->attributes.read_only = false;
 
 #ifdef __linux__
     if (options->auto_reload) {
@@ -2174,22 +1971,21 @@ config_source_t *config_source_create_file(const config_file_source_options_t *o
 
 config_source_t *config_source_create_env(const config_env_source_options_t *options)
 {
-    if (!options) return NULL;
+    if (!options)
+        return NULL;
 
-    // 创建配置源基础对象
     const char *name = options->prefix ? options->prefix : "env";
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_ENV, name, &env_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 创建私有数据
     env_source_priv_t *priv = (env_source_priv_t *)AIRY_CALLOC(1, sizeof(env_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 复制选项数据
     priv->prefix = options->prefix ? duplicate_string(options->prefix) : NULL;
     priv->case_sensitive = options->case_sensitive;
     priv->separator =
@@ -2198,7 +1994,6 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
     priv->env_keys = NULL;
     priv->env_count = 0;
 
-    // 检查资源分配是否成功
     if (options->separator && !priv->separator) {
         if (priv->prefix)
             AIRY_FREE(priv->prefix);
@@ -2207,40 +2002,37 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 更新属
     source->priv_data = priv;
-    source->attributes.read_only = true;   // 环境变量只读
-    source->attributes.watchable = false;  // 环境变量变化检测复制
+    source->attributes.read_only = true;
+    source->attributes.watchable = false;
 
     return source;
 }
 
 config_source_t *config_source_create_args(const config_args_source_options_t *options)
 {
-    if (!options || options->argc <= 0 || !options->argv) return NULL;
+    if (!options || options->argc <= 0 || !options->argv)
+        return NULL;
 
-    // 创建配置源基础对象
     const char *name = options->prefix ? options->prefix : "args";
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_ARGS, name, &args_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 创建私有数据
     args_source_priv_t *priv = (args_source_priv_t *)AIRY_CALLOC(1, sizeof(args_source_priv_t));
     if (!priv) {
         config_source_free_base(source);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 复制选项数据
     priv->argc = options->argc;
-    priv->argv = options->argv;  // 不复制，不拥有所有权
+    priv->argv = options->argv;
     priv->prefix = options->prefix ? duplicate_string(options->prefix) : NULL;
     priv->assign_char =
         options->assign_char ? duplicate_string(options->assign_char) : duplicate_string("=");
     priv->allow_positional = options->allow_positional;
 
-    // 检查资源分配是否成功
     if (!priv->assign_char) {
         if (priv->prefix)
             AIRY_FREE(priv->prefix);
@@ -2249,23 +2041,22 @@ config_source_t *config_source_create_args(const config_args_source_options_t *o
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 更新属
     source->priv_data = priv;
-    source->attributes.read_only = true;   // 命令行参数只
-    source->attributes.watchable = false;  // 命令行参数不会变?
+    source->attributes.read_only = true;
+    source->attributes.watchable = false;
     return source;
 }
 
 config_source_t *config_source_create_memory(const config_memory_source_options_t *options)
 {
-    if (!options || !options->data) return NULL;
+    if (!options || !options->data)
+        return NULL;
 
-    // 创建配置源基础对象
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_MEMORY, "memory", &memory_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 创建私有数据
     memory_source_priv_t *priv =
         (memory_source_priv_t *)AIRY_CALLOC(1, sizeof(memory_source_priv_t));
     if (!priv) {
@@ -2273,13 +2064,11 @@ config_source_t *config_source_create_memory(const config_memory_source_options_
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 复制选项数据
     priv->data = duplicate_string(options->data);
     priv->data_len = options->data_len ? options->data_len : strlen(options->data);
     priv->format = options->format ? duplicate_string(options->format) : duplicate_string("json");
     priv->owns_data = true;
 
-    // 检查资源分配是否成功
     if (!priv->data || !priv->format) {
         if (priv->data)
             AIRY_FREE(priv->data);
@@ -2290,24 +2079,23 @@ config_source_t *config_source_create_memory(const config_memory_source_options_
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 更新属
     source->priv_data = priv;
-    source->attributes.read_only = true;   // 内存配置源通常只读
-    source->attributes.watchable = false;  // 需要外部触发变
+    source->attributes.read_only = true;
+    source->attributes.watchable = false;
 
     return source;
 }
 
 config_source_t *config_source_create_defaults(const char *const *default_values, size_t count)
 {
-    if (!default_values || count == 0) return NULL;
+    if (!default_values || count == 0)
+        return NULL;
 
-    // 创建配置源基础对象
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_DEFAULT, "defaults", &defaults_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
-    // 创建私有数据
     defaults_source_priv_t *priv =
         (defaults_source_priv_t *)AIRY_CALLOC(1, sizeof(defaults_source_priv_t));
     if (!priv) {
@@ -2315,7 +2103,6 @@ config_source_t *config_source_create_defaults(const char *const *default_values
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 分配键值对数组
     priv->keys = (char **)AIRY_CALLOC(count, sizeof(char *));
     priv->vals = (char **)AIRY_CALLOC(count, sizeof(char *));
     if (!priv->keys || !priv->vals) {
@@ -2337,21 +2124,22 @@ config_source_t *config_source_create_defaults(const char *const *default_values
         }
     }
 
-    // 更新属
     source->priv_data = priv;
-    source->attributes.read_only = true;   // 默认值只
-    source->attributes.watchable = false;  // 默认值不会变?
+    source->attributes.read_only = true;
+    source->attributes.watchable = false;
     return source;
 }
 
 config_source_t *config_source_create_remote(const char *url, const char *token, const char *ns,
                                              uint32_t poll_interval_ms)
 {
-    if (!url) return NULL;
+    if (!url)
+        return NULL;
 
     config_source_t *source =
         config_source_create_base(CONFIG_SOURCE_NETWORK, "remote", &remote_source_adapter);
-    if (!source) return NULL;
+    if (!source)
+        return NULL;
 
     remote_source_priv_t *priv =
         (remote_source_priv_t *)AIRY_CALLOC(1, sizeof(remote_source_priv_t));
@@ -2383,7 +2171,6 @@ void config_source_destroy(config_source_t *source)
     if (source->adapter && source->adapter->destroy) {
         source->adapter->destroy(source);
     } else {
-        // 如果没有适配器，直接释放基础资源
         config_source_free_base(source);
     }
 }
@@ -2436,15 +2223,13 @@ config_source_type_t config_source_get_type(config_source_t *source)
     return attr->type;
 }
 
-/* ==================== 配置源管理器实现 ==================== */
-
 config_source_manager_t *config_source_manager_create(void)
 {
     config_source_manager_t *manager =
         (config_source_manager_t *)AIRY_CALLOC(1, sizeof(config_source_manager_t));
-    if (!manager) return NULL;
+    if (!manager)
+        return NULL;
 
-    // 初始容量
     manager->capacity = 16;
     manager->sources =
         (config_source_t **)AIRY_CALLOC(manager->capacity, sizeof(config_source_t *));
@@ -2468,14 +2253,12 @@ void config_source_manager_destroy(config_source_manager_t *manager)
     if (!manager)
         return;
 
-    // 销毁所有配置源
     for (size_t i = 0; i < manager->count; i++) {
         if (manager->sources[i]) {
             config_source_destroy(manager->sources[i]);
         }
     }
 
-    // 释放资源
     if (manager->sources)
         AIRY_FREE(manager->sources);
     airy_mtx_destroy(&manager->internal_mutex);
@@ -2487,11 +2270,11 @@ config_error_t config_source_manager_add(config_source_manager_t *manager, confi
     if (!manager || !source)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 检查容量，必要时扩
     if (manager->count >= manager->capacity) {
         size_t new_capacity = manager->capacity * 2;
-        config_source_t **new_sources = (config_source_t **)AIRY_REALLOC(
-            manager->sources, new_capacity * sizeof(config_source_t *));
+        config_source_t **new_sources =
+            (config_source_t **)AIRY_REALLOC(manager->sources,
+                                             new_capacity * sizeof(config_source_t *));
         if (!new_sources)
             return CONFIG_ERROR_OUT_OF_MEMORY;
 
@@ -2499,15 +2282,12 @@ config_error_t config_source_manager_add(config_source_manager_t *manager, confi
         manager->capacity = new_capacity;
     }
 
-    // 添加配配置
     manager->sources[manager->count] = source;
     manager->count++;
 
-    // 更新时时间
     if (source->adapter && source->adapter->get_attributes) {
         const config_source_attr_t *attr = source->adapter->get_attributes(source);
         if (attr) {
-            // 这里可以记录添加时间
         }
     }
 
@@ -2520,10 +2300,8 @@ config_error_t config_source_manager_remove(config_source_manager_t *manager,
     if (!manager || !source)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 查找配配置
     for (size_t i = 0; i < manager->count; i++) {
         if (manager->sources[i] == source) {
-            // 移动后续元素
             for (size_t j = i; j < manager->count - 1; j++) {
                 manager->sources[j] = manager->sources[j + 1];
             }
@@ -2538,7 +2316,8 @@ config_error_t config_source_manager_remove(config_source_manager_t *manager,
 
 config_source_t *config_source_manager_find(config_source_manager_t *manager, const char *name)
 {
-    if (!manager || !name) return NULL;
+    if (!manager || !name)
+        return NULL;
 
     for (size_t i = 0; i < manager->count; i++) {
         const config_source_attr_t *attr = config_source_get_attributes(manager->sources[i]);
@@ -2558,7 +2337,6 @@ config_error_t config_source_manager_load_all(config_source_manager_t *manager,
 
     config_error_t overall_error = CONFIG_SUCCESS;
 
-    // 按优先级排序加载
     for (size_t i = 0; i < manager->count; i++) {
         config_source_t *source = manager->sources[i];
         if (!source)
@@ -2567,8 +2345,7 @@ config_error_t config_source_manager_load_all(config_source_manager_t *manager,
         config_error_t error = config_source_load(source, ctx);
         if (error != CONFIG_SUCCESS) {
             overall_error = error;
-            // 根据策略决定是否继续
-            if (merge_strategy == 0) {  // 严格模式：任何错误都停止
+            if (merge_strategy == 0) {
                 return error;
             }
         }
@@ -2667,8 +2444,6 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
     return 0;
 }
 
-/* ==================== 工具函数实现 ==================== */
-
 const char *config_source_type_to_string(config_source_type_t type)
 {
     switch (type) {
@@ -2717,14 +2492,16 @@ const char *config_parse_file_format(const char *file_path)
 
 char *config_source_create_name(config_source_type_t type, const char *identifier)
 {
-    if (!identifier) return NULL;
+    if (!identifier)
+        return NULL;
 
     const char *type_str = config_source_type_to_string(type);
     size_t type_len = strlen(type_str);
     size_t id_len = strlen(identifier);
 
-    char *name = (char *)AIRY_MALLOC(type_len + id_len + 2);  // +2 for ':' and null terminator
-    if (!name) return NULL;
+    char *name = (char *)AIRY_MALLOC(type_len + id_len + 2); // +2 for ':' and null terminator
+    if (!name)
+        return NULL;
 
     snprintf(name, type_len + id_len + 2, "%s:%s", type_str, identifier);
     return name;

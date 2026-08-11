@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file strategy_common.c
  * @brief 策略模式共享工具 - 实现
  *
  * 实现策略模式的通用功能，消除跨模块的代码重复。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "strategy_common.h"
@@ -14,8 +14,6 @@
 #include <float.h>
 #include <stdio.h>
 #include "error.h"
-
-
 
 /**
  * @brief 计算加权评分

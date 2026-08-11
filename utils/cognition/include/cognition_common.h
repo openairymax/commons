@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cognition_common.h
  * @brief 认知模块通用功能定义
@@ -7,7 +8,6 @@
  * 提供认知模块共享的功能，包括计划、调度、协调等
  * 减少认知模块之间的代码重复
  *
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef COGNITION_COMMON_H
@@ -25,57 +25,57 @@ extern "C" {
  * @brief Agent信息结构
  */
 typedef struct {
-    char *agent_id;            /**< Agent ID */
-    double weight;             /**< 权重 */
-    double success_rate;       /**< 成功率 */
-    uint64_t total_tasks;      /**< 总任务数 */
-    uint64_t successful_tasks; /**< 成功任务数 */
-    double avg_latency;        /**< 平均延迟 */
-    uint64_t last_used;        /**< 最后使用时间 */
+    char *agent_id; /**< Agent ID */
+    double weight;
+    double success_rate;
+    uint64_t total_tasks;
+    uint64_t successful_tasks;
+    double avg_latency;
+    uint64_t last_used;
 } agent_info_t;
 
 /**
  * @brief 任务信息结构
  */
 typedef struct {
-    char *task_id;      /**< 任务ID */
-    char *task_type;    /**< 任务类型 */
-    char *task_content; /**< 任务内容 */
-    uint64_t priority;  /**< 优先级 */
-    uint64_t deadline;  /**< 截止时间 */
+    char *task_id;
+    char *task_type;
+    char *task_content;
+    uint64_t priority;
+    uint64_t deadline;
 } task_info_t;
 
 /**
  * @brief 计划结果结构
  */
 typedef struct {
-    bool success;      /**< 是否成功 */
-    char *plan;        /**< 计划内容 */
-    size_t plan_size;  /**< 计划大小 */
-    char *error;       /**< 错误信息 */
-    size_t error_size; /**< 错误信息大小 */
+    bool success;
+    char *plan;
+    size_t plan_size;
+    char *error;
+    size_t error_size;
 } plan_result_t;
 
 /**
  * @brief 调度结果结构
  */
 typedef struct {
-    bool success;         /**< 是否成功 */
-    char *selected_agent; /**< 选中的Agent */
-    double confidence;    /**< 置信度 */
-    char *error;          /**< 错误信息 */
-    size_t error_size;    /**< 错误信息大小 */
+    bool success;
+    char *selected_agent;
+    double confidence;
+    char *error;
+    size_t error_size;
 } dispatch_result_t;
 
 /**
  * @brief 协调结果结构
  */
 typedef struct {
-    bool success;         /**< 是否成功 */
-    char *decision;       /**< 决策结果 */
-    size_t decision_size; /**< 决策结果大小 */
-    char *error;          /**< 错误信息 */
-    size_t error_size;    /**< 错误信息大小 */
+    bool success;
+    char *decision;
+    size_t decision_size;
+    char *error;
+    size_t error_size;
 } coordination_result_t;
 
 /**
@@ -211,4 +211,4 @@ int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task);
 }
 #endif
 
-#endif  // COGNITION_COMMON_H
+#endif /* COGNITION_COMMON_H */

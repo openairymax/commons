@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file test_network.c
  * @brief 网络通信模块单元测试
@@ -66,10 +66,8 @@ static void test_network_connection_create_destroy(void **state)
     network_connection_t *conn = network_connection_create(&config);
     assert_non_null(conn);
 
-    /* 初始状态应为已断开 */
     assert_int_equal(network_get_status(conn), NETWORK_STATUS_DISCONNECTED);
 
-    /* 错误消息初始应为空或 "No error" */
     const char *err_msg = network_get_error_message(conn);
     assert_non_null(err_msg);
 
@@ -83,14 +81,11 @@ static void test_network_null_handling(void **state)
 {
     (void)state;
 
-    /* NULL 创建应返回 NULL */
     network_connection_t *conn = network_connection_create(NULL);
     assert_null(conn);
 
-    /* NULL 销毁不应崩溃 */
     network_connection_destroy(NULL);
 
-    /* NULL 连接操作应返回错误 */
     assert_int_equal(network_connect(NULL), AIRY_EINVAL);
     assert_int_equal(network_disconnect(NULL), AIRY_EINVAL);
     assert_int_equal(network_get_status(NULL), NETWORK_STATUS_ERROR);
@@ -206,7 +201,6 @@ static void test_http_response_structure(void **state)
     assert_string_equal(response.body, "OK");
     assert_int_equal(response.body_len, 2);
 
-    /* 使用标准释放函数 */
     network_http_response_free(&response);
     assert_null(response.body);
 }
@@ -253,19 +247,15 @@ static void test_network_pool_parameter_validation(void **state)
 
     network_config_t config = network_create_default_config();
 
-    /* 大小为 0 应返回 NULL */
     network_pool_t *pool_zero = network_pool_create(&config, 0);
     assert_null(pool_zero);
 
-    /* 超过最大池大小应返回 NULL */
     network_pool_t *pool_oversize = network_pool_create(&config, NETWORK_MAX_POOL_SIZE + 1);
     assert_null(pool_oversize);
 
-    /* NULL 配置应返回 NULL */
     network_pool_t *pool_null_cfg = network_pool_create(NULL, 5);
     assert_null(pool_null_cfg);
 
-    /* NULL 销毁不应崩溃 */
     network_pool_destroy(NULL);
 }
 
@@ -283,9 +273,8 @@ static void test_network_pool_available(void **state)
     network_pool_t *pool = network_pool_create(&config, 5);
     assert_non_null(pool);
 
-    /* 空池的可用连接数应该等于最大大小（全部可新建） */
     size_t available = network_pool_available(pool);
-    assert_true(available >= 5); /* 至少有 5 个槽位可用 */
+    assert_true(available >= 5);
 
     network_pool_destroy(pool);
 }
@@ -304,11 +293,9 @@ static void test_network_pool_health_check(void **state)
     network_pool_t *pool = network_pool_create(&config, 5);
     assert_non_null(pool);
 
-    /* 空池的健康连接数应为 0 */
     size_t healthy = network_pool_health_check(pool);
     assert_int_equal(healthy, 0);
 
-    /* NULL 池的健康检查不应崩溃 */
     healthy = network_pool_health_check(NULL);
     assert_int_equal(healthy, 0);
 
@@ -330,7 +317,6 @@ static void test_dns_resolve_exists(void **state)
 
     airy_err_t err = network_dns_resolve("localhost", NETWORK_AF_INET, &result);
 
-    /* 无论成功与否，都不应崩溃 */
     if (err == AIRY_SUCCESS && result.count > 0) {
         assert_non_null(result.addresses);
         network_dns_result_free(&result);
@@ -344,13 +330,11 @@ static void test_dns_resolve_null_handling(void **state)
 {
     (void)state;
 
-    /* NULL 参数应返回错误 */
     assert_int_equal(network_dns_resolve(NULL, NETWORK_AF_INET, NULL), AIRY_EINVAL);
 
     network_dns_result_t result = {0};
     assert_int_equal(network_dns_resolve(NULL, NETWORK_AF_INET, &result), AIRY_EINVAL);
 
-    /* 释放 NULL 结果不应崩溃 */
     network_dns_result_free(NULL);
 }
 
@@ -368,12 +352,11 @@ static void test_network_init_cleanup(void **state)
     airy_err_t err = network_init();
     assert_int_equal(err, AIRY_SUCCESS);
 
-    /* 多次初始化应该是安全的 */
     err = network_init();
     assert_int_equal(err, AIRY_SUCCESS);
 
     network_cleanup();
-    /* 多次清理也应是安全的 */
+
     network_cleanup();
 }
 
@@ -384,13 +367,11 @@ static void test_network_is_reachable(void **state)
 {
     (void)state;
 
-    /* NULL 主机应返回 false */
     bool reachable = network_is_reachable(NULL, 1000);
     assert_false(reachable);
 
-    /* localhost 通常可达（但可能因环境而异，只验证不崩溃） */
     reachable = network_is_reachable("127.0.0.1", 1000);
-    (void)reachable; /* 结果取决于系统环境 */
+    (void)reachable;
 }
 
 /**
@@ -402,16 +383,13 @@ static void test_network_get_local_ip(void **state)
 
     char buffer[64] = {0};
 
-    /* NULL 缓冲区应返回错误 */
     assert_int_equal(network_get_local_ip(NETWORK_AF_INET, NULL, 0), AIRY_EINVAL);
 
-    /* 正常调用应成功 */
     airy_err_t err = network_get_local_ip(NETWORK_AF_INET, buffer, sizeof(buffer));
     assert_int_equal(err, AIRY_SUCCESS);
 
-    /* 应该得到有效的 IP 字符串 */
     if (buffer[0] != '\0') {
-        /* 验证包含数字和点号 */
+
         int has_digit = 0, has_dot = 0;
         for (size_t i = 0; buffer[i]; i++) {
             if (buffer[i] >= '0' && buffer[i] <= '9')
@@ -439,7 +417,6 @@ static void test_network_addr_to_string(void **state)
     airy_err_t err = network_addr_to_string(NETWORK_AF_INET, &addr, buffer, sizeof(buffer));
     assert_int_equal(err, AIRY_SUCCESS);
 
-    /* NULL 参数处理 */
     err = network_addr_to_string(NETWORK_AF_INET, NULL, buffer, sizeof(buffer));
     assert_int_equal(err, AIRY_EINVAL);
 
@@ -497,7 +474,7 @@ static void test_network_stats_structure(void **state)
 int main(void)
 {
     const struct CMUnitTest tests[] = {
-        /* 基础连接 API 测试 */
+
         cmocka_unit_test(test_network_default_config),
         cmocka_unit_test(test_network_connection_create_destroy),
         cmocka_unit_test(test_network_null_handling),
@@ -506,23 +483,19 @@ int main(void)
         cmocka_unit_test(test_network_af_enums),
         cmocka_unit_test(test_network_ssl_verify_enums),
 
-        /* HTTP 客户端 API 测试 */
         cmocka_unit_test(test_http_get_request_init),
         cmocka_unit_test(test_http_post_request_init),
         cmocka_unit_test(test_http_response_structure),
         cmocka_unit_test(test_http_response_free_null),
 
-        /* 连接池 API 测试 */
         cmocka_unit_test(test_network_pool_create_destroy),
         cmocka_unit_test(test_network_pool_parameter_validation),
         cmocka_unit_test(test_network_pool_available),
         cmocka_unit_test(test_network_pool_health_check),
 
-        /* DNS 解析 API 测试 */
         cmocka_unit_test(test_dns_resolve_exists),
         cmocka_unit_test(test_dns_resolve_null_handling),
 
-        /* 工具函数测试 */
         cmocka_unit_test(test_network_init_cleanup),
         cmocka_unit_test(test_network_is_reachable),
         cmocka_unit_test(test_network_get_local_ip),

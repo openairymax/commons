@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file network_common.c
  * @brief 网络通信模块实现 - 跨平台网络抽象层
@@ -18,7 +18,6 @@
  * @version 0.1.0
  */
 
-/* Windows网络编程：必须在所有Windows头文件前定义 */
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
@@ -59,28 +58,28 @@
  * @brief 网络连接内部结构
  */
 struct network_connection {
-    network_config_t config;           /**< 连接配置 */
-    network_status_t status;           /**< 连接状态 */
-    char error_msg[256];               /**< 错误消息 */
-    network_event_callback_t event_cb; /**< 事件回调 */
-    void *event_user_data;             /**< 回调用户数据 */
-    network_stats_t stats;             /**< 统计信息 */
+    network_config_t config;
+    network_status_t status;
+    char error_msg[256];
+    network_event_callback_t event_cb;
+    void *event_user_data;
+    network_stats_t stats;
 #ifdef _WIN32
-    SOCKET sock; /**< Windows Socket 句柄 */
+    SOCKET sock;
 #else
-    int fd; /**< Unix 文件描述符 */
+    int fd;
 #endif
-    struct sockaddr_in addr; /**< 目标地址 */
+    struct sockaddr_in addr;
 };
 
 /**
  * @brief 连接池内部结构
  */
 struct network_pool {
-    network_config_t base_config;            /**< 基础配置 */
-    size_t max_size;                         /**< 最大连接数 */
-    size_t current_size;                     /**< 当前连接数 */
-    struct network_connection **connections; /**< 连接数组 */
+    network_config_t base_config;
+    size_t max_size;
+    size_t current_size;
+    struct network_connection **connections;
 };
 
 /* ============================================================================
@@ -297,7 +296,6 @@ airy_err_t network_connect(network_connection_t *connection)
 
     connection->status = NETWORK_STATUS_CONNECTING;
 
-    /* 创建系统 Socket */
     int native_af = af_to_native(connection->config.af);
     int native_type = socktype_to_native(connection->config.sock_type);
 
@@ -321,12 +319,10 @@ airy_err_t network_connect(network_connection_t *connection)
     connection->fd = fd;
 #endif
 
-    /* 设置目标地址 */
     AIRY_MEMSET(&connection->addr, 0, sizeof(connection->addr));
     connection->addr.sin_family = AF_INET;
     connection->addr.sin_port = htons((uint16_t)connection->config.port);
 
-    /* 尝试直接解析为 IP，否则使用 DNS */
     if (inet_pton(AF_INET, connection->config.host, &connection->addr.sin_addr) <= 0) {
         struct addrinfo hints, *result;
         AIRY_MEMSET(&hints, 0, sizeof(hints));
@@ -348,21 +344,18 @@ airy_err_t network_connect(network_connection_t *connection)
         freeaddrinfo(result);
     }
 
-    /* 设置超时 */
 #ifdef _WIN32
     void *handle = (void *)(uintptr_t)connection->sock;
 #else
     void *handle = (void *)(intptr_t)connection->fd;
 #endif
-    set_socket_timeout(handle, connection->config.timeout_ms, 1); /* 接收超时 */
-    set_socket_timeout(handle, connection->config.timeout_ms, 0); /* 发送超时 */
+    set_socket_timeout(handle, connection->config.timeout_ms, 1);
+    set_socket_timeout(handle, connection->config.timeout_ms, 0);
 
-    /* 设置非阻塞模式（如果需要） */
     if (connection->config.nonblocking) {
         set_nonblocking_mode(handle);
     }
 
-    /* 建立连接 */
 #ifdef _WIN32
     if (connect(connection->sock, (struct sockaddr *)&connection->addr, sizeof(connection->addr)) ==
         SOCKET_ERROR) {
@@ -386,7 +379,6 @@ airy_err_t network_connect(network_connection_t *connection)
     connection->status = NETWORK_STATUS_CONNECTED;
     connection->stats.connect_count++;
 
-    /* 触发连接成功事件 */
     if (connection->event_cb) {
         connection->event_cb(connection, NETWORK_EVENT_CONNECTED, NULL, 0,
                              connection->event_user_data);
@@ -414,7 +406,6 @@ airy_err_t network_disconnect(network_connection_t *connection)
 
     connection->status = NETWORK_STATUS_DISCONNECTING;
 
-    /* 触发断开事件 */
     if (connection->event_cb) {
         connection->event_cb(connection, NETWORK_EVENT_DISCONNECTED, NULL, 0,
                              connection->event_user_data);
@@ -446,7 +437,7 @@ airy_err_t network_disconnect(network_connection_t *connection)
  * @return 错误码
  */
 airy_err_t network_send(network_connection_t *connection, const void *data, size_t length,
-                             size_t *sent)
+                        size_t *sent)
 {
     if (!connection || !data || length == 0) {
         return AIRY_EINVAL;
@@ -482,7 +473,6 @@ airy_err_t network_send(network_connection_t *connection, const void *data, size
     connection->stats.bytes_sent += result;
     connection->stats.packets_sent++;
 
-    /* 触发数据发送事件 */
     if (connection->event_cb && result > 0) {
         connection->event_cb(connection, NETWORK_EVENT_DATA_SENT, data, result,
                              connection->event_user_data);
@@ -500,7 +490,7 @@ airy_err_t network_send(network_connection_t *connection, const void *data, size
  * @return 错误码
  */
 airy_err_t network_receive(network_connection_t *connection, void *buffer, size_t length,
-                                size_t *received)
+                           size_t *received)
 {
     if (!connection || !buffer || length == 0) {
         return AIRY_EINVAL;
@@ -545,7 +535,6 @@ airy_err_t network_receive(network_connection_t *connection, void *buffer, size_
     connection->stats.bytes_received += result;
     connection->stats.packets_received++;
 
-    /* 触发数据接收事件 */
     if (connection->event_cb && result > 0) {
         connection->event_cb(connection, NETWORK_EVENT_DATA_RECEIVED, buffer, result,
                              connection->event_user_data);
@@ -570,8 +559,8 @@ airy_err_t network_send_all(network_connection_t *connection, const void *data, 
     const uint8_t *ptr = (const uint8_t *)data;
     size_t remaining = length;
     int retries = 0;
-    int max_retries = connection->config.max_retries > 0 ? connection->config.max_retries
-                                                         : NETWORK_DEFAULT_MAX_RETRIES;
+    int max_retries = connection->config.max_retries > 0 ? connection->config.max_retries :
+                                                           NETWORK_DEFAULT_MAX_RETRIES;
 
     while (remaining > 0) {
         size_t sent = 0;
@@ -609,8 +598,8 @@ airy_err_t network_receive_exact(network_connection_t *connection, void *buffer,
     uint8_t *ptr = (uint8_t *)buffer;
     size_t remaining = length;
     int retries = 0;
-    int max_retries = connection->config.max_retries > 0 ? connection->config.max_retries
-                                                         : NETWORK_DEFAULT_MAX_RETRIES;
+    int max_retries = connection->config.max_retries > 0 ? connection->config.max_retries :
+                                                           NETWORK_DEFAULT_MAX_RETRIES;
 
     while (remaining > 0) {
         size_t received = 0;
@@ -673,8 +662,8 @@ airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
 #else
         void *handle = (void *)(intptr_t)connection->fd;
 #endif
-        set_socket_timeout(handle, timeout_ms, 0); /* 发送超时 */
-        set_socket_timeout(handle, timeout_ms, 1); /* 接收超时 */
+        set_socket_timeout(handle, timeout_ms, 0);
+        set_socket_timeout(handle, timeout_ms, 1);
     }
 
     return AIRY_SUCCESS;
@@ -688,7 +677,7 @@ airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
  * @return 错误码
  */
 airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
-                                       int write_timeout_ms)
+                                  int write_timeout_ms)
 {
     if (!connection) {
         return AIRY_EINVAL;
@@ -749,7 +738,7 @@ airy_err_t network_reset_stats(network_connection_t *connection)
  * @return 错误码
  */
 airy_err_t network_set_event_callback(network_connection_t *connection,
-                                           network_event_callback_t callback, void *user_data)
+                                      network_event_callback_t callback, void *user_data)
 {
     if (!connection) {
         return AIRY_EINVAL;
@@ -786,8 +775,8 @@ const char *network_get_error_message(const network_connection_t *connection)
  * @return 错误码
  */
 airy_err_t network_http_request(network_connection_t *connection,
-                                     const network_http_request_t *request,
-                                     network_http_response_t *response)
+                                const network_http_request_t *request,
+                                network_http_response_t *response)
 {
     if (!connection || !request || !response) {
         return AIRY_EINVAL;
@@ -799,32 +788,27 @@ airy_err_t network_http_request(network_connection_t *connection,
 
     AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
 
-    /* 构建 HTTP 请求行 */
     char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
     int offset = 0;
 
     /* 每步 snprintf 后检查截断：返回值是"应写入"长度，path/host/自定义头超长时
      * 可能 >= 剩余容量，若直接累加会让 offset 超出缓冲、后续 size 参数无符号下溢，
      * 必须终止并返回错误，保证 offset 始终在缓冲范围内。 */
-#define NETWORK_REQ_APPEND(fmt, ...)                                              \
-    do {                                                                          \
-        int wlen = snprintf(request_buf + offset,                                \
-                            sizeof(request_buf) - (size_t)offset, fmt,           \
-                            ##__VA_ARGS__);                                      \
-        if (wlen < 0 || (size_t)wlen >= sizeof(request_buf) - (size_t)offset) {  \
-            response->error = AIRY_ERR_OVERFLOW;                                  \
-            response->error_message = AIRY_STRDUP("HTTP request header too long"); \
-            return AIRY_ERR_OVERFLOW;                                             \
-        }                                                                         \
-        offset += wlen;                                                           \
+#define NETWORK_REQ_APPEND(fmt, ...)                                                         \
+    do {                                                                                     \
+        int wlen = snprintf(request_buf + offset, sizeof(request_buf) - (size_t)offset, fmt, \
+                            ##__VA_ARGS__);                                                  \
+        if (wlen < 0 || (size_t)wlen >= sizeof(request_buf) - (size_t)offset) {              \
+            response->error = AIRY_ERR_OVERFLOW;                                             \
+            response->error_message = AIRY_STRDUP("HTTP request header too long");           \
+            return AIRY_ERR_OVERFLOW;                                                        \
+        }                                                                                    \
+        offset += wlen;                                                                      \
     } while (0)
 
-    /* 请求行 */
-    NETWORK_REQ_APPEND("%s %s HTTP/1.1\r\n",
-                       request->method ? request->method : "GET",
+    NETWORK_REQ_APPEND("%s %s HTTP/1.1\r\n", request->method ? request->method : "GET",
                        request->path ? request->path : "/");
 
-    /* Host 头 */
     if (connection->config.host) {
         NETWORK_REQ_APPEND("Host: %s\r\n", connection->config.host);
     }
@@ -839,7 +823,6 @@ airy_err_t network_http_request(network_connection_t *connection,
         NETWORK_REQ_APPEND("Content-Length: %zu\r\n", request->body_len);
     }
 
-    /* 自定义请求头 */
     if (request->headers && request->header_count > 0) {
         for (size_t i = 0; i < request->header_count; i++) {
             if (request->headers[i]) {
@@ -848,12 +831,10 @@ airy_err_t network_http_request(network_connection_t *connection,
         }
     }
 
-    /* 结束头部 */
     NETWORK_REQ_APPEND("\r\n");
 
 #undef NETWORK_REQ_APPEND
 
-    /* 发送请求头 */
     airy_err_t err = network_send_all(connection, request_buf, (size_t)offset);
     if (err != AIRY_SUCCESS) {
         response->error = err;
@@ -861,7 +842,6 @@ airy_err_t network_http_request(network_connection_t *connection,
         return err;
     }
 
-    /* 发送请求体 */
     if (request->body && request->body_len > 0) {
         err = network_send_all(connection, request->body, request->body_len);
         if (err != AIRY_SUCCESS) {
@@ -871,7 +851,6 @@ airy_err_t network_http_request(network_connection_t *connection,
         }
     }
 
-    /* 接收响应 */
     char recv_buffer[65536];
     size_t total_received = 0;
     size_t received = 0;
@@ -910,7 +889,6 @@ airy_err_t network_http_request(network_connection_t *connection,
     if (body_start) {
         size_t header_len = body_start - recv_buffer + 4;
 
-        /* 提取响应头 */
         response->headers = (char **)AIRY_CALLOC(1, sizeof(char *));
         if (response->headers) {
             response->headers[0] = (char *)AIRY_MALLOC(header_len + 1);
@@ -921,7 +899,6 @@ airy_err_t network_http_request(network_connection_t *connection,
             response->header_count = 1;
         }
 
-        /* 提取响应体 */
         body_start += 4;
         size_t body_len = total_received - (body_start - recv_buffer);
         response->body = AIRY_MALLOC(body_len + 1);
@@ -931,7 +908,7 @@ airy_err_t network_http_request(network_connection_t *connection,
             response->body_len = body_len;
         }
     } else {
-        /* 没有找到头部/体分隔符，整个作为响应体 */
+
         response->body = AIRY_MALLOC(total_received + 1);
         if (response->body) {
             __builtin_memcpy(response->body, recv_buffer, total_received);
@@ -952,7 +929,7 @@ airy_err_t network_http_request(network_connection_t *connection,
  * @return 错误码
  */
 airy_err_t network_http_get(network_connection_t *connection, const char *path,
-                                 network_http_response_t *response)
+                            network_http_response_t *response)
 {
     network_http_request_t request = {0};
     request.method = "GET";
@@ -972,8 +949,8 @@ airy_err_t network_http_get(network_connection_t *connection, const char *path,
  * @return 错误码
  */
 airy_err_t network_http_post(network_connection_t *connection, const char *path,
-                                  const char *content_type, const void *body, size_t body_len,
-                                  network_http_response_t *response)
+                             const char *content_type, const void *body, size_t body_len,
+                             network_http_response_t *response)
 {
     network_http_request_t request = {0};
     request.method = "POST";
@@ -1092,7 +1069,6 @@ network_connection_t *network_pool_acquire(network_pool_t *pool, int timeout_ms)
 
     (void)timeout_ms;
 
-    /* 优先复用已有连接 */
     for (size_t i = 0; i < pool->current_size; i++) {
         if (pool->connections[i] &&
             network_get_status(pool->connections[i]) == NETWORK_STATUS_CONNECTED) {
@@ -1100,7 +1076,6 @@ network_connection_t *network_pool_acquire(network_pool_t *pool, int timeout_ms)
         }
     }
 
-    /* 如果未达到最大连接数，创建新连接 */
     if (pool->current_size < pool->max_size) {
         network_connection_t *conn = network_connection_create(&pool->base_config);
         if (!conn) {
@@ -1132,7 +1107,6 @@ void network_pool_release(network_pool_t *pool, network_connection_t *connection
     if (!pool || !connection) {
         return;
     }
-    /* 连接保持在池中供后续复用 */
 }
 
 /**
@@ -1154,7 +1128,6 @@ size_t network_pool_available(const network_pool_t *pool)
         }
     }
 
-    /* 加上可以新建的连接槽位 */
     if (pool->current_size < pool->max_size) {
         available += (pool->max_size - pool->current_size);
     }
@@ -1196,10 +1169,9 @@ size_t network_pool_health_check(network_pool_t *pool)
                 healthy++;
                 i++;
             } else if (status == NETWORK_STATUS_ERROR || status == NETWORK_STATUS_DISCONNECTED) {
-                /* 移除不健康的连接 */
+
                 network_connection_destroy(pool->connections[i]);
 
-                /* 将最后一个连接移到当前位置以保持紧凑 */
                 if (i < pool->current_size - 1) {
                     pool->connections[i] = pool->connections[pool->current_size - 1];
                     pool->connections[pool->current_size - 1] = NULL;
@@ -1229,8 +1201,7 @@ size_t network_pool_health_check(network_pool_t *pool)
  * @param result [out] 解析结果
  * @return 错误码
  */
-airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
-                                    network_dns_result_t *result)
+airy_err_t network_dns_resolve(const char *hostname, network_af_t af, network_dns_result_t *result)
 {
     if (!hostname || !result) {
         return AIRY_EINVAL;
@@ -1248,7 +1219,6 @@ airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
         return AIRY_EIO;
     }
 
-    /* 统计结果数量 */
     int count = 0;
     struct addrinfo *p = res;
     while (p) {
@@ -1261,7 +1231,6 @@ airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
         return AIRY_ENOENT;
     }
 
-    /* 分配结果内存 */
     result->addresses = (char **)AIRY_CALLOC((size_t)count, sizeof(char *));
     result->ports = (int *)AIRY_CALLOC((size_t)count, sizeof(int));
     result->count = (size_t)count;
@@ -1273,7 +1242,6 @@ airy_err_t network_dns_resolve(const char *hostname, network_af_t af,
         return AIRY_ENOMEM;
     }
 
-    /* 提取 IP 地址 */
     p = res;
     for (int i = 0; i < count && p; i++) {
         char ip_str[INET6_ADDRSTRLEN];
@@ -1346,7 +1314,6 @@ bool network_is_reachable(const char *host, int timeout_ms)
 
     network_init_winsock();
 
-    /* 尝试创建 TCP 连接来检测可达性 */
     network_config_t config = network_create_default_config();
     config.host = host;
     config.timeout_ms = timeout_ms > 0 ? timeout_ms : 5000;
@@ -1410,7 +1377,7 @@ airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len
 
     freeaddrinfo(res);
 #else
-    /* 使用 UDP socket 连接到外部地址来获取本地 IP */
+
     const char *test_host = "8.8.8.8";
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
@@ -1447,7 +1414,7 @@ airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len
  * @return 错误码
  */
 airy_err_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
-                                       size_t buffer_len)
+                                  size_t buffer_len)
 {
     if (!addr || !buffer || buffer_len == 0) {
         return AIRY_EINVAL;

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file counter.c
  * @brief Token计数器实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 本模块实现Token计数与预算管理功能：
@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 统一基础库兼容层 */
 #include "../../memory/include/airy_memory.h"
 #include "../../string/include/string_compat.h"
 #include "error.h"
@@ -36,11 +35,11 @@
  * @brief Token计数器内部结构
  */
 struct airy_token_counter {
-    char model_name[MAX_MODEL_NAME]; /**< 模型名称 */
-    airy_mtx_t mutex;           /**< 互斥锁，保证线程安全 */
-    size_t total_count;              /**< 历史累计Token数 */
-    uint64_t request_count;          /**< 请求计数 */
-    size_t max_token_length;         /**< 最大Token长度 */
+    char model_name[MAX_MODEL_NAME];
+    airy_mtx_t mutex;
+    size_t total_count;
+    uint64_t request_count;
+    size_t max_token_length;
 };
 
 /**
@@ -283,7 +282,7 @@ size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text)
 }
 
 size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char **texts,
-                                         size_t count, size_t *out_counts)
+                                      size_t count, size_t *out_counts)
 {
     if (!counter || !texts || !out_counts) {
         return (size_t)-1;
@@ -311,7 +310,7 @@ size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char 
 }
 
 char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *text,
-                                     size_t max_tokens, const char *side)
+                                  size_t max_tokens, const char *side)
 {
     if (!counter || !text || max_tokens == 0) {
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
@@ -354,10 +353,11 @@ char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *tex
             snprintf(result + half, target_chars + 8 - half, "...[truncated]...");
             size_t remaining_space = target_chars + 8 - (half + 15);
             if (remaining_space > 0) {
-                size_t copy_len = (target_chars - half) < (remaining_space - 1)
-                                      ? (target_chars - half)
-                                      : (remaining_space - 1);
-                __builtin_memcpy(result + half + 15, text + length - (target_chars - half), copy_len);
+                size_t copy_len = (target_chars - half) < (remaining_space - 1) ?
+                                      (target_chars - half) :
+                                      (remaining_space - 1);
+                __builtin_memcpy(result + half + 15, text + length - (target_chars - half),
+                                 copy_len);
                 result[half + 15 + copy_len] = '\0';
             }
         }

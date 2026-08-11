@@ -1,7 +1,7 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file sync_spinlock.c
  * @brief 自旋锁实现
@@ -20,8 +20,7 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
 {
     CHECK_NULL_RET(spinlock, SYNC_ERROR_INVALID);
 
-    struct sync_spinlock *s =
-        (struct sync_spinlock *)AIRY_CALLOC(1, sizeof(struct sync_spinlock));
+    struct sync_spinlock *s = (struct sync_spinlock *)AIRY_CALLOC(1, sizeof(struct sync_spinlock));
     CHECK_NULL_RET(s, SYNC_ERROR_MEMORY);
 
     s->type = SYNC_TYPE_SPINLOCK;

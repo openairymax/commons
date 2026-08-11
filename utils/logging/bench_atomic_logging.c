@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file bench_atomic_logging.c
  * @brief 原子层日志系统性能基准测试
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 本测试用于评估原子层日志系统的性能，包括：
@@ -12,9 +12,13 @@
  * 3. 日志缓冲队列性能
  * 4. 内存分配和释放性能
  *
- * 测试方法? * - 使用高精度计时器测量操作耗时
- * - 模拟真实场景的日志写入模? * - 统计每秒日志记录数（Records Per Second? * - 测量平均延迟和尾部延?
- * * 注意：本测试需要支持C11标准和线程库的环境? */
+ * 测试方法：
+ * - 使用高精度计时器测量操作耗时
+ * - 模拟真实场景的日志写入模式
+ * - 统计每秒日志记录数（Records Per Second）
+ * - 测量平均延迟和尾部延迟
+ *
+ * 注意：本测试需要支持C11标准和线程库的环境。 */
 
 #include "atomic_logging.h"
 #include "logging.h"
@@ -30,36 +34,28 @@
 #include <string.h>
 #include <time.h>
 
-/* 跨平台原子操作支持 - 使用统一的 atomic_compat.h */
 #include "atomic_compat.h"
 
-/* ==================== 测试配置 ==================== */
-
-/** 测试迭代次数 */
 #define BENCH_ITERATIONS 1000000
 
-/** 线程数量（多线程测试?*/
 #define THREAD_COUNT 4
 
-/** 日志消息模板 */
 static const char *LOG_MESSAGES[] = {"用户登录成功: user_id=%d, ip=%s",
-                                     "数据库查询完? query_id=%d, rows=%d, time_ms=%d",
+                                     "数据库查询完成 query_id=%d, rows=%d, time_ms=%d",
                                      "网络请求处理: method=%s, path=%s, status=%d",
-                                     "缓存命中率统? hits=%d, misses=%d, ratio=%.2f",
+                                     "缓存命中率统计 hits=%d, misses=%d, ratio=%.2f",
                                      "内存使用报告: used=%llu, free=%llu, total=%llu",
                                      "任务调度延迟: task_id=%d, scheduled=%lld, actual=%lld",
-                                     "配置热更新完? section=%s, keys=%d",
+                                     "配置热更新完成 section=%s, keys=%d",
                                      "监控指标收集: metric=%s, value=%f, timestamp=%lld"};
 
 #define LOG_MESSAGE_COUNT (sizeof(LOG_MESSAGES) / sizeof(LOG_MESSAGES[0]))
 
-/* ==================== 计时器辅助函?==================== */
-
 /**
  * @brief 获取高精度时间戳（纳秒）
  *
- * 使用系统提供的高精度计时器? *
- * @return 当前时间戳（纳秒? */
+ * 使用系统提供的高精度计时器。
+ * @return 当前时间戳（纳秒） */
 static uint64_t get_nanoseconds(void)
 {
 #if defined(_WIN32)
@@ -77,47 +73,36 @@ static uint64_t get_nanoseconds(void)
 /**
  * @brief 将纳秒转换为毫秒
  *
- * @param ns 纳秒? * @return 毫秒? */
+ * @param ns 纳秒
+ * @return 毫秒 */
 static double ns_to_ms(uint64_t ns)
 {
     return (double)ns / 1000000.0;
 }
 
-/* ==================== 单线程性能测试 ==================== */
-
 /**
  * @brief 单线程日志写入性能测试
  *
- * 测量单线程连续写入大量日志记录的性能? *
+ * 测量单线程连续写入大量日志记录的性能。
  * @param iterations 迭代次数
- * @return 每秒日志记录? */
+ * @return 每秒日志记录数 */
 static double bench_single_thread(int iterations)
 {
     printf("开始单线程性能测试：%d次迭代）...\n", iterations);
 
-    // 初始化日志系统（如果尚未初始化）
     log_init(NULL);
 
     uint64_t start_time = get_nanoseconds();
 
     for (int i = 0; i < iterations; i++) {
-        // 选择一条日志消息模?        const char* msg_template = LOG_MESSAGES[i %
         // LOG_MESSAGE_COUNT];
 
-        // 生成日志记录
-        log_write(
-            LOG_LEVEL_INFO, "benchmark", __LINE__, msg_template, i, "192.168.1.1",  // 用户登录参数
-            i * 100, 50,
-            15,  // 数据库查询参?                 "GET", "/api/data", 200,  // 网络请求参数
-            i * 10, i * 2, 0.85f,  // 缓存统计参数
-            (unsigned long long)i * 1024 * 1024, (unsigned long long)(iterations - i) * 1024 * 1024,
-            (unsigned long long)iterations * 1024 * 1024,  // 内存使用参数
-            i, start_time, start_time + i * 1000,          // 任务调度参数
-            "database", 8,                                 // 配置更新参数
-            "cpu_usage", 0.75f, (long long)start_time      // 监控指标参数
-        );
+        log_write(LOG_LEVEL_INFO, "benchmark", __LINE__, msg_template, i, "192.168.1.1", i * 100,
+                  50, 15, i * 10, i * 2, 0.85f, (unsigned long long)i * 1024 * 1024,
+                  (unsigned long long)(iterations - i) * 1024 * 1024,
+                  (unsigned long long)iterations * 1024 * 1024, i, start_time,
+                  start_time + i * 1000, "database", 8, "cpu_usage", 0.75f, (long long)start_time);
 
-        // ?0000次迭代输出进?        if (i > 0 && i % 10000 == 0) {
         printf("  进度: %d/%d\n", i, iterations);
     }
 }
@@ -128,7 +113,7 @@ double elapsed_ms = ns_to_ms(elapsed_ns);
 
 double records_per_second = (double)iterations / (elapsed_ns / 1000000000.0);
 
-printf("单线程测试完?\n");
+printf("单线程测试完成\n");
 printf("  总耗时: %.2f 毫秒\n", elapsed_ms);
 printf("  平均延迟: %.3f 微秒/记录\n", (elapsed_ms * 1000.0) / iterations);
 printf("  吞吐： %.0f 记录/秒\n", records_per_second);
@@ -136,9 +121,6 @@ printf("  吞吐： %.0f 记录/秒\n", records_per_second);
 return records_per_second;
 }
 
-/* ==================== 多线程性能测试 ==================== */
-
-/** 线程参数结构?*/
 typedef struct {
     int thread_id;
     int iterations_per_thread;
@@ -148,10 +130,10 @@ typedef struct {
 } thread_params_t;
 
 /**
- * @brief 工作线程函数（多线程测试? *
- * 每个线程独立写入日志记录? *
+ * @brief 工作线程函数（多线程测试）
+ * 每个线程独立写入日志记录。
  * @param arg 线程参数
- * @return 线程退出状? */
+ * @return 线程退出状态 */
 #if defined(_WIN32)
 static DWORD WINAPI worker_thread(LPVOID arg)
 #else
@@ -160,22 +142,19 @@ static void *worker_thread(void *arg)
 {
     thread_params_t *params = (thread_params_t *)arg;
 
-    // 初始化线程本地日志上下文（如果需要）
-    // 原子层日志系统自动处理线程安?
+    // 原子层日志系统自动处理线程安全
     uint64_t thread_start_time = get_nanoseconds();
 
     for (int i = 0; i < params->iterations_per_thread; i++) {
-        // 生成唯一的日志消?        int msg_index = (params->thread_id *
         // params->iterations_per_thread + i) % LOG_MESSAGE_COUNT;
         const char *msg_template = LOG_MESSAGES[msg_index];
 
-        // 写入日志记录
         log_write(LOG_LEVEL_INFO, "benchmark", __LINE__, msg_template, params->thread_id, i,
                   msg_index);
 
-        // 原子增加计数?        atomic_fetch_add(&params->records_written, 1);
+        // 原子增加计数。
+        atomic_fetch_add(&params->records_written, 1);
 
-        // ?000次迭代输出进?        if (i > 0 && i % 5000 == 0) {
         printf("  线程 %d 进度: %d/%d\n", params->thread_id, i, params->iterations_per_thread);
     }
 }
@@ -194,18 +173,16 @@ return NULL;
 /**
  * @brief 多线程日志写入性能测试
  *
- * 测量多个线程并发写入日志记录的性能? *
+ * 测量多个线程并发写入日志记录的性能。
+ *
  * @param thread_count 线程数量
- * @param total_iterations 总迭代次? * @return 每秒日志记录? */
+ * @param total_iterations 总迭代次数
+ * @return 每秒日志记录数 */
 static double bench_multi_thread(int thread_count, int total_iterations)
 {
     printf("开始多线程性能测试：%d线程：%d次迭代）...\n", thread_count, total_iterations);
 
-    // 初始化日志系?    log_init(NULL);
-
-    // 分配线程参数
-    thread_params_t *params =
-        (thread_params_t *)AIRY_CALLOC(thread_count, sizeof(thread_params_t));
+    thread_params_t *params = (thread_params_t *)AIRY_CALLOC(thread_count, sizeof(thread_params_t));
     if (!params) {
         printf("内存分配失败！\n");
         return 0.0;
@@ -213,16 +190,12 @@ static double bench_multi_thread(int thread_count, int total_iterations)
 
     int iterations_per_thread = total_iterations / thread_count;
 
-    // 初始化线程参?    for (int i = 0; i < thread_count; i++) {
     params[i].thread_id = i;
     params[i].iterations_per_thread = iterations_per_thread;
     params[i].records_written = 0;
 }
 
-// 创建并启动线?    uint64_t overall_start_time = get_nanoseconds();
-
-airy_thread_t *threads =
-    (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
+airy_thread_t *threads = (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
 for (int i = 0; i < thread_count; i++) {
     if (airy_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
         printf("创建线程 %d 失败！\n", i);
@@ -232,17 +205,13 @@ for (int i = 0; i < thread_count; i++) {
     }
 }
 
-// 等待所有线程完?    WaitForMultipleObjects(thread_count, threads, TRUE, INFINITE);
-
-// 关闭线程句柄
 for (int i = 0; i < thread_count; i++) {
     CloseHandle(threads[i]);
 }
 
 AIRY_FREE(threads);
 #else
-airy_thread_t *threads =
-    (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
+airy_thread_t *threads = (airy_thread_t *)AIRY_CALLOC(thread_count, sizeof(airy_thread_t));
 for (int i = 0; i < thread_count; i++) {
     if (airy_thread_create(&threads[i], worker_thread, &params[i]) != 0) {
         printf("创建线程 %d 失败！\n", i);
@@ -261,7 +230,6 @@ AIRY_FREE(threads);
 
 uint64_t overall_end_time = get_nanoseconds();
 
-// 收集统计信息
 uint64_t total_records = 0;
 uint64_t total_thread_time_ns = 0;
 uint64_t min_thread_time_ns = UINT64_MAX;
@@ -283,7 +251,7 @@ double overall_time_ms = ns_to_ms(overall_time_ns);
 
 double records_per_second = (double)total_records / (overall_time_ns / 1000000000.0);
 
-printf("多线程测试完?\n");
+printf("多线程测试完成\n");
 printf("  总耗时: %.2f 毫秒\n", overall_time_ms);
 printf("  总记录数: %llu\n", (unsigned long long)total_records);
 printf("  吞吐： %.0f 记录/秒\n", records_per_second);
@@ -296,29 +264,21 @@ AIRY_FREE(params);
 return records_per_second;
 }
 
-/* ==================== 内存使用测试 ==================== */
-
 /**
- * @brief 内存使用和泄漏测? *
- * 测量日志系统在长时间运行中的内存使用情况? *
+ * @brief 内存使用和泄漏测试
+ * 测量日志系统在长时间运行中的内存使用情况。
  * @param iterations 迭代次数
  */
 static void bench_memory_usage(int iterations)
 {
     printf("开始内存使用测试（%d次迭代）...\n", iterations);
 
-    // 初始化日志系?    log_init(NULL);
-
-    // 记录初始内存状态
     printf("  内存使用测试 - 开始\n");
 
     for (int i = 0; i < iterations; i++) {
-        // 写入不同级别的日志记?        log_level_t level = (log_level_t)(i % 5); //
-        // 循环使用5个日志级?
         log_write(level, "memory_test", __LINE__, "内存测试迭代 %d，级：%d，消息长：%d", i, level,
                   i % 100);
 
-        // ?0000次迭代输出状?        if (i > 0 && i % 10000 == 0) {
         printf("  进度: %d/%d\n", i, iterations);
     }
 }
@@ -327,11 +287,9 @@ printf("  内存使用测试 - 完成\n");
 printf("  注意：实际内存泄漏检测需要专门的工具（如valgrind、AddressSanitizer）\n");
 }
 
-/* ==================== 主测试函?==================== */
-
 /**
- * @brief 主测试入? *
- * 运行所有性能基准测试并生成报告? *
+ * @brief 主测试入口
+ * 运行所有性能基准测试并生成报告。
  * @param argc 参数数量
  * @param argv 参数数组
  * @return 退出码
@@ -342,7 +300,6 @@ int main(int argc, char **argv)
     printf("原子层日志系统性能基准测试\n");
     printf("========================================\n\n");
 
-    // 解析命令行参?    int iterations = BENCH_ITERATIONS;
     int thread_count = THREAD_COUNT;
 
     if (argc > 1) {
@@ -363,13 +320,8 @@ int main(int argc, char **argv)
     printf("  日志消息模板: %zu\n", LOG_MESSAGE_COUNT);
     printf("\n");
 
-    // 运行单线程测?    double single_thread_rps = bench_single_thread(iterations / 10); //
-    // 减少迭代次数以加快测?    printf("\n");
-
-    // 运行多线程测?    double multi_thread_rps = bench_multi_thread(thread_count, iterations / 10);
     printf("\n");
 
-    // 运行内存使用测试
     bench_memory_usage(iterations / 100);
     printf("\n");
 
@@ -379,7 +331,7 @@ int main(int argc, char **argv)
     printf("========================================\n");
     printf("单线程性能:\n");
     printf("  %.0f 记录/秒\n", single_thread_rps);
-    printf("多线程性能：%d线程?\n", thread_count);
+    printf("多线程性能：%d线程）\n", thread_count);
     printf("  %.0f 记录/秒\n", multi_thread_rps);
     printf("并发加速比: %.2fx\n", multi_thread_rps / single_thread_rps);
     printf("\n");

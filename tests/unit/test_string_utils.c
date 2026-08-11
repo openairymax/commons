@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_string_utils.c
  * @brief 字符串工具模块单元测试
  *
  * 测试字符串操作的安全性、正确性和边界条件
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include "../../agentrt/commons/utils/string/include/string_compat.h"
@@ -31,16 +31,13 @@ static void test_safe_strcpy(void **state)
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_STRING_EQUAL("Hello", dest);
 
-    // 边界情况 - 恰好合适
     result = safe_strcpy(dest, sizeof(dest), "1234567890123456789");
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_INT_EQUAL(19, (int)strlen(dest));
 
-    // 边界情况 - 超出缓冲区
     result = safe_strcpy(dest, sizeof(dest), "This string is too long for the buffer");
     AIRY_TEST_ASSERT_FALSE(result == 0);
 
-    // NULL输入
     result = safe_strcpy(NULL, sizeof(dest), "test");
     AIRY_TEST_ASSERT_FALSE(result == 0);
 
@@ -56,19 +53,16 @@ static void test_safe_strcat(void **state)
     char dest[30] = "Hello";
     int result;
 
-    // 正常拼接
     result = safe_strcat(dest, sizeof(dest), ", World!");
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_STRING_EQUAL("Hello, World!", dest);
 
-    // 边界情况 - 接近满
     AIRY_STRNCPY_TERM(dest, "12345678901234567890", sizeof(dest) -);
     dest[sizeof(dest) - 1] = '\0';
     result = safe_strcat(dest, sizeof(dest), "X");
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_INT_EQUAL(21, (int)strlen(dest));
 
-    // 超出缓冲区
     result = safe_strcat(dest, sizeof(dest), "This is way too long");
     AIRY_TEST_ASSERT_FALSE(result == 0);
 }
@@ -82,21 +76,17 @@ static void test_safe_memcpy(void **state)
     char dest[20];
     int result;
 
-    // 正常复制
     result = safe_memcpy(dest, sizeof(dest), src, strlen(src) + 1);
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_STRING_EQUAL(src, dest);
 
-    // 部分复制
     result = safe_memcpy(dest, sizeof(dest), src, 5);
     AIRY_TEST_ASSERT_SUCCESS(result);
     AIRY_TEST_ASSERT_INT_EQUAL(0, memcmp(dest, src, 5));
 
-    // 目标缓冲区不足
     result = safe_memcpy(dest, 5, src, strlen(src) + 1);
     AIRY_TEST_ASSERT_FALSE(result == 0);
 
-    // NULL指针
     result = safe_memcpy(NULL, sizeof(dest), src, 10);
     AIRY_TEST_ASSERT_FALSE(result == 0);
 
@@ -158,16 +148,13 @@ static void test_array_access_safety(void **state)
 {
     int array[10] = {0};
 
-    // 有效索引
     AIRY_TEST_ASSERT_TRUE(is_safe_array_access(5, 10));
     AIRY_TEST_ASSERT_TRUE(is_safe_array_access(0, 10));
     AIRY_TEST_ASSERT_TRUE(is_safe_array_access(9, 10));
 
-    // 无效索引
     AIRY_TEST_ASSERT_FALSE(is_safe_array_access(10, 10));
     AIRY_TEST_ASSERT_FALSE(is_safe_array_access(100, 10));
 
-    // 空数组
     AIRY_TEST_ASSERT_FALSE(is_safe_array_access(0, 0));
 }
 
@@ -178,16 +165,13 @@ static void test_ptr_offset_safety(void **state)
 {
     char buffer[100] = {0};
 
-    // 有效偏移
     AIRY_TEST_ASSERT_TRUE(is_safe_ptr_offset(buffer, 50, 100));
     AIRY_TEST_ASSERT_TRUE(is_safe_ptr_offset(buffer, 99, 100));
     AIRY_TEST_ASSERT_TRUE(is_safe_ptr_offset(buffer, 0, 100));
 
-    // 无效偏移
     AIRY_TEST_ASSERT_FALSE(is_safe_ptr_offset(buffer, 100, 100));
     AIRY_TEST_ASSERT_FALSE(is_safe_ptr_offset(buffer, 101, 100));
 
-    // NULL指针
     AIRY_TEST_ASSERT_FALSE(is_safe_ptr_offset(NULL, 50, 100));
 }
 
@@ -199,25 +183,19 @@ static void test_type_conversion_safety(void **state)
     int result;
     size_t size_result;
 
-    // int到size_t转换
     AIRY_TEST_ASSERT_SUCCESS(safe_int_to_size(42, &size_result));
     AIRY_TEST_ASSERT_TRUE(size_result == 42);
 
-    // 负数转换失败
     AIRY_TEST_ASSERT_FALSE(safe_int_to_size(-1, &size_result) == 0);
 
-    // size_t到int转换
     AIRY_TEST_ASSERT_SUCCESS(safe_size_to_int((size_t)42, &result));
     AIRY_TEST_ASSERT_INT_EQUAL(42, result);
 
-    // 大数转换失败
     AIRY_TEST_ASSERT_FALSE(safe_size_to_int((size_t)(INT_MAX) + 1, &result) == 0);
 
-    // double到int转换
     AIRY_TEST_ASSERT_SUCCESS(safe_double_to_int(3.14, &result));
     AIRY_TEST_ASSERT_INT_EQUAL(3, result);
 
-    // 超范围转换失败
     AIRY_TEST_ASSERT_FALSE(safe_double_to_int((double)INT_MAX + 1.0, &result) == 0);
 }
 
@@ -237,14 +215,11 @@ static void test_safe_strlen(void **state)
  */
 static void test_safe_strcmp(void **state)
 {
-    // 两个NULL
     AIRY_TEST_ASSERT_INT_EQUAL(0, safe_strcmp(NULL, NULL));
 
-    // 一个NULL
     AIRY_TEST_ASSERT_TRUE(safe_strcmp(NULL, "test") < 0);
     AIRY_TEST_ASSERT_TRUE(safe_strcmp("test", NULL) > 0);
 
-    // 正常比较
     AIRY_TEST_ASSERT_INT_EQUAL(0, safe_strcmp("abc", "abc"));
     AIRY_TEST_ASSERT_TRUE(safe_strcmp("abc", "abd") < 0);
     AIRY_TEST_ASSERT_TRUE(safe_strcmp("abc", "abb") > 0);

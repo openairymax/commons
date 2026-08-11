@@ -1,7 +1,7 @@
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /*
- * Copyright (C) 2025-2026 SPHARX Ltd. All Rights Reserved.
- * SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @file platform.h
  * @brief 跨平台兼容层 - 统一不同操作系统的API差异
@@ -31,15 +31,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-/* 注意：不在此处包含 <time.h>，因为项目的 corekern/include/time.h 会覆盖系统 time.h */
-/* 需要使用 time.h 定义的代码（如 clockid_t, CLOCK_MONOTONIC）应在 .c 文件中 */
-/* 在包含 platform.h 之前先包含系统的 <time.h> */
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ==================== 平台检测 ==================== */
+
 #if defined(_WIN32) || defined(_WIN64)
 #define AIRY_PLATFORM_WINDOWS 1
 #define AIRY_PLATFORM_NAME "Windows"
@@ -67,17 +65,17 @@ extern "C" {
 #error "Unsupported platform"
 #endif
 
-/* ==================== 导出宏定义 ==================== */
+
 #include "export.h"
 
-/* ==================== 线程局部存储 ==================== */
+
 #if defined(_WIN32) || defined(_WIN64)
 #define AIRY_THREAD_LOCAL __declspec(thread)
 #else
 #define AIRY_THREAD_LOCAL __thread
 #endif
 
-/* ==================== 内联函数 ==================== */
+
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef AIRY_INLINE
 #define AIRY_INLINE __forceinline
@@ -86,12 +84,12 @@ extern "C" {
 #define AIRY_INLINE static inline __attribute__((always_inline))
 #endif
 
-/* ==================== 未使用参数标记 ==================== */
+
 #ifndef AIRY_UNUSED
 #define AIRY_UNUSED(x) ((void)(x))
 #endif
 
-/* ==================== 路径分隔符 ==================== */
+
 #if AIRY_PLATFORM_WINDOWS
 #define AIRY_PATH_SEP '\\'
 #define AIRY_PATH_SEP_STR "\\"
@@ -102,10 +100,9 @@ extern "C" {
 #define AIRY_PATH_MAX 4096
 #endif
 
-/* ==================== 标准路径常量 (BAN-32合规) ==================== */
-/* 注意：使用 #ifndef 守卫，允许 CMake target_compile_definitions 覆盖（如 cupolas/channel_d） */
+
 #if AIRY_PLATFORM_WINDOWS
-/* Windows: 系统级数据目录（%ProgramData%） */
+
 #ifndef AIRY_RUNTIME_DIR
 #define AIRY_RUNTIME_DIR "C:\\ProgramData\\agentrt\\run"
 #endif
@@ -125,7 +122,7 @@ extern "C" {
 #define AIRY_CACHE_DIR "C:\\ProgramData\\agentrt\\cache"
 #endif
 #elif AIRY_PLATFORM_LINUX
-/* Linux: FHS 标准路径（保持原有行为不变） */
+
 #ifndef AIRY_RUNTIME_DIR
 #define AIRY_RUNTIME_DIR "/tmp/agentrt"
 #endif
@@ -145,7 +142,7 @@ extern "C" {
 #define AIRY_CACHE_DIR "/var/cache/agentrt"
 #endif
 #else
-/* macOS 及其他 POSIX: 相对路径（避免硬编码 /var 与 /etc，保持 Linux 行为不变） */
+
 #ifndef AIRY_RUNTIME_DIR
 #define AIRY_RUNTIME_DIR "./agentrt/run"
 #endif
@@ -166,7 +163,7 @@ extern "C" {
 #endif
 #endif
 
-/* ==================== 平台头文件包含 ==================== */
+
 #if AIRY_PLATFORM_WINDOWS
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -192,7 +189,6 @@ extern "C" {
 #include <unistd.h>
 #endif
 
-/* ==================== 基础类型定义 ==================== */
 
 #if AIRY_PLATFORM_WINDOWS
 typedef HANDLE airy_thread_t;
@@ -217,7 +213,6 @@ typedef pid_t airy_process_t;
 #define AIRY_INVALID_SOCKET (-1)
 #define AIRY_INVALID_PROCESS ((airy_process_t)0)
 
-/* ==================== 互斥锁接口 ==================== */
 
 /**
  * @brief 初始化互斥锁
@@ -265,7 +260,6 @@ airy_mtx_t *airy_mtx_create(void);
  */
 void airy_mtx_free(airy_mtx_t *mutex);
 
-/* ==================== 条件变量接口 ==================== */
 
 /**
  * @brief 初始化条件变量
@@ -323,7 +317,6 @@ airy_cond_t *airy_cond_create(void);
  */
 void airy_cond_free(airy_cond_t *cond);
 
-/* ==================== 线程接口 ==================== */
 
 /**
  * @brief 线程函数类型
@@ -366,7 +359,6 @@ int airy_platform_thread_detach(airy_thread_t thread);
  */
 uint64_t airy_thread_id(void);
 
-/* ==================== Socket 接口 ==================== */
 
 /**
  * @brief 创建 TCP Socket
@@ -402,7 +394,6 @@ int airy_sock_set_nonblock(airy_sock_t sock, int nonblock);
  */
 int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse);
 
-/* ==================== 进程接口 ==================== */
 
 /* 前向声明：取消令牌（改进1 "取消下探"）。完整定义见
  * commons/utils/sync/include/cancel_token.h（该头 include platform.h，
@@ -422,7 +413,7 @@ typedef struct {
     /* Windows 子进程句柄，存入结构体以支持多进程并发与线程安全，
      * 替代原先的全局变量（单进程限制）。使用 void* 避免在此处引入 windows.h。 */
     void *process_handle; /* HANDLE to the child process */
-    void *thread_handle;  /* HANDLE to the child's primary thread */
+    void *thread_handle; /* HANDLE to the child's primary thread */
 #endif
 } airy_process_info_t;
 
@@ -435,7 +426,7 @@ typedef struct {
  * @return 0 成功，非0 失败
  */
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
-                          airy_process_info_t *proc);
+                       airy_process_info_t *proc);
 
 /**
  * @brief 等待进程结束
@@ -473,9 +464,8 @@ void airy_process_close_pipes(airy_process_info_t *proc);
  * @param output_size 输出缓冲区大小（含 '\0'）
  * @return 退出码(0-255)；-1=启动失败；-2=超时
  */
-int airy_process_run_capture(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size);
+int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
+                             uint32_t timeout_ms, char *output, size_t output_size);
 
 /**
  * @brief 事件源驱动的可取消命令执行（改进1 "tool_d 事件源驱动"）
@@ -491,15 +481,13 @@ int airy_process_run_capture(const char *executable, char *const argv[],
  * @param cancel_token 取消令牌（可为 NULL = 等同 airy_process_run_capture）
  * @return 退出码(0-255)；-1=启动失败；-2=超时；-3=取消（AIRY_PROCESS_RC_CANCELED）
  */
-int airy_process_run_capture_ex(const char *executable, char *const argv[],
-                                char *const envp[], uint32_t timeout_ms,
-                                char *output, size_t output_size,
+int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
+                                uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token);
 
-/* 可取消执行返回码：取消令牌命中（与超时 -2 区分） */
+
 #define AIRY_PROCESS_RC_CANCELED (-3)
 
-/* ==================== 时间接口 ==================== */
 
 /**
  * @brief 获取高精度时间戳（纳秒）
@@ -519,7 +507,6 @@ uint64_t airy_time_ms(void);
  */
 void airy_sleep_ms(uint32_t ms);
 
-/* ==================== 随机数接口 ==================== */
 
 /**
  * @brief 初始化随机数生成器（线程安全）
@@ -548,7 +535,6 @@ float airy_random_float(void);
  */
 int airy_random_bytes(void *buf, size_t len);
 
-/* ==================== 文件系统接口 ==================== */
 
 /**
  * @brief 检查文件是否存在
@@ -571,7 +557,6 @@ int airy_mkdir_p(const char *path);
  */
 int64_t airy_file_size(const char *path);
 
-/* ==================== 网络初始化接口 ==================== */
 
 /**
  * @brief 初始化网络库（Windows需要）
@@ -584,14 +569,12 @@ int airy_network_init(void);
  */
 void airy_network_cleanup(void);
 
-/* ==================== 信号处理接口 ==================== */
 
 /**
  * @brief 忽略 SIGPIPE 信号
  */
 void airy_ignore_sigpipe(void);
 
-/* ==================== 字符串工具 ==================== */
 
 /**
  * @brief 安全的字符串复制
@@ -611,7 +594,6 @@ int airy_strlcpy(char *dest, const char *src, size_t dest_size);
  */
 int airy_strlcat(char *dest, const char *src, size_t dest_size);
 
-/* ==================== 错误处理接口 ==================== */
 
 /**
  * @brief 获取最后错误的错误码
@@ -626,7 +608,6 @@ int airy_get_last_error(void);
  */
 const char *airy_strerror(int error);
 
-/* ==================== 系统信息类型 (UNI-01: 唯一定义) ==================== */
 
 #ifndef AIRY_SYSINFO_T_DEFINED
 #define AIRY_SYSINFO_T_DEFINED
@@ -642,7 +623,6 @@ typedef struct {
 
 int airy_get_sysinfo(airy_sysinfo_t *info);
 
-/* ==================== 原子操作类型 (UNI-01: 唯一定义) ==================== */
 
 #ifndef AIRY_ATOMIC_INT_T_DEFINED
 #define AIRY_ATOMIC_INT_T_DEFINED
@@ -655,7 +635,7 @@ void airy_atomic_store(airy_atomic_int_t *atomic, int value);
 int airy_atomic_fetch_add(airy_atomic_int_t *atomic, int value);
 int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
 
-/* ==================== P0.18.3: AIRY_MUTEX_LOCK_GUARD RAII 自动解锁 ==================== */
+
 /* d8 清理：从 sync_compat.h 迁移到 platform.h（RAII 守卫依赖 airy_mtx_lock/unlock，
  * 逻辑上属于 platform.h API 的辅助工具）。消除 sync_compat.h 的兼容层定位。 */
 
@@ -671,8 +651,8 @@ int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
  * 互斥锁调用 unlock。MSVC 回退到仅加锁（需手动解锁）。
  *
  * 用法：
- *   AIRY_MUTEX_LOCK_GUARD(m);   // 加锁，函数返回时自动解锁
- *   // 临界区操作...
+ *   AIRY_MUTEX_LOCK_GUARD(m);
+ *
  *
  * 注意：宏不检查加锁是否成功。若加锁可能失败（如死锁检测），请使用
  * airy_mtx_lock + 手动 if 检查 + airy_mtx_unlock。
@@ -686,8 +666,8 @@ int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
  * 保存互斥锁指针和加锁状态，用于 cleanup 时判断是否需要解锁。
  */
 typedef struct {
-    airy_mtx_t *mutex;      /**< 指向 airy_mtx_t 变量 */
-    bool        acquired;   /**< 是否已成功获取锁 */
+    airy_mtx_t *mutex;
+    bool acquired;
 } airy_mtx_guard_t;
 
 /**
@@ -718,15 +698,15 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  *   airy_mtx_init(&my_lock);
  *   {
  *       AIRY_MUTEX_LOCK_GUARD(my_lock);
- *       // 临界区操作...
- *   }  // 离开作用域时自动 airy_mtx_unlock(&my_lock)
+ *
+ *   }
  *
  * @note 使用 __COUNTER__ 生成唯一变量名，同一作用域可多次使用
  * @note 加锁失败时 acquired=false，cleanup 不会解锁；后续代码在未加锁状态下执行
  */
-#define AIRY_MUTEX_LOCK_GUARD_(m, counter) \
-    airy_mtx_guard_t __attribute__((cleanup(airy_mtx_guard_cleanup))) \
-    __guard_##counter = { .mutex = &(m), .acquired = (airy_mtx_lock(&(m)) == 0) }
+#define AIRY_MUTEX_LOCK_GUARD_(m, counter)                                                  \
+    airy_mtx_guard_t __attribute__((cleanup(airy_mtx_guard_cleanup))) __guard_##counter = { \
+        .mutex = &(m), .acquired = (airy_mtx_lock(&(m)) == 0)}
 
 /* 两层间接：强制 __COUNTER__ 在 ## 拼接前展开为数字，避免变量名冲突。
  * 直接 AIRY_MUTEX_LOCK_GUARD_(m, __COUNTER__) 会拼接成 __guard___COUNTER__
@@ -755,9 +735,8 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 #endif
 
-/** @} */  // end of mutex_guard
+/** @} */ /* end of mutex_guard */
 
-/* ==================== AIRY_MUTEX_* 兼容宏 ==================== */
 /* d8 清理：sync_compat.h 已迁移，但部分代码仍使用 AIRY_MUTEX_* 宏形式。
  * 这里提供与 airy_mtx_* 函数的兼容映射，避免调用方逐一改写。
  * 调用约定：调用方传入指针（如 AIRY_MUTEX_LOCK(&ctx->mutex)），
@@ -822,22 +801,22 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  */
 
 #define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
-#define AIRY_HOME_SUBDIR_BIN    "bin"
-#define AIRY_HOME_SUBDIR_LIB    "lib"
-#define AIRY_HOME_SUBDIR_RUN    "run"
-#define AIRY_HOME_SUBDIR_LOG    "logs"
+#define AIRY_HOME_SUBDIR_BIN "bin"
+#define AIRY_HOME_SUBDIR_LIB "lib"
+#define AIRY_HOME_SUBDIR_RUN "run"
+#define AIRY_HOME_SUBDIR_LOG "logs"
 #define AIRY_HOME_SUBDIR_CONFIG "config"
-#define AIRY_HOME_SUBDIR_DATA   "data"
-#define AIRY_HOME_SUBDIR_TMP    "tmp"
-#define AIRY_HOME_SUBDIR_CACHE  "cache"
+#define AIRY_HOME_SUBDIR_DATA "data"
+#define AIRY_HOME_SUBDIR_TMP "tmp"
+#define AIRY_HOME_SUBDIR_CACHE "cache"
 
-/** @brief AIRY_HOME 根目录（$AIRY_HOME 或 $HOME/.airymaxrt），线程安全 */
+
 const char *airy_home_dir(void);
-/** @brief 可执行文件目录，线程安全 */
+
 const char *airy_bin_dir(void);
-/** @brief 运行时依赖目录（Python SDK/agents），线程安全 */
+
 const char *airy_lib_dir(void);
-/** @brief 运行时目录（socket/pid），线程安全 */
+
 const char *airy_runtime_dir(void);
 
 /**
@@ -851,15 +830,15 @@ const char *airy_runtime_dir(void);
  * @return 静态缓冲（仅启动期一次性读取，daemon 单线程初始化阶段安全）
  */
 const char *airy_runtime_dir_socket(const char *name);
-/** @brief 日志目录，线程安全 */
+
 const char *airy_log_dir(void);
-/** @brief 配置目录，线程安全 */
+
 const char *airy_config_dir(void);
-/** @brief 数据目录，线程安全 */
+
 const char *airy_data_dir(void);
-/** @brief 临时目录，线程安全 */
+
 const char *airy_tmp_dir(void);
-/** @brief 缓存目录，线程安全 */
+
 const char *airy_cache_dir(void);
 
 /**

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cmocka_stub.h
  * @brief CMocka 测试框架 stub 头文件（用于编译时无 CMocka 的情况）
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 当系统未安装 CMocka 测试框架时，使用此 stub 文件进行编译。
  * 提供基本的测试宏定义和函数声明，支持单元测试的基本功能。
@@ -23,18 +23,16 @@
 extern "C" {
 #endif
 
-/* ==================== CMocka 类型定义 ==================== */
 
-/** @brief 测试状态指针类型 */
 typedef void **CMockaState;
 
-/** @brief 测试夹具函数类型 */
+
 typedef void (*CMFixtureFunction)(void **state);
 
-/** @brief 单元测试函数类型 */
+
 typedef void (*CMUnitTestFunction)(void **state);
 
-/** @brief 单元测试结构 */
+
 struct CMUnitTest {
     const char *name;
     void (*test_func)(void **state);
@@ -43,7 +41,6 @@ struct CMUnitTest {
     int state;
 };
 
-/* ==================== 基本断言宏 ==================== */
 
 #define assert_true(a) _assert_true((a), #a, __FILE__, __LINE__)
 #define assert_false(a) _assert_false((a), #a, __FILE__, __LINE__)
@@ -56,7 +53,6 @@ struct CMUnitTest {
 #define assert_in_set(value, set, size) \
     _assert_in_set((value), (set), (size), #value, __FILE__, __LINE__)
 
-/* ==================== 内存分配测试函数 ==================== */
 
 /**
  * @brief 测试用内存分配失败注入
@@ -75,7 +71,6 @@ int test_malloc_fail_count(void);
  */
 void test_malloc_fail_reset(void);
 
-/* ==================== 内部实现函数 ==================== */
 
 static inline void _assert_true(int condition, const char *expr, const char *file, int line)
 {
@@ -157,7 +152,6 @@ static inline void _assert_in_set(int value, const int *set, size_t size, const 
     }
 }
 
-/* ==================== CMocka 测试运行函数 ==================== */
 
 /**
  * @brief 运行一组单元测试
@@ -188,15 +182,10 @@ static inline int cmocka_run_group_tests(const struct CMUnitTest *tests, size_t 
  * @brief 创建单元测试条目宏
  * @param test_func 测试函数名
  */
-#define cmocka_unit_test(test_func)            \
-    {                                          \
-        #test_func, (test_func), NULL, NULL, 0 \
-    }
+#define cmocka_unit_test(test_func) {#test_func, (test_func), NULL, NULL, 0}
 
 #define cmocka_unit_test_setup_teardown(test_func, setup, teardown) \
-    {                                                               \
-        #test_func, (test_func), (setup), (teardown), 0             \
-    }
+    {#test_func, (test_func), (setup), (teardown), 0}
 
 #ifdef __cplusplus
 }

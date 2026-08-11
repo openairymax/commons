@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file config_service.h
  * @brief 统一配置模块 - 服务层接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 服务层提供配置模块的高级功能：
  * 1. 配置验证和Schema定义
@@ -27,7 +27,6 @@
 extern "C" {
 #endif
 
-/* ==================== 配置验证相关 ==================== */
 
 /**
  * @brief 配置验证器回调函数
@@ -48,36 +47,35 @@ typedef struct config_validator config_validator_t;
  * @brief 验证器类型
  */
 typedef enum {
-    VALIDATOR_TYPE_RANGE = 0,  // 范围验证
-    VALIDATOR_TYPE_REGEX = 1,  // 正则表达式验证
-    VALIDATOR_TYPE_ENUM = 2,   // 枚举值验证
-    VALIDATOR_TYPE_CUSTOM = 3  // 自定义验证
+    VALIDATOR_TYPE_RANGE = 0,
+    VALIDATOR_TYPE_REGEX = 1,
+    VALIDATOR_TYPE_ENUM = 2,
+    VALIDATOR_TYPE_CUSTOM = 3
 } validator_type_t;
 
 /**
  * @brief 验证器选项
  */
 typedef struct {
-    validator_type_t type;            // 验证器类型
-    const char *pattern;              // 模式（正则表达式或范围）
-    const char **enum_values;         // 枚举值数组
-    size_t enum_count;                // 枚举值数量
-    config_validator_cb_t custom_cb;  // 自定义验证回调
-    void *user_data;                  // 用户数据
+    validator_type_t type;
+    const char *pattern;
+    const char **enum_values;
+    size_t enum_count;
+    config_validator_cb_t custom_cb;
+    void *user_data;
 } validator_options_t;
 
-/* ==================== 配置Schema ==================== */
 
 /**
  * @brief 配置Schema项
  */
 typedef struct {
-    const char *key;                // 配置键
-    config_value_type_t type;       // 配置类型
-    bool required;                  // 是否必需
-    const char *description;        // 描述
-    const char *default_value;      // 默认值（字符串形式）
-    config_validator_t *validator;  // 验证器
+    const char *key;
+    config_value_type_t type;
+    bool required;
+    const char *description;
+    const char *default_value;
+    config_validator_t *validator;
 } config_schema_item_t;
 
 /**
@@ -85,7 +83,6 @@ typedef struct {
  */
 typedef struct config_schema config_schema_t;
 
-/* ==================== 配置热更新 ==================== */
 
 /**
  * @brief 配置变化回调函数
@@ -104,39 +101,37 @@ typedef void (*config_change_cb_t)(config_context_t *ctx, const char *key,
  */
 typedef struct config_hot_reload_manager config_hot_reload_manager_t;
 
-/* ==================== 配置加密 ==================== */
 
 /**
  * @brief 加密算法类型
  */
 typedef enum {
-    ENCRYPTION_NONE = 0,              // 不加密
-    ENCRYPTION_AES_256_GCM = 1,       // AES-256-GCM
-    ENCRYPTION_CHACHA20_POLY1305 = 2  // ChaCha20-Poly1305
+    ENCRYPTION_NONE = 0,
+    ENCRYPTION_AES_256_GCM = 1, /* AES-256-GCM */
+    ENCRYPTION_CHACHA20_POLY1305 = 2 /* ChaCha20-Poly1305 */
 } encryption_algorithm_t;
 
 /**
  * @brief 加密配置
  */
 typedef struct {
-    encryption_algorithm_t algorithm;  // 加密算法
-    const char *key;                   // 加密密钥
-    size_t key_len;                    // 密钥长度
-    const char *iv;                    // 初始化向量
-    size_t iv_len;                     // 初始化向量长度
+    encryption_algorithm_t algorithm;
+    const char *key;
+    size_t key_len;
+    const char *iv;
+    size_t iv_len;
 } encryption_config_t;
 
-/* ==================== 配置版本管理 ==================== */
 
 /**
  * @brief 配置版本信息
  */
 typedef struct {
-    uint32_t version;         // 版本号
-    uint64_t timestamp;       // 时间戳
-    const char *author;       // 作者
-    const char *description;  // 描述
-    size_t change_count;      // 变化数量
+    uint32_t version;
+    uint64_t timestamp;
+    const char *author;
+    const char *description;
+    size_t change_count;
 } config_version_info_t;
 
 /**
@@ -144,9 +139,6 @@ typedef struct {
  */
 typedef struct config_version_manager config_version_manager_t;
 
-/* ==================== 配置服务API ==================== */
-
-/* ==================== 配置验证API ==================== */
 
 /**
  * @brief 创建配置验证器
@@ -194,7 +186,6 @@ config_validator_t *config_validator_create_regex(const char *pattern);
  */
 config_validator_t *config_validator_create_enum(const char **values, size_t count);
 
-/* ==================== 配置Schema API ==================== */
 
 /**
  * @brief 创建配置Schema
@@ -242,7 +233,6 @@ const char *config_schema_get_error(config_schema_t *schema, int index);
  */
 config_error_t config_schema_apply_defaults(config_schema_t *schema, config_context_t *ctx);
 
-/* ==================== 配置热更新API ==================== */
 
 /**
  * @brief 创建热更新管理器
@@ -250,8 +240,8 @@ config_error_t config_schema_apply_defaults(config_schema_t *schema, config_cont
  * @param source_manager 配置源管理器
  * @return 热更新管理器，失败返回NULL
  */
-config_hot_reload_manager_t *
-config_hot_reload_manager_create(config_context_t *ctx, config_source_manager_t *source_manager);
+config_hot_reload_manager_t *config_hot_reload_manager_create(
+    config_context_t *ctx, config_source_manager_t *source_manager);
 
 /**
  * @brief 销毁热更新管理器
@@ -294,7 +284,6 @@ config_error_t config_hot_reload_stop(config_hot_reload_manager_t *manager);
  */
 config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager);
 
-/* ==================== 配置加密API ==================== */
 
 /**
  * @brief 加密配置值
@@ -323,7 +312,6 @@ config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
 config_source_t *config_source_create_encrypted(config_source_t *source,
                                                 const encryption_config_t *manager);
 
-/* ==================== 配置版本管理API ==================== */
 
 /**
  * @brief 创建配置版本管理器
@@ -379,7 +367,6 @@ size_t config_version_get_list(config_version_manager_t *manager, config_version
 size_t config_version_get_diff(config_version_manager_t *manager, uint32_t version1,
                                uint32_t version2, char *diff, size_t diff_size);
 
-/* ==================== 配置模板API ==================== */
 
 /**
  * @brief 展开配置模板变量
@@ -400,7 +387,6 @@ config_error_t config_expand_template(config_context_t *ctx, const char *templat
  */
 config_error_t config_apply_template(config_context_t *ctx, config_context_t *template_ctx);
 
-/* ==================== 高级配置服务API ==================== */
 
 /**
  * @brief 创建完整的配置服务

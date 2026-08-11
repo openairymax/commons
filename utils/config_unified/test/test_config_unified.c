@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file test_config_unified.c
  * @brief 统一配置模块单元测试
  *
  * 测试config_unified模块的基本功能：配置加载、值获取、类型转换、错误处理等。
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #include <stdio.h>
@@ -22,8 +22,6 @@
 
 #include <assert.h>
 #include <string.h>
-
-/* ==================== 测试辅助宏 ==================== */
 
 #define TEST_ASSERT(condition, message)                \
     do {                                               \
@@ -47,8 +45,6 @@
 
 static int passed_tests = 0;
 static int failed_tests = 0;
-
-/* ==================== 测试用例 ==================== */
 
 /**
  * @brief 测试配置上下文创建和销毁
@@ -75,7 +71,6 @@ static int test_config_source_env(void)
 {
     printf("  测试环境变量配置源...\n");
 
-    // 设置测试环境变量
     _putenv("AIRY_TEST_CONFIG_INT=42");
     _putenv("AIRY_TEST_CONFIG_STR=hello");
     _putenv("AIRY_TEST_CONFIG_BOOL=true");
@@ -86,7 +81,6 @@ static int test_config_source_env(void)
     int result = config_context_add_env_source(ctx, "AIRY_TEST_CONFIG_");
     TEST_ASSERT(result == 0, "环境变量源添加失败");
 
-    // 测试获取值
     int int_val = 0;
     result = config_context_get_int(ctx, "test.manager.int", &int_val);
     TEST_ASSERT(result == 0, "获取整数值失败");
@@ -104,7 +98,6 @@ static int test_config_source_env(void)
 
     config_context_destroy(ctx);
 
-    // 清理环境变量
     _putenv("AIRY_TEST_CONFIG_INT=");
     _putenv("AIRY_TEST_CONFIG_STR=");
     _putenv("AIRY_TEST_CONFIG_BOOL=");
@@ -120,7 +113,6 @@ static int test_config_source_file(void)
 {
     printf("  测试配置文件源（简化）...\n");
 
-    // 创建临时配置文件
     const char *test_config = "{\n"
                               "  \"database\": {\n"
                               "    \"host\": \"localhost\",\n"
@@ -148,7 +140,6 @@ static int test_config_source_file(void)
         return 0;
     }
 
-    // 测试获取值
     char host[64] = {0};
     result = config_context_get_string(ctx, "database.host", host, sizeof(host));
     TEST_ASSERT(result == 0, "获取数据库主机失败");
@@ -181,7 +172,6 @@ static int test_config_value_conversion(void)
     config_context_t *ctx = config_context_create();
     TEST_ASSERT(ctx != NULL, "配置上下文创建失败");
 
-    // 添加测试值（通过内存源）
     config_memory_source_t *mem_source = config_memory_source_create();
     TEST_ASSERT(mem_source != NULL, "内存配置源创建失败");
 
@@ -192,25 +182,21 @@ static int test_config_value_conversion(void)
 
     config_context_add_source(ctx, (config_source_t *)mem_source);
 
-    // 测试整型转换
     int int_val = 0;
     int result = config_context_get_int(ctx, "test.int", &int_val);
     TEST_ASSERT(result == 0, "整型转换失败");
     TEST_ASSERT(int_val == 123, "整型值不匹配");
 
-    // 测试浮点型转换
     double float_val = 0.0;
     result = config_context_get_double(ctx, "test.float", &float_val);
     TEST_ASSERT(result == 0, "浮点型转换失败");
     TEST_ASSERT(float_val > 45.66 && float_val < 45.68, "浮点值不匹配");
 
-    // 测试布尔型转换
     bool bool_val = false;
     result = config_context_get_bool(ctx, "test.bool", &bool_val);
     TEST_ASSERT(result == 0, "布尔型转换失败");
     TEST_ASSERT(bool_val == true, "布尔值不匹配");
 
-    // 测试无效转换
     int invalid_val = 0;
     result = config_context_get_int(ctx, "test.invalid", &invalid_val);
     TEST_ASSERT(result != 0, "无效转换应失败");
@@ -231,19 +217,16 @@ static int test_config_source_priority(void)
     config_context_t *ctx = config_context_create();
     TEST_ASSERT(ctx != NULL, "配置上下文创建失败");
 
-    // 添加低优先级源
     config_memory_source_t *low_pri_source = config_memory_source_create();
     TEST_ASSERT(low_pri_source != NULL, "低优先级内存源创建失败");
     config_memory_source_set_string(low_pri_source, "test.key", "low_priority");
     config_context_add_source(ctx, (config_source_t *)low_pri_source);
 
-    // 添加高优先级源
     config_memory_source_t *high_pri_source = config_memory_source_create();
     TEST_ASSERT(high_pri_source != NULL, "高优先级内存源创建失败");
     config_memory_source_set_string(high_pri_source, "test.key", "high_priority");
     config_context_add_source(ctx, (config_source_t *)high_pri_source);
 
-    // 应返回高优先级值
     char value[64] = {0};
     int result = config_context_get_string(ctx, "test.key", value, sizeof(value));
     TEST_ASSERT(result == 0, "获取配置值失败");
@@ -265,12 +248,10 @@ static int test_config_error_handling(void)
     config_context_t *ctx = config_context_create();
     TEST_ASSERT(ctx != NULL, "配置上下文创建失败");
 
-    // 测试获取不存在的键
     int int_val = 0;
     int result = config_context_get_int(ctx, "nonexistent.key", &int_val);
     TEST_ASSERT(result != 0, "获取不存在的键应失败");
 
-    // 测试类型不匹配
     config_memory_source_t *mem_source = config_memory_source_create();
     TEST_ASSERT(mem_source != NULL, "内存配置源创建失败");
     config_memory_source_set_string(mem_source, "test.key", "not_a_number");
@@ -290,8 +271,6 @@ static int test_config_error_handling(void)
     return 0;
 }
 
-/* ==================== 主测试函数 ==================== */
-
 int main(void)
 {
     printf("\n");
@@ -299,7 +278,6 @@ int main(void)
     printf("  统一配置模块单元测试\n");
     printf("========================================\n");
 
-    // 运行所有测试
     TEST_RUN(test_config_context_create_destroy);
     TEST_RUN(test_config_source_env);
     TEST_RUN(test_config_source_file);

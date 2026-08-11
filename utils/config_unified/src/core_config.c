@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file core_config.c
  * @brief 统一配置模块 - 核心层实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 本文件实现统一配置模块的核心层功能，提供：
  * 1. 统一的配置数据模型和基础接口
@@ -29,16 +29,10 @@
 #include <string.h>
 #include "error.h"
 
-
-
-/* ==================== 内部数据结构 ==================== */
-
-/** 配置值结构体 */
 struct config_value {
-    /** 配置值类?*/
+
     config_value_type_t type;
 
-    /** 配置值数据（联合体） */
     union {
         bool bool_value;
         int32_t int_value;
@@ -68,7 +62,6 @@ struct config_value {
     } data;
 };
 
-/** 配置上下文结构体 */
 struct config_context {
     char *name;
 
@@ -91,12 +84,11 @@ struct config_context {
     bool encryption_enabled;
 };
 
-/* ==================== 内部辅助函数 ==================== */
-
 /**
- * @brief 分配配置值内? *
- * 分配配置值内存并初始化基本字段? *
- * @param type 配置值类? * @return 配置值对象，失败返回NULL
+ * @brief 分配配置值内存
+ * 分配配置值内存并初始化基本字段。
+ * @param type 配置值类型
+ * @return 配置值对象，失败返回NULL
  */
 static config_value_t *config_value_alloc(config_value_type_t type)
 {
@@ -108,8 +100,8 @@ static config_value_t *config_value_alloc(config_value_type_t type)
 }
 
 /**
- * @brief 复制字符? *
- * 安全复制字符串，返回新分配的字符串? *
+ * @brief 复制字符串
+ * 安全复制字符串，返回新分配的字符串。
  * @param str 源字符串
  * @return 新分配的字符串，失败返回NULL
  */
@@ -128,9 +120,11 @@ static char *duplicate_string(const char *str)
 }
 
 /**
- * @brief 查找配置项索? *
- * 在配置上下文中查找指定键的索引? *
- * @param ctx 配置上下? * @param key 配置? * @return 索引，未找到返回-1
+ * @brief 查找配置项索引
+ * 在配置上下文中查找指定键的索引。
+ * @param ctx 配置上下文
+ * @param key 配置键
+ * @return 索引，未找到返回-1
  */
 static int find_item_index(const config_context_t *ctx, const char *key)
 {
@@ -148,9 +142,10 @@ static int find_item_index(const config_context_t *ctx, const char *key)
 }
 
 /**
- * @brief 扩展配置上下文容? *
- * 扩展配置上下文的容量以容纳更多配置项? *
- * @param ctx 配置上下? * @return 错误? */
+ * @brief 扩展配置上下文容量
+ * 扩展配置上下文的容量以容纳更多配置项。
+ * @param ctx 配置上下文
+ * @return 错误码 */
 static config_error_t expand_context_capacity(config_context_t *ctx)
 {
     if (!ctx) {
@@ -169,8 +164,6 @@ static config_error_t expand_context_capacity(config_context_t *ctx)
 
     return CONFIG_SUCCESS;
 }
-
-/* ==================== 配置值操作API实现 ==================== */
 
 config_value_t *config_value_create_null(void)
 {
@@ -236,8 +229,8 @@ config_value_t *config_value_create_array(size_t capacity)
     config_value_t *val = config_value_alloc(CONFIG_TYPE_ARRAY);
     if (val) {
         val->data.array_value.capacity = capacity > 0 ? capacity : 16;
-        val->data.array_value.items = (config_value_t **)AIRY_CALLOC(
-            val->data.array_value.capacity, sizeof(config_value_t *));
+        val->data.array_value.items = (config_value_t **)AIRY_CALLOC(val->data.array_value.capacity,
+                                                                     sizeof(config_value_t *));
         if (!val->data.array_value.items) {
             AIRY_FREE(val);
             AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
@@ -252,8 +245,8 @@ config_value_t *config_value_create_object(size_t capacity)
     config_value_t *val = config_value_alloc(CONFIG_TYPE_OBJECT);
     if (val) {
         val->data.object_value.capacity = capacity > 0 ? capacity : 16;
-        val->data.object_value.items = AIRY_CALLOC(val->data.object_value.capacity,
-                                                      sizeof(val->data.object_value.items[0]));
+        val->data.object_value.items =
+            AIRY_CALLOC(val->data.object_value.capacity, sizeof(val->data.object_value.items[0]));
         if (!val->data.object_value.items) {
             AIRY_FREE(val);
             AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
@@ -337,7 +330,7 @@ config_value_t *config_value_clone(const config_value_t *value)
                 copy->data.binary_value.data = AIRY_MALLOC(value->data.binary_value.size);
                 if (copy->data.binary_value.data) {
                     __builtin_memcpy(copy->data.binary_value.data, value->data.binary_value.data,
-                           value->data.binary_value.size);
+                                     value->data.binary_value.size);
                     copy->data.binary_value.size = value->data.binary_value.size;
                 } else {
                     AIRY_FREE(copy);
@@ -403,8 +396,9 @@ config_error_t config_value_array_append(config_value_t *array, config_value_t *
 
     if (array->data.array_value.count >= array->data.array_value.capacity) {
         size_t new_cap = array->data.array_value.capacity * 2;
-        config_value_t **new_items = (config_value_t **)AIRY_REALLOC(
-            array->data.array_value.items, new_cap * sizeof(config_value_t *));
+        config_value_t **new_items =
+            (config_value_t **)AIRY_REALLOC(array->data.array_value.items,
+                                            new_cap * sizeof(config_value_t *));
         if (!new_items)
             return CONFIG_ERROR_OUT_OF_MEMORY;
         array->data.array_value.items = new_items;
@@ -442,7 +436,6 @@ int32_t config_value_get_int(const config_value_t *value, int32_t default_value)
     case CONFIG_TYPE_DOUBLE:
         return (int32_t)value->data.double_value;
     case CONFIG_TYPE_STRING:
-        // 尝试解析字符串
         return (int32_t)strtol(value->data.string_value.str, NULL, 10);
     default:
         return default_value;
@@ -496,8 +489,6 @@ const char *config_value_get_string(const config_value_t *value, const char *def
     }
     return value->data.string_value.str ? value->data.string_value.str : default_value;
 }
-
-/* ==================== 配置上下文操作API实现 ==================== */
 
 config_context_t *config_context_create(const char *name)
 {
@@ -568,17 +559,14 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
      * 同时调用）。修复：对 set 操作加 mutex，与 get/delete 保持一致。 */
     airy_mtx_lock(&ctx->mutex);
 
-    // 查找现有项
     int index = find_item_index(ctx, key);
 
     if (index >= 0) {
-        // 替换现有项
         config_value_destroy(ctx->items[index].value);
         ctx->items[index].value = value;
         airy_mtx_unlock(&ctx->mutex);
         return CONFIG_SUCCESS;
     } else {
-        // 添加新项
         if (ctx->count >= ctx->capacity) {
             config_error_t err = expand_context_capacity(ctx);
             if (err != CONFIG_SUCCESS) {
@@ -708,10 +696,12 @@ config_error_t config_context_unlock(config_context_t *ctx)
 
 config_context_t *config_context_clone(const config_context_t *ctx)
 {
-    if (!ctx) return NULL;
+    if (!ctx)
+        return NULL;
 
     config_context_t *clone = config_context_create(ctx->name);
-    if (!clone) return NULL;
+    if (!clone)
+        return NULL;
 
     for (size_t i = 0; i < ctx->count; i++) {
         char *key_copy = duplicate_string(ctx->items[i].key);
@@ -779,13 +769,15 @@ config_error_t config_context_copy(config_context_t *dst, const config_context_t
 
 const char *config_context_get_key_at(const config_context_t *ctx, size_t index)
 {
-    if (!ctx || index >= ctx->count) return NULL;
+    if (!ctx || index >= ctx->count)
+        return NULL;
     return ctx->items[index].key;
 }
 
 const config_value_t *config_context_get_value_at(const config_context_t *ctx, size_t index)
 {
-    if (!ctx || index >= ctx->count) return NULL;
+    if (!ctx || index >= ctx->count)
+        return NULL;
     return ctx->items[index].value;
 }
 
@@ -796,9 +788,11 @@ struct config_iterator {
 
 const config_iterator_t *config_context_iterator(const config_context_t *ctx)
 {
-    if (!ctx) return NULL;
+    if (!ctx)
+        return NULL;
     config_iterator_t *it = (config_iterator_t *)AIRY_CALLOC(1, sizeof(config_iterator_t));
-    if (!it) return NULL;
+    if (!it)
+        return NULL;
     it->ctx = ctx;
     it->pos = 0;
     return it;
@@ -820,7 +814,8 @@ bool config_iterator_has_next(const config_iterator_t *it)
 
 const char *config_iterator_next_key(const config_iterator_t *it)
 {
-    if (!it || !it->ctx || it->pos >= it->ctx->count) return NULL;
+    if (!it || !it->ctx || it->pos >= it->ctx->count)
+        return NULL;
     const char *key = it->ctx->items[it->pos].key;
     ((config_iterator_t *)it)->pos++;
     return key;
@@ -847,8 +842,6 @@ void config_context_set_encryption(config_context_t *ctx, bool enabled)
         return;
     ctx->encryption_enabled = enabled;
 }
-
-/* ==================== 工具函数实现 ==================== */
 
 const char *config_error_to_string(config_error_t error)
 {

@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file core_config.h
  * @brief 统一配置模块 - 核心层接口
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * 统一配置模块核心层，提供统一的配置数据模型和基础接口。
  * 设计原则：
@@ -24,45 +24,40 @@
 extern "C" {
 #endif
 
-/* ==================== 配置数据类型 ==================== */
 
 typedef enum {
-    CONFIG_TYPE_NULL = 0,    // 空类型
-    CONFIG_TYPE_BOOL = 1,    // 布尔类型
-    CONFIG_TYPE_INT = 2,     // 32位整数
-    CONFIG_TYPE_INT64 = 3,   // 64位整数
-    CONFIG_TYPE_DOUBLE = 4,  // 双精度浮点数
-    CONFIG_TYPE_STRING = 5,  // 字符串
-    CONFIG_TYPE_ARRAY = 6,   // 数组
-    CONFIG_TYPE_OBJECT = 7,  // 对象（映射表）
-    CONFIG_TYPE_BINARY = 8   // 二进制数据
+    CONFIG_TYPE_NULL = 0,
+    CONFIG_TYPE_BOOL = 1,
+    CONFIG_TYPE_INT = 2,
+    CONFIG_TYPE_INT64 = 3,
+    CONFIG_TYPE_DOUBLE = 4,
+    CONFIG_TYPE_STRING = 5,
+    CONFIG_TYPE_ARRAY = 6,
+    CONFIG_TYPE_OBJECT = 7,
+    CONFIG_TYPE_BINARY = 8
 } config_value_type_t;
 
-/* ==================== 配置值结构 ==================== */
 
 typedef struct config_value config_value_t;
 
-/* ==================== 错误码定义 ==================== */
 
 typedef enum {
-    CONFIG_SUCCESS = 0,              // 成功
-    CONFIG_ERROR_INVALID_ARG = 1,    // 参数无效
-    CONFIG_ERROR_NOT_FOUND = 2,      // 配置项不存在
-    CONFIG_ERROR_TYPE_MISMATCH = 3,  // 类型不匹配
-    CONFIG_ERROR_OUT_OF_MEMORY = 4,  // 内存不足
-    CONFIG_ERROR_IO = 5,             // I/O错误
-    CONFIG_ERROR_PARSE = 6,          // 解析错误
-    CONFIG_ERROR_VALIDATION = 7,     // 验证失败
-    CONFIG_ERROR_LOCKED = 8,         // 配置被锁定
-    CONFIG_ERROR_UNSUPPORTED = 9,    // 不支持的操作
-    CONFIG_ERROR_THREAD = 10         // 线程操作失败
+    CONFIG_SUCCESS = 0,
+    CONFIG_ERROR_INVALID_ARG = 1,
+    CONFIG_ERROR_NOT_FOUND = 2,
+    CONFIG_ERROR_TYPE_MISMATCH = 3,
+    CONFIG_ERROR_OUT_OF_MEMORY = 4,
+    CONFIG_ERROR_IO = 5,
+    CONFIG_ERROR_PARSE = 6,
+    CONFIG_ERROR_VALIDATION = 7,
+    CONFIG_ERROR_LOCKED = 8,
+    CONFIG_ERROR_UNSUPPORTED = 9,
+    CONFIG_ERROR_THREAD = 10
 } config_error_t;
 
-/* ==================== 配置上下文 ==================== */
 
 typedef struct config_context config_context_t;
 
-/* ==================== 核心API：配置值操作 ==================== */
 
 /**
  * @brief 创建空配置值
@@ -193,7 +188,6 @@ void config_iterator_reset(const config_iterator_t *it);
 bool config_iterator_has_next(const config_iterator_t *it);
 const char *config_iterator_next_key(const config_iterator_t *it);
 
-/* ==================== 核心API：配置上下文操作 ==================== */
 
 /**
  * @brief 创建配置上下文
@@ -282,7 +276,6 @@ void config_context_set_schema(config_context_t *ctx, config_schema_t *schema);
 void config_context_set_hot_reload(config_context_t *ctx, bool enabled, uint32_t interval_ms);
 void config_context_set_encryption(config_context_t *ctx, bool enabled);
 
-/* ==================== 工具函数 ==================== */
 
 /**
  * @brief 获取错误码描述

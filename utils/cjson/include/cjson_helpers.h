@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file cjson_helpers.h
  * @brief cJSON 三步曲宏化辅助层（P0.18.2）
@@ -22,7 +23,6 @@
  * 验收标准（ACC-P0182）：
  *   `grep -rn 'cJSON_Parse' agentrt/ | wc -l` 较修复前减少 ≥ 50%
  *
- * @copyright Copyright (c) 2026 SPHARX. All Rights Reserved.
  */
 
 #ifndef AIRY_RT_CJSON_HELPERS_H
@@ -34,7 +34,6 @@
 
 #include <cjson/cJSON.h>
 
-/* ==================== P0.18.2: cJSON 三步曲宏化 ==================== */
 
 /**
  * @defgroup cjson_helpers cJSON 三步曲宏化（P0.18.2）
@@ -52,7 +51,7 @@
  *       cJSON_Delete(req);
  *       return AIRY_ERR_NOT_FOUND;
  *   }
- *   // ... 使用 ...
+ *
  *   cJSON_Delete(req);
  * @endcode
  *
@@ -65,8 +64,8 @@
  *       AIRY_LOG_ERROR("missing jsonrpc");
  *       return AIRY_ERR_NOT_FOUND;
  *   });
- *   // ... 使用 ...
- *   // 函数返回时 cJSON_Delete(req) 自动调用
+ *
+ *
  * @endcode
  */
 
@@ -95,8 +94,8 @@
  *       JSONRPC_SEND_ERROR(client_fd, JSONRPC_PARSE_ERROR, "Parse error", -1);
  *       return;
  *   });
- *   // 此处 req 保证非 NULL，且函数返回时自动 cJSON_Delete(req)
- *   // 无需在 return 前手动 cJSON_Delete(req)
+ *
+ *
  * @endcode
  *
  * 注意：
@@ -104,9 +103,11 @@
  *   - var 必须是 cJSON 根节点（cJSON_Parse 返回值），不能是子节点
  *   - 同一作用域内多个 CJSON_PARSE_GUARD 变量按声明逆序释放
  */
-#define CJSON_PARSE_GUARD(var, text, on_fail) \
+#define CJSON_PARSE_GUARD(var, text, on_fail)         \
     CJSON_AUTO_FREE cJSON *var = cJSON_Parse((text)); \
-    if (!(var)) { on_fail; }
+    if (!(var)) {                                     \
+        on_fail;                                      \
+    }
 
 /**
  * @def CJSON_DEEP_COPY(node)
@@ -119,13 +120,13 @@
  * 替换模式（修复前）：
  * @code
  *   cJSON_AddItemToObject(params, "model", cJSON_Parse(cJSON_PrintUnformatted(model)));
- *   // ↑ cJSON_PrintUnformatted 返回的 char* 泄漏！
+ *
  * @endcode
  *
  * 修复后：
  * @code
  *   cJSON_AddItemToObject(params, "model", CJSON_DEEP_COPY(model));
- *   // ↑ 中间字符串自动释放，无泄漏
+ *
  * @endcode
  *
  * @param node 待拷贝的 cJSON 节点（可为 NULL，返回 NULL）
@@ -168,14 +169,16 @@ static inline cJSON *airy_cjson_deep_copy_impl(const cJSON *node)
  *       cJSON_Delete(req);
  *       return;
  *   });
- *   // 此处 method 保证非 NULL（但可能不是字符串类型，需 cJSON_IsString 校验）
+ *
  * @endcode
  *
  * 注意：on_fail 块通常需手动释放 parent（除非 parent 标记为 CJSON_AUTO_FREE）。
  */
-#define CJSON_GET_REQUIRED(out, parent, key, on_fail) \
+#define CJSON_GET_REQUIRED(out, parent, key, on_fail)  \
     cJSON *out = cJSON_GetObjectItem((parent), (key)); \
-    if (!(out)) { on_fail; }
+    if (!(out)) {                                      \
+        on_fail;                                       \
+    }
 
 /**
  * @def CJSON_GET_OPTIONAL(out, parent, key)
@@ -191,11 +194,10 @@ static inline cJSON *airy_cjson_deep_copy_impl(const cJSON *node)
  * 示例：
  * @code
  *   CJSON_GET_OPTIONAL(params, req, "params");
- *   if (cJSON_IsObject(params)) { ... }  // 使用 cJSON_Is* 判断类型
+ *   if (cJSON_IsObject(params)) { ... }
  * @endcode
  */
-#define CJSON_GET_OPTIONAL(out, parent, key) \
-    cJSON *out = cJSON_GetObjectItem((parent), (key))
+#define CJSON_GET_OPTIONAL(out, parent, key) cJSON *out = cJSON_GetObjectItem((parent), (key))
 
 /**
  * @def CJSON_AUTO_FREE
@@ -218,8 +220,8 @@ static inline cJSON *airy_cjson_deep_copy_impl(const cJSON *node)
  *   void handle_request(const char *buffer) {
  *       CJSON_AUTO_FREE cJSON *req = cJSON_Parse(buffer);
  *       if (!req) { return; }
- *       // ... 处理请求 ...
- *       // 函数返回时自动 cJSON_Delete(req)，无需手动释放
+ *
+ *
  *   }
  * @endcode
  */
@@ -265,16 +267,12 @@ static inline void airy_cjson_auto_free_impl(void *p)
 
 #endif
 
-/** @} */  // end of cjson_helpers
-
-#else  /* !AIRY_HAS_CJSON */
-
+/** @} */ /* end of cjson_helpers */
+#else /* !AIRY_HAS_CJSON */
 /* cJSON 不可用时：CJSON_AUTO_FREE 为空宏，其他宏未定义。
  * 调用方应在 cJSON 不可用的目标中不引用本头文件，
  * 或通过 #ifdef AIRY_HAS_CJSON 保护相关代码。 */
 
 #define CJSON_AUTO_FREE /* AIRY_HAS_CJSON not defined: cJSON unavailable */
-
 #endif /* AIRY_HAS_CJSON */
-
 #endif /* AIRY_RT_CJSON_HELPERS_H */

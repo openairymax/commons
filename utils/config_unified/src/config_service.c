@@ -1,13 +1,16 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file config_service.c
- * @brief 统一配置模块 - 服务层实? * @copyright (c) 2026 SPHARX. All Rights Reserved.
+ * @brief 统一配置模块 - 服务层实现
  *
  * 本文件实现统一配置模块的服务层功能，提供：
  * 1. 配置验证和Schema定义
  * 2. 热更新和变化通知
- * 3. 配置加密和安全存? * 4. 配置版本管理和回? * 5. 配置模板和变量展开
+ * 3. 配置加密和安全存储
+ * 4. 配置版本管理和回滚
+ * 5. 配置模板和变量展开
  *
  * ? */
 
@@ -36,24 +39,16 @@
 #include <openssl/rand.h>
 #endif
 
-
-
-/* ==================== 内部数据结构 ==================== */
-
-/** 配置验证器结构体 */
 struct config_validator {
-    validator_type_t type;  // 验证器类
-    char *pattern;          // 模式（正则表达式或范围）
-    char **enum_values;     // 枚举值数量
+    validator_type_t type;
+    char *pattern;
+    char **enum_values;
     size_t enum_count;
-    // 枚举值数?
-    config_validator_cb_t custom_cb;  // 自定义验证回?
+    config_validator_cb_t custom_cb;
     void *user_data;
-    // 用户数据
-    char *error_message;  // 错误信息
+    char *error_message;
 };
 
-/** 配置Schema项内部结?*/
 typedef struct {
     char *key;
     config_value_type_t type;
@@ -63,7 +58,6 @@ typedef struct {
     config_validator_t *validator;
 } schema_item_internal_t;
 
-/** 配置Schema结构?*/
 struct config_schema {
     char *name;
     schema_item_internal_t *items;
@@ -74,14 +68,12 @@ struct config_schema {
     size_t error_capacity;
 };
 
-/** 配置变化回调?*/
 typedef struct {
-    char *key;                    // 配置键（NULL表示所有）
-    config_change_cb_t callback;  // 回调函数
-    void *user_data;              // 用户数据
+    char *key;
+    config_change_cb_t callback;
+    void *user_data;
 } change_callback_item_t;
 
-/** 热更新管理器结构体 */
 struct config_hot_reload_manager {
     config_context_t *ctx;
     config_source_manager_t *source_manager;
@@ -96,7 +88,6 @@ struct config_hot_reload_manager {
     void *lock;
 };
 
-/** 配置版本?*/
 typedef struct {
     uint32_t version;
     uint64_t timestamp;
@@ -105,7 +96,6 @@ typedef struct {
     config_context_t *snapshot;
 } config_version_item_t;
 
-/** 版本管理器结构体 */
 struct config_version_manager {
     config_context_t *ctx;
     config_version_item_t *versions;
@@ -115,11 +105,9 @@ struct config_version_manager {
     uint32_t next_version;
 };
 
-/* ==================== 内部辅助函数 ==================== */
-
 /**
- * @brief 复制字符? *
- * 安全复制字符串，处理NULL情况? *
+ * @brief 复制字符串
+ * 安全复制字符串，处理NULL情况。
  * @param str 源字符串
  * @return 新分配的字符串，失败返回NULL
  */
@@ -127,7 +115,7 @@ static char *duplicate_string(const char *str)
 {
     if (!str) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     size_t len = strlen(str);
     char *copy = (char *)AIRY_MALLOC(len + 1);
     if (copy) {
@@ -140,9 +128,10 @@ static char *duplicate_string(const char *str)
 /**
  * @brief 添加验证错误
  *
- * 向Schema添加验证错误信息? *
+ * 向Schema添加验证错误信息。
  * @param schema Schema对象
- * @param format 错误格式字符? * @param ... 可变参数
+ * @param format 错误格式字符串
+ * @param ... 可变参数
  * @return 是否成功
  */
 static bool add_schema_error(config_schema_t *schema, const char *format, ...)
@@ -185,7 +174,7 @@ static bool add_schema_error(config_schema_t *schema, const char *format, ...)
 /**
  * @brief 清除验证错误
  *
- * 清除Schema中的所有验证错误? *
+ * 清除Schema中的所有验证错误。
  * @param schema Schema对象
  */
 static void clear_schema_errors(config_schema_t *schema)
@@ -204,9 +193,10 @@ static void clear_schema_errors(config_schema_t *schema)
 }
 
 /**
- * @brief 验证配置值类? *
- * 验证配置值是否符合指定类型? *
- * @param value 配置? * @param expected_type 期望类型
+ * @brief 验证配置值类型
+ * 验证配置值是否符合指定类型。
+ * @param value 配置值
+ * @param expected_type 期望类型
  * @return 是否类型匹配
  */
 static bool validate_value_type(const config_value_t *value, config_value_type_t expected_type)
@@ -219,8 +209,9 @@ static bool validate_value_type(const config_value_t *value, config_value_type_t
 /**
  * @brief 验证范围
  *
- * 验证数值是否在指定范围内? *
- * @param value 配置? * @param min_str 最小值字符串
+ * 验证数值是否在指定范围内。
+ * @param value 配置值
+ * @param min_str 最小值字符串
  * @param max_str 最大值字符串
  * @return 是否在范围内
  */
@@ -252,10 +243,12 @@ static bool validate_range(const config_value_t *value, const char *min_str, con
 }
 
 /**
- * @brief 验证枚举? *
- * 验证字符串是否在枚举值列表中? *
- * @param value 配置? * @param enum_values 枚举值数? * @param enum_count 枚举值数? * @return
- * 是否在枚举值中
+ * @brief 验证枚举值
+ * 验证字符串是否在枚举值列表中。
+ * @param value 配置值
+ * @param enum_values 枚举值数组
+ * @param enum_count 枚举值数量
+ * @return 是否在枚举值中
  */
 static bool validate_enum(const config_value_t *value, const char **enum_values, size_t enum_count)
 {
@@ -278,10 +271,11 @@ static bool validate_enum(const config_value_t *value, const char **enum_values,
 }
 
 /**
- * @brief 查找Schema? *
- * 根据键查找Schema项? *
+ * @brief 查找Schema项
+ * 根据键查找Schema项。
  * @param schema Schema对象
- * @param key 配置? * @return Schema项索引，未找到返回值1
+ * @param key 配置键
+ * @return Schema项索引，未找到返回值1
  */
 static int find_schema_item(const config_schema_t *schema, const char *key)
 {
@@ -297,25 +291,22 @@ static int find_schema_item(const config_schema_t *schema, const char *key)
     return INDEX_NOT_FOUND;
 }
 
-/* ==================== 配置验证器实?==================== */
-
 config_validator_t *config_validator_create(const validator_options_t *options)
 {
     if (!options) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_validator_t *validator =
         (config_validator_t *)AIRY_CALLOC(1, sizeof(config_validator_t));
     if (!validator) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     validator->type = options->type;
     validator->custom_cb = options->custom_cb;
     validator->user_data = options->user_data;
 
-    // 复制模式字符
     if (options->pattern) {
         validator->pattern = duplicate_string(options->pattern);
         if (!validator->pattern) {
@@ -324,7 +315,6 @@ config_validator_t *config_validator_create(const validator_options_t *options)
         }
     }
 
-    // 复制枚举
     if (options->enum_values && options->enum_count > 0) {
         validator->enum_values = (char **)AIRY_CALLOC(options->enum_count, sizeof(char *));
         if (!validator->enum_values) {
@@ -338,7 +328,6 @@ config_validator_t *config_validator_create(const validator_options_t *options)
             if (options->enum_values[i]) {
                 validator->enum_values[i] = duplicate_string(options->enum_values[i]);
                 if (!validator->enum_values[i]) {
-                    // 清理已分配的内存
                     for (size_t j = 0; j < i; j++) {
                         if (validator->enum_values[j])
                             AIRY_FREE(validator->enum_values[j]);
@@ -451,21 +440,20 @@ config_validator_t *config_validator_create_range(const char *min, const char *m
 {
     if (!min || !max) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_RANGE,
-                                   .pattern = NULL,  // 需要构建模式字符串
+                                   .pattern = NULL,
                                    .enum_values = NULL,
                                    .enum_count = 0,
                                    .custom_cb = NULL,
                                    .user_data = NULL};
 
-    // 构建范围模式字符?"min,max"
     size_t pattern_len = strlen(min) + strlen(max) + 2;
     char *pattern = (char *)AIRY_MALLOC(pattern_len);
     if (!pattern) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     snprintf(pattern, pattern_len, "%s,%s", min, max);
     options.pattern = pattern;
@@ -480,7 +468,7 @@ config_validator_t *config_validator_create_regex(const char *pattern)
 {
     if (!pattern) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_REGEX,
                                    .pattern = pattern,
@@ -496,7 +484,7 @@ config_validator_t *config_validator_create_enum(const char **values, size_t cou
 {
     if (!values || count == 0) {
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
-        }
+    }
 
     validator_options_t options = {.type = VALIDATOR_TYPE_ENUM,
                                    .pattern = NULL,
@@ -508,18 +496,16 @@ config_validator_t *config_validator_create_enum(const char **values, size_t cou
     return config_validator_create(&options);
 }
 
-/* ==================== 配置Schema实现 ==================== */
-
 config_schema_t *config_schema_create(const char *name)
 {
     if (!name) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_schema_t *schema = (config_schema_t *)AIRY_CALLOC(1, sizeof(config_schema_t));
     if (!schema) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     schema->name = duplicate_string(name);
     if (!schema->name) {
@@ -527,7 +513,6 @@ config_schema_t *config_schema_create(const char *name)
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    // 初始容量
     schema->capacity = 16;
     schema->items =
         (schema_item_internal_t *)AIRY_CALLOC(schema->capacity, sizeof(schema_item_internal_t));
@@ -560,7 +545,6 @@ void config_schema_destroy(config_schema_t *schema)
     if (schema->name)
         AIRY_FREE(schema->name);
 
-    // 释放Schema
     for (size_t i = 0; i < schema->count; i++) {
         schema_item_internal_t *item = &schema->items[i];
         if (item->key)
@@ -589,7 +573,6 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
     if (!schema || !item || !item->key)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 检查是否已存在相同
     if (find_schema_item(schema, item->key) >= 0) {
         return CONFIG_ERROR_INVALID_ARG;
     }
@@ -597,8 +580,9 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
     // 确保有足够容
     if (schema->count >= schema->capacity) {
         size_t new_capacity = schema->capacity * 2;
-        schema_item_internal_t *new_items = (schema_item_internal_t *)AIRY_REALLOC(
-            schema->items, new_capacity * sizeof(schema_item_internal_t));
+        schema_item_internal_t *new_items =
+            (schema_item_internal_t *)AIRY_REALLOC(schema->items,
+                                                   new_capacity * sizeof(schema_item_internal_t));
         if (!new_items)
             return CONFIG_ERROR_OUT_OF_MEMORY;
 
@@ -606,7 +590,6 @@ config_error_t config_schema_add_item(config_schema_t *schema, const config_sche
         schema->capacity = new_capacity;
     }
 
-    // 复制Schema
     schema_item_internal_t *new_item = &schema->items[schema->count];
     AIRY_MEMSET(new_item, 0, sizeof(schema_item_internal_t));
 
@@ -654,8 +637,6 @@ bool config_schema_validate(config_schema_t *schema, const config_context_t *ctx
     for (size_t i = 0; i < schema->count; i++) {
         schema_item_internal_t *item = &schema->items[i];
 
-        // 查找配配置
-        // 从配置上下文中获取值
         const config_value_t *value = config_context_get(ctx, item->key);
 
         if (item->required && !value) {
@@ -680,7 +661,6 @@ bool config_schema_validate(config_schema_t *schema, const config_context_t *ctx
     }
 
     if (strict) {
-        // 检查是否有未在Schema中定义的配置项
         const config_iterator_t *it = config_context_iterator(ctx);
         if (it) {
             config_iterator_reset(it);
@@ -719,22 +699,17 @@ config_error_t config_schema_apply_defaults(config_schema_t *schema, config_cont
     if (!schema || !ctx)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 为每个有默认值的Schema项设置默认
     for (size_t i = 0; i < schema->count; i++) {
         schema_item_internal_t *item = &schema->items[i];
 
         if (item->default_value) {
-            // 检查是否已存在配配置
-            // 检查配置键是否存在
             bool has_key = config_context_has(ctx, item->key);
 
             if (!has_key) {
-                // 根据类型创建配配置
                 config_value_t *default_value = NULL;
 
                 switch (item->type) {
                 case CONFIG_TYPE_BOOL:
-                    // 解析布尔
                     default_value =
                         config_value_create_bool(strcasecmp(item->default_value, "true") == 0);
                     break;
@@ -757,12 +732,10 @@ config_error_t config_schema_apply_defaults(config_schema_t *schema, config_cont
                     break;
 
                 default:
-                    // 不支持的类型
                     continue;
                 }
 
                 if (default_value) {
-                    // 设置配配置
                     // config_context_set_value(ctx, item->key, default_value);
                     config_value_destroy(default_value);
                 }
@@ -773,20 +746,18 @@ config_error_t config_schema_apply_defaults(config_schema_t *schema, config_cont
     return CONFIG_SUCCESS;
 }
 
-/* ==================== 配置热更新实?==================== */
-
-config_hot_reload_manager_t *
-config_hot_reload_manager_create(config_context_t *ctx, config_source_manager_t *source_manager)
+config_hot_reload_manager_t *config_hot_reload_manager_create(
+    config_context_t *ctx, config_source_manager_t *source_manager)
 {
     if (!ctx || !source_manager) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_hot_reload_manager_t *manager =
         (config_hot_reload_manager_t *)AIRY_CALLOC(1, sizeof(config_hot_reload_manager_t));
     if (!manager) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     manager->ctx = ctx;
     manager->source_manager = source_manager;
@@ -795,10 +766,9 @@ config_hot_reload_manager_create(config_context_t *ctx, config_source_manager_t 
     manager->debounce_ms = 500;
     manager->last_trigger_time_ms = 0;
 
-    // 初始回调容量
     manager->callback_capacity = 8;
     manager->callbacks = (change_callback_item_t *)AIRY_CALLOC(manager->callback_capacity,
-                                                                  sizeof(change_callback_item_t));
+                                                               sizeof(change_callback_item_t));
     if (!manager->callbacks) {
         AIRY_FREE(manager);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
@@ -849,8 +819,9 @@ config_error_t config_hot_reload_register_callback(config_hot_reload_manager_t *
     // 确保有足够容
     if (manager->callback_count >= manager->callback_capacity) {
         size_t new_capacity = manager->callback_capacity * 2;
-        change_callback_item_t *new_callbacks = (change_callback_item_t *)AIRY_REALLOC(
-            manager->callbacks, new_capacity * sizeof(change_callback_item_t));
+        change_callback_item_t *new_callbacks =
+            (change_callback_item_t *)AIRY_REALLOC(manager->callbacks,
+                                                   new_capacity * sizeof(change_callback_item_t));
         if (!new_callbacks)
             return CONFIG_ERROR_OUT_OF_MEMORY;
 
@@ -858,7 +829,6 @@ config_error_t config_hot_reload_register_callback(config_hot_reload_manager_t *
         manager->callback_capacity = new_capacity;
     }
 
-    // 添加回调
     change_callback_item_t *cb = &manager->callbacks[manager->callback_count];
     cb->key = key ? duplicate_string(key) : NULL;
     cb->callback = callback;
@@ -929,7 +899,7 @@ static void *config_hot_reload_thread_func(void *arg)
     config_hot_reload_manager_t *manager = (config_hot_reload_manager_t *)arg;
     if (!manager) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     while (manager->running) {
         uint32_t interval = manager->check_interval_ms > 0 ? manager->check_interval_ms : 5000;
@@ -998,8 +968,6 @@ config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager)
     return CONFIG_SUCCESS;
 }
 
-/* ==================== 配置加密实现 ==================== */
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static char *config_bytes_to_hex(const unsigned char *data, size_t len)
@@ -1007,7 +975,7 @@ static char *config_bytes_to_hex(const unsigned char *data, size_t len)
     char *hex = (char *)AIRY_CALLOC(1, len * 2 + 1);
     if (!hex) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     for (size_t i = 0; i < len; i++) {
         snprintf(hex + i * 2, 3, "%02x", data[i]);
     }
@@ -1019,12 +987,12 @@ static unsigned char *config_hex_to_bytes(const char *hex, size_t *out_len)
     size_t hex_len = strlen(hex);
     if (hex_len % 2 != 0) {
         AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
-        }
+    }
     size_t byte_len = hex_len / 2;
     unsigned char *bytes = (unsigned char *)AIRY_CALLOC(1, byte_len);
     if (!bytes) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     for (size_t i = 0; i < byte_len; i++) {
         unsigned int val;
         char hex_byte[3] = {0};
@@ -1052,7 +1020,7 @@ static config_value_t *config_encrypt_string_value(const char *plaintext, size_t
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1) {
         EVP_CIPHER_CTX_free(ctx);
@@ -1117,7 +1085,7 @@ static config_value_t *config_encrypt_string_value(const char *plaintext, size_t
     AIRY_FREE(encoded);
     if (!hex) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_value_t *result = config_value_create_string(hex);
     AIRY_FREE(hex);
@@ -1229,7 +1197,7 @@ config_value_t *config_encrypt_value(const config_value_t *value,
 {
     if (!value) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     if (!manager || manager->algorithm == ENCRYPTION_NONE) {
         return config_value_clone(value);
     }
@@ -1239,7 +1207,7 @@ config_value_t *config_encrypt_value(const config_value_t *value,
         const char *str = config_value_get_string(value, NULL);
         if (!str) {
             AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-            }
+        }
         size_t str_len = strlen(str);
         config_value_t *encrypted = config_encrypt_string_value(str, str_len, manager);
         return encrypted ? encrypted : config_value_clone(value);
@@ -1253,7 +1221,7 @@ config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
 {
     if (!encrypted_value) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     if (!manager || manager->algorithm == ENCRYPTION_NONE) {
         return config_value_clone(encrypted_value);
     }
@@ -1263,7 +1231,7 @@ config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
         const char *hex_data = config_value_get_string(encrypted_value, NULL);
         if (!hex_data) {
             AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-            }
+        }
         config_value_t *decrypted = config_decrypt_string_value(hex_data, manager);
         return decrypted ? decrypted : config_value_clone(encrypted_value);
     }
@@ -1276,31 +1244,28 @@ config_source_t *config_source_create_encrypted(config_source_t *source,
 {
     if (!source) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
     if (!manager || manager->algorithm == ENCRYPTION_NONE)
         return source;
     return source;
 }
 
-/* ==================== 配置版本管理实现 ==================== */
-
 config_version_manager_t *config_version_manager_create(config_context_t *ctx, size_t max_versions)
 {
     if (!ctx) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_version_manager_t *manager =
         (config_version_manager_t *)AIRY_CALLOC(1, sizeof(config_version_manager_t));
     if (!manager) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     manager->ctx = ctx;
     manager->max_versions = max_versions > 0 ? max_versions : 10;
     manager->next_version = 1;
 
-    // 初始容量
     manager->capacity = 8;
     manager->versions =
         (config_version_item_t *)AIRY_CALLOC(manager->capacity, sizeof(config_version_item_t));
@@ -1344,8 +1309,9 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
     // 确保有足够容
     if (manager->count >= manager->capacity) {
         size_t new_capacity = manager->capacity * 2;
-        config_version_item_t *new_versions = (config_version_item_t *)AIRY_REALLOC(
-            manager->versions, new_capacity * sizeof(config_version_item_t));
+        config_version_item_t *new_versions =
+            (config_version_item_t *)AIRY_REALLOC(manager->versions,
+                                                  new_capacity * sizeof(config_version_item_t));
         if (!new_versions)
             return 0;
 
@@ -1353,7 +1319,6 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
         manager->capacity = new_capacity;
     }
 
-    // 创建版本
     config_version_item_t *version = &manager->versions[manager->count];
     AIRY_MEMSET(version, 0, sizeof(config_version_item_t));
 
@@ -1386,9 +1351,7 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
 
     manager->count++;
 
-    // 如果超过最大版本数，删除最旧的版本
     if (manager->count > manager->max_versions) {
-        // 删除第一个版本（最旧）
         config_version_item_t *oldest = &manager->versions[0];
         if (oldest->author)
             AIRY_FREE(oldest->author);
@@ -1398,7 +1361,6 @@ uint32_t config_version_create_snapshot(config_version_manager_t *manager, const
             config_context_destroy(oldest->snapshot);
         }
 
-        // 移动后续版本
         for (size_t i = 1; i < manager->count; i++) {
             manager->versions[i - 1] = manager->versions[i];
         }
@@ -1618,8 +1580,6 @@ size_t config_version_get_diff(config_version_manager_t *manager, uint32_t versi
     return pos < diff_size ? pos : diff_size - 1;
 }
 
-/* ==================== 配置模板实现 ==================== */
-
 config_error_t config_expand_template(config_context_t *ctx, const char *template_str, char *result,
                                       size_t result_size)
 {
@@ -1698,19 +1658,17 @@ config_error_t config_apply_template(config_context_t *ctx, config_context_t *te
     return CONFIG_SUCCESS;
 }
 
-/* ==================== 高级配置服务API ==================== */
-
 config_context_t *config_service_create(const char *service_name, config_schema_t *schema,
                                         bool enable_hot_reload, bool enable_encryption)
 {
     if (!service_name) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     config_context_t *ctx = config_context_create(service_name);
     if (!ctx) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
+    }
 
     if (schema) {
         config_context_set_schema(ctx, schema);
@@ -1760,7 +1718,6 @@ config_error_t config_service_get_status(config_context_t *ctx, char *status_jso
     if (!ctx || !status_json || status_size == 0)
         return CONFIG_ERROR_INVALID_ARG;
 
-    // 生成状态JSON
     snprintf(status_json, status_size, "{\"status\":\"ok\",\"service\":\"%s\"}", "config_service");
 
     return CONFIG_SUCCESS;

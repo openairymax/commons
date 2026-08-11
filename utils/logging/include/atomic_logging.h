@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file atomic_logging.h
  * @brief 统一分层日志系统原子层API
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 本模块提供统一的分层日志系统原子层接口，专注于：
@@ -37,11 +37,10 @@ extern "C" {
 
 #include <stdbool.h>
 
-/* 跨平台原子操作支持 - 使用统一的 atomic_compat.h */
+
 #include "atomic_compat.h"
 #define HAVE_STDATOMIC 1
 
-/* ==================== 原子层配置 ==================== */
 
 /**
  * @brief 原子层配置结构体
@@ -49,35 +48,34 @@ extern "C" {
  * 配置原子层的行为，优化性能和资源使用。
  */
 typedef struct {
-    /** @brief 是否启用无锁模式，true时使用CAS操作，false时使用互斥锁 */
+
     bool lock_free_mode;
 
-    /** @brief 每个线程的本地缓冲大小（字节） */
+
     size_t thread_local_buffer_size;
 
-    /** @brief 全局环形队列大小（记录数） */
+
     size_t ring_buffer_capacity;
 
-    /** @brief 批量提交阈值，达到此数量时触发批量提交 */
+
     size_t batch_commit_threshold;
 
-    /** @brief 最大批处理大小，单次批量提交的最大记录数 */
+
     size_t max_batch_size;
 
-    /** @brief 异步刷新线程的休眠间隔（毫秒） */
+
     uint32_t flush_thread_sleep_ms;
 
-    /** @brief 是否启用内存池，减少动态内存分配 */
+
     bool enable_memory_pool;
 
-    /** @brief 内存池初始大小（字节） */
+
     size_t memory_pool_initial_size;
 
-    /** @brief 内存池块大小（字节） */
+
     size_t memory_pool_block_size;
 } atomic_logging_config_t;
 
-/* ==================== 原子层数据结构 ==================== */
 
 /**
  * @brief 原子日志记录节点
@@ -86,16 +84,16 @@ typedef struct {
  * 设计为缓存行对齐（通常64字节），避免伪共享。
  */
 typedef struct _AtomicLogRecordNode {
-    /** @brief 日志记录数据 */
+
     log_record_t record;
 
-    /** @brief 节点状态：0=空闲，1=已写入待处理，2=已处理可回收 */
+
     _Atomic uint32_t state;
 
-    /** @brief 序列号，用于确保顺序一致性 */
+
     _Atomic uint64_t sequence;
 
-    /** @brief 填充字节，确保缓存行对齐 */
+
     uint8_t _padding[1];
 } AtomicLogRecordNode;
 
@@ -106,19 +104,19 @@ typedef struct _AtomicLogRecordNode {
  * 生产者可以并发写入，消费者顺序读取。
  */
 typedef struct {
-    /** @brief 节点数组 */
+
     AtomicLogRecordNode *nodes;
 
-    /** @brief 队列容量（节点数） */
+
     size_t capacity;
 
-    /** @brief 生产者头指针（写入位置） */
+
     _Atomic size_t head;
 
-    /** @brief 消费者尾指针（读取位置） */
+
     _Atomic size_t tail;
 
-    /** @brief 屏障指针，用于内存顺序控制 */
+
     _Atomic size_t barrier;
 } LockFreeRingBuffer;
 
@@ -129,20 +127,19 @@ typedef struct {
  * 当本地缓冲满时，批量提交到全局队列。
  */
 typedef struct {
-    /** @brief 缓冲数组 */
+
     log_record_t *buffer;
 
-    /** @brief 缓冲容量 */
+
     size_t capacity;
 
-    /** @brief 当前写入位置 */
+
     size_t position;
 
-    /** @brief 线程ID */
+
     uint64_t thread_id;
 } ThreadLocalBuffer;
 
-/* ==================== 原子层API函数 ==================== */
 
 /**
  * @brief 初始化原子层
@@ -213,7 +210,6 @@ int atomic_logging_acquire(log_record_t *record, int timeout_ms);
  */
 int atomic_logging_acquire_batch(log_record_t *records, size_t max_count, int timeout_ms);
 
-/* ==================== 性能监控结构体 ==================== */
 
 /**
  * @brief 原子层统计信息
@@ -282,7 +278,6 @@ int atomic_logging_flush(void);
  */
 void atomic_logging_cleanup(void);
 
-/* ==================== 内部使用的原子操作包装 ==================== */
 
 /**
  * @brief 内存屏障：写屏障
@@ -317,7 +312,7 @@ static inline void atomic_read_barrier(void)
  * @return true 操作成功，false 操作失败
  */
 static inline bool airy_atomic_cas_weak(volatile uint64_t *ptr, uint64_t *expected,
-                                           uint64_t desired)
+                                        uint64_t desired)
 {
     return atomic_compare_exchange_strong_64((volatile _Atomic int64_t *)ptr, (int64_t *)expected,
                                              (int64_t)desired, memory_order_acq_rel,

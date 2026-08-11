@@ -1,9 +1,9 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file safe_string_utils.c
  * @brief 安全字符串处理工具实现
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
- * SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
  *
  * @details
  * SP05 解耦：本文件从 daemons/common/src/ 迁移至 commons/utils/string/src/，
@@ -14,9 +14,8 @@
 
 #include "safe_string_utils.h"
 
-#include "error.h"         /* AIRY_ERROR / AIRY_ERROR_NULL */
+#include "error.h" /* AIRY_ERROR / AIRY_ERROR_NULL */
 #include "airy_memory.h" /* AIRY_MALLOC / AIRY_CALLOC / AIRY_REALLOC / AIRY_FREE */
-
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +67,7 @@ int safe_strcat(char *dest, const char *src, size_t dest_size)
 int safe_sprintf(char *dest, size_t dest_size, const char *fmt, ...)
 {
     if (!dest || !fmt || dest_size == 0) {
-        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_strcat: null parameter");
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "safe_sprintf: null parameter");
     }
 
     va_list args;
@@ -80,7 +79,7 @@ int safe_sprintf(char *dest, size_t dest_size, const char *fmt, ...)
 
     if (written < 0 || (size_t)written >= dest_size) {
         dest[dest_size - 1] = '\0';
-        AIRY_ERROR(AIRY_ERR_PARSE_ERROR, "safe_strcat: buffer overflow");
+        AIRY_ERROR(AIRY_ERR_PARSE_ERROR, "safe_sprintf: buffer overflow");
     }
 
     return written;
@@ -151,8 +150,6 @@ void secure_clear(void *buf, size_t size)
         p[i] = 0;
 }
 
-/* ==================== 输入验证函数（规范 3.2.2） ==================== */
-
 bool validate_string_input(const char *str, size_t max_len)
 {
     if (!str)
@@ -197,13 +194,11 @@ bool is_valid_ascii(const char *str, size_t len)
     return true;
 }
 
-/* ==================== 安全内存操作 ==================== */
-
 void *safe_malloc(size_t size, const char *purpose)
 {
-    /* purpose用于调试追踪（非桩） */
-    if (purpose && !purpose[0]) { /* 目的字符串有效性 */
-    }
+    /* purpose 保留用于调试追踪（非桩）：当前实现未消费该参数，显式标记避免
+     * 未使用参数告警，同时保留调用点语义（后续追踪模块可消费）。 */
+    (void)purpose;
     if (size == 0) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -213,9 +208,7 @@ void *safe_malloc(size_t size, const char *purpose)
 
 void *safe_calloc(size_t count, size_t size, const char *purpose)
 {
-    /* purpose用于调试追踪（非桩） */
-    if (purpose && !purpose[0]) { /* 目的字符串有效性 */
-    }
+    (void)purpose;
     if (count == 0 || size == 0) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -228,9 +221,7 @@ void *safe_calloc(size_t count, size_t size, const char *purpose)
 
 void *safe_realloc(void *ptr, size_t new_size, const char *purpose)
 {
-    /* purpose用于调试追踪（非桩） */
-    if (purpose && !purpose[0]) { /* 目的字符串有效性 */
-    }
+    (void)purpose;
     if (new_size == 0) {
         AIRY_FREE(ptr);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");

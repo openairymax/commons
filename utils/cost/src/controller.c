@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
 /**
  * @file controller.c
  * @brief 预算控制器实现（跨平台）
- * @copyright (c) 2026 SPHARX. All Rights Reserved.
  *
  * @details
  * 本模块实现成本预算控制功能：
- * - 支持周期性能耗统?
- * - 提供预算预警和限?
- * - 线程安全的预算操?
+ * - 支持周期性能耗统计
+ * - 提供预算预警和限制
+ * - 线程安全的预算操作
  */
 
 #include "atomic_compat.h"
@@ -23,13 +23,10 @@
 #include <time.h>
 #include "error.h"
 
-/* 平台特定头文件 */
 #ifdef _WIN32
 #else
 #include <unistd.h>
 #endif
-
-
 
 /**
  * @brief 跨平台互斥锁类型
@@ -90,19 +87,19 @@ static void budget_ctrl_mutex_unlock(budget_ctrl_mutex_t *mutex)
 }
 
 /**
- * @brief 预算控制器内部结?
+ * @brief 预算控制器内部结构
  */
 struct airy_budget_controller {
-    double max_cost_usd;           /**< 最大成本预算（美元?*/
-    double warning_threshold;      /**< 警告阈值（百分比） */
-    atomic_double consumed_cost;   /**< 已消耗成?*/
-    atomic_double period_cost;     /**< 周期内消?*/
-    atomic_uint64_t request_count; /**< 请求计数 */
-    atomic_uint64_t denied_count;  /**< 拒绝计数 */
-    budget_ctrl_mutex_t mutex;     /**< 互斥?*/
-    time_t period_start;           /**< 周期开始时?*/
-    uint32_t period_seconds;       /**< 周期时长（秒?*/
-    double average_cost;           /**< 平均成本 */
+    double max_cost_usd;
+    double warning_threshold;
+    atomic_double consumed_cost;
+    atomic_double period_cost;
+    atomic_uint64_t request_count;
+    atomic_uint64_t denied_count;
+    budget_ctrl_mutex_t mutex;
+    time_t period_start;
+    uint32_t period_seconds;
+    double average_cost;
 };
 
 /**
@@ -141,7 +138,7 @@ static int check_and_reset_period(airy_budget_controller_t *controller)
 }
 
 airy_budget_controller_t *airy_budget_controller_create(double max_cost_usd,
-                                                              uint32_t period_seconds)
+                                                        uint32_t period_seconds)
 {
     if (max_cost_usd <= 0) {
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
@@ -235,7 +232,7 @@ int airy_budget_controller_consume(airy_budget_controller_t *controller, double 
     return 0;
 }
 
-double airy_budget_controller_remaining(airy_budget_controller_t *controller)
+double airy_budget_ctrl_remaining(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -249,7 +246,7 @@ double airy_budget_controller_remaining(airy_budget_controller_t *controller)
     return remaining > 0 ? remaining : 0.0;
 }
 
-double airy_budget_controller_consumed(airy_budget_controller_t *controller)
+double airy_budget_ctrl_consumed(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -258,7 +255,7 @@ double airy_budget_controller_consumed(airy_budget_controller_t *controller)
     return atomic_load(&controller->consumed_cost);
 }
 
-double airy_budget_controller_period_consumed(airy_budget_controller_t *controller)
+double airy_budget_ctrl_period_cons(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0.0;
@@ -269,7 +266,7 @@ double airy_budget_controller_period_consumed(airy_budget_controller_t *controll
     return atomic_load(&controller->period_cost);
 }
 
-uint64_t airy_budget_controller_requests(airy_budget_controller_t *controller)
+uint64_t airy_budget_ctrl_requests(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return 0;
@@ -287,7 +284,7 @@ uint64_t airy_budget_controller_denied(airy_budget_controller_t *controller)
     return atomic_load(&controller->denied_count);
 }
 
-int airy_budget_controller_set_warning(airy_budget_controller_t *controller, double threshold)
+int airy_budget_ctrl_set_warning(airy_budget_controller_t *controller, double threshold)
 {
     if (!controller || threshold <= 0 || threshold > 1.0) {
         return AIRY_EINVAL;
@@ -300,7 +297,7 @@ int airy_budget_controller_set_warning(airy_budget_controller_t *controller, dou
     return 0;
 }
 
-int airy_budget_controller_reset_period(airy_budget_controller_t *controller)
+int airy_budget_ctrl_reset_period(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return AIRY_EINVAL;
@@ -327,7 +324,7 @@ double airy_budget_controller_average(airy_budget_controller_t *controller)
     return avg;
 }
 
-int airy_budget_controller_get_status(airy_budget_controller_t *controller)
+int airy_budget_ctrl_get_status(airy_budget_controller_t *controller)
 {
     if (!controller) {
         return AIRY_EINVAL;

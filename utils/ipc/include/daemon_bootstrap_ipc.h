@@ -1,5 +1,6 @@
-// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
-// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
+/* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
+
 /**
  * @file daemon_bootstrap_ipc.h
  * @brief P1.8 C-L09: daemon IPC Bus 一键引导模块（commons 权威版本）
@@ -28,7 +29,7 @@
  *
  *   // ... daemon 主循环 ...
  *
- *   // 3. 关闭
+ *
  *   daemon_bootstrap_ipc_stop(bipc);
  * @endcode
  *
@@ -48,11 +49,9 @@
 extern "C" {
 #endif
 
-/* ==================== 引导句柄 ==================== */
 
 typedef struct daemon_bootstrap_ipc_s daemon_bootstrap_ipc_t;
 
-/* ==================== 生命周期 ==================== */
 
 /**
  * @brief 一键引导：初始化 IPC Bus + 注册通道 + 注册端点
@@ -65,9 +64,8 @@ typedef struct daemon_bootstrap_ipc_s daemon_bootstrap_ipc_t;
  * @return 引导句柄，失败返回 NULL
  */
 daemon_bootstrap_ipc_t *daemon_bootstrap_ipc_start(const char *daemon_name,
-                                                    const char *channel_name,
-                                                    const char *host, uint16_t port,
-                                                    ipc_bus_proto_t protocol);
+                                                   const char *channel_name, const char *host,
+                                                   uint16_t port, ipc_bus_proto_t protocol);
 
 /**
  * @brief 一键引导（Unix Socket 版本）
@@ -79,9 +77,9 @@ daemon_bootstrap_ipc_t *daemon_bootstrap_ipc_start(const char *daemon_name,
  * @return 引导句柄，失败返回 NULL
  */
 daemon_bootstrap_ipc_t *daemon_bootstrap_ipc_start_unix(const char *daemon_name,
-                                                         const char *channel_name,
-                                                         const char *socket_path,
-                                                         ipc_bus_proto_t protocol);
+                                                        const char *channel_name,
+                                                        const char *socket_path,
+                                                        ipc_bus_proto_t protocol);
 
 /**
  * @brief 停止 IPC Bus 引导
@@ -90,7 +88,6 @@ daemon_bootstrap_ipc_t *daemon_bootstrap_ipc_start_unix(const char *daemon_name,
  */
 void daemon_bootstrap_ipc_stop(daemon_bootstrap_ipc_t *bipc);
 
-/* ==================== 消息处理器 ==================== */
 
 /**
  * @brief 注册自定义消息处理器
@@ -101,10 +98,8 @@ void daemon_bootstrap_ipc_stop(daemon_bootstrap_ipc_t *bipc);
  * @return 0 成功，非0 失败
  */
 int daemon_bootstrap_ipc_register_handler(daemon_bootstrap_ipc_t *bipc,
-                                           ipc_bus_message_handler_t handler,
-                                           void *user_data);
+                                          ipc_bus_message_handler_t handler, void *user_data);
 
-/* ==================== 消息发送 ==================== */
 
 /**
  * @brief 便捷发送方法（自动路由）
@@ -115,11 +110,9 @@ int daemon_bootstrap_ipc_register_handler(daemon_bootstrap_ipc_t *bipc,
  * @param payload_size   负载大小
  * @return 0 成功，非0 失败
  */
-int daemon_bootstrap_ipc_send(daemon_bootstrap_ipc_t *bipc,
-                               const char *target_service,
-                               const void *payload, size_t payload_size);
+int daemon_bootstrap_ipc_send(daemon_bootstrap_ipc_t *bipc, const char *target_service,
+                              const void *payload, size_t payload_size);
 
-/* ==================== 查询 ==================== */
 
 /**
  * @brief 获取底层 ipc_bus_helper 句柄
