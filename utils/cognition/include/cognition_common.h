@@ -3,11 +3,10 @@
 
 /**
  * @file cognition_common.h
- * @brief 认知模块通用功能定义
+ * @brief Common cognition-module definitions.
  *
- * 提供认知模块共享的功能，包括计划、调度、协调等
- * 减少认知模块之间的代码重复
- *
+ * Provides functionality shared by the cognition modules -- planning,
+ * dispatch, coordination, etc. -- reducing code duplication between them.
  */
 
 #ifndef COGNITION_COMMON_H
@@ -22,7 +21,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Agent信息结构
+ * @brief Agent information structure
  */
 typedef struct {
     char *agent_id; /**< Agent ID */
@@ -35,7 +34,7 @@ typedef struct {
 } agent_info_t;
 
 /**
- * @brief 任务信息结构
+ * @brief Task information structure
  */
 typedef struct {
     char *task_id;
@@ -46,7 +45,7 @@ typedef struct {
 } task_info_t;
 
 /**
- * @brief 计划结果结构
+ * @brief Plan result structure
  */
 typedef struct {
     bool success;
@@ -57,7 +56,7 @@ typedef struct {
 } plan_result_t;
 
 /**
- * @brief 调度结果结构
+ * @brief Dispatch result structure
  */
 typedef struct {
     bool success;
@@ -68,7 +67,7 @@ typedef struct {
 } dispatch_result_t;
 
 /**
- * @brief 协调结果结构
+ * @brief Coordination result structure
  */
 typedef struct {
     bool success;
@@ -79,131 +78,131 @@ typedef struct {
 } coordination_result_t;
 
 /**
- * @brief 初始化Agent信息
- * @param agent Agent信息指针
+ * @brief Initialize agent information
+ * @param agent Agent information pointer
  * @param agent_id Agent ID
- * @return 0 成功，非0 失败
+ * @return 0 on success, non-zero on failure
  */
 int agent_info_init(agent_info_t *agent, const char *agent_id);
 
 /**
- * @brief 清理Agent信息
- * @param agent Agent信息指针
+ * @brief Clean up agent information
+ * @param agent Agent information pointer
  */
 void agent_info_cleanup(agent_info_t *agent);
 
 /**
- * @brief 更新Agent性能统计
- * @param agent Agent信息指针
- * @param success 是否成功
- * @param latency 延迟时间
+ * @brief Update agent performance statistics
+ * @param agent Agent information pointer
+ * @param success Whether successful
+ * @param latency Latency
  */
 void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency);
 
 /**
- * @brief 计算Agent权重
- * @param agent Agent信息指针
- * @return 计算后的权重
+ * @brief Calculate the agent weight
+ * @param agent Agent information pointer
+ * @return Calculated weight
  */
 double agent_info_calculate_weight(const agent_info_t *agent);
 
 /**
- * @brief 初始化任务信息
- * @param task 任务信息指针
- * @param task_id 任务ID
- * @param task_type 任务类型
- * @param task_content 任务内容
- * @return 0 成功，非0 失败
+ * @brief Initialize task information
+ * @param task Task information pointer
+ * @param task_id Task ID
+ * @param task_type Task type
+ * @param task_content Task content
+ * @return 0 on success, non-zero on failure
  */
 int task_info_init(task_info_t *task, const char *task_id, const char *task_type,
                    const char *task_content);
 
 /**
- * @brief 清理任务信息
- * @param task 任务信息指针
+ * @brief Clean up task information
+ * @param task Task information pointer
  */
 void task_info_cleanup(task_info_t *task);
 
 /**
- * @brief 初始化计划结果
- * @param result 计划结果指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a plan result
+ * @param result Plan result pointer
+ * @return 0 on success, non-zero on failure
  */
 int plan_result_init(plan_result_t *result);
 
 /**
- * @brief 清理计划结果
- * @param result 计划结果指针
+ * @brief Clean up a plan result
+ * @param result Plan result pointer
  */
 void plan_result_cleanup(plan_result_t *result);
 
 /**
- * @brief 初始化调度结果
- * @param result 调度结果指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a dispatch result
+ * @param result Dispatch result pointer
+ * @return 0 on success, non-zero on failure
  */
 int dispatch_result_init(dispatch_result_t *result);
 
 /**
- * @brief 清理调度结果
- * @param result 调度结果指针
+ * @brief Clean up a dispatch result
+ * @param result Dispatch result pointer
  */
 void dispatch_result_cleanup(dispatch_result_t *result);
 
 /**
- * @brief 初始化协调结果
- * @param result 协调结果指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a coordination result
+ * @param result Coordination result pointer
+ * @return 0 on success, non-zero on failure
  */
 int coordination_result_init(coordination_result_t *result);
 
 /**
- * @brief 清理协调结果
- * @param result 协调结果指针
+ * @brief Clean up a coordination result
+ * @param result Coordination result pointer
  */
 void coordination_result_cleanup(coordination_result_t *result);
 
 /**
- * @brief 选择最佳Agent
- * @param agents Agent数组
- * @param agent_count Agent数量
- * @param task 任务信息
- * @param result 调度结果
- * @return 0 成功，非0 失败
+ * @brief Select the best agent
+ * @param agents Agent array
+ * @param agent_count Number of agents
+ * @param task Task information
+ * @param result Dispatch result
+ * @return 0 on success, non-zero on failure
  */
 int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const task_info_t *task,
                                 dispatch_result_t *result);
 
 /**
- * @brief 生成计划
- * @param task 任务信息
- * @param result 计划结果
- * @return 0 成功，非0 失败
+ * @brief Generate a plan
+ * @param task Task information
+ * @param result Plan result
+ * @return 0 on success, non-zero on failure
  */
 int cognition_generate_plan(const task_info_t *task, plan_result_t *result);
 
 /**
- * @brief 协调多个Agent的结果
- * @param agent_results 多个Agent的结果
- * @param result_count 结果数量
- * @param result 协调结果
- * @return 0 成功，非0 失败
+ * @brief Coordinate the results of multiple agents
+ * @param agent_results Results from multiple agents
+ * @param result_count Number of results
+ * @param result Coordination result
+ * @return 0 on success, non-zero on failure
  */
 int cognition_coordinate_results(const char **agent_results, size_t result_count,
                                  coordination_result_t *result);
 
 /**
- * @brief 计算任务优先级
- * @param task 任务信息
- * @return 优先级值
+ * @brief Calculate the task priority
+ * @param task Task information
+ * @return Priority value
  */
 uint64_t cognition_calculate_task_priority(const task_info_t *task);
 
 /**
- * @brief 评估计划质量
- * @param plan 计划内容
- * @param task 任务信息
- * @return 质量分数（0-100）
+ * @brief Evaluate plan quality
+ * @param plan Plan content
+ * @param task Task information
+ * @return Quality score (0-100)
  */
 int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task);
 

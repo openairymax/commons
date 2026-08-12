@@ -472,6 +472,18 @@ int64_t airy_tspan_get_end_time_us(const airy_trace_span_t *span)
     return span ? span->end_time : 0;
 }
 
+/* 历史命名差异：头文件以 airy_trace_span_get_* 声明（telemetry.c 等按此调用），
+ * 实现长期以 airy_tspan_get_* 定义。此处补全长名定义，保证链接与 API 一致。 */
+int64_t airy_trace_span_get_start_time_us(const airy_trace_span_t *span)
+{
+    return airy_tspan_get_start_time_us(span);
+}
+
+int64_t airy_trace_span_get_end_time_us(const airy_trace_span_t *span)
+{
+    return airy_tspan_get_end_time_us(span);
+}
+
 int airy_trace_span_get_status(const airy_trace_span_t *span)
 {
     return span ? atomic_load(&span->status) : 0;

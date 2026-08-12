@@ -3,34 +3,37 @@
 
 /**
  * @file service_discovery_helper.h
- * @brief C-L08: ServiceDiscovery → daemon 自动注册便捷层（commons 权威版本）
+ * @brief C-L08: ServiceDiscovery -> daemon auto-registration convenience
+ *        layer (authoritative commons version).
  *
- * P0.17 阶段 4：从 daemons/common/include/ 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 4: migrated from daemons/common/include/ into commons,
+ * removing the atoms->daemons compile-time reverse dependency (IRON-6).
+ * The daemons copy is kept as a re-exporting compatibility header.
  *
- * 每个 daemon 启动时调用此模块的便捷 API 实现自动注册和心跳。
- * 基于 service_discovery.h 的核心 API 封装，简化 daemon 集成。
+ * Each daemon calls the convenience APIs of this module at startup for
+ * automatic registration and heartbeat. Built on the core API of
+ * service_discovery.h to simplify daemon integration.
  *
- * 使用方式（典型 daemon main()）：
+ * Typical usage (in a daemon main()):
  * @code
- *   // 1. 初始化服务发现
+ *   // 1. Initialize service discovery
  *   sd_helper_t *sdh = sd_helper_init(NULL);
  *
- *   // 2. 自动注册
+ *   // 2. Auto-register
  *   sd_helper_register(sdh, "llm_d", "llm", "127.0.0.1", 8080,
  *                      "ai,core", 10000);
  *
- *   // 3. 启动心跳线程
+ *   // 3. Start the heartbeat thread
  *   sd_helper_start_heartbeat(sdh);
  *
- *   // ... daemon 主循环 ...
+ *   // ... daemon main loop ...
  *
- *   // 4. 关闭时自动注销
+ *   // 4. Auto-deregister on shutdown
  *   sd_helper_shutdown(sdh);
  * @endcode
  *
  * @see service_discovery.h
- * @see P1.7 C-L08 连接线
+ * @see P1.7 C-L08 wiring
  */
 
 #ifndef AIRY_RT_SERVICE_DISCOVERY_HELPER_H
@@ -47,163 +50,170 @@ extern "C" {
 
 
 /**
- * @brief 服务发现助手句柄
+ * @brief Service discovery helper handle
  *
- * 封装了 service_discovery 实例、心跳线程和注册信息。
+ * Encapsulates a service_discovery instance, the heartbeat thread, and
+ * registration information.
  */
 typedef struct sd_helper_s sd_helper_t;
 
 
 /**
- * @brief 初始化服务发现助手
+ * @brief Initialize the service discovery helper
  *
- * 创建 service_discovery 实例并启动后台管理。
+ * Creates a service_discovery instance and starts background management.
  *
- * @param config 服务发现配置（NULL 使用默认配置）
- * @return 助手句柄，失败返回 NULL
+ * @param config Service discovery configuration (NULL for defaults)
+ * @return Helper handle, NULL on failure
  */
 sd_helper_t *sd_helper_init(const sd_config_t *config);
 
 /**
- * @brief 关闭服务发现助手
+ * @brief Shut down the service discovery helper
  *
- * 自动注销已注册的服务，停止心跳，释放资源。
+ * Automatically deregisters registered services, stops the heartbeat, and
+ * releases resources.
  *
- * @param sdh 助手句柄
+ * @param sdh Helper handle
  */
 void sd_helper_shutdown(sd_helper_t *sdh);
 
 
 /**
- * @brief 注册当前 daemon 到服务发现
+ * @brief Register the current daemon with service discovery
  *
- * 自动生成 instance_id（基于 host:port），填充 sd_instance_t 并调用 sd_register。
+ * Auto-generates the instance_id (based on host:port), fills sd_instance_t,
+ * and calls sd_register.
  *
- * @param sdh      助手句柄
- * @param name     服务名称（如 "llm_d"）
- * @param type     服务类型（如 "llm"）
- * @param host     监听地址（如 "127.0.0.1"）
- * @param port     监听端口（如 8080）
- * @param tags     标签（逗号分隔，如 "ai,core"，NULL 表示无标签）
- * @param ttl_ms   心跳 TTL（毫秒），0 使用默认值 30000
- * @return 0 成功，非0 失败
+ * @param sdh    Helper handle
+ * @param name   Service name (e.g. "llm_d")
+ * @param type   Service type (e.g. "llm")
+ * @param host   Listen address (e.g. "127.0.0.1")
+ * @param port   Listen port (e.g. 8080)
+ * @param tags   Tags (comma-separated, e.g. "ai,core"; NULL for none)
+ * @param ttl_ms Heartbeat TTL (ms), 0 for the default 30000
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_register(sd_helper_t *sdh, const char *name, const char *type, const char *host,
                        uint16_t port, const char *tags, uint32_t ttl_ms);
 
 /**
- * @brief 注册当前 daemon 到服务发现（Unix Socket 版本）
+ * @brief Register the current daemon with service discovery (Unix socket
+ *        version)
  *
- * @param sdh         助手句柄
- * @param name        服务名称
- * @param type        服务类型
- * @param socket_path Unix socket 路径
- * @param tags        标签
- * @param ttl_ms      心跳 TTL
- * @return 0 成功，非0 失败
+ * @param sdh         Helper handle
+ * @param name        Service name
+ * @param type        Service type
+ * @param socket_path Unix socket path
+ * @param tags        Tags
+ * @param ttl_ms      Heartbeat TTL
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_register_unix(sd_helper_t *sdh, const char *name, const char *type,
                             const char *socket_path, const char *tags, uint32_t ttl_ms);
 
 
 /**
- * @brief 启动后台心跳线程
+ * @brief Start the background heartbeat thread
  *
- * 按配置的 heartbeat_interval_ms 定期发送心跳。
- * 心跳线程在 sd_helper_shutdown 时自动停止。
+ * Sends heartbeats periodically at the configured heartbeat_interval_ms.
+ * The heartbeat thread stops automatically at sd_helper_shutdown.
  *
- * @param sdh 助手句柄
- * @return 0 成功，非0 失败
+ * @param sdh Helper handle
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_start_heartbeat(sd_helper_t *sdh);
 
 /**
- * @brief 停止心跳线程
+ * @brief Stop the heartbeat thread
  *
- * @param sdh 助手句柄
+ * @param sdh Helper handle
  */
 void sd_helper_stop_heartbeat(sd_helper_t *sdh);
 
 /**
- * @brief 手动发送一次心跳
+ * @brief Manually send one heartbeat
  *
- * @param sdh 助手句柄
- * @return 0 成功，非0 失败
+ * @param sdh Helper handle
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_send_heartbeat(sd_helper_t *sdh);
 
 
 /**
- * @brief 发现可用服务实例
+ * @brief Discover available service instances
  *
- * 便捷封装 sd_discover，返回可用实例列表。
+ * Convenience wrapper around sd_discover returning the list of available
+ * instances.
  *
- * @param sdh          助手句柄
- * @param service_name 服务名称
- * @param instances    输出实例数组
- * @param max_count    最大数量
- * @param found_count  实际找到数量
- * @return 0 成功，非0 失败
+ * @param sdh          Helper handle
+ * @param service_name Service name
+ * @param instances    Output instance array
+ * @param max_count    Maximum count
+ * @param found_count  Actual count found
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_find(sd_helper_t *sdh, const char *service_name, sd_instance_t *instances,
                    uint32_t max_count, uint32_t *found_count);
 
 
 /**
- * @brief 选择最优服务实例
+ * @brief Select the best service instance
  *
- * 便捷封装 sd_select_instance，使用默认负载均衡策略。
+ * Convenience wrapper around sd_select_instance using the default
+ * load-balancing strategy.
  *
- * @param sdh          助手句柄
- * @param service_name 服务名称
- * @param instance     输出的选中实例
- * @return 0 成功，非0 失败
+ * @param sdh          Helper handle
+ * @param service_name Service name
+ * @param instance     Output of the selected instance
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_select(sd_helper_t *sdh, const char *service_name, sd_instance_t *instance);
 
 /**
- * @brief 选择最优服务实例（指定策略）
+ * @brief Select the best service instance (with a strategy)
  *
- * @param sdh          助手句柄
- * @param service_name 服务名称
- * @param strategy     负载均衡策略
- * @param instance     输出的选中实例
- * @return 0 成功，非0 失败
+ * @param sdh          Helper handle
+ * @param service_name Service name
+ * @param strategy     Load-balancing strategy
+ * @param instance     Output of the selected instance
+ * @return 0 on success, non-zero on failure
  */
 int sd_helper_select_with_strategy(sd_helper_t *sdh, const char *service_name,
                                    sd_lb_strategy_t strategy, sd_instance_t *instance);
 
 
 /**
- * @brief 获取底层 service_discovery 句柄
+ * @brief Get the underlying service_discovery handle
  *
- * 用于需要直接调用 service_discovery API 的场景。
+ * For scenarios needing to call the service_discovery API directly.
  *
- * @param sdh 助手句柄
- * @return service_discovery 句柄
+ * @param sdh Helper handle
+ * @return service_discovery handle
  */
 service_discovery_t sd_helper_get_sd(sd_helper_t *sdh);
 
 /**
- * @brief 检查服务发现是否运行中
+ * @brief Check whether service discovery is running
  *
- * @param sdh 助手句柄
- * @return true 运行中
+ * @param sdh Helper handle
+ * @return true if running
  */
 bool sd_helper_is_running(sd_helper_t *sdh);
 
 /**
- * @brief 获取已注册服务数量
+ * @brief Get the number of registered services
  *
- * @param sdh 助手句柄
- * @return 服务数量
+ * @param sdh Helper handle
+ * @return Number of services
  */
 uint32_t sd_helper_service_count(sd_helper_t *sdh);
 
 /**
- * @brief C-L08: 输出服务发现统计摘要（单行格式，适合周期性日志）
+ * @brief C-L08: Output a service discovery statistics summary (single-line
+ *        format, suitable for periodic logging)
  *
- * @param sdh 助手句柄
+ * @param sdh Helper handle
  */
 void sd_helper_dump_stats(sd_helper_t *sdh);
 

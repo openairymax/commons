@@ -4,17 +4,15 @@
 /*
  *
  * @file airy_string.h
- * @brief 统一字符串处理模块 - 核心层API
+ * @brief Unified string handling module: core-layer API.
  *
- * 提供安全、高效、统一的字符串处理接口，避免缓冲区溢出等常见安全问题。
- * 本模块旨在消除项目中分散的字符串处理代码，提供一致的字符串操作策略。
+ * Provides safe, efficient, and unified string handling interfaces that
+ * avoid common issues such as buffer overflows. The module aims to
+ * eliminate scattered string-handling code across the project and provide
+ * a consistent string operation policy.
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-03-30
- * @version 2.0
- *
- * @note 线程安全：所有公共接口均为线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-1 安全内生原则
+ * @note Thread safety: all public interfaces are thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md E-1 security-by-design principle
  */
 
 #ifndef AIRY_RT_STRING_H
@@ -37,12 +35,12 @@ extern "C" {
 #endif
 
 /**
- * @defgroup string_api 字符串处理API
+ * @defgroup string_api String handling API
  * @{
  */
 
 /**
- * @brief 字符串编码类型
+ * @brief String encoding types
  */
 typedef enum {
     STRING_ENCODING_ASCII,
@@ -56,7 +54,7 @@ typedef enum {
 } string_encoding_t;
 
 /**
- * @brief 字符串比较选项
+ * @brief String comparison options
  */
 typedef enum {
     STRING_COMPARE_CASE_SENSITIVE = 0,
@@ -66,7 +64,7 @@ typedef enum {
 } string_compare_option_t;
 
 /**
- * @brief 字符串分割选项
+ * @brief String split options
  */
 typedef enum {
     STRING_SPLIT_KEEP_EMPTY = 1,
@@ -75,7 +73,7 @@ typedef enum {
 } string_split_option_t;
 
 /**
- * @brief 字符串缓冲区结构
+ * @brief String buffer structure
  */
 typedef struct {
     char *data;
@@ -86,7 +84,7 @@ typedef struct {
 } string_buffer_t;
 
 /**
- * @brief 字符串视图结构（不拥有数据）
+ * @brief String view structure (does not own the data)
  */
 typedef struct {
     const char *data;
@@ -95,7 +93,7 @@ typedef struct {
 } string_view_t;
 
 /**
- * @brief 字符串列表结构
+ * @brief String list structure
  */
 typedef struct {
     string_view_t *items;
@@ -104,7 +102,7 @@ typedef struct {
 } string_list_t;
 
 /**
- * @brief 字符串格式化选项
+ * @brief String formatting options
  */
 typedef struct {
     size_t initial_buffer_size;
@@ -115,535 +113,539 @@ typedef struct {
 } string_format_options_t;
 
 /**
- * @brief 安全复制字符串到缓冲区
+ * @brief Safely copy a string into a buffer
  *
- * @param[out] dest 目标缓冲区
- * @param[in] src 源字符串
- * @param[in] dest_size 目标缓冲区大小（字节）
- * @return 成功返回复制的字符数（不包括空字符），失败返回-1
+ * @param[out] dest Destination buffer
+ * @param[in] src Source string
+ * @param[in] dest_size Destination buffer size (bytes)
+ * @return Number of characters copied (excluding the NUL) on success,
+ *         -1 on failure
  *
- * @note 保证目标缓冲区以空字符结尾
- * @note 如果目标缓冲区大小不足，会复制尽可能多的字符并返回-1
+ * @note Guarantees NUL termination of the destination buffer
+ * @note If the destination buffer is too small, copies as many characters
+ *       as possible and returns -1
  */
 int string_copy(char *dest, const char *src, size_t dest_size);
 
 /**
- * @brief 安全复制指定长度的字符串到缓冲区
+ * @brief Safely copy a bounded-length string into a buffer
  *
- * @param[out] dest 目标缓冲区
- * @param[in] src 源字符串
- * @param[in] count 要复制的最大字符数
- * @param[in] dest_size 目标缓冲区大小（字节）
- * @return 成功返回复制的字符数（不包括空字符），失败返回-1
+ * @param[out] dest Destination buffer
+ * @param[in] src Source string
+ * @param[in] count Maximum number of characters to copy
+ * @param[in] dest_size Destination buffer size (bytes)
+ * @return Number of characters copied (excluding the NUL) on success,
+ *         -1 on failure
  */
 int string_copy_n(char *dest, const char *src, size_t count, size_t dest_size);
 
 /**
- * @brief 安全连接字符串到缓冲区
+ * @brief Safely concatenate a string onto a buffer
  *
- * @param[inout] dest 目标缓冲区（必须为空字符结尾）
- * @param[in] src 源字符串
- * @param[in] dest_size 目标缓冲区总大小（字节）
- * @return 成功返回连接后的总长度，失败返回-1
+ * @param[inout] dest Destination buffer (must be NUL-terminated)
+ * @param[in] src Source string
+ * @param[in] dest_size Total destination buffer size (bytes)
+ * @return Total length after concatenation on success, -1 on failure
  */
 int string_concat(char *dest, const char *src, size_t dest_size);
 
 /**
- * @brief 安全连接指定长度的字符串到缓冲区
+ * @brief Safely concatenate a bounded-length string onto a buffer
  *
- * @param[inout] dest 目标缓冲区（必须为空字符结尾）
- * @param[in] src 源字符串
- * @param[in] count 要连接的最大字符数
- * @param[in] dest_size 目标缓冲区总大小（字节）
- * @return 成功返回连接后的总长度，失败返回-1
+ * @param[inout] dest Destination buffer (must be NUL-terminated)
+ * @param[in] src Source string
+ * @param[in] count Maximum number of characters to concatenate
+ * @param[in] dest_size Total destination buffer size (bytes)
+ * @return Total length after concatenation on success, -1 on failure
  */
 int string_concat_n(char *dest, const char *src, size_t count, size_t dest_size);
 
 /**
- * @brief 比较两个字符串
+ * @brief Compare two strings
  *
- * @param[in] str1 第一个字符串
- * @param[in] str2 第二个字符串
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 相等返回0，str1 < str2返回负数，str1 > str2返回正数
+ * @param[in] str1 First string
+ * @param[in] str2 Second string
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return 0 if equal, negative if str1 < str2, positive if str1 > str2
  */
 int string_compare(const char *str1, const char *str2, int options);
 
 /**
- * @brief 比较两个字符串（指定长度）
+ * @brief Compare two strings (bounded length)
  *
- * @param[in] str1 第一个字符串
- * @param[in] str2 第二个字符串
- * @param[in] len 要比较的最大字符数
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 相等返回0，str1 < str2返回负数，str1 > str2返回正数
+ * @param[in] str1 First string
+ * @param[in] str2 Second string
+ * @param[in] len Maximum number of characters to compare
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return 0 if equal, negative if str1 < str2, positive if str1 > str2
  */
 int string_compare_n(const char *str1, const char *str2, size_t len, int options);
 
 /**
- * @brief 计算字符串长度（安全版本）
+ * @brief Compute a string's length (safe version)
  *
- * @param[in] str 字符串
- * @param[in] max_len 最大检查长度（防止无界字符串）
- * @return 字符串长度（不包括空字符），如果超过max_len返回max_len
+ * @param[in] str String
+ * @param[in] max_len Maximum length to check (guards against unbounded strings)
+ * @return String length (excluding the NUL), or max_len if longer
  */
 size_t string_length(const char *str, size_t max_len);
 
 /**
- * @brief 查找子字符串
+ * @brief Find a substring
  *
- * @param[in] haystack 要搜索的字符串
- * @param[in] needle 要查找的子字符串
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 找到返回子字符串起始位置，未找到返回NULL
+ * @param[in] haystack String to search
+ * @param[in] needle Substring to find
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return Pointer to the substring start, or NULL if not found
  */
 const char *string_find(const char *haystack, const char *needle, int options);
 
 /**
- * @brief 从末尾开始查找子字符串
+ * @brief Find a substring from the end
  *
- * @param[in] haystack 要搜索的字符串
- * @param[in] needle 要查找的子字符串
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 找到返回子字符串起始位置，未找到返回NULL
+ * @param[in] haystack String to search
+ * @param[in] needle Substring to find
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return Pointer to the substring start, or NULL if not found
  */
 const char *string_find_last(const char *haystack, const char *needle, int options);
 
 /**
- * @brief 查找字符第一次出现的位置
+ * @brief Find the first occurrence of a character
  *
- * @param[in] str 字符串
- * @param[in] ch 要查找的字符
- * @return 找到返回字符位置，未找到返回NULL
+ * @param[in] str String
+ * @param[in] ch Character to find
+ * @return Pointer to the character, or NULL if not found
  */
 const char *string_find_char(const char *str, char ch);
 
 /**
- * @brief 查找字符最后一次出现的位置
+ * @brief Find the last occurrence of a character
  *
- * @param[in] str 字符串
- * @param[in] ch 要查找的字符
- * @return 找到返回字符位置，未找到返回NULL
+ * @param[in] str String
+ * @param[in] ch Character to find
+ * @return Pointer to the character, or NULL if not found
  */
 const char *string_find_char_last(const char *str, char ch);
 
 /**
- * @brief 修剪字符串开头和结尾的空白字符
+ * @brief Trim leading and trailing whitespace
  *
- * @param[inout] str 要修剪的字符串（会被修改）
- * @return 修剪后的字符串（指向原字符串的某个位置）
+ * @param[inout] str String to trim (modified in place)
+ * @return Trimmed string (points into the original string)
  */
 char *string_trim(char *str);
 
 /**
- * @brief 修剪字符串开头的空白字符
+ * @brief Trim leading whitespace
  *
- * @param[inout] str 要修剪的字符串（会被修改）
- * @return 修剪后的字符串（指向原字符串的某个位置）
+ * @param[inout] str String to trim (modified in place)
+ * @return Trimmed string (points into the original string)
  */
 char *string_trim_start(char *str);
 
 /**
- * @brief 修剪字符串结尾的空白字符
+ * @brief Trim trailing whitespace
  *
- * @param[inout] str 要修剪的字符串（会被修改）
- * @return 修剪后的字符串（指向原字符串的某个位置）
+ * @param[inout] str String to trim (modified in place)
+ * @return Trimmed string (points into the original string)
  */
 char *string_trim_end(char *str);
 
 /**
- * @brief 转换字符串为小写
+ * @brief Convert a string to lowercase
  *
- * @param[inout] str 要转换的字符串（会被修改）
- * @return 转换后的字符串
+ * @param[inout] str String to convert (modified in place)
+ * @return Converted string
  */
 char *string_to_lower(char *str);
 
 /**
- * @brief 转换字符串为大写
+ * @brief Convert a string to uppercase
  *
- * @param[inout] str 要转换的字符串（会被修改）
- * @return 转换后的字符串
+ * @param[inout] str String to convert (modified in place)
+ * @return Converted string
  */
 char *string_to_upper(char *str);
 
 /**
- * @brief 替换字符串中的子字符串
+ * @brief Replace a substring in a string
  *
- * @param[in] str 原始字符串
- * @param[in] old_substr 要替换的子字符串
- * @param[in] new_substr 新的子字符串
- * @param[out] result 结果缓冲区
- * @param[in] result_size 结果缓冲区大小
- * @return 成功返回结果字符串长度，失败返回-1
+ * @param[in] str Original string
+ * @param[in] old_substr Substring to replace
+ * @param[in] new_substr Replacement substring
+ * @param[out] result Result buffer
+ * @param[in] result_size Result buffer size
+ * @return Result string length on success, -1 on failure
  *
- * @note 如果结果缓冲区大小不足，会复制尽可能多的字符并返回-1
+ * @note If the result buffer is too small, copies as many characters as
+ *       possible and returns -1
  */
 int string_replace(const char *str, const char *old_substr, const char *new_substr, char *result,
                    size_t result_size);
 
 /**
- * @brief 分割字符串
+ * @brief Split a string
  *
- * @param[in] str 要分割的字符串
- * @param[in] delimiter 分隔符
- * @param[in] options 分割选项（STRING_SPLIT_* 的位掩码）
- * @param[in] limit 最大分割次数（如果设置了STRING_SPLIT_LIMIT_COUNT）
- * @return 字符串列表，使用后必须调用string_list_free释放
+ * @param[in] str String to split
+ * @param[in] delimiter Delimiter
+ * @param[in] options Split options (bitmask of STRING_SPLIT_*)
+ * @param[in] limit Maximum number of splits (if STRING_SPLIT_LIMIT_COUNT is set)
+ * @return String list; must be released with string_list_free after use
  */
 string_list_t string_split(const char *str, const char *delimiter, int options, size_t limit);
 
 /**
- * @brief 连接字符串列表
+ * @brief Join a string list
  *
- * @param[in] list 字符串列表
- * @param[in] delimiter 分隔符
- * @param[out] result 结果缓冲区
- * @param[in] result_size 结果缓冲区大小
- * @return 成功返回结果字符串长度，失败返回-1
+ * @param[in] list String list
+ * @param[in] delimiter Delimiter
+ * @param[out] result Result buffer
+ * @param[in] result_size Result buffer size
+ * @return Result string length on success, -1 on failure
  */
 int string_join(const string_list_t *list, const char *delimiter, char *result, size_t result_size);
 
 /**
- * @brief 检查字符串是否以指定前缀开头
+ * @brief Check whether a string starts with a prefix
  *
- * @param[in] str 字符串
- * @param[in] prefix 前缀
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 以指定前缀开头返回true，否则返回false
+ * @param[in] str String
+ * @param[in] prefix Prefix
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return true if the string starts with the prefix, false otherwise
  */
 bool string_starts_with(const char *str, const char *prefix, int options);
 
 /**
- * @brief 检查字符串是否以指定后缀结尾
+ * @brief Check whether a string ends with a suffix
  *
- * @param[in] str 字符串
- * @param[in] suffix 后缀
- * @param[in] options 比较选项（STRING_COMPARE_* 的位掩码）
- * @return 以指定后缀结尾返回true，否则返回false
+ * @param[in] str String
+ * @param[in] suffix Suffix
+ * @param[in] options Comparison options (bitmask of STRING_COMPARE_*)
+ * @return true if the string ends with the suffix, false otherwise
  */
 bool string_ends_with(const char *str, const char *suffix, int options);
 
 /**
- * @brief 检查字符串是否只包含空白字符
+ * @brief Check whether a string contains only whitespace
  *
- * @param[in] str 字符串
- * @return 只包含空白字符返回true，否则返回false
+ * @param[in] str String
+ * @return true if the string contains only whitespace, false otherwise
  */
 bool string_is_blank(const char *str);
 
 /**
- * @brief 检查字符串是否只包含数字字符
+ * @brief Check whether a string contains only digits
  *
- * @param[in] str 字符串
- * @return 只包含数字字符返回true，否则返回false
+ * @param[in] str String
+ * @return true if the string contains only digits, false otherwise
  */
 bool string_is_digit(const char *str);
 
 /**
- * @brief 检查字符串是否只包含字母字符
+ * @brief Check whether a string contains only alphabetic characters
  *
- * @param[in] str 字符串
- * @return 只包含字母字符返回true，否则返回false
+ * @param[in] str String
+ * @return true if the string contains only alphabetic characters, false otherwise
  */
 bool string_is_alpha(const char *str);
 
 /**
- * @brief 检查字符串是否只包含字母数字字符
+ * @brief Check whether a string contains only alphanumeric characters
  *
- * @param[in] str 字符串
- * @return 只包含字母数字字符返回true，否则返回false
+ * @param[in] str String
+ * @return true if the string contains only alphanumeric characters, false otherwise
  */
 bool string_is_alnum(const char *str);
 
 /**
- * @brief 格式化字符串（安全版本）
+ * @brief Format a string (safe version)
  *
- * @param[out] buffer 输出缓冲区
- * @param[in] buffer_size 缓冲区大小
- * @param[in] format 格式字符串
- * @param[in] ... 格式化参数
- * @return 成功返回写入的字符数（不包括空字符），失败返回-1
+ * @param[out] buffer Output buffer
+ * @param[in] buffer_size Buffer size
+ * @param[in] format Format string
+ * @param[in] ... Format arguments
+ * @return Number of characters written (excluding the NUL) on success, -1 on failure
  */
 int string_format(char *buffer, size_t buffer_size, const char *format, ...);
 
 /**
- * @brief 格式化字符串（va_list版本）
+ * @brief Format a string (va_list version)
  *
- * @param[out] buffer 输出缓冲区
- * @param[in] buffer_size 缓冲区大小
- * @param[in] format 格式字符串
- * @param[in] args 格式化参数
- * @return 成功返回写入的字符数（不包括空字符），失败返回-1
+ * @param[out] buffer Output buffer
+ * @param[in] buffer_size Buffer size
+ * @param[in] format Format string
+ * @param[in] args Format arguments
+ * @return Number of characters written (excluding the NUL) on success, -1 on failure
  */
 int string_format_v(char *buffer, size_t buffer_size, const char *format, va_list args);
 
 /**
- * @brief 分配并格式化字符串
+ * @brief Allocate and format a string
  *
- * @param[in] format 格式字符串
- * @param[in] ... 格式化参数
- * @return 成功返回分配的字符串，失败返回NULL
+ * @param[in] format Format string
+ * @param[in] ... Format arguments
+ * @return Allocated string on success, NULL on failure
  *
- * @note 返回的字符串必须使用free释放
+ * @note The returned string must be released with free
  */
 char *string_alloc_format(const char *format, ...);
 
 /**
- * @brief 分配并格式化字符串（va_list版本）
+ * @brief Allocate and format a string (va_list version)
  *
- * @param[in] format 格式字符串
- * @param[in] args 格式化参数
- * @return 成功返回分配的字符串，失败返回NULL
+ * @param[in] format Format string
+ * @param[in] args Format arguments
+ * @return Allocated string on success, NULL on failure
  */
 char *string_alloc_format_v(const char *format, va_list args);
 
 /**
- * @brief 复制字符串（分配新内存）
+ * @brief Copy a string (allocates new memory)
  *
- * @param[in] str 源字符串
- * @return 成功返回复制的字符串，失败返回NULL
+ * @param[in] str Source string
+ * @return Copied string on success, NULL on failure
  *
- * @note 返回的字符串必须使用free释放
+ * @note The returned string must be released with free
  */
 char *string_alloc_copy(const char *str);
 
 /**
- * @brief 复制指定长度的字符串（分配新内存）
+ * @brief Copy a bounded-length string (allocates new memory)
  *
- * @param[in] str 源字符串
- * @param[in] len 要复制的最大长度
- * @return 成功返回复制的字符串，失败返回NULL
+ * @param[in] str Source string
+ * @param[in] len Maximum length to copy
+ * @return Copied string on success, NULL on failure
  */
 char *string_alloc_copy_n(const char *str, size_t len);
 
 /**
- * @brief 连接字符串（分配新内存）
+ * @brief Concatenate strings (allocates new memory)
  *
- * @param[in] str1 第一个字符串
- * @param[in] str2 第二个字符串
- * @return 成功返回连接的字符串，失败返回NULL
+ * @param[in] str1 First string
+ * @param[in] str2 Second string
+ * @return Concatenated string on success, NULL on failure
  */
 char *string_alloc_concat(const char *str1, const char *str2);
 
 /**
- * @brief 创建字符串缓冲区
+ * @brief Create a string buffer
  *
- * @param[in] initial_capacity 初始容量（不包括空字符）
- * @param[in] encoding 字符串编码
- * @return 成功返回字符串缓冲区，失败返回NULL
+ * @param[in] initial_capacity Initial capacity (excluding the NUL)
+ * @param[in] encoding String encoding
+ * @return String buffer on success, NULL on failure
  */
 string_buffer_t *string_buffer_create(size_t initial_capacity, string_encoding_t encoding);
 
 /**
- * @brief 销毁字符串缓冲区
+ * @brief Destroy a string buffer
  *
- * @param[in] buffer 字符串缓冲区
+ * @param[in] buffer String buffer
  */
 void string_buffer_destroy(string_buffer_t *buffer);
 
 /**
- * @brief 向字符串缓冲区追加字符串
+ * @brief Append a string to a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @param[in] str 要追加的字符串
- * @return 成功返回true，失败返回false
+ * @param[in] buffer String buffer
+ * @param[in] str String to append
+ * @return true on success, false on failure
  */
 bool string_buffer_append(string_buffer_t *buffer, const char *str);
 
 /**
- * @brief 向字符串缓冲区追加指定长度的字符串
+ * @brief Append a bounded-length string to a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @param[in] str 要追加的字符串
- * @param[in] len 要追加的长度
- * @return 成功返回true，失败返回false
+ * @param[in] buffer String buffer
+ * @param[in] str String to append
+ * @param[in] len Length to append
+ * @return true on success, false on failure
  */
 bool string_buffer_append_n(string_buffer_t *buffer, const char *str, size_t len);
 
 /**
- * @brief 向字符串缓冲区追加格式化字符串
+ * @brief Append a formatted string to a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @param[in] format 格式字符串
- * @param[in] ... 格式化参数
- * @return 成功返回true，失败返回false
+ * @param[in] buffer String buffer
+ * @param[in] format Format string
+ * @param[in] ... Format arguments
+ * @return true on success, false on failure
  */
 bool string_buffer_append_format(string_buffer_t *buffer, const char *format, ...);
 
 /**
- * @brief 向字符串缓冲区追加字符
+ * @brief Append a character to a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @param[in] ch 要追加的字符
- * @return 成功返回true，失败返回false
+ * @param[in] buffer String buffer
+ * @param[in] ch Character to append
+ * @return true on success, false on failure
  */
 bool string_buffer_append_char(string_buffer_t *buffer, char ch);
 
 /**
- * @brief 清空字符串缓冲区
+ * @brief Clear a string buffer
  *
- * @param[in] buffer 字符串缓冲区
+ * @param[in] buffer String buffer
  */
 void string_buffer_clear(string_buffer_t *buffer);
 
 /**
- * @brief 获取字符串缓冲区的C字符串
+ * @brief Get the C string of a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @return C字符串（只读，生命周期与缓冲区相同）
+ * @param[in] buffer String buffer
+ * @return C string (read-only; lifetime tied to the buffer)
  */
 const char *string_buffer_cstr(const string_buffer_t *buffer);
 
 /**
- * @brief 获取字符串缓冲区的长度
+ * @brief Get the length of a string buffer
  *
- * @param[in] buffer 字符串缓冲区
- * @return 字符串长度
+ * @param[in] buffer String buffer
+ * @return String length
  */
 size_t string_buffer_length(const string_buffer_t *buffer);
 
 /**
- * @brief 创建字符串视图
+ * @brief Create a string view
  *
- * @param[in] str C字符串
- * @param[in] encoding 字符串编码
- * @return 字符串视图
+ * @param[in] str C string
+ * @param[in] encoding String encoding
+ * @return String view
  */
 string_view_t string_view_create(const char *str, string_encoding_t encoding);
 
 /**
- * @brief 从指定长度创建字符串视图
+ * @brief Create a string view from a bounded length
  *
- * @param[in] str C字符串
- * @param[in] len 字符串长度
- * @param[in] encoding 字符串编码
- * @return 字符串视图
+ * @param[in] str C string
+ * @param[in] len String length
+ * @param[in] encoding String encoding
+ * @return String view
  */
 string_view_t string_view_create_n(const char *str, size_t len, string_encoding_t encoding);
 
 /**
- * @brief 比较两个字符串视图
+ * @brief Compare two string views
  *
- * @param[in] view1 第一个字符串视图
- * @param[in] view2 第二个字符串视图
- * @param[in] options 比较选项
- * @return 相等返回0，view1 < view2返回负数，view1 > view2返回正数
+ * @param[in] view1 First string view
+ * @param[in] view2 Second string view
+ * @param[in] options Comparison options
+ * @return 0 if equal, negative if view1 < view2, positive if view1 > view2
  */
 int string_view_compare(const string_view_t *view1, const string_view_t *view2, int options);
 
 /**
- * @brief 查找子字符串视图
+ * @brief Find a substring in a string view
  *
- * @param[in] haystack 要搜索的字符串视图
- * @param[in] needle 要查找的子字符串视图
- * @param[in] options 比较选项
- * @return 找到返回子字符串起始位置在haystack中的索引，未找到返回-1
+ * @param[in] haystack String view to search
+ * @param[in] needle Substring view to find
+ * @param[in] options Comparison options
+ * @return Index of the substring start in haystack, or -1 if not found
  */
 ssize_t string_view_find(const string_view_t *haystack, const string_view_t *needle, int options);
 
 /**
- * @brief 字符串视图转换为C字符串（分配新内存）
+ * @brief Convert a string view to a C string (allocates new memory)
  *
- * @param[in] view 字符串视图
- * @return C字符串（必须使用free释放）
+ * @param[in] view String view
+ * @return C string (must be released with free)
  */
 char *string_view_to_cstr(const string_view_t *view);
 
 /**
- * @brief 创建字符串列表
+ * @brief Create a string list
  *
- * @param[in] initial_capacity 初始容量
- * @return 字符串列表
+ * @param[in] initial_capacity Initial capacity
+ * @return String list
  */
 string_list_t string_list_create(size_t initial_capacity);
 
 /**
- * @brief 销毁字符串列表
+ * @brief Destroy a string list
  *
- * @param[in] list 字符串列表
+ * @param[in] list String list
  */
 void string_list_destroy(string_list_t *list);
 
 /**
- * @brief 向字符串列表添加字符串视图
+ * @brief Add a string view to a string list
  *
- * @param[inout] list 字符串列表
- * @param[in] item 要添加的字符串视图
- * @return 成功返回true，失败返回false
+ * @param[inout] list String list
+ * @param[in] item String view to add
+ * @return true on success, false on failure
  */
 bool string_list_add(string_list_t *list, const string_view_t *item);
 
 /**
- * @brief 向字符串列表添加C字符串
+ * @brief Add a C string to a string list
  *
- * @param[inout] list 字符串列表
- * @param[in] str 要添加的C字符串
- * @return 成功返回true，失败返回false
+ * @param[inout] list String list
+ * @param[in] str C string to add
+ * @return true on success, false on failure
  */
 bool string_list_add_cstr(string_list_t *list, const char *str);
 
 /**
- * @brief 清空字符串列表
+ * @brief Clear a string list
  *
- * @param[inout] list 字符串列表
+ * @param[inout] list String list
  */
 void string_list_clear(string_list_t *list);
 
 /**
- * @brief 获取字符串列表的大小
+ * @brief Get the size of a string list
  *
- * @param[in] list 字符串列表
- * @return 列表大小
+ * @param[in] list String list
+ * @return List size
  */
 size_t string_list_size(const string_list_t *list);
 
 /**
- * @brief 获取字符串列表的项
+ * @brief Get an item from a string list
  *
- * @param[in] list 字符串列表
- * @param[in] index 索引
- * @return 字符串视图，索引无效返回空视图
+ * @param[in] list String list
+ * @param[in] index Index
+ * @return String view, or an empty view if the index is invalid
  */
 string_view_t string_list_get(const string_list_t *list, size_t index);
 
 /**
- * @brief 编码转换
+ * @brief Convert encoding
  *
- * @param[in] src 源字符串
- * @param[in] src_encoding 源编码
- * @param[out] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区大小
- * @param[in] dest_encoding 目标编码
- * @return 成功返回转换后的字节数，失败返回-1
+ * @param[in] src Source string
+ * @param[in] src_encoding Source encoding
+ * @param[out] dest Destination buffer
+ * @param[in] dest_size Destination buffer size
+ * @param[in] dest_encoding Destination encoding
+ * @return Number of converted bytes on success, -1 on failure
  */
 int string_convert_encoding(const char *src, string_encoding_t src_encoding, char *dest,
                             size_t dest_size, string_encoding_t dest_encoding);
 
 /**
- * @brief 计算UTF-8字符串的字符数（码点）
+ * @brief Count the characters (code points) of a UTF-8 string
  *
- * @param[in] str UTF-8字符串
- * @param[in] max_len 最大检查长度
- * @return 字符数（码点数）
+ * @param[in] str UTF-8 string
+ * @param[in] max_len Maximum length to check
+ * @return Character count (code points)
  */
 size_t string_utf8_char_count(const char *str, size_t max_len);
 
 /**
- * @brief 获取UTF-8字符串的下一个字符
+ * @brief Get the next character of a UTF-8 string
  *
- * @param[in] str UTF-8字符串
- * @param[out] ch 输出字符（Unicode码点）
- * @return 成功返回跳过的字节数，失败返回0
+ * @param[in] str UTF-8 string
+ * @param[out] ch Output character (Unicode code point)
+ * @return Number of bytes skipped on success, 0 on failure
  */
 size_t string_utf8_next_char(const char *str, uint32_t *ch);
 
 /**
- * @brief 检查字符串是否为有效的UTF-8
+ * @brief Check whether a string is valid UTF-8
  *
- * @param[in] str 字符串
- * @param[in] len 字符串长度
- * @return 有效的UTF-8返回true，否则返回false
+ * @param[in] str String
+ * @param[in] len String length
+ * @return true if valid UTF-8, false otherwise
  */
 bool string_utf8_validate(const char *str, size_t len);
 

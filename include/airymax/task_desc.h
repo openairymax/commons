@@ -5,13 +5,17 @@
  *
  * A-TD (Airymax Task Descriptor) — [SC] shared contract header.
  *
- * 128-byte task descriptor Layout（与 A-IPC 128 字节消息头 Layout C v4 对齐风格）：
- *   magic: 0x41475453 ('AGTS')，独立于 IPC 消息头 magic 0x41524531 ('ARE1')。
- *   CRC32 覆盖 header[0:72) + payload（crc32 字段自身不参与计算），
- *   算法与 IPC C-S12 一致（CRC-32 IEEE 802.3，多项式 0xEDB88320）。
+ * 128-byte task descriptor layout (aligned with the A-IPC 128-byte message
+ * header Layout C v4 style):
+ *   magic: 0x41475453 ('AGTS'), independent of the IPC header magic
+ *   0x41524531 ('ARE1').
+ *   CRC32 covers header[0:72) + payload (the crc32 field itself is excluded
+ *   from computation), using the same algorithm as IPC C-S12
+ *   (CRC-32 IEEE 802.3, polynomial 0xEDB88320).
  *
- * 完整性校验：airy_task_desc_validate() 依次检查 magic/version/reserved/CRC32，
- * 与 agentrt-linux 协作契约保持一致（见 CHANGELOG 任务描述符完整性校验）。
+ * Integrity check: airy_task_desc_validate() checks magic/version/reserved/
+ * CRC32 in order, consistent with the agentrt-linux cooperation contract
+ * (see CHANGELOG "task descriptor integrity check").
  */
 
 #ifndef _UAPI_AIRYMAX_TASK_DESC_H
@@ -73,35 +77,36 @@ _Static_assert(offsetof(struct airy_task_desc, reserved) == 72,
 
 /* ─── API ────────────────────────────────────────────────────────────── */
 /**
- * @brief 计算 CRC-32（IEEE 802.3）校验和
+ * @brief Compute CRC-32 (IEEE 802.3) checksum
  *
- * 与 IPC 消息头校验同一算法（多项式 0xEDB88320 反射形式、
- * 初始值/最终异或 0xFFFFFFFF、输入输出反射）。
+ * Same algorithm as the IPC message header checksum (reflected form of
+ * polynomial 0xEDB88320, init/final xor 0xFFFFFFFF, input/output reflected).
  *
- * @param data 数据指针（NULL 且 len=0 时返回 0x00000000）
- * @param len  数据长度（字节）
- * @return CRC32 校验值
+ * @param data data pointer (returns 0x00000000 when NULL and len=0)
+ * @param len  data length in bytes
+ * @return CRC32 checksum value
  */
 __u32 airy_task_desc_crc32(const void *data, size_t len);
 
 /**
- * @brief 创建任务描述符
+ * @brief Create a task descriptor
  *
- * 填充 magic（'AGTS'）、version、opcode、任务标识、时间戳、payload 长度、
- * flags、priority，并计算 CRC32（覆盖 header[0:72) + payload）。
+ * Fills magic ('AGTS'), version, opcode, task identifiers, timestamps,
+ * payload length, flags and priority, then computes CRC32
+ * (covering header[0:72) + payload).
  *
- * @param desc            输出描述符（调用方提供 128 字节对齐缓冲区）
- * @param opcode          任务操作码（AIRY_TASK_OP_*）
- * @param task_id         任务标识符
- * @param parent_task_id  父任务标识符（0=根任务）
- * @param deadline_ns     截止时间戳（0=无截止）
- * @param src_task        源任务标识
- * @param dst_task        目标任务标识
- * @param payload         任务负载（可为 NULL，此时 payload_len 必须为 0）
- * @param payload_len     负载长度（字节）
- * @param flags           任务标志（保留位必须为 0）
- * @param priority        调度优先级
- * @return AIRY_EOK 成功；AIRY_EINVAL 参数无效
+ * @param desc            output descriptor (caller provides a 128-byte aligned buffer)
+ * @param opcode          task opcode (AIRY_TASK_OP_*)
+ * @param task_id         task identifier
+ * @param parent_task_id  parent task identifier (0 = root task)
+ * @param deadline_ns     deadline timestamp (0 = no deadline)
+ * @param src_task        source task identifier
+ * @param dst_task        destination task identifier
+ * @param payload         task payload (may be NULL, then payload_len must be 0)
+ * @param payload_len     payload length in bytes
+ * @param flags           task flags (reserved bits must be 0)
+ * @param priority        scheduling priority
+ * @return AIRY_EOK on success; AIRY_EINVAL on invalid arguments
  */
 airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u64 task_id,
                                  __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,
@@ -109,21 +114,22 @@ airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u6
                                  __u32 flags, __u32 priority);
 
 /**
- * @brief 校验任务描述符完整性
+ * @brief Validate task descriptor integrity
  *
- * 依次检查：
- *   1. 指针/长度参数有效（AIRY_EINVAL）
- *   2. magic == AIRY_TASK_DESC_MAGIC（AIRY_EIPC_MAGIC）
- *   3. version == AIRY_TASK_DESC_VERSION（AIRY_ECFGVERSION）
- *   4. flags 保留位为零（AIRY_EIPC_FLAGS）
- *   5. reserved[56] 全为零（AIRY_EIPC_RESERVED）
- *   6. payload_len 与提供的 payload 匹配且未超界（AIRY_EIPC_PAYLOAD）
- *   7. CRC32（header[0:72) + payload）匹配（AIRY_EIPC_CRC32）
+ * Checks in order:
+ *   1. Pointer/length arguments valid (AIRY_EINVAL)
+ *   2. magic == AIRY_TASK_DESC_MAGIC (AIRY_EIPC_MAGIC)
+ *   3. version == AIRY_TASK_DESC_VERSION (AIRY_ECFGVERSION)
+ *   4. flags reserved bits zero (AIRY_EIPC_FLAGS)
+ *   5. reserved[56] all zero (AIRY_EIPC_RESERVED)
+ *   6. payload_len matches the provided payload and is within bounds
+ *      (AIRY_EIPC_PAYLOAD)
+ *   7. CRC32 (header[0:72) + payload) matches (AIRY_EIPC_CRC32)
  *
- * @param desc        描述符指针
- * @param payload     对应负载（可为 NULL，此时要求 desc->payload_len == 0）
- * @param payload_len 提供的负载长度（必须 >= desc->payload_len）
- * @return AIRY_EOK 校验通过；否则返回对应错误码
+ * @param desc        descriptor pointer
+ * @param payload     corresponding payload (may be NULL, then desc->payload_len must be 0)
+ * @param payload_len provided payload length (must be >= desc->payload_len)
+ * @return AIRY_EOK on success; otherwise the corresponding error code
  */
 airy_err_t airy_task_desc_validate(const struct airy_task_desc *desc, const void *payload,
                                    __u32 payload_len);

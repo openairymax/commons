@@ -48,12 +48,14 @@
 
 #include "airy_memory.h"
 
-/* ==================== AIRY_HOME 路径体系 ====================
+/* ==================== AIRY_HOME path system ====================
  *
- * 统一安装根目录：$AIRY_HOME 或 $HOME/.airymaxrt（与 Claude Code 等
- * 主流 CLI 的 ~/.<tool> 惯例一致）。全部运行时产物收敛其下，非 root
- * 部署、容器化、卸载均干净。airy_paths_init() 同时 setenv 兼容变量，
- * 使既有 getenv 型消费点（AIRY_RUNTIME_DIR 等）立即生效。 */
+ * Unified install root: $AIRY_HOME or $HOME/.airymaxrt (consistent with
+ * the ~/.<tool> convention of mainstream CLIs such as Claude Code). All
+ * runtime artifacts are consolidated under it, keeping non-root
+ * deployments, containerization and uninstall clean. airy_paths_init()
+ * also setenvs compatibility variables so existing getenv-style consumers
+ * (AIRY_RUNTIME_DIR etc.) take effect immediately. */
 
 static airy_mtx_t g_paths_lock;
 static int g_paths_initialized = 0;
@@ -225,8 +227,9 @@ int airy_paths_init(void)
             return rc;
     }
 
-    /* setenv 兼容变量，使既有 getenv 型消费点（含编译期宏的运行时覆盖）生效。
-     * Windows 无 setenv，使用 _putenv_s（预处理分支）。 */
+    /* setenv compatibility variables so existing getenv-style consumers
+     * (including runtime overrides of compile-time macros) take effect.
+     * Windows has no setenv; use _putenv_s (preprocessor branch). */
 #if AIRY_PLATFORM_WINDOWS
 #define AIRY_SETENV(key, val) _putenv_s((key), (val))
 #else

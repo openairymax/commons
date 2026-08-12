@@ -100,6 +100,7 @@ set(SOURCES
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_common_message.c)
     list(APPEND SOURCES utils/ipc/src/ipc_server_client.c)
     list(APPEND SOURCES utils/ipc/src/ipc_shm.c)
     list(APPEND SOURCES utils/ipc/src/ipc_mq.c)

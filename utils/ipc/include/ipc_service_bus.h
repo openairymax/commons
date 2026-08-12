@@ -3,22 +3,28 @@
 
 /**
  * @file ipc_service_bus.h
- * @brief IPC服务总线 - 守护进程间统一通信框架（commons 权威版本）
+ * @brief IPC service bus: unified inter-daemon communication framework
+ *        (authoritative commons version).
  *
- * 提供守护进程间的高效通信抽象层，集成UnifiedProtocol协议栈，
- * 支持多协议消息传递、服务发现和负载均衡。
+ * Provides an efficient communication abstraction layer between daemons,
+ * integrating the UnifiedProtocol stack with multi-protocol messaging,
+ * service discovery, and load balancing.
  *
- * P0.17 阶段 3：从 daemons/common/include/ipc_service_bus.h 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 3: migrated from daemons/common/include/ipc_service_bus.h
+ * into commons, removing the atoms->daemons compile-time reverse
+ * dependency (IRON-6). The daemons copy is kept as a re-exporting
+ * compatibility header.
  *
- * 设计原则：
- * 1. 统一消息总线：所有守护进程通过统一总线通信
- * 2. 协议感知：消息携带协议类型，支持MCP/A2A/OpenAI API等
- * 3. 位置透明：服务消费者无需知道提供者的物理位置
- * 4. 弹性通信：内置重试、超时和熔断机制
+ * Design principles:
+ * 1. Unified message bus: all daemons communicate over a unified bus
+ * 2. Protocol aware: messages carry a protocol type, supporting MCP/A2A/
+ *    OpenAI API etc.
+ * 3. Location transparency: service consumers need not know the provider's
+ *    physical location
+ * 4. Resilient communication: built-in retry, timeout, and circuit breaker
  *
- * @see svc_common.h 服务管理框架
- * @see ipc_common.h IPC底层抽象
+ * @see svc_common.h service management framework
+ * @see ipc_common.h IPC low-level abstraction
  */
 
 #ifndef AIRY_RT_IPC_SERVICE_BUS_H
@@ -143,98 +149,98 @@ typedef void (*ipc_bus_event_handler_t)(ipc_service_bus_t bus, const char *event
 
 
 /**
- * @brief 创建服务总线实例
- * @param bus_name 总线名称
- * @param config 总线配置（NULL使用默认）
- * @return 总线句柄，失败返回NULL
+ * @brief Create a service bus instance
+ * @param bus_name Bus name
+ * @param config Bus configuration (NULL for defaults)
+ * @return Bus handle, NULL on failure
  */
 AIRY_API ipc_service_bus_t ipc_service_bus_create(const char *bus_name,
                                                   const ipc_bus_channel_config_t *config);
 
 /**
- * @brief 销毁服务总线实例
- * @param bus 总线句柄
+ * @brief Destroy a service bus instance
+ * @param bus Bus handle
  */
 AIRY_API void ipc_service_bus_destroy(ipc_service_bus_t bus);
 
 /**
- * @brief 启动服务总线
- * @param bus 总线句柄
- * @return 0成功，非0失败
+ * @brief Start the service bus
+ * @param bus Bus handle
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_start(ipc_service_bus_t bus);
 
 /**
- * @brief 停止服务总线
- * @param bus 总线句柄
- * @return 0成功，非0失败
+ * @brief Stop the service bus
+ * @param bus Bus handle
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_stop(ipc_service_bus_t bus);
 
 
 /**
- * @brief 创建通信通道
- * @param bus 总线句柄
- * @param config 通道配置
- * @return 通道句柄，失败返回NULL
+ * @brief Create a communication channel
+ * @param bus Bus handle
+ * @param config Channel configuration
+ * @return Channel handle, NULL on failure
  */
 AIRY_API ipc_bus_channel_t ipc_bus_channel_create(ipc_service_bus_t bus,
                                                   const ipc_bus_channel_config_t *config);
 
 /**
- * @brief 销毁通信通道
- * @param channel 通道句柄
+ * @brief Destroy a communication channel
+ * @param channel Channel handle
  */
 AIRY_API void ipc_bus_channel_destroy(ipc_bus_channel_t channel);
 
 /**
- * @brief 获取通道名称
- * @param channel 通道句柄
- * @return 通道名称
+ * @brief Get the channel name
+ * @param channel Channel handle
+ * @return Channel name
  */
 AIRY_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
 
 
 /**
- * @brief 发送消息到指定服务
- * @param bus 总线句柄
- * @param target_service 目标服务名称
- * @param message 消息结构
- * @return 0成功，非0失败
+ * @brief Send a message to a specific service
+ * @param bus Bus handle
+ * @param target_service Target service name
+ * @param message Message structure
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *target_service,
                                          const ipc_bus_message_t *message);
 
 /**
- * @brief 发送请求并等待响应
- * @param bus 总线句柄
- * @param target_service 目标服务名称
- * @param request 请求消息
- * @param response [out] 响应消息
- * @param timeout_ms 超时时间
- * @return 0成功，非0失败
+ * @brief Send a request and wait for the response
+ * @param bus Bus handle
+ * @param target_service Target service name
+ * @param request Request message
+ * @param response [out] Response message
+ * @param timeout_ms Timeout
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus, const char *target_service,
                                             const ipc_bus_message_t *request,
                                             ipc_bus_message_t *response, uint32_t timeout_ms);
 
 /**
- * @brief 广播消息到所有服务
- * @param bus 总线句柄
- * @param message 消息结构
- * @return 0成功，非0失败
+ * @brief Broadcast a message to all services
+ * @param bus Bus handle
+ * @param message Message structure
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
                                               const ipc_bus_message_t *message);
 
 /**
- * @brief 发送通知消息
- * @param bus 总线句柄
- * @param target_service 目标服务名称
- * @param payload 负载数据
- * @param payload_size 负载大小
- * @param protocol 协议类型
- * @return 0成功，非0失败
+ * @brief Send a notification message
+ * @param bus Bus handle
+ * @param target_service Target service name
+ * @param payload Payload data
+ * @param payload_size Payload size
+ * @param protocol Protocol type
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus, const char *target_service,
                                            const void *payload, size_t payload_size,
@@ -242,32 +248,32 @@ AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus, const char *ta
 
 
 /**
- * @brief 注册消息处理器
- * @param bus 总线句柄
- * @param handler 消息处理函数
- * @param user_data 用户数据
- * @return 0成功，非0失败
+ * @brief Register a message handler
+ * @param bus Bus handle
+ * @param handler Message handler function
+ * @param user_data User data
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
                                                      ipc_bus_message_handler_t handler,
                                                      void *user_data);
 
 /**
- * @brief 注销消息处理器
- * @param bus 总线句柄
- * @param handler 消息处理函数
- * @return 0成功，非0失败
+ * @brief Unregister a message handler
+ * @param bus Bus handle
+ * @param handler Message handler function
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
                                                        ipc_bus_message_handler_t handler);
 
 /**
- * @brief 注册事件处理器
- * @param bus 总线句柄
- * @param event_name 事件名称
- * @param handler 事件处理函数
- * @param user_data 用户数据
- * @return 0成功，非0失败
+ * @brief Register an event handler
+ * @param bus Bus handle
+ * @param event_name Event name
+ * @param handler Event handler function
+ * @param user_data User data
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus,
                                                            const char *event_name,
@@ -276,32 +282,32 @@ AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus
 
 
 /**
- * @brief 注册服务端点
- * @param bus 总线句柄
- * @param endpoint 端点信息
- * @return 0成功，非0失败
+ * @brief Register a service endpoint
+ * @param bus Bus handle
+ * @param endpoint Endpoint information
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
                                                       const ipc_bus_endpoint_t *endpoint);
 
 /**
- * @brief 注销服务端点
- * @param bus 总线句柄
- * @param service_name 服务名称
- * @return 0成功，非0失败
+ * @brief Unregister a service endpoint
+ * @param bus Bus handle
+ * @param service_name Service name
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
                                                         const char *service_name);
 
 /**
- * @brief 发现服务端点
- * @param bus 总线句柄
- * @param service_name 服务名称（NULL表示所有）
- * @param protocol 协议过滤（IPC_BUS_PROTO_AUTO表示不过滤）
- * @param endpoints [out] 端点数组
- * @param max_count 数组最大容量
- * @param found_count [out] 实际找到数量
- * @return 0成功，非0失败
+ * @brief Discover service endpoints
+ * @param bus Bus handle
+ * @param service_name Service name (NULL for all)
+ * @param protocol Protocol filter (IPC_BUS_PROTO_AUTO for no filtering)
+ * @param endpoints [out] Endpoint array
+ * @param max_count Maximum array capacity
+ * @param found_count [out] Actual count found
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus, const char *service_name,
                                              ipc_bus_proto_t protocol,
@@ -309,94 +315,94 @@ AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus, const char *
                                              uint32_t *found_count);
 
 /**
- * @brief 选择最优端点（负载均衡）
- * @param bus 总线句柄
- * @param service_name 服务名称
- * @param protocol 协议类型
- * @param endpoint [out] 选中的端点
- * @return 0成功，非0失败
+ * @brief Select the best endpoint (load balancing)
+ * @param bus Bus handle
+ * @param service_name Service name
+ * @param protocol Protocol type
+ * @param endpoint [out] Selected endpoint
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus, const char *service_name,
                                                     ipc_bus_proto_t protocol,
                                                     ipc_bus_endpoint_t *endpoint);
 
 /**
- * @brief 更新端点健康状态
- * @param bus 总线句柄
- * @param service_name 服务名称
- * @param healthy 是否健康
- * @return 0成功，非0失败
+ * @brief Update endpoint health status
+ * @param bus Bus handle
+ * @param service_name Service name
+ * @param healthy Whether healthy
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus,
                                                            const char *service_name, bool healthy);
 
 
 /**
- * @brief 创建服务总线消息
- * @param msg_type 消息类型
- * @param protocol 协议类型
- * @param payload 负载数据
- * @param payload_size 负载大小
- * @return 消息结构，失败返回NULL
+ * @brief Create a service bus message
+ * @param msg_type Message type
+ * @param protocol Protocol type
+ * @param payload Payload data
+ * @param payload_size Payload size
+ * @return Message structure, NULL on failure
  */
 AIRY_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_type,
                                                    ipc_bus_proto_t protocol, const void *payload,
                                                    size_t payload_size);
 
 /**
- * @brief 释放服务总线消息
- * @param message 消息结构
+ * @brief Free a service bus message
+ * @param message Message structure
  */
 AIRY_API void ipc_bus_message_free(ipc_bus_message_t *message);
 
 /**
- * @brief 复制消息
- * @param message 源消息
- * @return 新消息，失败返回NULL
+ * @brief Clone a message
+ * @param message Source message
+ * @return New message, NULL on failure
  */
 AIRY_API ipc_bus_message_t *ipc_bus_message_clone(const ipc_bus_message_t *message);
 
 /**
- * @brief 协议类型转字符串
- * @param proto 协议类型
- * @return 协议名称字符串
+ * @brief Convert a protocol type to a string
+ * @param proto Protocol type
+ * @return Protocol name string
  */
 AIRY_API const char *ipc_bus_proto_to_string(ipc_bus_proto_t proto);
 
 /**
- * @brief 字符串转协议类型
- * @param str 协议名称
- * @return 协议类型
+ * @brief Convert a string to a protocol type
+ * @param str Protocol name
+ * @return Protocol type
  */
 AIRY_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
 
 
 /**
- * @brief 获取服务总线统计信息
- * @param bus 总线句柄
- * @param stats [out] 统计信息
- * @return 0成功，非0失败
+ * @brief Get service bus statistics
+ * @param bus Bus handle
+ * @param stats [out] Statistics
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_get_stats(ipc_service_bus_t bus, ipc_bus_stats_t *stats);
 
 /**
- * @brief 重置统计信息
- * @param bus 总线句柄
- * @return 0成功，非0失败
+ * @brief Reset statistics
+ * @param bus Bus handle
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t ipc_service_bus_reset_stats(ipc_service_bus_t bus);
 
 /**
- * @brief 获取总线名称
- * @param bus 总线句柄
- * @return 总线名称
+ * @brief Get the bus name
+ * @param bus Bus handle
+ * @return Bus name
  */
 AIRY_API const char *ipc_service_bus_get_name(ipc_service_bus_t bus);
 
 /**
- * @brief 检查总线是否运行中
- * @param bus 总线句柄
- * @return true运行中，false未运行
+ * @brief Check whether the bus is running
+ * @param bus Bus handle
+ * @return true if running, false otherwise
  */
 AIRY_API bool ipc_service_bus_is_running(ipc_service_bus_t bus);
 

@@ -3,26 +3,30 @@
 
 /**
  * @file service_discovery.h
- * @brief 跨进程服务发现机制（commons 权威版本）
+ * @brief Cross-process service discovery mechanism (authoritative commons
+ *        version).
  *
- * P0.17 阶段 4：从 daemons/common/include/ 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 4: migrated from daemons/common/include/ into commons,
+ * removing the atoms->daemons compile-time reverse dependency (IRON-6).
+ * The daemons copy is kept as a re-exporting compatibility header.
  *
- * 基于共享内存的跨进程服务注册中心，支持：
- * - 跨进程服务注册与发现
- * - 服务健康状态传播
- * - 负载均衡服务选择（轮询/加权/最少连接）
- * - 服务依赖追踪
- * - 心跳与自动过期
+ * A shared-memory based cross-process service registry, supporting:
+ * - Cross-process service registration and discovery
+ * - Service health-state propagation
+ * - Load-balanced service selection (round-robin/weighted/least
+ *   connection)
+ * - Service dependency tracking
+ * - Heartbeat and automatic expiry
  *
- * 设计原则：
- * 1. 零依赖：不依赖外部注册中心（如etcd/consul）
- * 2. 高性能：基于共享内存，发现时间<100ms
- * 3. 自愈性：自动清理过期服务，健康检查联动
- * 4. 跨平台：Windows/Linux/macOS共享内存抽象
+ * Design principles:
+ * 1. Zero dependencies: no external registry (e.g. etcd/consul) required
+ * 2. High performance: shared-memory based, discovery < 100ms
+ * 3. Self-healing: automatic cleanup of expired services, tied to health
+ *    checks
+ * 4. Cross-platform: Windows/Linux/macOS shared-memory abstraction
  *
- * @see svc_common.h 服务管理框架
- * @see ipc_service_bus.h IPC服务总线
+ * @see svc_common.h service management framework
+ * @see ipc_service_bus.h IPC service bus
  */
 
 #ifndef AIRY_RT_SERVICE_DISCOVERY_H
@@ -127,227 +131,229 @@ typedef void (*sd_event_callback_t)(sd_event_type_t event, const char *service_n
 
 
 /**
- * @brief 创建服务发现实例
- * @param config 配置参数（NULL使用默认）
- * @return 服务发现句柄，失败返回NULL
+ * @brief Create a service discovery instance
+ * @param config Configuration (NULL for defaults)
+ * @return Service discovery handle, NULL on failure
  */
 AIRY_API service_discovery_t sd_create(const sd_config_t *config);
 
 /**
- * @brief 销毁服务发现实例
- * @param sd 服务发现句柄
+ * @brief Destroy a service discovery instance
+ * @param sd Service discovery handle
  */
 AIRY_API void sd_destroy(service_discovery_t sd);
 
 /**
- * @brief 启动服务发现
- * @param sd 服务发现句柄
- * @return 0成功，非0失败
+ * @brief Start service discovery
+ * @param sd Service discovery handle
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_start(service_discovery_t sd);
 
 /**
- * @brief 停止服务发现
- * @param sd 服务发现句柄
- * @return 0成功，非0失败
+ * @brief Stop service discovery
+ * @param sd Service discovery handle
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_stop(service_discovery_t sd);
 
 
 /**
- * @brief 注册服务实例
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param service_type 服务类型
- * @param instance 实例信息
- * @param tags 标签（逗号分隔）
- * @param dependencies 依赖服务（逗号分隔）
- * @return 0成功，非0失败
+ * @brief Register a service instance
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param service_type Service type
+ * @param instance Instance information
+ * @param tags Tags (comma-separated)
+ * @param dependencies Dependent services (comma-separated)
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_register(service_discovery_t sd, const char *service_name,
                                 const char *service_type, const sd_instance_t *instance,
                                 const char *tags, const char *dependencies);
 
 /**
- * @brief 注销服务实例
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param instance_id 实例ID
- * @return 0成功，非0失败
+ * @brief Deregister a service instance
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param instance_id Instance ID
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_deregister(service_discovery_t sd, const char *service_name,
                                   const char *instance_id);
 
 /**
- * @brief 注销服务的所有实例
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @return 0成功，非0失败
+ * @brief Deregister all instances of a service
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_deregister_all(service_discovery_t sd, const char *service_name);
 
 
 /**
- * @brief 发现服务（获取所有健康实例）
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param instances [out] 实例数组
- * @param max_count 数组最大容量
- * @param found_count [out] 实际找到数量
- * @return 0成功，非0失败
+ * @brief Discover a service (get all healthy instances)
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param instances [out] Instance array
+ * @param max_count Maximum array capacity
+ * @param found_count [out] Actual count found
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_discover(service_discovery_t sd, const char *service_name,
                                 sd_instance_t *instances, uint32_t max_count,
                                 uint32_t *found_count);
 
 /**
- * @brief 按类型发现服务
- * @param sd 服务发现句柄
- * @param service_type 服务类型
- * @param entries [out] 服务条目数组
- * @param max_count 数组最大容量
- * @param found_count [out] 实际找到数量
- * @return 0成功，非0失败
+ * @brief Discover services by type
+ * @param sd Service discovery handle
+ * @param service_type Service type
+ * @param entries [out] Service entry array
+ * @param max_count Maximum array capacity
+ * @param found_count [out] Actual count found
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_discover_by_type(service_discovery_t sd, const char *service_type,
                                         sd_service_entry_t *entries, uint32_t max_count,
                                         uint32_t *found_count);
 
 /**
- * @brief 按标签发现服务
- * @param sd 服务发现句柄
- * @param tags 标签过滤（逗号分隔）
- * @param entries [out] 服务条目数组
- * @param max_count 数组最大容量
- * @param found_count [out] 实际找到数量
- * @return 0成功，非0失败
+ * @brief Discover services by tags
+ * @param sd Service discovery handle
+ * @param tags Tag filter (comma-separated)
+ * @param entries [out] Service entry array
+ * @param max_count Maximum array capacity
+ * @param found_count [out] Actual count found
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_discover_by_tags(service_discovery_t sd, const char *tags,
                                         sd_service_entry_t *entries, uint32_t max_count,
                                         uint32_t *found_count);
 
 /**
- * @brief 选择最优实例（负载均衡）
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param strategy 负载均衡策略
- * @param instance [out] 选中的实例
- * @return 0成功，非0失败
+ * @brief Select the best instance (load balancing)
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param strategy Load-balancing strategy
+ * @param instance [out] Selected instance
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_select_instance(service_discovery_t sd, const char *service_name,
                                        sd_lb_strategy_t strategy, sd_instance_t *instance);
 
 
 /**
- * @brief 发送心跳
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param instance_id 实例ID
- * @return 0成功，非0失败
+ * @brief Send a heartbeat
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param instance_id Instance ID
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd, const char *service_name,
                                  const char *instance_id);
 
 /**
- * @brief 更新实例健康状态
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param instance_id 实例ID
- * @param healthy 是否健康
- * @return 0成功，非0失败
+ * @brief Update an instance's health status
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param instance_id Instance ID
+ * @param healthy Whether healthy
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_update_health(service_discovery_t sd, const char *service_name,
                                      const char *instance_id, bool healthy);
 
 /**
- * @brief 更新实例连接数
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param instance_id 实例ID
- * @param active_connections 当前活跃连接数
- * @return 0成功，非0失败
+ * @brief Update an instance's connection count
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param instance_id Instance ID
+ * @param active_connections Current active connection count
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_update_connections(service_discovery_t sd, const char *service_name,
                                           const char *instance_id, uint32_t active_connections);
 
 
 /**
- * @brief 获取服务依赖列表
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param dependencies [out] 依赖列表（逗号分隔）
- * @param max_len 缓冲区最大长度
- * @return 0成功，非0失败
+ * @brief Get a service's dependency list
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param dependencies [out] Dependency list (comma-separated)
+ * @param max_len Maximum buffer length
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_get_dependencies(service_discovery_t sd, const char *service_name,
                                         char *dependencies, size_t max_len);
 
 /**
- * @brief 检查服务依赖是否满足
- * @param sd 服务发现句柄
- * @param service_name 服务名称
- * @param missing_deps [out] 缺失依赖列表（逗号分隔），NULL不输出
- * @param max_len 缓冲区最大长度
- * @return 0所有依赖满足，非0有缺失依赖
+ * @brief Check whether a service's dependencies are satisfied
+ * @param sd Service discovery handle
+ * @param service_name Service name
+ * @param missing_deps [out] Missing dependency list (comma-separated),
+ *                           NULL to skip output
+ * @param max_len Maximum buffer length
+ * @return 0 if all dependencies satisfied, non-zero if any are missing
  */
 AIRY_API airy_err_t sd_check_dependencies(service_discovery_t sd, const char *service_name,
                                           char *missing_deps, size_t max_len);
 
 
 /**
- * @brief 注册服务变更回调
- * @param sd 服务发现句柄
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 0成功，非0失败
+ * @brief Register a service change callback
+ * @param sd Service discovery handle
+ * @param callback Callback function
+ * @param user_data User data
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_register_event_callback(service_discovery_t sd, sd_event_callback_t callback,
                                                void *user_data);
 
 /**
- * @brief 获取服务发现统计
- * @param sd 服务发现句柄
- * @param stats [out] 统计信息
- * @return 0成功，非0失败
+ * @brief Get service discovery statistics
+ * @param sd Service discovery handle
+ * @param stats [out] Statistics
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t sd_get_stats(service_discovery_t sd, sd_stats_t *stats);
 
 /**
- * @brief 获取所有已注册服务数量
- * @param sd 服务发现句柄
- * @return 服务数量
+ * @brief Get the number of registered services
+ * @param sd Service discovery handle
+ * @return Number of services
  */
 AIRY_API uint32_t sd_service_count(service_discovery_t sd);
 
 /**
- * @brief 获取服务发现运行状态
- * @param sd 服务发现句柄
- * @return true运行中，false未运行
+ * @brief Get the service discovery run state
+ * @param sd Service discovery handle
+ * @return true if running, false otherwise
  */
 AIRY_API bool sd_is_running(service_discovery_t sd);
 
 
 /**
- * @brief 负载均衡策略转字符串
- * @param strategy 策略类型
- * @return 策略名称
+ * @brief Convert a load-balancing strategy to a string
+ * @param strategy Strategy type
+ * @return Strategy name
  */
 AIRY_API const char *sd_lb_strategy_to_string(sd_lb_strategy_t strategy);
 
 /**
- * @brief 创建默认配置
- * @return 默认配置
+ * @brief Create the default configuration
+ * @return Default configuration
  */
 AIRY_API sd_config_t sd_create_default_config(void);
 
 /**
- * @brief C-L08: 输出服务发现统计摘要（单行格式，适合周期性日志）
+ * @brief C-L08: Output a service discovery statistics summary (single-line
+ *        format, suitable for periodic logging)
  *
- * 格式: "C-L08: SD-STATS services=N instances=N "
- *        "registrations=N deregistrations=N discoveries=N "
- *        "heartbeats=N expirations=N lb_selections=N"
+ * Format: "C-L08: SD-STATS services=N instances=N "
+ *         "registrations=N deregistrations=N discoveries=N "
+ *         "heartbeats=N expirations=N lb_selections=N"
  *
- * @param sd 服务发现句柄
+ * @param sd Service discovery handle
  */
 AIRY_API void sd_dump_stats(service_discovery_t sd);
 

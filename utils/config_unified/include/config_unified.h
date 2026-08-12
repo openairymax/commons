@@ -4,27 +4,26 @@
 /*
  *
  * @file config_unified.h
- * @brief 统一配置模块 - 主头文件
+ * @brief Unified configuration module: main header.
  *
- * 统一配置模块主头文件，包含所有子模块的头文件。
- * 提供统一的分层配置管理：
- * 1. 核心层：统一的配置数据模型和基础接口
- * 2. 源适配层：多种配置源的统一适配
- * 3. 服务层：高级配置功能（验证、热更新、加密等）
- * 4. 兼容层：向后兼容现有配置API
+ * Main header of the unified configuration module; includes the headers
+ * of all submodules. Provides unified layered configuration management:
+ * 1. Core layer: unified configuration data model and basic interfaces
+ * 2. Source adapter layer: unified adaptation of multiple configuration
+ *    sources
+ * 3. Service layer: advanced features (validation, hot reload,
+ *    encryption, etc.)
+ * 4. Compatibility layer: backward compatibility with existing
+ *    configuration APIs
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-03-30
- * @version 2.0
+ * @note Thread safety: all public interfaces are thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md E-2 observability principle
  *
- * @note 线程安全：所有公共接口均为线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-2 可观测性原则
- *
- * 使用示例：
+ * Usage example:
  *   config_context_t *ctx = config_context_create("myapp");
  *   config_value_t *val = config_value_create_string("localhost");
  *   config_context_set(ctx, "database.host", val);
- *   // 使用源适配器
+ *   // Using a source adapter
  *   config_file_source_options_t file_opts = {.file_path = "manager.yaml", .format = "yaml"};
  *   config_source_t *source = config_source_create_file(&file_opts);
  *   config_source_load(source, ctx);
@@ -49,38 +48,38 @@
 
 
 /**
- * @brief 创建字符串配置值的简化宏
- * @param value 字符串值
- * @return 配置值对象
+ * @brief Simplified macro for creating a string config value
+ * @param value String value
+ * @return Config value object
  */
 #define CONFIG_STRING(value) config_value_create_string(value)
 
 /**
- * @brief 创建整数配置值的简化宏
- * @param value 整数值
- * @return 配置值对象
+ * @brief Simplified macro for creating an integer config value
+ * @param value Integer value
+ * @return Config value object
  */
 #define CONFIG_INT(value) config_value_create_int(value)
 
 /**
- * @brief 创建布尔配置值的简化宏
- * @param value 布尔值
- * @return 配置值对象
+ * @brief Simplified macro for creating a boolean config value
+ * @param value Boolean value
+ * @return Config value object
  */
 #define CONFIG_BOOL(value) config_value_create_bool(value)
 
 /**
- * @brief 创建浮点数配置值的简化宏
- * @param value 浮点数值
- * @return 配置值对象
+ * @brief Simplified macro for creating a double config value
+ * @param value Double value
+ * @return Config value object
  */
 #define CONFIG_DOUBLE(value) config_value_create_double(value)
 
 /**
- * @brief 安全设置配置值（自动销毁旧值）
- * @param ctx 配置上下文
- * @param key 配置键
- * @param value 配置值（所有权转移）
+ * @brief Safely set a config value (auto-destroys the old value)
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @param value Config value (ownership transferred)
  */
 #define CONFIG_SET_SAFE(ctx, key, value)                          \
     do {                                                          \
@@ -94,11 +93,11 @@
     } while (0)
 
 /**
- * @brief 安全获取字符串配置值
- * @param ctx 配置上下文
- * @param key 配置键
- * @param default_value 默认值
- * @return 配置值
+ * @brief Safely get a string config value
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @param default_value Default value
+ * @return Config value
  */
 #define CONFIG_GET_STRING_SAFE(ctx, key, default_value)                    \
     __extension__({                                                        \
@@ -107,11 +106,11 @@
     })
 
 /**
- * @brief 安全获取整数配置值
- * @param ctx 配置上下文
- * @param key 配置键
- * @param default_value 默认值
- * @return 配置值
+ * @brief Safely get an integer config value
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @param default_value Default value
+ * @return Config value
  */
 #define CONFIG_GET_INT_SAFE(ctx, key, default_value)                    \
     __extension__({                                                     \
@@ -120,11 +119,11 @@
     })
 
 /**
- * @brief 安全获取布尔配置值
- * @param ctx 配置上下文
- * @param key 配置键
- * @param default_value 默认值
- * @return 配置值
+ * @brief Safely get a boolean config value
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @param default_value Default value
+ * @return Config value
  */
 #define CONFIG_GET_BOOL_SAFE(ctx, key, default_value)                    \
     __extension__({                                                      \
@@ -133,11 +132,11 @@
     })
 
 /**
- * @brief 安全获取浮点数配置值
- * @param ctx 配置上下文
- * @param key 配置键
- * @param default_value 默认值
- * @return 配置值
+ * @brief Safely get a double config value
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @param default_value Default value
+ * @return Config value
  */
 #define CONFIG_GET_DOUBLE_SAFE(ctx, key, default_value)                    \
     __extension__({                                                        \
@@ -147,88 +146,88 @@
 
 
 /**
- * @brief 构建配置路径
- * @param base 基础路径
- * @param key 子键
- * @return 完整路径字符串
+ * @brief Build a configuration path
+ * @param base Base path
+ * @param key Sub-key
+ * @return Full path string
  */
 #define CONFIG_PATH(base, key) (base "." key)
 
 /**
- * @brief 构建数据库配置路径
- * @param key 子键
- * @return 完整路径字符串
+ * @brief Build a database configuration path
+ * @param key Sub-key
+ * @return Full path string
  */
 #define CONFIG_DB_PATH(key) CONFIG_PATH("database", key)
 
 /**
- * @brief 构建日志配置路径
- * @param key 子键
- * @return 完整路径字符串
+ * @brief Build a logging configuration path
+ * @param key Sub-key
+ * @return Full path string
  */
 #define CONFIG_LOG_PATH(key) CONFIG_PATH("logging", key)
 
 /**
- * @brief 构建网络配置路径
- * @param key 子键
- * @return 完整路径字符串
+ * @brief Build a network configuration path
+ * @param key Sub-key
+ * @return Full path string
  */
 #define CONFIG_NETWORK_PATH(key) CONFIG_PATH("network", key)
 
 /**
- * @brief 构建安全配置路径
- * @param key 子键
- * @return 完整路径字符串
+ * @brief Build a security configuration path
+ * @param key Sub-key
+ * @return Full path string
  */
 #define CONFIG_SECURITY_PATH(key) CONFIG_PATH("security", key)
 
 
 /**
- * @brief 验证配置值是否为有效字符串
- * @param value 配置值
- * @return 是否有效
+ * @brief Validate that a config value is a valid string
+ * @param value Config value
+ * @return Whether valid
  */
 #define CONFIG_VALID_STRING(value) (value && config_value_get_type(value) == CONFIG_TYPE_STRING)
 
 /**
- * @brief 验证配置值是否为有效整数
- * @param value 配置值
- * @return 是否有效
+ * @brief Validate that a config value is a valid integer
+ * @param value Config value
+ * @return Whether valid
  */
 #define CONFIG_VALID_INT(value) (value && config_value_get_type(value) == CONFIG_TYPE_INT)
 
 /**
- * @brief 验证配置值是否为有效布尔值
- * @param value 配置值
- * @return 是否有效
+ * @brief Validate that a config value is a valid boolean
+ * @param value Config value
+ * @return Whether valid
  */
 #define CONFIG_VALID_BOOL(value) (value && config_value_get_type(value) == CONFIG_TYPE_BOOL)
 
 /**
- * @brief 验证配置值是否为有效浮点数
- * @param value 配置值
- * @return 是否有效
+ * @brief Validate that a config value is a valid double
+ * @param value Config value
+ * @return Whether valid
  */
 #define CONFIG_VALID_DOUBLE(value) (value && config_value_get_type(value) == CONFIG_TYPE_DOUBLE)
 
 
 /**
- * @brief 检查配置操作是否成功
- * @param error 错误码
- * @return 是否成功
+ * @brief Check whether a config operation succeeded
+ * @param error Error code
+ * @return Whether successful
  */
 #define CONFIG_SUCCESS(error) ((error) == CONFIG_SUCCESS)
 
 /**
- * @brief 检查配置操作是否失败
- * @param error 错误码
- * @return 是否失败
+ * @brief Check whether a config operation failed
+ * @param error Error code
+ * @return Whether failed
  */
 #define CONFIG_FAILED(error) ((error) != CONFIG_SUCCESS)
 
 /**
- * @brief 如果配置操作失败则返回
- * @param error 错误码
+ * @brief Return if a config operation failed
+ * @param error Error code
  */
 #define CONFIG_RETURN_IF_FAILED(error) \
     do {                               \
@@ -238,9 +237,9 @@
     } while (0)
 
 /**
- * @brief 如果配置操作失败则转到标签
- * @param error 错误码
- * @param label 跳转标签
+ * @brief Jump to a label if a config operation failed
+ * @param error Error code
+ * @param label Jump label
  */
 #define CONFIG_GOTO_IF_FAILED(error, label) \
     do {                                    \
@@ -251,11 +250,11 @@
 
 
 /**
- * @brief 初始化配置上下文并设置默认值
- * @param ctx_name 上下文名称
- * @param defaults 默认值数组
- * @param count 默认值数量
- * @return 配置上下文
+ * @brief Initialize a config context and set defaults
+ * @param ctx_name Context name
+ * @param defaults Default value array
+ * @param count Number of defaults
+ * @return Configuration context
  */
 #define CONFIG_INIT_WITH_DEFAULTS(ctx_name, defaults, count)                         \
     __extension__({                                                                  \
@@ -273,10 +272,10 @@
 
 
 /**
- * @brief 安全转换配置值为字符串
- * @param value 配置值
- * @param default_value 默认值
- * @return 字符串值
+ * @brief Safely convert a config value to a string
+ * @param value Config value
+ * @param default_value Default value
+ * @return String value
  */
 #define CONFIG_AS_STRING(value, default_value)            \
     (config_value_get_type(value) == CONFIG_TYPE_STRING ? \
@@ -284,10 +283,10 @@
          default_value)
 
 /**
- * @brief 安全转换配置值为整数
- * @param value 配置值
- * @param default_value 默认值
- * @return 整数值
+ * @brief Safely convert a config value to an integer
+ * @param value Config value
+ * @param default_value Default value
+ * @return Integer value
  */
 #define CONFIG_AS_INT(value, default_value)            \
     (config_value_get_type(value) == CONFIG_TYPE_INT ? \
@@ -295,10 +294,10 @@
          default_value)
 
 /**
- * @brief 安全转换配置值为布尔值
- * @param value 配置值
- * @param default_value 默认值
- * @return 布尔值
+ * @brief Safely convert a config value to a boolean
+ * @param value Config value
+ * @param default_value Default value
+ * @return Boolean value
  */
 #define CONFIG_AS_BOOL(value, default_value)            \
     (config_value_get_type(value) == CONFIG_TYPE_BOOL ? \
@@ -306,10 +305,10 @@
          default_value)
 
 /**
- * @brief 安全转换配置值为浮点数
- * @param value 配置值
- * @param default_value 默认值
- * @return 浮点数值
+ * @brief Safely convert a config value to a double
+ * @param value Config value
+ * @param default_value Default value
+ * @return Double value
  */
 #define CONFIG_AS_DOUBLE(value, default_value)            \
     (config_value_get_type(value) == CONFIG_TYPE_DOUBLE ? \

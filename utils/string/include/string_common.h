@@ -3,14 +3,14 @@
 
 /**
  * @file string_common.h
- * @brief 字符串工具公共库
+ * @brief Common string utility library.
  *
- * 提供统一的字符串操作接口，包括：
- * - 字符串复制和连接
- * - 字符串比较
- * - 字符串查找和替换
- * - 字符串转换
- * - 字符串内存管理
+ * Provides unified string operation interfaces, including:
+ * - String copy and concatenation
+ * - String comparison
+ * - String search and replacement
+ * - String conversion
+ * - String memory management
  */
 
 #ifndef STRING_COMMON_H
@@ -25,168 +25,168 @@ extern "C" {
 #endif
 
 /**
- * @brief 安全的字符串复制函数
- * @param dest 目标字符串
- * @param dest_size 目标字符串大小
- * @param src 源字符串
- * @return 目标字符串指针
+ * @brief Safe string copy function
+ * @param dest Destination string
+ * @param dest_size Destination string size
+ * @param src Source string
+ * @return Destination string pointer
  */
 char *string_common_strlcpy(char *dest, size_t dest_size, const char *src);
 
 /**
- * @brief 安全的字符串连接函数
- * @param dest 目标字符串
- * @param dest_size 目标字符串大小
- * @param src 源字符串
- * @return 目标字符串指针
+ * @brief Safe string concatenation function
+ * @param dest Destination string
+ * @param dest_size Destination string size
+ * @param src Source string
+ * @return Destination string pointer
  */
 char *string_common_strlcat(char *dest, size_t dest_size, const char *src);
 
 /**
- * @brief 字符串复制（动态内存分配）
- * @param str 源字符串
- * @return 复制的字符串指针，需要调用 free() 释放
+ * @brief String copy (dynamic memory allocation)
+ * @param str Source string
+ * @return Copied string pointer, release with free()
  */
 char *string_common_strdup(const char *str);
 
 /**
- * @brief 字符串复制（指定长度，动态内存分配）
- * @param str 源字符串
- * @param n 最大复制长度
- * @return 复制的字符串指针，需要调用 free() 释放
+ * @brief String copy with length limit (dynamic memory allocation)
+ * @param str Source string
+ * @param n Maximum copy length
+ * @return Copied string pointer, release with free()
  */
 char *string_common_strndup(const char *str, size_t n);
 
 /**
- * @brief 大小写不敏感的字符串比较
- * @param s1 字符串1
- * @param s2 字符串2
- * @return 比较结果
+ * @brief Case-insensitive string comparison
+ * @param s1 String 1
+ * @param s2 String 2
+ * @return Comparison result
  */
 int string_common_strcasecmp(const char *s1, const char *s2);
 
 /**
- * @brief 大小写不敏感的字符串比较（指定长度）
- * @param s1 字符串1
- * @param s2 字符串2
- * @param n 最大比较长度
- * @return 比较结果
+ * @brief Case-insensitive string comparison (bounded length)
+ * @param s1 String 1
+ * @param s2 String 2
+ * @param n Maximum comparison length
+ * @return Comparison result
  */
 int string_common_strncasecmp(const char *s1, const char *s2, size_t n);
 
 /**
- * @brief 字符串查找
- * @param haystack 待查找的字符串
- * @param needle 要查找的子串
- * @return 子串在字符串中的位置指针，未找到返回 NULL
+ * @brief String search
+ * @param haystack String to search
+ * @param needle Substring to find
+ * @return Pointer to the substring position, NULL if not found
  */
 char *string_common_strstr(const char *haystack, const char *needle);
 
 /**
- * @brief 字符串分割
- * @param str 要分割的字符串
- * @param delim 分隔符
- * @return 分割后的字符串数组，最后一个元素为 NULL
+ * @brief String split
+ * @param str String to split
+ * @param delim Delimiter
+ * @return Split string array, last element is NULL
  */
 char **string_common_strsplit(const char *str, const char *delim);
 
 /**
- * @brief 释放字符串数组
- * @param arr 字符串数组
+ * @brief Free a string array
+ * @param arr String array
  */
 void string_common_strsplit_free(char **arr);
 
 /**
- * @brief 字符串转换为整数
- * @param str 字符串
- * @param base 进制
- * @param result 转换结果
- * @return 成功返回 true，失败返回 false
+ * @brief Convert a string to an integer
+ * @param str String
+ * @param base Base
+ * @param result Conversion result
+ * @return true on success, false on failure
  */
 bool string_common_strtoint(const char *str, int base, int *result);
 
 /**
- * @brief 字符串转换为无符号整数
- * @param str 字符串
- * @param base 进制
- * @param result 转换结果
- * @return 成功返回 true，失败返回 false
+ * @brief Convert a string to an unsigned integer
+ * @param str String
+ * @param base Base
+ * @param result Conversion result
+ * @return true on success, false on failure
  */
 bool string_common_strtouint(const char *str, int base, uint32_t *result);
 
 /**
- * @brief 字符串转换为双精度浮点数
- * @param str 字符串
- * @param result 转换结果
- * @return 成功返回 true，失败返回 false
+ * @brief Convert a string to a double
+ * @param str String
+ * @param result Conversion result
+ * @return true on success, false on failure
  */
 bool string_common_strtod(const char *str, double *result);
 
 /**
- * @brief 整数转换为字符串
- * @param value 整数值
- * @param base 进制
- * @param buf 缓冲区
- * @param buf_size 缓冲区大小
- * @return 转换后的字符串长度
+ * @brief Convert an integer to a string
+ * @param value Integer value
+ * @param base Base
+ * @param buf Buffer
+ * @param buf_size Buffer size
+ * @return Converted string length
  */
 size_t string_common_itoa(int value, int base, char *buf, size_t buf_size);
 
 /**
- * @brief 无符号整数转换为字符串
- * @param value 无符号整数值
- * @param base 进制
- * @param buf 缓冲区
- * @param buf_size 缓冲区大小
- * @return 转换后的字符串长度
+ * @brief Convert an unsigned integer to a string
+ * @param value Unsigned integer value
+ * @param base Base
+ * @param buf Buffer
+ * @param buf_size Buffer size
+ * @return Converted string length
  */
 size_t string_common_utoa(uint32_t value, int base, char *buf, size_t buf_size);
 
 /**
- * @brief 双精度浮点数转换为字符串
- * @param value 浮点数值
- * @param precision 小数位数
- * @param buf 缓冲区
- * @param buf_size 缓冲区大小
- * @return 转换后的字符串长度
+ * @brief Convert a double to a string
+ * @param value Double value
+ * @param precision Fractional digits
+ * @param buf Buffer
+ * @param buf_size Buffer size
+ * @return Converted string length
  */
 size_t string_common_ftoa(double value, int precision, char *buf, size_t buf_size);
 
 /**
- * @brief 字符串修剪（去除首尾空白字符）
- * @param str 字符串
- * @return 修剪后的字符串指针
+ * @brief String trim (removes leading/trailing whitespace)
+ * @param str String
+ * @return Trimmed string pointer
  */
 char *string_common_strtrim(char *str);
 
 /**
- * @brief 字符串转小写
- * @param str 字符串
- * @return 转换后的字符串指针
+ * @brief Convert a string to lowercase
+ * @param str String
+ * @return Converted string pointer
  */
 char *string_common_strtolower(char *str);
 
 /**
- * @brief 字符串转大写
- * @param str 字符串
- * @return 转换后的字符串指针
+ * @brief Convert a string to uppercase
+ * @param str String
+ * @return Converted string pointer
  */
 char *string_common_strtoupper(char *str);
 
 /**
- * @brief JSON字符串转义
- * @param src 源字符串
- * @param out 输出转义后的字符串（动态分配，调用者负责free）
- * @return 成功返回0，失败返回-1
+ * @brief JSON string escaping
+ * @param src Source string
+ * @param out Escaped string output (dynamically allocated; caller frees)
+ * @return 0 on success, -1 on failure
  */
 int string_common_json_escape(const char *src, char **out);
 
 /**
- * @brief JSON字符串转义（固定缓冲区版本）
- * @param src 源字符串
- * @param dst 目标缓冲区
- * @param dst_size 目标缓冲区大小
- * @return 写入的字符数
+ * @brief JSON string escaping (fixed-buffer version)
+ * @param src Source string
+ * @param dst Destination buffer
+ * @param dst_size Destination buffer size
+ * @return Number of characters written
  */
 size_t string_common_json_escape_buf(const char *src, char *dst, size_t dst_size);
 

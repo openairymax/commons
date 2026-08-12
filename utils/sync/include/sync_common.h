@@ -3,11 +3,11 @@
 
 /**
  * @file sync_common.h
- * @brief 同步功能通用定义
+ * @brief Common synchronization definitions.
  *
- * 提供同步相关的共享功能，包括互斥锁、条件变量、信号量等
- * 减少同步相关代码的重复
- *
+ * Provides shared synchronization functionality -- mutexes, condition
+ * variables, semaphores, etc. -- reducing duplication of
+ * synchronization-related code.
  */
 
 #ifndef SYNC_COMMON_H
@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 /**
- * @brief 互斥锁结构
+ * @brief Mutex structure
  */
 typedef struct {
     void *mutex;
@@ -29,7 +29,7 @@ typedef struct {
 } sync_mutex_t;
 
 /**
- * @brief 条件变量结构
+ * @brief Condition variable structure
  */
 typedef struct {
     void *cond;
@@ -37,7 +37,7 @@ typedef struct {
 } sync_cond_t;
 
 /**
- * @brief 信号量结构
+ * @brief Semaphore structure
  */
 typedef struct {
     void *sem;
@@ -46,7 +46,7 @@ typedef struct {
 } sync_sem_t;
 
 /**
- * @brief 读写锁结构
+ * @brief Read-write lock structure
  */
 typedef struct {
     void *rwlock;
@@ -54,179 +54,179 @@ typedef struct {
 } sync_rwlock_t;
 
 /**
- * @brief 初始化互斥锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a mutex
+ * @param mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_mutex_init(sync_mutex_t *mutex);
 
 /**
- * @brief 销毁互斥锁
- * @param mutex 互斥锁指针
+ * @brief Destroy a mutex
+ * @param mutex Mutex pointer
  */
 void sync_mutex_destroy(sync_mutex_t *mutex);
 
 /**
- * @brief 加锁互斥锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Lock a mutex
+ * @param mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_mutex_lock(sync_mutex_t *mutex);
 
 /**
- * @brief 解锁互斥锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a mutex
+ * @param mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_mutex_unlock(sync_mutex_t *mutex);
 
 /**
- * @brief 尝试加锁互斥锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Try to lock a mutex
+ * @param mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_mutex_trylock(sync_mutex_t *mutex);
 
 /**
- * @brief 初始化条件变量
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a condition variable
+ * @param cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_cond_init(sync_cond_t *cond);
 
 /**
- * @brief 销毁条件变量
- * @param cond 条件变量指针
+ * @brief Destroy a condition variable
+ * @param cond Condition variable pointer
  */
 void sync_cond_destroy(sync_cond_t *cond);
 
 /**
- * @brief 等待条件变量
- * @param cond 条件变量指针
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Wait on a condition variable
+ * @param cond Condition variable pointer
+ * @param mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_cond_wait(sync_cond_t *cond, sync_mutex_t *mutex);
 
 /**
- * @brief 带超时的等待条件变量
- * @param cond 条件变量指针
- * @param mutex 互斥锁指针
- * @param timeout_ms 超时时间（毫秒）
- * @return 0 成功，非0 失败
+ * @brief Timed wait on a condition variable
+ * @param cond Condition variable pointer
+ * @param mutex Mutex pointer
+ * @param timeout_ms Timeout in milliseconds
+ * @return 0 on success, non-zero on failure
  */
 int sync_cond_timedwait(sync_cond_t *cond, sync_mutex_t *mutex, uint32_t timeout_ms);
 
 /**
- * @brief 唤醒一个等待条件变量的线程
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake one thread waiting on the condition variable
+ * @param cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_cond_signal(sync_cond_t *cond);
 
 /**
- * @brief 唤醒所有等待条件变量的线程
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake all threads waiting on the condition variable
+ * @param cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_cond_broadcast(sync_cond_t *cond);
 
 /**
- * @brief 初始化信号量
- * @param sem 信号量指针
- * @param value 初始值
- * @return 0 成功，非0 失败
+ * @brief Initialize a semaphore
+ * @param sem Semaphore pointer
+ * @param value Initial value
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_init(sync_sem_t *sem, uint32_t value);
 
 /**
- * @brief 销毁信号量
- * @param sem 信号量指针
+ * @brief Destroy a semaphore
+ * @param sem Semaphore pointer
  */
 void sync_sem_destroy(sync_sem_t *sem);
 
 /**
- * @brief 等待信号量
- * @param sem 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Wait on a semaphore
+ * @param sem Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_wait(sync_sem_t *sem);
 
 /**
- * @brief 带超时的等待信号量
- * @param sem 信号量指针
- * @param timeout_ms 超时时间（毫秒）
- * @return 0 成功，非0 失败
+ * @brief Timed wait on a semaphore
+ * @param sem Semaphore pointer
+ * @param timeout_ms Timeout in milliseconds
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_timedwait(sync_sem_t *sem, uint32_t timeout_ms);
 
 /**
- * @brief 尝试等待信号量
- * @param sem 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Try to wait on a semaphore
+ * @param sem Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_trywait(sync_sem_t *sem);
 
 /**
- * @brief 释放信号量
- * @param sem 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Post a semaphore
+ * @param sem Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_post(sync_sem_t *sem);
 
 /**
- * @brief 获取信号量当前值
- * @param sem 信号量指针
- * @param value 输出参数，用于存储当前值
- * @return 0 成功，非0 失败
+ * @brief Get a semaphore's current value
+ * @param sem Semaphore pointer
+ * @param value Output parameter for the current value
+ * @return 0 on success, non-zero on failure
  */
 int sync_sem_getvalue(sync_sem_t *sem, uint32_t *value);
 
 /**
- * @brief 初始化读写锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a read-write lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_init(sync_rwlock_t *rwlock);
 
 /**
- * @brief 销毁读写锁
- * @param rwlock 读写锁指针
+ * @brief Destroy a read-write lock
+ * @param rwlock Read-write lock pointer
  */
 void sync_rwlock_destroy(sync_rwlock_t *rwlock);
 
 /**
- * @brief 读加锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Acquire the read lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_rdlock(sync_rwlock_t *rwlock);
 
 /**
- * @brief 写加锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Acquire the write lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_wrlock(sync_rwlock_t *rwlock);
 
 /**
- * @brief 尝试读加锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Try to acquire the read lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_tryrdlock(sync_rwlock_t *rwlock);
 
 /**
- * @brief 尝试写加锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Try to acquire the write lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_trywrlock(sync_rwlock_t *rwlock);
 
 /**
- * @brief 解锁读写锁
- * @param rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a read-write lock
+ * @param rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int sync_rwlock_unlock(sync_rwlock_t *rwlock);
 

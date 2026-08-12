@@ -5,12 +5,13 @@
  *
  * Syscall numbering — [SC] shared contract header.
  *
- * v1.1 唯一基线，v4.3 锁定（IRON-8：禁止双轨制）。
+ * v1.1 single baseline, locked at v4.3 (IRON-8: no dual-track numbering).
  * 4 core syscalls (548-551) + 20 reserved (552-571), avoiding the
- * x32 historical range 512-547. v1.0.1 起始编号统一为 548，对齐
- * SSoT docs/AirymaxOS/140-application-development/07-syscall-registry.md
- * 与 arch/x86/entry/syscalls/syscall_64.tbl + asm-generic/unistd.h
- * 三方一致性（ABI 铁律）。
+ * x32 historical range 512-547. Starting numbers unified at 548 since
+ * v1.0.1, aligned with the SSoT
+ * docs/AirymaxOS/140-application-development/07-syscall-registry.md
+ * and arch/x86/entry/syscalls/syscall_64.tbl + asm-generic/unistd.h
+ * (three-way consistency, an ABI iron rule).
  */
 
 #ifndef _UAPI_AIRYMAX_SYSCALLS_H
@@ -36,10 +37,12 @@
  * AIRY_DSL_SYS_* aliases let callers detect fallback at compile time.
  * See [DSL] §2.2 (v1.0.1 update: 12→4 syscalls).
  *
- * Note: v1.0.1 起始编号统一为 548，避开 x86_64 x32 历史遗留区域
- * (512-547)，确保跨架构二进制兼容。SSoT 注册表
+ * Note: since v1.0.1 the starting number is unified at 548, avoiding the
+ * x86_64 x32 historical range (512-547) to guarantee cross-architecture
+ * binary compatibility. The SSoT registry
  * docs/AirymaxOS/140-application-development/07-syscall-registry.md
- * 为唯一权威源，syscall_64.tbl 与 unistd.h 必须与本文件保持三方一致。
+ * is the single authoritative source; syscall_64.tbl and unistd.h must
+ * stay three-way consistent with this file.
  */
 #ifdef AIRY_SC_FALLBACK
 #define AIRY_DSL_SYS_CALL AIRY_SYS_CALL

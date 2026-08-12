@@ -4,25 +4,23 @@
 /*
  *
  * @file input_validator.h
- * @brief 输入验证工具库 - 安全内生加固
+ * @brief Input validation utility library: security-by-design hardening.
  *
  * @details
- * 本模块提供统一的输入验证功能，防止注入攻击、路径遍历、缓冲区溢出等安全问题。
- * 遵循白名单验证原则，只允许已知安全的输入模式。
+ * This module provides unified input validation to prevent injection
+ * attacks, path traversal, buffer overflows, and other security issues.
+ * It follows the whitelist validation principle, only allowing known-safe
+ * input patterns.
  *
- * 安全原则：
- * 1. 永不信任外部输入
- * 2. 白名单优于黑名单
- * 3. 边界检查必须严格
- * 4. 错误时安全失败
+ * Security principles:
+ * 1. Never trust external input
+ * 2. Whitelists over blacklists
+ * 3. Boundary checks must be strict
+ * 4. Fail safely on error
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-03-30
- * @version 2.0
- *
- * @note 线程安全：所有公共接口均为线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-1 安全内生原则
- * @see C_Cpp_secure_coding_standard.md 安全编码指南
+ * @note Thread safety: all public interfaces are thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md E-1 security-by-design principle
+ * @see C_Cpp_secure_coding_standard.md secure coding guide
  */
 
 #ifndef AIRY_RT_INPUT_VALIDATOR_H
@@ -39,7 +37,7 @@ extern "C" {
 
 
 /**
- * @brief 验证结果结构
+ * @brief Validation result structure
  */
 typedef struct {
     int is_valid;
@@ -50,193 +48,194 @@ typedef struct {
 
 
 /**
- * @brief 验证字符串长度
- * @param str [in] 输入字符串
- * @param min_len 最小长度
- * @param max_len 最大长度
- * @param result [out] 验证结果
+ * @brief Validate a string's length
+ * @param str [in] Input string
+ * @param min_len Minimum length
+ * @param max_len Maximum length
+ * @param result [out] Validation result
  */
 void airy_validate_string_length(const char *str, size_t min_len, size_t max_len,
                                  airy_validation_result_t *result);
 
 /**
- * @brief 验证字符串是否只包含安全字符
- * @param str [in] 输入字符串
- * @param allowed_chars [in] 允许的字符集（白名单）
- * @param result [out] 验证结果
+ * @brief Validate that a string contains only safe characters
+ * @param str [in] Input string
+ * @param allowed_chars [in] Allowed character set (whitelist)
+ * @param result [out] Validation result
  */
 void airy_validate_string_charset(const char *str, const char *allowed_chars,
                                   airy_validation_result_t *result);
 
 /**
- * @brief 验证标识符（字母、数字、下划线）
- * @param str [in] 输入字符串
- * @param max_len 最大长度
- * @param result [out] 验证结果
+ * @brief Validate an identifier (letters, digits, underscores)
+ * @param str [in] Input string
+ * @param max_len Maximum length
+ * @param result [out] Validation result
  */
 void airy_validate_identifier(const char *str, size_t max_len, airy_validation_result_t *result);
 
 /**
- * @brief 验证JSON字符串
- * @param str [in] 输入字符串
- * @param max_len 最大长度
- * @param result [out] 验证结果
+ * @brief Validate a JSON string
+ * @param str [in] Input string
+ * @param max_len Maximum length
+ * @param result [out] Validation result
  */
 void airy_validate_json_string(const char *str, size_t max_len, airy_validation_result_t *result);
 
 
 /**
- * @brief 验证文件路径安全性
- * @param path [in] 输入路径
- * @param allowed_root [in] 允许的根目录（可为NULL）
- * @param result [out] 验证结果
+ * @brief Validate file path safety
+ * @param path [in] Input path
+ * @param allowed_root [in] Allowed root directory (may be NULL)
+ * @param result [out] Validation result
  *
  * @details
- * 检测以下安全问题：
- * - 路径遍历攻击（../）
- * - 空字节注入
- * - 符号链接攻击
- * - 绝对路径限制
+ * Detects the following security issues:
+ * - Path traversal attacks (../)
+ * - NUL-byte injection
+ * - Symlink attacks
+ * - Absolute path restrictions
  */
 void airy_validate_file_path(const char *path, const char *allowed_root,
                              airy_validation_result_t *result);
 
 /**
- * @brief 规范化路径
- * @param path [in] 输入路径
- * @param out_normalized [out] 输出规范化路径（调用者负责释放）
- * @param out_len 输出长度
- * @return airy_err_t 错误码
+ * @brief Normalize a path
+ * @param path [in] Input path
+ * @param out_normalized [out] Normalized path output (caller frees)
+ * @param out_len Output length
+ * @return airy_err_t Error code
  */
 airy_err_t airy_normalize_path(const char *path, char **out_normalized, size_t *out_len);
 
 
 /**
- * @brief 验证Shell命令安全性
- * @param cmd [in] 输入命令
- * @param allowed_commands [in] 允许的命令列表（以NULL结尾）
- * @param result [out] 验证结果
+ * @brief Validate shell command safety
+ * @param cmd [in] Input command
+ * @param allowed_commands [in] Allowed command list (NULL-terminated)
+ * @param result [out] Validation result
  *
  * @details
- * 检测以下安全问题：
- * - 命令注入（; | & $ ` 等）
- * - 危险命令（rm -rf, dd, mkfs等）
- * - 环境变量注入
+ * Detects the following security issues:
+ * - Command injection (; | & $ ` etc.)
+ * - Dangerous commands (rm -rf, dd, mkfs, etc.)
+ * - Environment variable injection
  */
 void airy_validate_shell_command(const char *cmd, const char **allowed_commands,
                                  airy_validation_result_t *result);
 
 /**
- * @brief 净化Shell参数
- * @param param [in] 输入参数
- * @param out_sanitized [out] 输出净化后的参数（调用者负责释放）
- * @return airy_err_t 错误码
+ * @brief Sanitize a shell parameter
+ * @param param [in] Input parameter
+ * @param out_sanitized [out] Sanitized parameter output (caller frees)
+ * @return airy_err_t Error code
  */
 airy_err_t airy_sanitize_shell_param(const char *param, char **out_sanitized);
 
 
 /**
- * @brief 验证SQL查询安全性
- * @param sql [in] 输入SQL
- * @param result [out] 验证结果
+ * @brief Validate SQL query safety
+ * @param sql [in] Input SQL
+ * @param result [out] Validation result
  *
  * @details
- * 检测以下安全问题：
- * - SQL注入（UNION, OR 1=1, --等）
- * - 危险操作（DROP, TRUNCATE, ALTER等）
- * - 多语句执行
+ * Detects the following security issues:
+ * - SQL injection (UNION, OR 1=1, -- etc.)
+ * - Dangerous operations (DROP, TRUNCATE, ALTER, etc.)
+ * - Multi-statement execution
  */
 void airy_validate_sql_query(const char *sql, airy_validation_result_t *result);
 
 /**
- * @brief 净化SQL标识符（表名、列名等）
- * @param identifier [in] 输入标识符
- * @param out_sanitized [out] 输出净化后的标识符（调用者负责释放）
- * @return airy_err_t 错误码
+ * @brief Sanitize an SQL identifier (table names, column names, etc.)
+ * @param identifier [in] Input identifier
+ * @param out_sanitized [out] Sanitized identifier output (caller frees)
+ * @return airy_err_t Error code
  */
 airy_err_t airy_sanitize_sql_identifier(const char *identifier, char **out_sanitized);
 
 
 /**
- * @brief 验证URL安全性
- * @param url [in] 输入URL
- * @param allowed_schemes [in] 允许的协议列表（如 {"http", "https", NULL}）
- * @param result [out] 验证结果
+ * @brief Validate URL safety
+ * @param url [in] Input URL
+ * @param allowed_schemes [in] Allowed scheme list (e.g. {"http",
+ *                             "https", NULL})
+ * @param result [out] Validation result
  *
  * @details
- * 检测以下安全问题：
- * - 协议注入（javascript:, data:等）
- * - SSRF攻击（内网IP、localhost等）
- * - 凭据泄露
+ * Detects the following security issues:
+ * - Scheme injection (javascript:, data:, etc.)
+ * - SSRF attacks (internal IPs, localhost, etc.)
+ * - Credential leakage
  */
 void airy_validate_url(const char *url, const char **allowed_schemes,
                        airy_validation_result_t *result);
 
 /**
- * @brief 解析URL组件
- * @param url [in] 输入URL
- * @param out_scheme [out] 输出协议（调用者负责释放）
- * @param out_host [out] 输出主机名（调用者负责释放）
- * @param out_port [out] 输出端口
- * @param out_path [out] 输出路径（调用者负责释放）
- * @return airy_err_t 错误码
+ * @brief Parse URL components
+ * @param url [in] Input URL
+ * @param out_scheme [out] Scheme output (caller frees)
+ * @param out_host [out] Hostname output (caller frees)
+ * @param out_port [out] Port output
+ * @param out_path [out] Path output (caller frees)
+ * @return airy_err_t Error code
  */
 airy_err_t airy_parse_url(const char *url, char **out_scheme, char **out_host, uint16_t *out_port,
                           char **out_path);
 
 
 /**
- * @brief 验证整数范围
- * @param value 输入值
- * @param min_val 最小值
- * @param max_val 最大值
- * @param result [out] 验证结果
+ * @brief Validate an integer range
+ * @param value Input value
+ * @param min_val Minimum value
+ * @param max_val Maximum value
+ * @param result [out] Validation result
  */
 void airy_validate_int_range(int64_t value, int64_t min_val, int64_t max_val,
                              airy_validation_result_t *result);
 
 /**
- * @brief 验证浮点数范围
- * @param value 输入值
- * @param min_val 最小值
- * @param max_val 最大值
- * @param result [out] 验证结果
+ * @brief Validate a float range
+ * @param value Input value
+ * @param min_val Minimum value
+ * @param max_val Maximum value
+ * @param result [out] Validation result
  */
 void airy_validate_float_range(double value, double min_val, double max_val,
                                airy_validation_result_t *result);
 
 
 /**
- * @brief 安全内存复制
- * @param dest [out] 目标缓冲区
- * @param dest_size 目标缓冲区大小
- * @param src [in] 源数据
- * @param src_size 源数据大小
- * @return airy_err_t 错误码
+ * @brief Safe memory copy
+ * @param dest [out] Destination buffer
+ * @param dest_size Destination buffer size
+ * @param src [in] Source data
+ * @param src_size Source data size
+ * @return airy_err_t Error code
  */
 airy_err_t airy_safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size);
 
 /**
- * @brief 安全字符串复制
- * @param dest [out] 目标缓冲区
- * @param dest_size 目标缓冲区大小
- * @param src [in] 源字符串
- * @return airy_err_t 错误码
+ * @brief Safe string copy
+ * @param dest [out] Destination buffer
+ * @param dest_size Destination buffer size
+ * @param src [in] Source string
+ * @return airy_err_t Error code
  */
 airy_err_t airy_safe_strcpy(char *dest, size_t dest_size, const char *src);
 
 /**
- * @brief 安全字符串拼接
- * @param dest [in,out] 目标缓冲区
- * @param dest_size 目标缓冲区大小
- * @param src [in] 源字符串
- * @return airy_err_t 错误码
+ * @brief Safe string concatenation
+ * @param dest [in,out] Destination buffer
+ * @param dest_size Destination buffer size
+ * @param src [in] Source string
+ * @return airy_err_t Error code
  */
 airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src);
 
 
 /**
- * @brief 验证并返回错误
+ * @brief Validate and return on failure
  */
 #define AIRY_VALIDATE_OR_RETURN(result, error_code) \
     do {                                            \
@@ -246,7 +245,7 @@ airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src);
     } while (0)
 
 /**
- * @brief 验证并跳转到错误处理
+ * @brief Validate and jump to error handling
  */
 #define AIRY_VALIDATE_OR_GOTO(result, label, error_code) \
     do {                                                 \
@@ -257,12 +256,12 @@ airy_err_t airy_safe_strcat(char *dest, size_t dest_size, const char *src);
     } while (0)
 
 /**
- * @brief 安全字符串复制宏
+ * @brief Safe string copy macro
  */
 #define AIRY_SAFE_STRCPY(dest, src) airy_safe_strcpy(dest, sizeof(dest), src)
 
 /**
- * @brief 安全字符串拼接宏
+ * @brief Safe string concatenation macro
  */
 #define AIRY_SAFE_STRCAT(dest, src) airy_safe_strcat(dest, sizeof(dest), src)
 

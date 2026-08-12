@@ -3,30 +3,38 @@
 
 /**
  * @file service_logging.h
- * @brief 统一分层日志系统服务层API
+ * @brief Unified layered logging system: service-layer API.
  *
  * @details
- * 本模块提供统一的分层日志系统服务层接口，提供高级功能：
- * - 日志轮转：基于大小/时间自动轮转，支持压缩和归档
- * - 日志过滤：级别过滤、关键字过滤、正则表达式过滤
- * - 日志传输：网络传输（TCP/UDP）、Syslog集成、远程收集
- * - 监控统计：吞吐量统计、延迟监控、错误率告警
- * - 管理接口：热重载、运行时调整、查询检索
+ * This module provides the unified layered logging system service-layer
+ * interface with advanced features:
+ * - Log rotation: automatic rotation by size/time, with compression and
+ *   archiving
+ * - Log filtering: level filtering, keyword filtering, regex filtering
+ * - Log transport: network transport (TCP/UDP), Syslog integration,
+ *   remote collection
+ * - Monitoring and statistics: throughput, latency monitoring, error-rate
+ *   alerts
+ * - Management interface: hot reload, runtime adjustment, query/retrieval
  *
- * 服务层设计原则：
- * 1. **功能丰富**：提供生产环境所需的所有高级日志功能
- * 2. **配置灵活**：支持多种配置方式和运行时调整
- * 3. **可扩展性**：插件化架构，支持自定义输出器和过滤器
- * 4. **监控完备**：全面的性能指标和健康状态监控
+ * Service-layer design principles:
+ * 1. Feature rich: all advanced logging features needed in production
+ * 2. Flexible configuration: multiple configuration methods and runtime
+ *    adjustment
+ * 3. Extensibility: plug-in architecture supporting custom outputters and
+ *    filters
+ * 4. Complete monitoring: comprehensive performance metrics and health
+ *    state monitoring
  *
- * 架构角色：
- * - 从原子层获取日志记录
- * - 应用过滤规则和格式化
- * - 将日志输出到多个目标（文件、网络、Syslog等）
- * - 提供管理接口和监控数据
+ * Architecture role:
+ * - Receives log records from the atomic layer
+ * - Applies filter rules and formatting
+ * - Outputs logs to multiple targets (file, network, Syslog, etc.)
+ * - Provides management interfaces and monitoring data
  *
- * 注意：服务层是可选的，简单应用可以只使用核心层和原子层。
- * 服务层功能可通过条件编译禁用，以减少资源消耗。
+ * Note: the service layer is optional; simple applications can use only
+ * the core and atomic layers. Service-layer features can be disabled via
+ * conditional compilation to reduce resource usage.
  */
 
 #ifndef AIRY_RT_COMMON_SERVICE_LOGGING_H
@@ -43,9 +51,9 @@ extern "C" {
 
 
 /**
- * @brief 服务层配置结构体
+ * @brief Service-layer configuration structure
  *
- * 配置服务层的各项高级功能。
+ * Configures the advanced features of the service layer.
  */
 typedef struct {
 
@@ -78,9 +86,9 @@ typedef struct {
 
 
 /**
- * @brief 日志轮转策略
+ * @brief Log rotation strategy
  *
- * 定义何时触发日志轮转。
+ * Defines when log rotation is triggered.
  */
 typedef enum {
 
@@ -94,9 +102,9 @@ typedef enum {
 } rotation_strategy_t;
 
 /**
- * @brief 时间轮转间隔
+ * @brief Time-rotation interval
  *
- * 定义时间轮转的间隔单位。
+ * Defines the interval unit for time-based rotation.
  */
 typedef enum {
 
@@ -113,9 +121,9 @@ typedef enum {
 } rotation_interval_t;
 
 /**
- * @brief 日志轮转配置
+ * @brief Log rotation configuration
  *
- * 配置日志轮转的行为。
+ * Configures the log rotation behavior.
  */
 typedef struct {
 
@@ -145,9 +153,9 @@ typedef struct {
 
 
 /**
- * @brief 过滤条件类型
+ * @brief Filter condition types
  *
- * 定义过滤条件的匹配类型。
+ * Defines the matching type of a filter condition.
  */
 typedef enum {
 
@@ -170,9 +178,9 @@ typedef enum {
 } filter_match_type_t;
 
 /**
- * @brief 过滤条件
+ * @brief Filter condition
  *
- * 定义单个过滤条件。
+ * Defines a single filter condition.
  */
 typedef struct {
 
@@ -192,9 +200,10 @@ typedef struct {
 } filter_condition_t;
 
 /**
- * @brief 过滤规则
+ * @brief Filter rule
  *
- * 定义完整的过滤规则，包含多个条件和逻辑关系。
+ * Defines a complete filter rule with multiple conditions and their
+ * logical relationship.
  */
 typedef struct {
 
@@ -214,9 +223,9 @@ typedef struct {
 } filter_rule_t;
 
 /**
- * @brief 过滤配置
+ * @brief Filter configuration
  *
- * 配置日志过滤的行为。
+ * Configures the log filtering behavior.
  */
 typedef struct {
 
@@ -237,9 +246,9 @@ typedef struct {
 
 
 /**
- * @brief 传输协议
+ * @brief Transport protocols
  *
- * 定义日志传输的网络协议。
+ * Defines the network protocols for log transport.
  */
 typedef enum {
 
@@ -259,9 +268,9 @@ typedef enum {
 } transport_protocol_t;
 
 /**
- * @brief 传输配置
+ * @brief Transport configuration
  *
- * 配置日志传输的行为。
+ * Configures the log transport behavior.
  */
 typedef struct {
 
@@ -305,9 +314,9 @@ typedef struct {
 
 
 /**
- * @brief 监控配置
+ * @brief Monitoring configuration
  *
- * 配置日志系统监控的行为。
+ * Configures the logging system's monitoring behavior.
  */
 typedef struct {
 
@@ -355,114 +364,115 @@ typedef struct {
 
 
 /**
- * @brief 初始化服务层
+ * @brief Initialize the service layer
  *
- * 初始化服务层内部组件，启动工作线程。
- * 必须在调用任何服务层函数之前调用。
+ * Initializes the service-layer internal components and starts the worker
+ * threads. Must be called before any service-layer function.
  *
- * @param manager 服务层配置，为NULL时使用默认配置
- * @return 0 成功，负值表示错误
+ * @param manager Service-layer configuration, NULL for defaults
+ * @return 0 on success, negative on error
  */
 int service_logging_init(const service_logging_config_t *manager);
 
 /**
- * @brief 配置日志轮转
+ * @brief Configure log rotation
  *
- * 配置日志文件的轮转行为。
+ * Configures the log file rotation behavior.
  *
- * @param manager 轮转配置
- * @return 0 成功，负值表示错误
+ * @param manager Rotation configuration
+ * @return 0 on success, negative on error
  */
 int service_logging_configure_rotation(const log_rotation_config_t *manager);
 
 /**
- * @brief 配置日志过滤
+ * @brief Configure log filtering
  *
- * 配置日志记录的过滤规则。
+ * Configures the log record filter rules.
  *
- * @param manager 过滤配置
- * @return 0 成功，负值表示错误
+ * @param manager Filter configuration
+ * @return 0 on success, negative on error
  */
 int service_logging_configure_filtering(const log_filter_config_t *manager);
 
 /**
- * @brief 配置日志传输
+ * @brief Configure log transport
  *
- * 配置日志的远程传输。
+ * Configures remote log transport.
  *
- * @param manager 传输配置
- * @return 0 成功，负值表示错误
+ * @param manager Transport configuration
+ * @return 0 on success, negative on error
  */
 int service_logging_configure_transport(const log_transport_config_t *manager);
 
 /**
- * @brief 配置监控统计
+ * @brief Configure monitoring and statistics
  *
- * 配置日志系统的监控和统计。
+ * Configures the logging system's monitoring and statistics.
  *
- * @param manager 监控配置
- * @return 0 成功，负值表示错误
+ * @param manager Monitoring configuration
+ * @return 0 on success, negative on error
  */
 int service_logging_configure_monitoring(const log_monitoring_config_t *manager);
 
 /**
- * @brief 启动日志轮转
+ * @brief Trigger log rotation now
  *
- * 手动触发日志轮转，立即轮转当前日志文件。
+ * Manually triggers log rotation, rotating the current log file
+ * immediately.
  *
- * @param reason 轮转原因（用于日志记录）
- * @return 0 成功，负值表示错误
+ * @param reason Rotation reason (for logging)
+ * @return 0 on success, negative on error
  */
 int service_logging_rotate_now(const char *reason);
 
 /**
- * @brief 添加过滤规则
+ * @brief Add a filter rule
  *
- * 动态添加过滤规则，支持运行时更新。
+ * Dynamically adds a filter rule, supporting runtime updates.
  *
- * @param rule 过滤规则
- * @return 规则ID，负值表示错误
+ * @param rule Filter rule
+ * @return Rule ID, negative on error
  */
 int service_logging_add_filter_rule(const filter_rule_t *rule);
 
 /**
- * @brief 移除过滤规则
+ * @brief Remove a filter rule
  *
- * 动态移除过滤规则。
+ * Dynamically removes a filter rule.
  *
- * @param rule_id 规则ID
- * @return 0 成功，负值表示错误
+ * @param rule_id Rule ID
+ * @return 0 on success, negative on error
  */
 int service_logging_remove_filter_rule(int rule_id);
 
 /**
- * @brief 更新过滤规则
+ * @brief Update a filter rule
  *
- * 动态更新过滤规则。
+ * Dynamically updates a filter rule.
  *
- * @param rule_id 规则ID
- * @param rule 新的过滤规则
- * @return 0 成功，负值表示错误
+ * @param rule_id Rule ID
+ * @param rule New filter rule
+ * @return 0 on success, negative on error
  */
 int service_logging_update_filter_rule(int rule_id, const filter_rule_t *rule);
 
 /**
- * @brief 测试过滤规则
+ * @brief Test a filter rule
  *
- * 测试过滤规则是否匹配指定的日志记录。
+ * Tests whether a filter rule matches the given log record.
  *
- * @param rule_id 规则ID
- * @param record 日志记录
- * @return true 匹配，false 不匹配
+ * @param rule_id Rule ID
+ * @param record Log record
+ * @return true if matched, false otherwise
  */
 bool service_logging_test_filter_rule(int rule_id, const log_record_t *record);
 
 /**
- * @brief 发送日志到远程
+ * @brief Send buffered logs to the remote
  *
- * 立即发送缓冲的日志到远程服务器。
+ * Immediately sends buffered logs to the remote server.
  *
- * @return 成功发送的记录数，负值表示错误
+ * @return Number of records sent, negative on error
  */
 
 
@@ -472,73 +482,74 @@ typedef struct log_monitoring_stats log_monitoring_stats_t;
 int service_logging_flush_transport(void);
 
 /**
- * @brief 输出单条日志记录
+ * @brief Output a single log record
  *
- * 通过已注册的outputter输出单条日志记录。
- * 由atomic_logging层调用，实现分层日志桥接。
+ * Outputs a single log record through the registered outputters. Called
+ * by the atomic-logging layer to bridge the layered logging.
  *
- * @param record 日志记录指针
+ * @param record Log record pointer
  */
 void service_log_output_record(const log_record_t *record);
 
 /**
- * @brief 获取监控统计
+ * @brief Get monitoring statistics
  *
- * 获取日志系统的当前监控统计信息。
+ * Gets the current monitoring statistics of the logging system.
  *
- * @param out_stats 输出参数，接收统计信息
- * @return 0 成功，负值表示错误
+ * @param out_stats Output parameter receiving the statistics
+ * @return 0 on success, negative on error
  */
 int service_logging_get_monitoring_stats(struct log_monitoring_stats *out_stats);
 
 /**
- * @brief 重置监控统计
+ * @brief Reset monitoring statistics
  *
- * 重置所有监控统计计数器。
+ * Resets all monitoring statistic counters.
  *
- * @return 0 成功，负值表示错误
+ * @return 0 on success, negative on error
  */
 int service_logging_reset_monitoring_stats(void);
 
 struct log_query;
 
 /**
- * @brief 查询日志
+ * @brief Query logs
  *
- * 查询符合条件的日志记录（需要启用日志存储功能）。
+ * Queries log records matching the criteria (requires the log storage
+ * feature).
  *
- * @param query 查询条件
- * @param out_records 输出数组，接收查询结果
- * @param max_records 最大返回记录数
- * @param timeout_ms 查询超时时间（毫秒）
- * @return 实际返回的记录数，负值表示错误
+ * @param query Query criteria
+ * @param out_records Output array receiving the results
+ * @param max_records Maximum number of records to return
+ * @param timeout_ms Query timeout (ms)
+ * @return Number of records returned, negative on error
  */
 int service_logging_query(const struct log_query *query, log_record_t *out_records,
                           size_t max_records, int timeout_ms);
 
 /**
- * @brief 重新加载服务层配置
+ * @brief Reload the service-layer configuration
  *
- * 从配置文件重新加载服务层配置。
+ * Reloads the service-layer configuration from a config file.
  *
- * @param config_path 配置文件路径
- * @return 0 成功，负值表示错误
+ * @param config_path Config file path
+ * @return 0 on success, negative on error
  */
 int service_logging_reload_config(const char *config_path);
 
 /**
- * @brief 清理服务层
+ * @brief Clean up the service layer
  *
- * 清理服务层资源，停止工作线程。
- * 必须在程序退出前调用。
+ * Releases service-layer resources and stops the worker threads. Must be
+ * called before program exit.
  */
 void service_logging_cleanup(void);
 
 
 /**
- * @brief 日志监控统计信息
+ * @brief Log monitoring statistics
  *
- * 日志系统的运行时监控统计信息。
+ * Runtime monitoring statistics of the logging system.
  */
 typedef struct log_monitoring_stats {
 
@@ -638,9 +649,9 @@ typedef struct log_monitoring_stats {
 
 
 /**
- * @brief 日志查询条件
+ * @brief Log query criteria
  *
- * 定义日志查询的条件。
+ * Defines the criteria for querying logs.
  */
 typedef struct log_query {
 

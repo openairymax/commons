@@ -3,9 +3,10 @@
 
 /**
  * @file compat.h
- * @brief 跨平台兼容性定义
+ * @brief Cross-platform compatibility definitions.
  *
- * 提供编译器兼容性、平台抽象宏、位操作工具等。
+ * Provides compiler compatibility, platform abstraction macros, and
+ * bit-operation utilities.
  *
  * @see docs/Capital_Specifications/coding_standard/C_coding_style_standard.md
  */
@@ -219,10 +220,10 @@ AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 
 
 /**
- * @brief 检查指针是否对齐
- * @param ptr 指针
- * @param align 对齐值（必须是2的幂）
- * @return 1对齐，0未对齐
+ * @brief Check whether a pointer is aligned
+ * @param ptr Pointer
+ * @param align Alignment value (must be a power of 2)
+ * @return 1 if aligned, 0 if not
  */
 AIRY_INLINE int airy_is_aligned(const void *ptr, size_t align)
 {
@@ -230,10 +231,10 @@ AIRY_INLINE int airy_is_aligned(const void *ptr, size_t align)
 }
 
 /**
- * @brief 向上对齐值
- * @param value 原始值
- * @param align 对齐值（必须是2的幂）
- * @return 对齐后的值
+ * @brief Align a value up
+ * @param value Original value
+ * @param align Alignment value (must be a power of 2)
+ * @return Aligned value
  */
 AIRY_INLINE size_t airy_align_up(size_t value, size_t align)
 {
@@ -241,10 +242,10 @@ AIRY_INLINE size_t airy_align_up(size_t value, size_t align)
 }
 
 /**
- * @brief 向下对齐值
- * @param value 原始值
- * @param align 对齐值（必须是2的幂）
- * @return 对齐后的值
+ * @brief Align a value down
+ * @param value Original value
+ * @param align Alignment value (must be a power of 2)
+ * @return Aligned value
  */
 AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
 {
@@ -253,17 +254,17 @@ AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
 
 
 /**
- * @brief 获取数组元素数量
- * @param arr 数组
- * @return 元素数量
+ * @brief Get the number of array elements
+ * @param arr Array
+ * @return Number of elements
  */
 #define AIRY_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /**
- * @brief 获取结构体成员偏移量
- * @param type 结构体类型
- * @param member 成员名
- * @return 偏移量
+ * @brief Get the offset of a struct member
+ * @param type Struct type
+ * @param member Member name
+ * @return Offset
  */
 #if defined(AIRY_COMPILER_GCC) || defined(AIRY_COMPILER_CLANG)
 #define AIRY_OFFSETOF(type, member) __builtin_offsetof(type, member)
@@ -272,20 +273,20 @@ AIRY_INLINE size_t airy_align_down(size_t value, size_t align)
 #endif
 
 /**
- * @brief 根据成员指针获取结构体指针
- * @param ptr 成员指针
- * @param type 结构体类型
- * @param member 成员名
- * @return 结构体指针
+ * @brief Get the struct pointer from a member pointer
+ * @param ptr Member pointer
+ * @param type Struct type
+ * @param member Member name
+ * @return Struct pointer
  */
 #define AIRY_CONTAINER_OF(ptr, type, member) ((type *)((char *)(ptr) - AIRY_OFFSETOF(type, member)))
 
 
 /**
- * @brief 检查位是否设置
- * @param x 值
- * @param bit 位索引（从0开始）
- * @return 1设置，0未设置
+ * @brief Test whether a bit is set
+ * @param x Value
+ * @param bit Bit index (starting from 0)
+ * @return 1 if set, 0 if not
  */
 AIRY_INLINE int airy_bit_test(unsigned int x, unsigned int bit)
 {
@@ -293,9 +294,9 @@ AIRY_INLINE int airy_bit_test(unsigned int x, unsigned int bit)
 }
 
 /**
- * @brief 设置位
- * @param x 值指针
- * @param bit 位索引（从0开始）
+ * @brief Set a bit
+ * @param x Value pointer
+ * @param bit Bit index (starting from 0)
  */
 AIRY_INLINE void airy_bit_set(unsigned int *x, unsigned int bit)
 {
@@ -304,9 +305,9 @@ AIRY_INLINE void airy_bit_set(unsigned int *x, unsigned int bit)
 }
 
 /**
- * @brief 清除位
- * @param x 值指针
- * @param bit 位索引（从0开始）
+ * @brief Clear a bit
+ * @param x Value pointer
+ * @param bit Bit index (starting from 0)
  */
 AIRY_INLINE void airy_bit_clear(unsigned int *x, unsigned int bit)
 {
@@ -315,9 +316,9 @@ AIRY_INLINE void airy_bit_clear(unsigned int *x, unsigned int bit)
 }
 
 /**
- * @brief 翻转位
- * @param x 值指针
- * @param bit 位索引（从0开始）
+ * @brief Flip a bit
+ * @param x Value pointer
+ * @param bit Bit index (starting from 0)
  */
 AIRY_INLINE void airy_bit_flip(unsigned int *x, unsigned int bit)
 {
@@ -326,9 +327,9 @@ AIRY_INLINE void airy_bit_flip(unsigned int *x, unsigned int bit)
 }
 
 /**
- * @brief 计算置位数量
- * @param x 值
- * @return 置位数量
+ * @brief Count the number of set bits
+ * @param x Value
+ * @return Number of set bits
  */
 AIRY_INLINE unsigned int airy_popcount(unsigned int x)
 {
@@ -347,9 +348,9 @@ AIRY_INLINE unsigned int airy_popcount(unsigned int x)
 }
 
 /**
- * @brief 计算前导零数量
- * @param x 值
- * @return 前导零数量
+ * @brief Count the number of leading zeros
+ * @param x Value
+ * @return Number of leading zeros
  */
 AIRY_INLINE unsigned int airy_clz(unsigned int x)
 {
@@ -374,9 +375,9 @@ AIRY_INLINE unsigned int airy_clz(unsigned int x)
 }
 
 /**
- * @brief 计算尾随零数量
- * @param x 值
- * @return 尾随零数量
+ * @brief Count the number of trailing zeros
+ * @param x Value
+ * @return Number of trailing zeros
  */
 AIRY_INLINE unsigned int airy_ctz(unsigned int x)
 {
@@ -402,60 +403,60 @@ AIRY_INLINE unsigned int airy_ctz(unsigned int x)
 
 
 /**
- * @brief 安全字符串复制
- * @param dest 目标缓冲区
- * @param src 源字符串
- * @param dest_size 目标缓冲区大小
- * @return 0成功，非0失败
+ * @brief Safe string copy
+ * @param dest Destination buffer
+ * @param src Source string
+ * @param dest_size Destination buffer size
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API int airy_strlcpy(char *dest, const char *src, size_t dest_size);
 
 /**
- * @brief 安全字符串连接
- * @param dest 目标缓冲区
- * @param src 源字符串
- * @param dest_size 目标缓冲区大小
- * @return 0成功，非0失败
+ * @brief Safe string concatenation
+ * @param dest Destination buffer
+ * @param src Source string
+ * @param dest_size Destination buffer size
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API int airy_strlcat(char *dest, const char *src, size_t dest_size);
 
 /**
- * @brief 安全字符串复制（带返回值）
- * @param dest 目标缓冲区
- * @param src 源字符串
- * @param dest_size 目标缓冲区大小
- * @return 目标缓冲区指针
+ * @brief Safe string copy (returns the destination)
+ * @param dest Destination buffer
+ * @param src Source string
+ * @param dest_size Destination buffer size
+ * @return Destination buffer pointer
  */
 AIRY_API char *airy_strncpy_safe(char *dest, const char *src, size_t dest_size);
 
 
 /**
- * @brief 安全内存设置
- * @param dest 目标缓冲区
- * @param c 填充值
- * @param dest_size 目标缓冲区大小
- * @param count 要设置的字节数
- * @return 0成功，非0失败
+ * @brief Safe memory set
+ * @param dest Destination buffer
+ * @param c Fill value
+ * @param dest_size Destination buffer size
+ * @param count Number of bytes to set
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API int airy_memset_s(void *dest, int c, size_t dest_size, size_t count);
 
 /**
- * @brief 安全内存复制
- * @param dest 目标缓冲区
- * @param dest_size 目标缓冲区大小
- * @param src 源缓冲区
- * @param count 要复制的字节数
- * @return 0成功，非0失败
+ * @brief Safe memory copy
+ * @param dest Destination buffer
+ * @param dest_size Destination buffer size
+ * @param src Source buffer
+ * @param count Number of bytes to copy
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API int airy_memcpy_s(void *dest, size_t dest_size, const void *src, size_t count);
 
 /**
- * @brief 安全内存移动
- * @param dest 目标缓冲区
- * @param dest_size 目标缓冲区大小
- * @param src 源缓冲区
- * @param count 要移动的字节数
- * @return 0成功，非0失败
+ * @brief Safe memory move
+ * @param dest Destination buffer
+ * @param dest_size Destination buffer size
+ * @param src Source buffer
+ * @param count Number of bytes to move
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count);
 
@@ -480,32 +481,32 @@ AIRY_API int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_
 #endif
 
 /**
- * @brief 断言失败处理函数
+ * @brief Assertion failure handler
  */
 AIRY_API void airy_assert_fail(const char *cond, const char *file, int line, const char *func);
 
 /**
- * @brief 断言失败处理函数（带消息）
+ * @brief Assertion failure handler (with message)
  */
 AIRY_API void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
                                    const char *msg);
 
 /**
- * @brief 自定义断言处理器回调类型
+ * @brief Custom assertion handler callback type
  *
- * 设置后，断言失败时调用此回调而非abort()。
- * 生产环境可设置为日志记录+优雅降级。
+ * When set, this callback is invoked on assertion failure instead of
+ * abort(). In production it can be set to log and degrade gracefully.
  */
 typedef void (*airy_assert_handler_t)(const char *cond, const char *file, int line,
                                       const char *func, const char *msg);
 
 /**
- * @brief 设置自定义断言处理器
+ * @brief Set a custom assertion handler
  */
 AIRY_API void airy_set_assert_handler(airy_assert_handler_t handler);
 
 /**
- * @brief 获取当前断言处理器
+ * @brief Get the current assertion handler
  */
 AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 
@@ -520,12 +521,12 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 #endif
 
 /**
- * @brief 编译时检查
+ * @brief Compile-time check
  */
 #define AIRY_COMPILE_TIME_ASSERT(cond) AIRY_STATIC_ASSERT(cond, "Compile-time assertion failed")
 
 /**
- * @brief 检查类型大小
+ * @brief Check a type's size
  */
 #define AIRY_CHECK_SIZE(type, size) \
     AIRY_STATIC_ASSERT(sizeof(type) == size, "Size mismatch for " #type)
@@ -538,7 +539,7 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 #endif
 
 /**
- * @brief 调试断点
+ * @brief Debug breakpoint
  */
 AIRY_API void airy_debug_break(void);
 
@@ -549,12 +550,12 @@ AIRY_API void airy_debug_break(void);
 #define AIRY_VERSION_STRING "0.1.1"
 
 /**
- * @brief 获取版本字符串
+ * @brief Get the version string
  */
 AIRY_API const char *airy_version_string(void);
 
 /**
- * @brief 获取构建信息
+ * @brief Get build information
  */
 AIRY_API const char *airy_build_info(void);
 

@@ -3,12 +3,14 @@
 
 /**
  * @file svc_logger.h
- * @brief 服务层日志兼容接口（原生定义）
+ * @brief Service-layer logging compatibility interface (native
+ *        definitions).
  *
- * P0.17 阶段 2：从 daemons/common/include/svc_logger.h 迁移至
- * commons/utils/logging/include/svc_logger.h，消除 atoms→daemons
- * 编译期反向依赖（IRON-6）。提供 SVC_LOG_* 宏、airy_trace_context_t
- * 类型及日志记录器接口，供 atoms 与 daemons 共享使用。
+ * P0.17 phase 2: migrated from daemons/common/include/svc_logger.h to
+ * commons/utils/logging/include/svc_logger.h, removing the atoms->daemons
+ * compile-time reverse dependency (IRON-6). Provides the SVC_LOG_* macros,
+ * the airy_trace_context_t type, and the logger interface, shared by atoms
+ * and daemons.
  *
  * @see logging.h
  */
@@ -24,11 +26,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-/* P0.17 阶段 2: AIRY_STRNCPY_TERM 安全字符串复制宏
- * 原定义位于 commons/utils/memory/include/airy_memory.h:607，
- * 但完整包含 airy_memory.h 会引入 error.h/airy_memory.h 等过重依赖
- * （AIRY_EINVAL/AIRY_ERR_BUSY/airy_time_ms 等循环依赖冲突）。
- * 此处直接内联定义，带 ifndef 保护以避免重复定义。 */
+/* P0.17 phase 2: AIRY_STRNCPY_TERM safe string-copy macro.
+ * Originally defined in commons/utils/memory/include/airy_memory.h:607,
+ * but fully including airy_memory.h would drag in the heavy error.h/
+ * airy_memory.h dependency chain (circular-dependency conflicts with
+ * AIRY_EINVAL/AIRY_ERR_BUSY/airy_time_ms). It is inlined here with an
+ * ifndef guard to avoid duplicate definitions. */
 #ifndef AIRY_STRNCPY_TERM
 #define AIRY_STRNCPY_TERM(dst, src, size)                               \
     do {                                                                \
@@ -45,21 +48,22 @@ extern "C" {
 
 
 /**
- * @brief 日志级别枚举（兼容层）
- * @note 映射到 commons 的 log_level_t
+ * @brief Log level enumeration (compatibility layer)
+ * @note Maps to commons log_level_t
  */
 #ifndef AIRY_LOG_LEVEL_T_DEFINED
 #define AIRY_LOG_LEVEL_T_DEFINED
 typedef log_level_t airy_log_level_t;
 #endif
 
-/* 兼容旧日志级别名称
+/* Compatibility with old log-level names
  *
- * 注意：AIRY_LOG_DEBUG / INFO / WARN / ERROR / FATAL 已移除值宏定义，
- * 因为它们与 observability/logger.h 的函数式宏同名冲突。
- * 文件中需要日志级别常量时，请直接使用 LOG_LEVEL_* 枚举值。
- * 文件中需要日志打印时，请使用 AIRY_LOG_*("fmt", ...) 函数式宏
- * （来自 observability/logger.h）或 SVC_LOG_* 宏。
+ * Note: the AIRY_LOG_DEBUG / INFO / WARN / ERROR / FATAL value-macro
+ * definitions were removed because they conflict with the functional
+ * macros of the same name in observability/logger.h. When a log-level
+ * constant is needed, use the LOG_LEVEL_* enum values directly. When log
+ * output is needed, use the AIRY_LOG_*("fmt", ...) functional macros (from
+ * observability/logger.h) or the SVC_LOG_* macros.
  */
 #ifndef AIRY_LOG_TRACE
 #define AIRY_LOG_TRACE LOG_LEVEL_DEBUG
@@ -70,8 +74,8 @@ typedef log_level_t airy_log_level_t;
 
 
 /**
- * @brief 追踪上下文结构
- * @note 用于分布式追踪，支持 TraceID/SpanID/SessionID
+ * @brief Trace context structure
+ * @note For distributed tracing; supports TraceID/SpanID/SessionID
  */
 typedef struct {
     char trace_id[36];
@@ -82,14 +86,14 @@ typedef struct {
 
 
 /**
- * @brief 日志记录器句柄类型
- * @note 兼容层使用单例模式
+ * @brief Logger handle type
+ * @note The compatibility layer uses a singleton pattern
  */
 typedef struct airy_logger_s *airy_logger_t;
 
 
 /**
- * @brief 日志输出目标类型
+ * @brief Log output target types
  */
 typedef log_output_t airy_log_target_type_t;
 
@@ -100,7 +104,7 @@ typedef log_output_t airy_log_target_type_t;
 #define AIRY_LOG_TARGET_CALLBACK LOG_OUTPUT_NETWORK
 
 /**
- * @brief 日志回调函数类型
+ * @brief Log callback function type
  */
 typedef void (*airy_log_callback_t)(airy_log_level_t level, const char *timestamp,
                                     const char *logger_name, const airy_trace_context_t *trace_ctx,
@@ -108,7 +112,7 @@ typedef void (*airy_log_callback_t)(airy_log_level_t level, const char *timestam
                                     void *user_data);
 
 /**
- * @brief 日志输出目标配置
+ * @brief Log output target configuration
  */
 typedef struct {
     airy_log_target_type_t type;
@@ -127,7 +131,7 @@ typedef struct {
 
 
 /**
- * @brief 日志记录器配置
+ * @brief Logger configuration
  */
 typedef struct {
     char name[64];
@@ -141,9 +145,9 @@ typedef struct {
 
 
 /**
- * @brief 初始化日志系统
- * @param config [in] 全局配置（可为NULL使用默认值）
- * @return 0成功，非0失败
+ * @brief Initialize the logging system
+ * @param config [in] Global configuration (may be NULL for defaults)
+ * @return 0 on success, non-zero on failure
  */
 static inline int airy_log_init(const airy_logger_config_t *config)
 {
@@ -169,7 +173,7 @@ static inline int airy_log_init(const airy_logger_config_t *config)
 }
 
 /**
- * @brief 关闭日志系统
+ * @brief Shut down the logging system
  */
 static inline void airy_log_shutdown(void)
 {
@@ -177,8 +181,8 @@ static inline void airy_log_shutdown(void)
 }
 
 /**
- * @brief 设置全局日志级别
- * @param level [in] 日志级别
+ * @brief Set the global log level
+ * @param level [in] Log level
  */
 static inline void airy_log_set_level(airy_log_level_t level)
 {
@@ -186,8 +190,8 @@ static inline void airy_log_set_level(airy_log_level_t level)
 }
 
 /**
- * @brief 获取全局日志级别
- * @return 当前日志级别
+ * @brief Get the global log level
+ * @return Current log level
  */
 static inline airy_log_level_t airy_log_get_level(void)
 {
@@ -196,8 +200,8 @@ static inline airy_log_level_t airy_log_get_level(void)
 
 
 /**
- * @brief 生成新的追踪上下文
- * @param ctx [out] 追踪上下文输出
+ * @brief Generate a new trace context
+ * @param ctx [out] Trace context output
  */
 static inline void airy_trace_new(airy_trace_context_t *ctx)
 {
@@ -216,8 +220,8 @@ static inline void airy_trace_new(airy_trace_context_t *ctx)
 }
 
 /**
- * @brief 生成新的 SpanID
- * @param ctx [in,out] 追踪上下文
+ * @brief Generate a new SpanID
+ * @param ctx [in,out] Trace context
  */
 static inline void airy_trace_new_span(airy_trace_context_t *ctx)
 {
@@ -227,8 +231,8 @@ static inline void airy_trace_new_span(airy_trace_context_t *ctx)
 }
 
 /**
- * @brief 获取当前线程的追踪上下文
- * @return 追踪上下文指针（线程本地存储）
+ * @brief Get the current thread's trace context
+ * @return Trace context pointer (thread-local storage)
  */
 static inline airy_trace_context_t *airy_trace_current(void)
 {
@@ -237,8 +241,8 @@ static inline airy_trace_context_t *airy_trace_current(void)
 }
 
 /**
- * @brief 设置当前线程的追踪上下文
- * @param ctx [in] 追踪上下文
+ * @brief Set the current thread's trace context
+ * @param ctx [in] Trace context
  */
 static inline void airy_trace_set_current(const airy_trace_context_t *ctx)
 {
@@ -251,8 +255,8 @@ static inline void airy_trace_set_current(const airy_trace_context_t *ctx)
 }
 
 /**
- * @brief 设置当前会话ID
- * @param session_id [in] 会话ID
+ * @brief Set the current session ID
+ * @param session_id [in] Session ID
  */
 static inline void airy_trace_set_session_id(const char *session_id)
 {
@@ -265,8 +269,8 @@ static inline void airy_trace_set_session_id(const char *session_id)
 }
 
 /**
- * @brief 获取当前会话ID
- * @return 会话ID字符串
+ * @brief Get the current session ID
+ * @return Session ID string
  */
 static inline const char *airy_trace_get_session_id(void)
 {
@@ -276,8 +280,8 @@ static inline const char *airy_trace_get_session_id(void)
 
 
 /**
- * @brief 获取默认日志记录器
- * @return 默认日志记录器句柄
+ * @brief Get the default logger
+ * @return Default logger handle
  */
 static inline airy_logger_t airy_logger_default(void)
 {
@@ -285,9 +289,9 @@ static inline airy_logger_t airy_logger_default(void)
 }
 
 /**
- * @brief 创建日志记录器
- * @param config [in] 配置
- * @return 日志记录器句柄
+ * @brief Create a logger
+ * @param config [in] Configuration
+ * @return Logger handle
  */
 static inline airy_logger_t airy_logger_create(const airy_logger_config_t *config)
 {
@@ -296,8 +300,8 @@ static inline airy_logger_t airy_logger_create(const airy_logger_config_t *confi
 }
 
 /**
- * @brief 销毁日志记录器
- * @param logger [in] 日志记录器句柄
+ * @brief Destroy a logger
+ * @param logger [in] Logger handle
  */
 static inline void airy_logger_destroy(airy_logger_t logger)
 {
@@ -305,9 +309,9 @@ static inline void airy_logger_destroy(airy_logger_t logger)
 }
 
 /**
- * @brief 设置日志记录器级别
- * @param logger [in] 日志记录器句柄
- * @param level [in] 日志级别
+ * @brief Set a logger's level
+ * @param logger [in] Logger handle
+ * @param level [in] Log level
  */
 static inline void airy_logger_set_level(airy_logger_t logger, airy_log_level_t level)
 {
@@ -316,14 +320,14 @@ static inline void airy_logger_set_level(airy_logger_t logger, airy_log_level_t 
 }
 
 /**
- * @brief 写入日志
- * @param logger [in] 日志记录器句柄
- * @param level [in] 日志级别
- * @param file [in] 源文件名
- * @param line [in] 行号
- * @param func [in] 函数名
- * @param fmt [in] 格式化消息
- * @param ... [in] 可变参数
+ * @brief Write a log record
+ * @param logger [in] Logger handle
+ * @param level [in] Log level
+ * @param file [in] Source file name
+ * @param line [in] Line number
+ * @param func [in] Function name
+ * @param fmt [in] Formatted message
+ * @param ... [in] Variadic arguments
  */
 static inline void airy_logger_log(airy_logger_t logger, airy_log_level_t level, const char *file,
                                    int line, const char *func, const char *fmt, ...)
@@ -337,7 +341,7 @@ static inline void airy_logger_log(airy_logger_t logger, airy_log_level_t level,
 }
 
 /**
- * @brief 写入带追踪上下文的日志
+ * @brief Write a log record with a trace context
  */
 static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_level_t level,
                                               const airy_trace_context_t *trace_ctx,
@@ -359,7 +363,7 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief 日志宏（内部使用）
+ * @brief Log macro (internal use)
  */
 #define AIRY_LOG_IMPL(logger, level, ...)                    \
     do {                                                     \
@@ -368,7 +372,7 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
     } while (0)
 
 /**
- * @brief 带追踪上下文的日志宏（内部使用）
+ * @brief Log macro with trace context (internal use)
  */
 #define AIRY_LOG_TRACE_IMPL(logger, level, trace_ctx, ...)     \
     do {                                                       \
@@ -381,7 +385,7 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief 跟踪级别日志
+ * @brief Trace-level log
  */
 #ifndef LOG_TRACE
 #define LOG_TRACE(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
@@ -409,44 +413,44 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief 带追踪的跟踪级别日志
+ * @brief Trace-level log with trace context
  */
 #define LOG_TRACE_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
- * @brief 带追踪的调试级别日志
+ * @brief Debug-level log with trace context
  */
 #define LOG_DEBUG_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
- * @brief 带追踪的信息级别日志
+ * @brief Info-level log with trace context
  */
 #define LOG_INFO_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_INFO, (ctx), __VA_ARGS__)
 
 /**
- * @brief 带追踪的警告级别日志
+ * @brief Warning-level log with trace context
  */
 #define LOG_WARN_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_WARN, (ctx), __VA_ARGS__)
 
 /**
- * @brief 带追踪的错误级别日志
+ * @brief Error-level log with trace context
  */
 #define LOG_ERROR_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_ERROR, (ctx), __VA_ARGS__)
 
 /**
- * @brief 带追踪的致命级别日志
+ * @brief Fatal-level log with trace context
  */
 #define LOG_FATAL_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_FATAL, (ctx), __VA_ARGS__)
 
 
 /**
- * @brief 记录错误并返回错误码
+ * @brief Log an error and return the error code
  */
 #define LOG_ERROR_RETURN(code, ...) \
     do {                            \
@@ -455,7 +459,7 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
     } while (0)
 
 /**
- * @brief 条件检查日志
+ * @brief Conditional-check log
  */
 #define LOG_CHECK(cond, level, ...)                                     \
     do {                                                                \
@@ -466,9 +470,10 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief SVC_ 前缀日志宏 - 与 LOG_* 完全等价
- * @note Daemon 服务层统一使用 SVC_ 前缀，避免与其他模块命名冲突
- *       这些宏直接映射到 commons 的 log_write() 函数
+ * @brief SVC_-prefixed log macros - fully equivalent to LOG_*
+ * @note The daemon service layer uniformly uses the SVC_ prefix to avoid
+ *       name conflicts with other modules. These macros map directly to
+ *       commons log_write().
  */
 
 
@@ -491,7 +496,7 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief 日志级别转字符串
+ * @brief Convert a log level to a string
  */
 static inline const char *airy_log_level_to_string(airy_log_level_t level)
 {
@@ -499,7 +504,7 @@ static inline const char *airy_log_level_to_string(airy_log_level_t level)
 }
 
 /**
- * @brief 字符串转日志级别
+ * @brief Convert a string to a log level
  */
 static inline airy_log_level_t airy_log_level_from_string(const char *str)
 {

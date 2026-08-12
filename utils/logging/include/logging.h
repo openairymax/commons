@@ -4,33 +4,31 @@
 /*
  *
  * @file logging.h
- * @brief 统一分层日志系统核心层API
+ * @brief Unified layered logging system: core-layer API.
  *
  * @details
- * 本模块提供统一的分层日志系统核心层接口，支持：
- * - 5级日志级别：DEBUG, INFO, WARN, ERROR, FATAL
- * - 多输出目标：控制台、文件、网络、Syslog、内存缓冲
- * - 多格式输出：文本、JSON、结构化、二进制
- * - 线程安全的追踪ID管理
- * - 运行时配置热重载
+ * This module provides the unified layered logging system core interface:
+ * - 5 log levels: DEBUG, INFO, WARN, ERROR, FATAL
+ * - Multiple output targets: console, file, network, Syslog, memory buffer
+ * - Multiple output formats: text, JSON, structured, binary
+ * - Thread-safe trace-ID management
+ * - Runtime configuration hot reload
  *
- * 架构层次：
- * 1. 核心层（本文件）：定义接口和数据类型的平台无关抽象
- * 2. 原子层：提供高性能、线程安全的日志写入实现
- * 3. 服务层：提供高级功能（轮转、过滤、传输、监控）
+ * Architecture layers:
+ * 1. Core layer (this file): platform-independent interface and type
+ *    definitions
+ * 2. Atomic layer: high-performance, thread-safe log-write implementation
+ * 3. Service layer: advanced features (rotation, filtering, transport,
+ *    monitoring)
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-03-30
- * @version 2.0
- *
- * @note 线程安全：所有公共接口均为线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-2 可观测性原则
- * @see logging_format.md 日志格式规范
+ * @note Thread safety: all public interfaces are thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md E-2 observability principle
+ * @see logging_format.md log format specification
  */
 
 /**
  * @details
- * 使用示例：
+ * Usage example:
  * @code
  *
  * log_config_t manager = {
@@ -41,8 +39,8 @@
  * log_init(&manager);
  *
  *
- * LOG_INFO("系统启动成功，版本: %s", version);
- * LOG_ERROR("连接失败，错误码: %d", errno);
+ * LOG_INFO("system started successfully, version: %s", version);
+ * LOG_ERROR("connection failed, errno: %d", errno);
  *
  *
  * log_set_trace_id("req-123456");
@@ -67,9 +65,10 @@ extern "C" {
 
 
 /**
- * @brief 日志级别枚举
+ * @brief Log level enumeration
  *
- * 定义5级日志级别，遵循Syslog标准，支持细粒度日志控制。
+ * Defines 5 log levels following the Syslog standard, supporting
+ * fine-grained log control.
  */
 typedef enum {
 
@@ -92,30 +91,31 @@ typedef enum {
 } log_level_t;
 
 /**
- * @brief 获取日志级别名称字符串
+ * @brief Get the log-level name string
  *
- * 将日志级别枚举转换为可读的字符串表示。
+ * Converts a log-level enum to a readable string.
  *
- * @param level 日志级别
- * @return 级别名称字符串，无效级别返回"UNKNOWN"
+ * @param level Log level
+ * @return Level name string, "UNKNOWN" for an invalid level
  */
 const char *log_level_to_string(log_level_t level);
 
 /**
- * @brief 从字符串解析日志级别
+ * @brief Parse a log level from a string
  *
- * 将字符串（如"DEBUG"、"INFO"）转换为日志级别枚举。
+ * Converts a string (e.g. "DEBUG", "INFO") to a log-level enum.
  *
- * @param str 日志级别字符串（不区分大小写）
- * @return 对应的日志级别，解析失败返回LOG_LEVEL_INFO
+ * @param str Log-level string (case-insensitive)
+ * @return The corresponding log level, LOG_LEVEL_INFO on parse failure
  */
 log_level_t log_level_from_string(const char *str);
 
 
 /**
- * @brief 日志输出目标枚举
+ * @brief Log output target enumeration
  *
- * 定义日志可以输出的目标位置，支持多目标同时输出。
+ * Defines the targets logs can be written to; multiple targets can be
+ * active simultaneously.
  */
 typedef enum {
 
@@ -139,9 +139,9 @@ typedef enum {
 
 
 /**
- * @brief 日志输出格式枚举
+ * @brief Log output format enumeration
  *
- * 定义日志的格式化方式，支持多种结构化格式。
+ * Defines the log formatting modes, supporting several structured formats.
  */
 typedef enum {
 
@@ -162,10 +162,10 @@ typedef enum {
 
 
 /**
- * @brief 日志记录结构体
+ * @brief Log record structure
  *
- * 表示一条完整的日志记录，包含所有元数据和消息内容。
- * 用于在日志系统的不同层次之间传递。
+ * Represents a complete log record with all metadata and the message
+ * content. Used to pass records between the logging layers.
  */
 typedef struct {
 
@@ -198,9 +198,9 @@ typedef struct {
 
 
 /**
- * @brief 日志配置结构体
+ * @brief Log configuration structure
  *
- * 配置日志系统的行为，支持运行时动态修改。
+ * Configures the logging system behavior; supports runtime modification.
  */
 typedef struct {
 
@@ -248,38 +248,39 @@ typedef struct {
 
 
 /**
- * @brief 初始化日志系统
+ * @brief Initialize the logging system
  *
- * 初始化日志系统，应用指定的配置。
- * 必须在调用任何其他日志函数之前调用（除log_set_default_config外）。
+ * Initializes the logging system with the given configuration. Must be
+ * called before any other logging function (except log_set_default_config).
  *
- * @param manager 日志配置，为NULL时使用默认配置
- * @return 0 成功，负值表示错误（错误码定义在log_error.h）
+ * @param manager Log configuration, NULL for defaults
+ * @return 0 on success, negative on error (error codes in log_error.h)
  */
 int log_init(const log_config_t *manager);
 
 /**
- * @brief 设置默认日志配置
+ * @brief Set the default log configuration
  *
- * 设置日志系统的默认配置，这些配置将在log_init()未提供配置时使用。
- * 可以在log_init()之前调用，用于预设配置。
+ * Sets the default configuration used when log_init() is called without a
+ * configuration. May be called before log_init() to preset the
+ * configuration.
  *
- * @param manager 默认日志配置
- * @return 0 成功，负值表示错误
+ * @param manager Default log configuration
+ * @return 0 on success, negative on error
  */
 int log_set_default_config(const log_config_t *manager);
 
 /**
- * @brief 记录日志
+ * @brief Write a log record
  *
- * 记录一条日志消息，这是日志系统的核心写入函数。
- * 根据配置，日志可能会被输出到多个目标。
+ * Writes a log message; the core write function of the logging system.
+ * Depending on the configuration, the record may go to multiple targets.
  *
- * @param level 日志级别
- * @param module 模块名称（通常使用__FILE__或组件名）
- * @param line 源代码行号（通常使用__LINE__）
- * @param fmt 格式化字符串，遵循printf格式
- * @param ... 格式化参数
+ * @param level Log level
+ * @param module Module name (usually __FILE__ or a component name)
+ * @param line Source line number (usually __LINE__)
+ * @param fmt Format string, printf-style
+ * @param ... Format arguments
  */
 void log_write(log_level_t level, const char *module, int line, const char *fmt, ...)
 #if defined(__GNUC__) || defined(__clang__)
@@ -288,72 +289,73 @@ void log_write(log_level_t level, const char *module, int line, const char *fmt,
     ;
 
 /**
- * @brief 记录可变参数日志
+ * @brief Write a log record with a va_list
  *
- * log_write()的可变参数版本，用于需要传递va_list的场景。
+ * The va_list variant of log_write(), for scenarios that need to pass a
+ * va_list.
  *
- * @param level 日志级别
- * @param module 模块名称
- * @param line 源代码行号
- * @param fmt 格式化字符串
- * @param args 可变参数列表
+ * @param level Log level
+ * @param module Module name
+ * @param line Source line number
+ * @param fmt Format string
+ * @param args Variadic argument list
  */
 void log_write_va(log_level_t level, const char *module, int line, const char *fmt, va_list args);
 
 /**
- * @brief 设置当前线程的追踪ID
+ * @brief Set the current thread's trace ID
  *
- * 为当前线程设置追踪ID，所有后续日志都会包含此ID。
- * 用于分布式系统跟踪请求流程。
+ * Sets the trace ID for the current thread; all subsequent logs include
+ * this ID. Used to trace request flows in distributed systems.
  *
- * @param trace_id 追踪ID字符串，为NULL时自动生成
- * @return 实际设置的追踪ID（内部存储，无需释放）
+ * @param trace_id Trace ID string, auto-generated if NULL
+ * @return The effective trace ID (internally stored, no need to free)
  */
 const char *log_set_trace_id(const char *trace_id);
 
 /**
- * @brief 获取当前线程的追踪ID
+ * @brief Get the current thread's trace ID
  *
- * 获取当前线程设置的追踪ID。
- *
- * @return 追踪ID字符串，未设置返回NULL
+ * @return Trace ID string, NULL if not set
  */
 const char *log_get_trace_id(void);
 
 /**
- * @brief 设置当前线程的Span ID
+ * @brief Set the current thread's Span ID
  *
- * 为当前线程设置OpenTelemetry Span ID，所有后续日志都会包含此ID。
- * 用于链路追踪中的跨度标识。
+ * Sets the OpenTelemetry Span ID for the current thread; all subsequent
+ * logs include this ID. Used for span identification in trace linking.
  *
- * @param span_id Span ID字符串，为NULL时清除
- * @return 实际设置的Span ID（内部存储，无需释放）
+ * @param span_id Span ID string, cleared if NULL
+ * @return The effective Span ID (internally stored, no need to free)
  */
 const char *log_set_span_id(const char *span_id);
 
 /**
- * @brief 获取当前线程的Span ID
+ * @brief Get the current thread's Span ID
  *
- * @return Span ID字符串，未设置返回NULL
+ * @return Span ID string, NULL if not set
  */
 const char *log_get_span_id(void);
 
 /**
- * @brief 设置模块日志级别
+ * @brief Set a module log level
  *
- * 为特定模块设置独立的日志级别，覆盖全局级别。
- * 支持通配符匹配（如"network.*"匹配所有network模块）。
+ * Sets an independent log level for a specific module, overriding the
+ * global level. Supports wildcard matching (e.g. "network.*" matches all
+ * network modules).
  *
- * @param module_pattern 模块名称模式（支持通配符*）
- * @param level 日志级别
- * @return 0 成功，负值表示错误
+ * @param module_pattern Module name pattern (supports wildcard *)
+ * @param level Log level
+ * @return 0 on success, negative on error
  */
 int log_set_module_level(const char *module_pattern, log_level_t level);
 
 /**
- * @brief 模块日志级别配置信息（只读快照）
+ * @brief Module log-level configuration info (read-only snapshot)
  *
- * 描述单个模块级别过滤规则，由 log_get_module_info() 填充。
+ * Describes a single module-level filter rule; filled by
+ * log_get_module_info().
  */
 typedef struct {
     char pattern[128];
@@ -361,86 +363,91 @@ typedef struct {
 } log_module_info_t;
 
 /**
- * @brief 获取已配置模块级别过滤器的数量
+ * @brief Get the number of configured module-level filters
  *
- * 返回通过 log_set_module_level() 注册的模块级别过滤器数量，
- * 用于日志系统内省与迁移监控。线程安全。
+ * Returns the number of module-level filters registered via
+ * log_set_module_level(), for logging introspection and migration
+ * monitoring. Thread-safe.
  *
- * @return 已注册的模块级别过滤器数量（未初始化时返回0）
+ * @return Number of registered module-level filters (0 when uninitialized)
  */
 size_t log_get_module_count(void);
 
 /**
- * @brief 枚举已配置的模块级别过滤器
+ * @brief Enumerate the configured module-level filters
  *
- * 将当前模块级别过滤表的内容快照复制到 out_info 数组。线程安全。
+ * Snapshots the current module-level filter table into the out_info array.
+ * Thread-safe.
  *
- * @param[out] out_info 输出数组，可为NULL（此时返回0）
- * @param[in] max_count out_info 数组容量
- * @return 实际填充的条目数（不超过 max_count 和注册总数）
+ * @param[out] out_info Output array, may be NULL (returns 0 in that case)
+ * @param[in] max_count out_info array capacity
+ * @return Number of entries actually filled (no more than max_count and
+ *         the registration total)
  */
 size_t log_get_module_info(log_module_info_t *out_info, size_t max_count);
 
 /**
- * @brief 重新加载日志配置
+ * @brief Reload the log configuration
  *
- * 从配置文件重新加载日志配置，支持热重载。
+ * Reloads the log configuration from a config file; supports hot reload.
  *
- * @param config_path 配置文件路径，为NULL时使用默认路径
- * @return 0 成功，负值表示错误
+ * @param config_path Config file path, NULL for the default path
+ * @return 0 on success, negative on error
  */
 int log_reload_config(const char *config_path);
 
 /**
- * @brief 刷新日志缓冲
+ * @brief Flush the log buffer
  *
- * 强制刷新所有缓冲的日志到输出目标。
- * 在程序退出前调用以确保所有日志都被写入。
+ * Force-flushes all buffered logs to the output targets. Call before
+ * program exit to ensure all logs are written.
  */
 void log_flush(void);
 
 /**
- * @brief 清理日志系统
+ * @brief Clean up the logging system
  *
- * 清理日志系统资源，刷新所有缓冲的日志。
- * 程序退出前应该调用此函数。
+ * Releases logging resources and flushes all buffered logs. Should be
+ * called before program exit.
  */
 void log_cleanup(void);
 
 
 /**
- * @brief 调试级别日志宏
+ * @brief Debug-level log macro
  *
- * 记录DEBUG级别的日志，通常在开发调试时使用。
+ * Writes a DEBUG-level log, typically used during development/debugging.
  */
 #define LOG_DEBUG(fmt, ...) log_write(LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
- * @brief 信息级别日志宏
+ * @brief Info-level log macro
  *
- * 记录INFO级别的日志，用于记录系统正常运行状态。
+ * Writes an INFO-level log, used to record normal system operation.
  */
 #define LOG_INFO(fmt, ...) log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
- * @brief 警告级别日志宏
+ * @brief Warning-level log macro
  *
- * 记录WARN级别的日志，表示可能的问题但不影响系统运行。
+ * Writes a WARN-level log, indicating a possible problem that does not
+ * affect system operation.
  */
 #define LOG_WARN(fmt, ...) log_write(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
- * @brief 错误级别日志宏
+ * @brief Error-level log macro
  *
- * 记录ERROR级别的日志，表示功能错误但不导致系统崩溃。
+ * Writes an ERROR-level log, indicating a functional error that does not
+ * crash the system.
  */
 #define LOG_ERROR(fmt, ...) log_write(LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
- * @brief 致命错误级别日志宏
+ * @brief Fatal-error-level log macro
  *
- * 记录FATAL级别的日志，表示系统无法继续运行。
- * 记录日志后通常会调用abort()终止程序。
+ * Writes a FATAL-level log, indicating the system cannot continue. After
+ * logging it usually calls abort() to terminate the program.
  */
 #define LOG_FATAL(fmt, ...)                                                 \
     do {                                                                    \
@@ -450,9 +457,10 @@ void log_cleanup(void);
     } while (0)
 
 /**
- * @brief 条件日志宏
+ * @brief Conditional log macro
  *
- * 仅当条件成立时记录日志，避免不必要的字符串格式化开销。
+ * Writes a log only when the condition holds, avoiding unnecessary string
+ * formatting overhead.
  */
 #define LOG_IF(condition, level, fmt, ...)                            \
     do {                                                              \
@@ -463,22 +471,23 @@ void log_cleanup(void);
 
 
 /**
- * @brief 启用日志节流
+ * @brief Enable log throttling
  *
- * @param enable 是否启用
- * @param max_per_sec 每秒最大相同消息数（0使用默认值100）
+ * @param enable Whether to enable
+ * @param max_per_sec Maximum identical messages per second (0 for the
+ *                    default of 100)
  */
 void log_set_throttle(bool enable, uint32_t max_per_sec);
 
 /**
- * @brief 采样日志宏
+ * @brief Sampled log macro
  *
- * 根据日志级别的采样率（ERROR=100%, WARN=10%, INFO=1%, DEBUG=0.1%）
- * 概率性地记录日志。
+ * Probabilistically writes a log according to the level's sampling rate
+ * (ERROR=100%, WARN=10%, INFO=1%, DEBUG=0.1%).
  *
- * @param level 日志级别（LOG_LEVEL_*）
- * @param fmt 格式化字符串
- * @param ... 格式化参数
+ * @param level Log level (LOG_LEVEL_*)
+ * @param fmt Format string
+ * @param ... Format arguments
  */
 #define LOG_SAMPLE(level, fmt, ...)                                   \
     do {                                                              \
@@ -488,13 +497,13 @@ void log_set_throttle(bool enable, uint32_t max_per_sec);
     } while (0)
 
 /**
- * @brief 检查当前日志是否应被采样输出
+ * @brief Check whether the current log should be sampled
  *
- * 基于日志级别的采样率进行概率性判断。
- * ERROR/FATAL 始终返回true（100%采样）。
+ * Probabilistic decision based on the level's sampling rate. ERROR/FATAL
+ * always return true (100% sampling).
  *
- * @param level 日志级别
- * @return true 应输出，false 跳过
+ * @param level Log level
+ * @return true to output, false to skip
  */
 bool log_should_sample(log_level_t level);
 

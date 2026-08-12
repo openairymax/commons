@@ -3,10 +3,11 @@
 
 /**
  * @file config_source.h
- * @brief 统一配置模块 - 源适配层接口
+ * @brief Unified configuration module: source adapter-layer interface.
  *
- * 源适配层提供不同配置源的统一适配接口。
- * 支持多种配置源：文件、环境变量、命令行参数、内存、网络等。
+ * The source adapter layer provides a unified adapter interface for
+ * different configuration sources. Supports multiple sources: file,
+ * environment variables, command-line arguments, memory, network, etc.
  */
 
 #ifndef AIRY_RT_CONFIG_SOURCE_H
@@ -82,7 +83,7 @@ typedef struct {
 
 
 /**
- * @brief 配置源适配器接口定义
+ * @brief Configuration source adapter interface definition
  */
 typedef struct {
 
@@ -103,93 +104,93 @@ typedef struct {
 
 
 /**
- * @brief 创建文件配置源
- * @param options 文件配置源选项
- * @return 配置源对象，失败返回NULL
+ * @brief Create a file configuration source
+ * @param options File configuration source options
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_file(const config_file_source_options_t *options);
 
 /**
- * @brief 创建环境变量配置源
- * @param options 环境变量配置源选项
- * @return 配置源对象，失败返回NULL
+ * @brief Create an environment-variable configuration source
+ * @param options Environment-variable configuration source options
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_env(const config_env_source_options_t *options);
 
 /**
- * @brief 创建命令行配置源
- * @param options 命令行配置源选项
- * @return 配置源对象，失败返回NULL
+ * @brief Create a command-line configuration source
+ * @param options Command-line configuration source options
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_args(const config_args_source_options_t *options);
 
 /**
- * @brief 创建内存配置源
- * @param options 内存配置源选项
- * @return 配置源对象，失败返回NULL
+ * @brief Create a memory configuration source
+ * @param options Memory configuration source options
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_memory(const config_memory_source_options_t *options);
 
 /**
- * @brief 创建默认值配置源
- * @param default_values 默认值映射表（键值对数组）
- * @param count 键值对数量
- * @return 配置源对象，失败返回NULL
+ * @brief Create a default-value configuration source
+ * @param default_values Default value map (key-value array)
+ * @param count Number of key-value pairs
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_defaults(const char *const *default_values, size_t count);
 
 /**
- * @brief 创建远程配置源
- * @param url 配置中心URL
- * @param token 认证令牌（可为NULL）
- * @param ns 命名空间（可为NULL）
- * @param poll_interval_ms 轮询间隔毫秒（0使用默认30000ms）
- * @return 配置源对象，失败返回NULL
+ * @brief Create a remote configuration source
+ * @param url Configuration center URL
+ * @param token Authentication token (may be NULL)
+ * @param ns Namespace (may be NULL)
+ * @param poll_interval_ms Poll interval in ms (0 for the default 30000ms)
+ * @return Configuration source object, NULL on failure
  */
 config_source_t *config_source_create_remote(const char *url, const char *token, const char *ns,
                                              uint32_t poll_interval_ms);
 
 
 /**
- * @brief 销毁配置源
- * @param source 配置源对象
+ * @brief Destroy a configuration source
+ * @param source Configuration source object
  */
 void config_source_destroy(config_source_t *source);
 
 /**
- * @brief 从配置源加载配置到上下文
- * @param source 配置源
- * @param ctx 配置上下文
- * @return 错误码
+ * @brief Load configuration from a source into a context
+ * @param source Configuration source
+ * @param ctx Configuration context
+ * @return Error code
  */
 config_error_t config_source_load(config_source_t *source, config_context_t *ctx);
 
 /**
- * @brief 保存配置上下文到配置源
- * @param source 配置源
- * @param ctx 配置上下文
- * @return 错误码
+ * @brief Save a configuration context to a source
+ * @param source Configuration source
+ * @param ctx Configuration context
+ * @return Error code
  */
 config_error_t config_source_save(config_source_t *source, const config_context_t *ctx);
 
 /**
- * @brief 检查配置源是否已改变
- * @param source 配置源
- * @return 是否已改变
+ * @brief Check whether a configuration source has changed
+ * @param source Configuration source
+ * @return Whether it has changed
  */
 bool config_source_has_changed(config_source_t *source);
 
 /**
- * @brief 获取配置源属性
- * @param source 配置源
- * @return 配置源属性
+ * @brief Get configuration source attributes
+ * @param source Configuration source
+ * @return Configuration source attributes
  */
 const config_source_attr_t *config_source_get_attributes(config_source_t *source);
 
 /**
- * @brief 获取配置源类型
- * @param source 配置源
- * @return 配置源类型
+ * @brief Get the configuration source type
+ * @param source Configuration source
+ * @return Configuration source type
  */
 config_source_type_t config_source_get_type(config_source_t *source);
 
@@ -197,58 +198,59 @@ config_source_type_t config_source_get_type(config_source_t *source);
 typedef struct config_source_manager config_source_manager_t;
 
 /**
- * @brief 创建配置源管理器
- * @return 配置源管理器，失败返回NULL
+ * @brief Create a configuration source manager
+ * @return Configuration source manager, NULL on failure
  */
 config_source_manager_t *config_source_manager_create(void);
 
 /**
- * @brief 销毁配置源管理器
- * @param manager 配置源管理器
+ * @brief Destroy a configuration source manager
+ * @param manager Configuration source manager
  */
 void config_source_manager_destroy(config_source_manager_t *manager);
 
 /**
- * @brief 添加配置源到管理器
- * @param manager 配置源管理器
- * @param source 配置源
- * @return 错误码
+ * @brief Add a configuration source to the manager
+ * @param manager Configuration source manager
+ * @param source Configuration source
+ * @return Error code
  */
 config_error_t config_source_manager_add(config_source_manager_t *manager, config_source_t *source);
 
 /**
- * @brief 从管理器移除配置源
- * @param manager 配置源管理器
- * @param source 配置源
- * @return 错误码
+ * @brief Remove a configuration source from the manager
+ * @param manager Configuration source manager
+ * @param source Configuration source
+ * @return Error code
  */
 config_error_t config_source_manager_remove(config_source_manager_t *manager,
                                             config_source_t *source);
 
 /**
- * @brief 按名称查找配置源
- * @param manager 配置源管理器
- * @param name 配置源名称
- * @return 配置源，未找到返回NULL
+ * @brief Find a configuration source by name
+ * @param manager Configuration source manager
+ * @param name Configuration source name
+ * @return Configuration source, NULL if not found
  */
 config_source_t *config_source_manager_find(config_source_manager_t *manager, const char *name);
 
 /**
- * @brief 从所有配置源加载配置
- * @param manager 配置源管理器
- * @param ctx 配置上下文
- * @param merge_strategy 合并策略（0:覆盖，1:合并，2:智能合并）
- * @return 错误码
+ * @brief Load configuration from all sources
+ * @param manager Configuration source manager
+ * @param ctx Configuration context
+ * @param merge_strategy Merge strategy (0: overwrite, 1: merge,
+ *                      2: smart merge)
+ * @return Error code
  */
 config_error_t config_source_manager_load_all(config_source_manager_t *manager,
                                               config_context_t *ctx, int merge_strategy);
 
 /**
- * @brief 监控配置源变化
- * @param manager 配置源管理器
- * @param callback 变化回调函数
- * @param user_data 用户数据
- * @return 错误码
+ * @brief Watch for configuration source changes
+ * @param manager Configuration source manager
+ * @param callback Change callback function
+ * @param user_data User data
+ * @return Error code
  */
 config_error_t config_source_manager_watch(config_source_manager_t *manager,
                                            void (*callback)(config_source_t *source,
@@ -256,37 +258,38 @@ config_error_t config_source_manager_watch(config_source_manager_t *manager,
                                            void *user_data);
 
 /**
- * @brief 轮询检查所有可监控配置源的变化并通知回调
+ * @brief Poll all watchable sources for changes and notify callbacks
  *
- * 检查所有 watchable 的配置源是否有变化。若检测到变化，在防抖间隔后
- * 依次调用注册的回调函数通知每个变更的配置源。
- * 防抖默认 500ms，即 500ms 内的多次变更合并为一次通知。
+ * Checks whether any watchable source has changed. If a change is
+ * detected, invokes the registered callbacks for each changed source
+ * after the debounce interval. The default debounce is 500ms, i.e.
+ * multiple changes within 500ms are merged into one notification.
  *
- * @param manager 配置源管理器
- * @return 发生变化的配置源数量，0表示无变化，-1表示错误
+ * @param manager Configuration source manager
+ * @return Number of changed sources, 0 for no changes, -1 on error
  */
 int config_source_manager_poll_changes(config_source_manager_t *manager);
 
 
 /**
- * @brief 获取配置源类型描述
- * @param type 配置源类型
- * @return 类型描述字符串
+ * @brief Get a configuration source type description
+ * @param type Configuration source type
+ * @return Type description string
  */
 const char *config_source_type_to_string(config_source_type_t type);
 
 /**
- * @brief 解析配置文件格式
- * @param file_path 文件路径
- * @return 文件格式字符串，未知返回"unknown"
+ * @brief Parse a configuration file format
+ * @param file_path File path
+ * @return File format string, "unknown" for unknown formats
  */
 const char *config_parse_file_format(const char *file_path);
 
 /**
- * @brief 创建配置源名称
- * @param type 配置源类型
- * @param identifier 标识符（如文件路径、环境变量前缀等）
- * @return 配置源名称字符串（需调用者释放）
+ * @brief Create a configuration source name
+ * @param type Configuration source type
+ * @param identifier Identifier (e.g. file path, env prefix, etc.)
+ * @return Configuration source name string (caller frees)
  */
 char *config_source_create_name(config_source_type_t type, const char *identifier);
 

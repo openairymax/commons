@@ -3,16 +3,16 @@
 
 /**
  * @file airy_quality.h
- * @brief AgentRT 代码质量保证框架
+ * @brief AgentRT code quality assurance framework.
  *
- * 提供标准化的代码质量保证工具，包括：
- * - 输入验证宏（NULL检查、范围检查、类型检查）
- * - 错误处理宏（安全返回、错误传播）
- * - 资源管理宏（RAII模式、自动清理）
- * - 边界检查宏（数组越界、整数溢出）
+ * Provides standardized code quality assurance utilities:
+ * - Input validation macros (NULL check, range check, type check)
+ * - Error handling macros (safe return, error propagation)
+ * - Resource management macros (RAII pattern, automatic cleanup)
+ * - Boundary check macros (array bounds, integer overflow)
  *
- * 遵循E-1安全内生、E-3资源确定性、E-6错误可追溯原则。
- *
+ * Follows the E-1 security-by-design, E-3 resource determinism, and E-6
+ * error traceability principles.
  */
 
 #ifndef AIRY_RT_QUALITY_H
@@ -39,7 +39,7 @@ extern "C" {
 
 
 /**
- * @brief 检查指针是否为NULL，如果为NULL则返回错误码
+ * @brief Check that a pointer is not NULL; return the error code if it is
  */
 #ifndef AIRY_CHECK_NULL
 #define AIRY_CHECK_NULL(ptr, error_code) \
@@ -51,7 +51,7 @@ extern "C" {
 #endif
 
 /**
- * @brief 检查指针是否为NULL，如果为NULL则跳转到错误标签
+ * @brief Check that a pointer is not NULL; jump to the error label if it is
  */
 #define AIRY_CHECK_NULL_GOTO(ptr, label, error_code) \
     do {                                             \
@@ -62,7 +62,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查条件是否成立，如果不成立则返回错误码
+ * @brief Check a condition; return the error code if it does not hold
  */
 #define AIRY_CHECK_CONDITION(cond, error_code) \
     do {                                       \
@@ -72,7 +72,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查条件是否成立，如果不成立则跳转到错误标签
+ * @brief Check a condition; jump to the error label if it does not hold
  */
 #define AIRY_CHECK_CONDITION_GOTO(cond, label, error_code) \
     do {                                                   \
@@ -83,7 +83,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查值是否在范围内 [min, max]
+ * @brief Check that a value is within [min, max]
  */
 #define AIRY_CHECK_RANGE(value, min_val, max_val, error_code) \
     do {                                                      \
@@ -93,7 +93,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查值是否大于等于最小值
+ * @brief Check that a value is at least the minimum
  */
 #define AIRY_CHECK_MIN(value, min_val, error_code) \
     do {                                           \
@@ -103,7 +103,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查值是否小于等于最大值
+ * @brief Check that a value is at most the maximum
  */
 #define AIRY_CHECK_MAX(value, max_val, error_code) \
     do {                                           \
@@ -113,7 +113,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查字符串长度是否在允许范围内
+ * @brief Check that a string's length is within the allowed range
  */
 #define AIRY_CHECK_STR_LEN(str, max_len, error_code) \
     do {                                             \
@@ -123,7 +123,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查数组索引是否有效
+ * @brief Check that an array index is valid
  */
 #define AIRY_CHECK_ARRAY_INDEX(index, array_size, error_code) \
     do {                                                      \
@@ -133,7 +133,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查字符串是否为空或NULL
+ * @brief Check that a string is neither NULL nor empty
  */
 #define AIRY_CHECK_EMPTY(str, error_code)        \
     do {                                         \
@@ -143,13 +143,13 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 检查数组索引是否越界（兼容宏）
+ * @brief Check that an array index is in bounds (compatibility macro)
  */
 #define AIRY_CHECK_BOUNDS(idx, size, error_code) AIRY_CHECK_ARRAY_INDEX((idx), (size), (error_code))
 
 
 /**
- * @brief 安全执行操作，失败时跳转到清理标签
+ * @brief Execute an operation safely; jump to the cleanup label on failure
  */
 #define AIRY_SAFE_EXEC(expr, cleanup_label, error_var) \
     do {                                               \
@@ -161,7 +161,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 安全分配内存，失败时跳转到清理标签
+ * @brief Allocate memory safely; jump to the cleanup label on failure
  */
 #define AIRY_SAFE_ALLOC(var, size, cleanup_label, error_var) \
     do {                                                     \
@@ -173,7 +173,7 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 安全分配内存并清零，失败时跳转到清理标签
+ * @brief Allocate and zero memory safely; jump to the cleanup label on failure
  */
 #define AIRY_SAFE_CALLOC(var, size, cleanup_label, error_var) \
     do {                                                      \
@@ -185,27 +185,27 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 记录错误并返回
+ * @brief Log an error and return
  */
 #define AIRY_LOG_ERROR_AND_RETURN(error_code, fmt, ...) \
     do {                                                \
-        /* 日志记录 */                                  \
+        /* log the error */                             \
         return (error_code);                            \
     } while (0)
 
 
 /**
- * @brief 定义RAII风格的资源守卫作用域开始
+ * @brief Begin a RAII-style resource guard scope
  */
 #define AIRY_RESOURCE_GUARD_SCOPE_BEGIN() {
 
 /**
- * @brief 定义RAII风格的资源守卫作用域结束
+ * @brief End a RAII-style resource guard scope
  */
 #define AIRY_RESOURCE_GUARD_SCOPE_END() }
 
 /**
- * @brief 自动释放资源的宏（用于局部变量）
+ * @brief Macro for automatic resource release (for local variables)
  */
 #ifndef AIRY_AUTO_FREE
 #define AIRY_AUTO_FREE(ptr) \
@@ -213,12 +213,12 @@ extern "C" {
 #endif
 
 /**
- * @brief 自动关闭文件描述符的宏
+ * @brief Macro for automatic file-descriptor close
  */
 #define AIRY_AUTO_CLOSE(fd) __attribute__((cleanup(airy_auto_close))) int *_auto_##fd = &(fd)
 
 /**
- * @brief 安全释放内存并置为NULL
+ * @brief Free memory safely and set the pointer to NULL
  */
 #define AIRY_SAFE_FREE(ptr)   \
     do {                      \
@@ -229,15 +229,15 @@ extern "C" {
     } while (0)
 
 /**
- * @brief 安全释放内存：先清零再释放（SEC-15 合规）
+ * @brief Free memory securely: zero it before releasing (SEC-15 compliance)
  *
- * 用于释放包含敏感数据的内存（API Key、Token、密码等），
- * 防止数据残留在堆上被泄露。
+ * Used for memory holding sensitive data (API keys, tokens, passwords,
+ * etc.), preventing data remnants on the heap from leaking.
  *
- * @note 仅对通过 airy_mem_alloc/malloc 分配的内存有效
- * @note 释放后指针置 NULL，防止 use-after-free
+ * @note Only valid for memory allocated via airy_mem_alloc/malloc
+ * @note Sets the pointer to NULL after freeing, preventing use-after-free
  *
- * BAN-247: 敏感数据释放前必须清零
+ * BAN-247: sensitive data must be zeroed before release
  */
 #ifndef AIRY_SECURE_FREE
 #define AIRY_SECURE_FREE(ptr, size)                 \
@@ -253,17 +253,18 @@ extern "C" {
 #endif
 
 /**
- * @brief 安全释放内存（自动计算大小版本，用于已知类型的指针）
+ * @brief Securely free memory (auto-size version for known types)
  *
- * 用法: AIRY_SECURE_FREE_T(my_struct_ptr, my_struct_t)
+ * Usage: AIRY_SECURE_FREE_T(my_struct_ptr, my_struct_t)
  */
 #define AIRY_SECURE_FREE_T(ptr, type) AIRY_SECURE_FREE((ptr), sizeof(type))
 
 /**
- * @brief 显式内存清零（防止编译器优化掉 memset）
+ * @brief Explicit memory zeroing (prevents the compiler from optimizing
+ *        away the memset)
  *
- * 使用 volatile 函数指针确保编译器不会将清零操作优化掉。
- * 这对于安全敏感数据的擦除至关重要。
+ * Uses a volatile function pointer so the compiler cannot optimize away
+ * the zeroing. This is critical for erasing security-sensitive data.
  */
 static inline void airy_explicit_bzero(void *s, size_t n)
 {
@@ -277,7 +278,7 @@ static inline void airy_explicit_bzero(void *s, size_t n)
 
 
 /**
- * @brief 验证数值是否非负
+ * @brief Validate that a value is non-negative
  */
 static inline bool airy_validate_non_negative(int value)
 {
@@ -285,7 +286,7 @@ static inline bool airy_validate_non_negative(int value)
 }
 
 /**
- * @brief 验证数值是否为正数
+ * @brief Validate that a value is positive
  */
 static inline bool airy_validate_positive(int value)
 {
@@ -293,7 +294,7 @@ static inline bool airy_validate_positive(int value)
 }
 
 /**
- * @brief 验证数值是否为有效百分比 [0, 100]
+ * @brief Validate that a value is a valid percentage [0, 100]
  */
 static inline bool airy_validate_percentage(float value)
 {
@@ -301,7 +302,7 @@ static inline bool airy_validate_percentage(float value)
 }
 
 /**
- * @brief 验证数值是否为有效概率 [0, 1]
+ * @brief Validate that a value is a valid probability [0, 1]
  */
 static inline bool airy_validate_probability(float value)
 {
@@ -309,7 +310,7 @@ static inline bool airy_validate_probability(float value)
 }
 
 /**
- * @brief 验证优先级是否在有效范围内
+ * @brief Validate that a priority is within the valid range
  */
 static inline bool airy_validate_priority(int priority, int min_val, int max_val)
 {
@@ -318,11 +319,11 @@ static inline bool airy_validate_priority(int priority, int min_val, int max_val
 
 
 /**
- * @brief 安全的整数加法（检测溢出）
- * @param[in] a 操作数a
- * @param[in] b 操作数b
- * @param[out] result 结果
- * @return 0成功，-1溢出
+ * @brief Safe integer addition (detects overflow)
+ * @param[in] a Operand a
+ * @param[in] b Operand b
+ * @param[out] result Result
+ * @return 0 on success, -1 on overflow
  */
 static inline int safe_add_int(int a, int b, int *result)
 {
@@ -338,11 +339,11 @@ static inline int safe_add_int(int a, int b, int *result)
 }
 
 /**
- * @brief 安全的整数乘法（检测溢出）
- * @param[in] a 操作数a
- * @param[in] b 操作数b
- * @param[out] result 结果
- * @return 0成功，-1溢出
+ * @brief Safe integer multiplication (detects overflow)
+ * @param[in] a Operand a
+ * @param[in] b Operand b
+ * @param[out] result Result
+ * @return 0 on success, -1 on overflow
  */
 static inline int safe_mul_int(int a, int b, int *result)
 {
@@ -366,11 +367,11 @@ static inline int safe_mul_int(int a, int b, int *result)
 }
 
 /**
- * @brief 安全的size_t加法（检测溢出）
- * @param[in] a 操作数a
- * @param[in] b 操作数b
- * @param[out] result 结果
- * @return 0成功，-1溢出
+ * @brief Safe size_t addition (detects overflow)
+ * @param[in] a Operand a
+ * @param[in] b Operand b
+ * @param[out] result Result
+ * @return 0 on success, -1 on overflow
  */
 static inline int safe_add_size(size_t a, size_t b, size_t *result)
 {
@@ -386,11 +387,11 @@ static inline int safe_add_size(size_t a, size_t b, size_t *result)
 }
 
 /**
- * @brief 安全的size_t乘法（检测溢出）
- * @param[in] a 操作数a
- * @param[in] b 操作数b
- * @param[out] result 结果
- * @return 0成功，-1溢出
+ * @brief Safe size_t multiplication (detects overflow)
+ * @param[in] a Operand a
+ * @param[in] b Operand b
+ * @param[out] result Result
+ * @return 0 on success, -1 on overflow
  */
 static inline int safe_mul_size(size_t a, size_t b, size_t *result)
 {
@@ -406,10 +407,10 @@ static inline int safe_mul_size(size_t a, size_t b, size_t *result)
 }
 
 /**
- * @brief 检查数组访问是否安全
- * @param[in] index 索引
- * @param[in] size 数组大小
- * @return true如果安全，false否则
+ * @brief Check whether an array access is safe
+ * @param[in] index Index
+ * @param[in] size Array size
+ * @return true if safe, false otherwise
  */
 static inline bool is_safe_array_access(size_t index, size_t size)
 {
@@ -417,11 +418,11 @@ static inline bool is_safe_array_access(size_t index, size_t size)
 }
 
 /**
- * @brief 检查指针偏移是否安全
- * @param[in] ptr 基地址指针
- * @param[in] offset 偏移量
- * @param[in] size 缓冲区大小
- * @return true如果安全，false否则
+ * @brief Check whether a pointer offset is safe
+ * @param[in] ptr Base address pointer
+ * @param[in] offset Offset
+ * @param[in] size Buffer size
+ * @return true if safe, false otherwise
  */
 static inline bool is_safe_ptr_offset(const void *ptr, size_t offset, size_t size)
 {
@@ -432,11 +433,11 @@ static inline bool is_safe_ptr_offset(const void *ptr, size_t offset, size_t siz
 }
 
 /**
- * @brief 检查字符串拷贝是否安全
- * @param[in] src 源字符串
- * @param[in] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区大小
- * @return true如果安全，false否则
+ * @brief Check whether a string copy is safe
+ * @param[in] src Source string
+ * @param[in] dest Destination buffer
+ * @param[in] dest_size Destination buffer size
+ * @return true if safe, false otherwise
  */
 static inline bool is_safe_str_copy(const char *src, char *dest, size_t dest_size)
 {
@@ -453,12 +454,12 @@ static inline bool is_safe_str_copy(const char *src, char *dest, size_t dest_siz
 
 
 /**
- * @brief 安全的内存复制（带边界检查）
- * @param[out] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区大小
- * @param[in] src 源数据
- * @param[in] src_size 源数据大小
- * @return 0成功，-1参数无效或缓冲区不足
+ * @brief Safe memory copy (with boundary checks)
+ * @param[out] dest Destination buffer
+ * @param[in] dest_size Destination buffer size
+ * @param[in] src Source data
+ * @param[in] src_size Source data size
+ * @return 0 on success, -1 on invalid parameters or insufficient buffer
  */
 static inline int safe_memcpy(void *dest, size_t dest_size, const void *src, size_t src_size)
 {
@@ -472,12 +473,12 @@ static inline int safe_memcpy(void *dest, size_t dest_size, const void *src, siz
 }
 
 /**
- * @brief 安全的内存设置（带边界检查）
- * @param[out] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区大小
- * @param[in] value 设置值
- * @param[in] count 字节数
- * @return 0成功，-1参数无效或超出范围
+ * @brief Safe memory set (with boundary checks)
+ * @param[out] dest Destination buffer
+ * @param[in] dest_size Destination buffer size
+ * @param[in] value Set value
+ * @param[in] count Byte count
+ * @return 0 on success, -1 on invalid parameters or out of range
  */
 static inline int safe_memset(void *dest, size_t dest_size, int value, size_t count)
 {
@@ -491,11 +492,11 @@ static inline int safe_memset(void *dest, size_t dest_size, int value, size_t co
 }
 
 /**
- * @brief 安全的字符串复制（带长度限制）
- * @param[out] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区大小（包含终止符空间）
- * @param[in] src 源字符串
- * @return 0成功，-1参数无效或源字符串过长
+ * @brief Safe string copy (with length limit)
+ * @param[out] dest Destination buffer
+ * @param[in] dest_size Destination buffer size (including terminator space)
+ * @param[in] src Source string
+ * @return 0 on success, -1 on invalid parameters or source too long
  */
 static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
 {
@@ -519,11 +520,11 @@ static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
 }
 
 /**
- * @brief 安全的字符串拼接（带长度限制）
- * @param[in,out] dest 目标缓冲区
- * @param[in] dest_size 目标缓冲区总大小
- * @param[in] src 源字符串
- * @return 0成功，-1参数无效或超出范围
+ * @brief Safe string concatenation (with length limit)
+ * @param[in,out] dest Destination buffer
+ * @param[in] dest_size Total destination buffer size
+ * @param[in] src Source string
+ * @return 0 on success, -1 on invalid parameters or out of range
  */
 static inline int safe_strcat(char *dest, size_t dest_size, const char *src)
 {
@@ -541,9 +542,9 @@ static inline int safe_strcat(char *dest, size_t dest_size, const char *src)
 }
 
 /**
- * @brief 安全的字符串长度获取（带NULL保护）
- * @param[in] str 字符串
- * @return 字符串长度，NULL返回0
+ * @brief Safe string length (with NULL protection)
+ * @param[in] str String
+ * @return String length, 0 for NULL
  */
 static inline size_t safe_strlen(const char *str)
 {
@@ -553,13 +554,14 @@ static inline size_t safe_strlen(const char *str)
 }
 
 /**
- * @brief 安全的字符串比较（带NULL保护）
- * @param[in] str1 字符串1
- * @param[in] str2 字符串2
- * @return 比较结果，NULL视为空字符串
+ * @brief Safe string comparison (with NULL protection)
+ * @param[in] str1 String 1
+ * @param[in] str2 String 2
+ * @return Comparison result; NULL is treated as an empty string
  */
-/* BAN-073 exempt: 本函数返回 strcmp 三态语义（负/0/正），非错误码。
- * NULL 视为空字符串参与比较，-1 表示 str1 < str2，非 AIRY_ERR_* 错误码。 */
+/* BAN-073 exempt: this function returns strcmp's three-state semantics
+ * (negative/0/positive), not an error code. NULL participates as an empty
+ * string; -1 means str1 < str2, not an AIRY_ERR_* error code. */
 static inline int safe_strcmp(const char *str1, const char *str2)
 {
     if (!str1 && !str2)
@@ -573,10 +575,10 @@ static inline int safe_strcmp(const char *str1, const char *str2)
 
 
 /**
- * @brief 安全的int到size_t转换（检查负数）
- * @param[in] value 整数值
- * @param[out] result 转换结果
- * @return 0成功，-1负数溢出
+ * @brief Safe int-to-size_t conversion (checks for negatives)
+ * @param[in] value Integer value
+ * @param[out] result Conversion result
+ * @return 0 on success, -1 on negative overflow
  */
 static inline int safe_int_to_size(int value, size_t *result)
 {
@@ -589,10 +591,10 @@ static inline int safe_int_to_size(int value, size_t *result)
 }
 
 /**
- * @brief 安全的size_t到int转换（检查范围）
- * @param[in] value size_t值
- * @param[out] result 转换结果
- * @return 0成功，-1超出int范围
+ * @brief Safe size_t-to-int conversion (checks the range)
+ * @param[in] value size_t value
+ * @param[out] result Conversion result
+ * @return 0 on success, -1 if out of int range
  */
 static inline int safe_size_to_int(size_t value, int *result)
 {
@@ -605,10 +607,10 @@ static inline int safe_size_to_int(size_t value, int *result)
 }
 
 /**
- * @brief 安全的double转int转换（检查范围）
- * @param[in] value double值
- * @param[out] result 转换结果
- * @return 0成功，-1超出范围
+ * @brief Safe double-to-int conversion (checks the range)
+ * @param[in] value double value
+ * @param[out] result Conversion result
+ * @return 0 on success, -1 if out of range
  */
 static inline int safe_double_to_int(double value, int *result)
 {
@@ -622,14 +624,14 @@ static inline int safe_double_to_int(double value, int *result)
 
 
 /**
- * @brief airy_safe_strcpy 兼容别名
- * @note 保留此别名以兼容atoms/tests/test_common_utils.c
+ * @brief airy_safe_strcpy compatibility alias
+ * @note Kept for compatibility with atoms/tests/test_common_utils.c
  */
 #define airy_safe_strcpy(dest, dest_size, src) safe_strcpy((dest), (dest_size), (src))
 
 /**
- * @brief airy_safe_strcat 兼容别名
- * @note 保留此别名以兼容atoms/tests/test_common_utils.c
+ * @brief airy_safe_strcat compatibility alias
+ * @note Kept for compatibility with atoms/tests/test_common_utils.c
  */
 #define airy_safe_strcat(dest, dest_size, src) safe_strcat((dest), (dest_size), (src))
 

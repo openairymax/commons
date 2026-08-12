@@ -167,7 +167,7 @@ void test_send_error_cases(void **state)
  * ============================================================================ */
 
 /**
- * @brief 测试接收消息
+ * @brief 测试接收消息（先发送后接收，自环）
  */
 void test_receive_message(void **state)
 {
@@ -177,9 +177,22 @@ void test_receive_message(void **state)
     ipc_channel_t *channel = ipc_channel_create(&config);
     ipc_channel_open(channel);
 
+    ipc_message_t msg = {0};
+    msg.header.magic = IPC_MAGIC;
+    msg.header.version = 1;
+    msg.header.type = IPC_MSG_DATA;
+    msg.header.msg_id = 1;
+    msg.header.payload_len = 0;
+    assert_int_equal(ipc_send(channel, &msg), AIRY_SUCCESS);
+
     ipc_message_t received_msg;
     airy_err_t err = ipc_receive(channel, &received_msg, 1000);
     assert_int_equal(err, AIRY_SUCCESS);
+    assert_int_equal(received_msg.header.msg_id, 1);
+
+    if (received_msg.payload) {
+        AIRY_FREE(received_msg.payload);
+    }
 
     ipc_channel_close(channel);
     ipc_channel_destroy(channel);
