@@ -89,30 +89,6 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
     return AIRY_EINVAL;
 }
 
-/**
- * @brief 检测Unicode代码点是否为CJK字符
- *
- * 使用精确的Unicode编码范围检测，覆盖所有CJK统一表意文字区块：
- * - U+4E00..U+9FFF  CJK Unified Ideographs
- * - U+3400..U+4DBF  CJK Unified Ideographs Extension A
- * - U+20000..U+2A6DF CJK Unified Ideographs Extension B
- * - U+2A700..U+2B73F CJK Unified Ideographs Extension C
- * - U+2B740..U+2B81F CJK Unified Ideographs Extension D
- * - U+2B820..U+2CEAF CJK Unified Ideographs Extension E
- * - U+2CEB0..U+2EBEF CJK Unified Ideographs Extension F
- * - U+30000..U+3134F CJK Unified Ideographs Extension G
- * - U+31350..U+323AF CJK Unified Ideographs Extension H
- * - U+F900..U+FAFF  CJK Compatibility Ideographs
- * - U+2F800..U+2FA1F CJK Compatibility Ideographs Supplement
- * - U+3000..U+303F  CJK Symbols and Punctuation
- * - U+3040..U+309F  Hiragana
- * - U+30A0..U+30FF  Katakana
- * - U+AC00..U+D7AF  Hangul Syllables
- * - U+FF00..U+FFEF  Halfwidth and Fullwidth Forms
- *
- * @param code_point Unicode代码点
- * @return 是CJK相关字符返回1，否则返回0
- */
 static int is_cjk_code_point(uint32_t code_point)
 {
     if (code_point >= 0x4E00 && code_point <= 0x9FFF)
@@ -150,9 +126,6 @@ static int is_cjk_code_point(uint32_t code_point)
     return 0;
 }
 
-/**
- * @brief 分析文本语言特征
- */
 int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
                             size_t *out_alpha_chars, size_t *out_total_chars)
 {
@@ -189,9 +162,6 @@ int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_cha
     return 0;
 }
 
-/**
- * @brief 标准化 Token 计算函数
- */
 size_t airy_token_standard_count(const char *text, size_t length, const airy_token_config_t *config)
 {
     if (!text) {
@@ -201,7 +171,6 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
     airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
     const airy_token_config_t *cfg = config ? config : &default_config;
 
-    // 验证配置
     if (airy_token_validate_config(cfg) != 0) {
         return (size_t)-1;
     }
@@ -253,7 +222,6 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
         }
     }
 
-    // 确保至少返回 1 个 Token
     if (token_count == 0 && total_chars > 0) {
         token_count = 1;
     }
@@ -261,9 +229,6 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
     return token_count;
 }
 
-/**
- * @brief 批量 Token 计算
- */
 int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t count,
                                size_t *out_counts, const airy_token_config_t *config)
 {
@@ -274,7 +239,6 @@ int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t
     airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
     const airy_token_config_t *cfg = config ? config : &default_config;
 
-    // 验证配置
     if (airy_token_validate_config(cfg) != 0) {
         return AIRY_EINVAL;
     }
@@ -288,7 +252,6 @@ int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t
         size_t length = lengths ? lengths[i] : 0;
         out_counts[i] = airy_token_standard_count(texts[i], length, cfg);
 
-        // 检查错误
         if (out_counts[i] == (size_t)-1) {
             return AIRY_EINVAL;
         }
@@ -297,17 +260,11 @@ int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t
     return 0;
 }
 
-/**
- * @brief 获取 Token 计算算法信息
- */
 const char *airy_token_get_algorithm_info(void)
 {
     return ALGORITHM_INFO;
 }
 
-/**
- * @brief 验证 Token 计算配置
- */
 int airy_token_validate_config(const airy_token_config_t *config)
 {
     if (!config) {
@@ -328,16 +285,12 @@ int airy_token_validate_config(const airy_token_config_t *config)
     }
 
     if ((config->flags & AIRY_TOKEN_FLAG_ACCURATE) && (config->flags & AIRY_TOKEN_FLAG_ESTIMATE)) {
-        // 不能同时设置准确和估算标志
         return AIRY_EINVAL;
     }
 
     return 0;
 }
 
-/**
- * @brief 设置 Token 计算精度
- */
 int airy_token_set_precision(airy_token_precision_t precision, airy_token_config_t *config)
 {
     if (!config) {
@@ -370,9 +323,6 @@ int airy_token_set_precision(airy_token_precision_t precision, airy_token_config
     return 0;
 }
 
-/**
- * @brief 检查资源配额是否足够
- */
 int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
                            const airy_token_usage_t *current_usage)
 {

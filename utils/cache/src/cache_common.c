@@ -52,9 +52,6 @@ typedef struct cache_impl {
     cache_config_t manager;
 } cache_impl_t;
 
-/**
- * @brief 创建默认缓存配置
- */
 cache_config_t cache_create_default_config(void)
 {
     cache_config_t manager = {.capacity = 1000,
@@ -68,9 +65,6 @@ cache_config_t cache_create_default_config(void)
     return manager;
 }
 
-/**
- * @brief 字符串键默认哈希函数
- */
 unsigned int cache_string_hash(const void *key)
 {
     const char *str = (const char *)key;
@@ -81,17 +75,11 @@ unsigned int cache_string_hash(const void *key)
     return h % HASH_SIZE;
 }
 
-/**
- * @brief 字符串键默认比较函数
- */
 int cache_string_compare(const void *a, const void *b)
 {
     return strcmp((const char *)a, (const char *)b);
 }
 
-/**
- * @brief 字符串默认复制函数
- */
 void *cache_string_copy(const void *data)
 {
     if (!data) {
@@ -100,9 +88,6 @@ void *cache_string_copy(const void *data)
     return memory_safe_strdup((const char *)data);
 }
 
-/**
- * @brief 字符串默认释放函数
- */
 void cache_string_free(void *data)
 {
     if (data) {
@@ -110,9 +95,6 @@ void cache_string_free(void *data)
     }
 }
 
-/**
- * @brief 创建缓存条目
- */
 static cache_entry_t *cache_entry_create(const cache_config_t *manager, const void *key,
                                          const void *value)
 {
@@ -140,9 +122,6 @@ static cache_entry_t *cache_entry_create(const cache_config_t *manager, const vo
     return entry;
 }
 
-/**
- * @brief 释放缓存条目
- */
 static void cache_entry_free(const cache_config_t *manager, cache_entry_t *entry)
 {
     if (!entry) {
@@ -154,9 +133,6 @@ static void cache_entry_free(const cache_config_t *manager, cache_entry_t *entry
     memory_safe_free(entry);
 }
 
-/**
- * @brief 从 LRU 链表中移除条目
- */
 static void lru_remove(cache_impl_t *cache, cache_entry_t *entry)
 {
     if (entry->prev) {
@@ -174,9 +150,6 @@ static void lru_remove(cache_impl_t *cache, cache_entry_t *entry)
     entry->prev = entry->next = NULL;
 }
 
-/**
- * @brief 将条目移到 LRU 链表头部
- */
 static void lru_move_to_head(cache_impl_t *cache, cache_entry_t *entry)
 {
     if (cache->lru_head == entry) {
@@ -195,9 +168,6 @@ static void lru_move_to_head(cache_impl_t *cache, cache_entry_t *entry)
     }
 }
 
-/**
- * @brief 驱逐 LRU 条目
- */
 static void evict_lru(cache_impl_t *cache)
 {
     if (!cache->lru_tail) {
@@ -225,9 +195,6 @@ static void evict_lru(cache_impl_t *cache)
     cache->size--;
 }
 
-/**
- * @brief 创建缓存
- */
 cache_t cache_create(const cache_config_t *manager)
 {
     cache_impl_t *cache = memory_safe_alloc(sizeof(cache_impl_t));
@@ -254,9 +221,6 @@ cache_t cache_create(const cache_config_t *manager)
     return (cache_t)cache;
 }
 
-/**
- * @brief 销毁缓存
- */
 void cache_destroy(cache_t cache)
 {
     if (!cache) {
@@ -284,9 +248,6 @@ void cache_destroy(cache_t cache)
     memory_safe_free(impl);
 }
 
-/**
- * @brief 从缓存获取值
- */
 int cache_get(cache_t cache, const void *key, void **out_value)
 {
     if (!cache || !key || !out_value) {
@@ -360,9 +321,6 @@ int cache_get(cache_t cache, const void *key, void **out_value)
     return 1;
 }
 
-/**
- * @brief 向缓存存入值
- */
 void cache_put(cache_t cache, const void *key, const void *value)
 {
     if (!cache || !key) {
@@ -434,9 +392,6 @@ void cache_put(cache_t cache, const void *key, const void *value)
     }
 }
 
-/**
- * @brief 从缓存删除值
- */
 void cache_delete(cache_t cache, const void *key)
 {
     if (!cache || !key) {
@@ -490,9 +445,6 @@ size_t cache_get_size(cache_t cache)
     return impl->size;
 }
 
-/**
- * @brief 获取缓存容量
- */
 size_t cache_get_capacity(cache_t cache)
 {
     if (!cache) {
@@ -503,9 +455,6 @@ size_t cache_get_capacity(cache_t cache)
     return impl->capacity;
 }
 
-/**
- * @brief 设置缓存容量
- */
 void cache_set_capacity(cache_t cache, size_t capacity)
 {
     if (!cache) {
@@ -522,9 +471,6 @@ void cache_set_capacity(cache_t cache, size_t capacity)
     sync_mutex_unlock(&impl->lru_lock);
 }
 
-/**
- * @brief 获取缓存过期时间
- */
 int cache_get_ttl(cache_t cache)
 {
     if (!cache) {
@@ -535,9 +481,6 @@ int cache_get_ttl(cache_t cache)
     return impl->ttl_sec;
 }
 
-/**
- * @brief 设置缓存过期时间
- */
 void cache_set_ttl(cache_t cache, int ttl_sec)
 {
     if (!cache) {
@@ -548,9 +491,6 @@ void cache_set_ttl(cache_t cache, int ttl_sec)
     impl->ttl_sec = ttl_sec;
 }
 
-/**
- * @brief 创建字符串缓存
- */
 cache_t cache_create_string_cache(size_t capacity, int ttl_sec)
 {
     cache_config_t manager = cache_create_default_config();
@@ -560,17 +500,11 @@ cache_t cache_create_string_cache(size_t capacity, int ttl_sec)
     return cache_create(&manager);
 }
 
-/**
- * @brief 从字符串缓存获取值
- */
 int cache_get_string(cache_t cache, const char *key, char **out_value)
 {
     return cache_get(cache, key, (void **)out_value);
 }
 
-/**
- * @brief 向字符串缓存存入值
- */
 void cache_put_string(cache_t cache, const char *key, const char *value)
 {
     cache_put(cache, key, value);

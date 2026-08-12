@@ -4,10 +4,11 @@
 /*
  *
  * @file network_common.c
- * @brief 网络通信模块实现 - 跨平台网络抽象层
+ * @brief 网络通信模块实现 - 连接生命周期与 IO 域
  *
  * @details
- * 本文件实现了 network_common.h 中声明的所有网络功能。
+ * 本文件实现了 network_common.h 中声明的连接生命周期与收发 IO 功能，
+ * 并保留模块级内部辅助工具（Winsock 初始化、超时/非阻塞设置、地址族转换）。
  * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
  * - E-4 跨平台一致性：支持 Windows/Linux/macOS
  * - E-5 命名语义化：所有函数名精确表达用途
@@ -27,6 +28,7 @@
 
 #include "../../memory/include/airy_memory.h"
 #include "network_common.h"
+#include "network_common_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,47 +52,7 @@
 #include <unistd.h>
 #endif
 
-/* ============================================================================
- * 内部数据结构定义
- * ============================================================================ */
-
-/**
- * @brief 网络连接内部结构
- */
-struct network_connection {
-    network_config_t config;
-    network_status_t status;
-    char error_msg[256];
-    network_event_callback_t event_cb;
-    void *event_user_data;
-    network_stats_t stats;
-#ifdef _WIN32
-    SOCKET sock;
-#else
-    int fd;
-#endif
-    struct sockaddr_in addr;
-};
-
-/**
- * @brief 连接池内部结构
- */
-struct network_pool {
-    network_config_t base_config;
-    size_t max_size;
-    size_t current_size;
-    struct network_connection **connections;
-};
-
-/* ============================================================================
- * 内部工具函数
- * ============================================================================ */
-
-/**
- * @brief 初始化 Winsock（仅 Windows）
- * @return 成功返回 0
- */
-static int network_init_winsock(void)
+int network_init_winsock(void)
 {
 #ifdef _WIN32
     static atomic_int initialized = 0;
@@ -107,12 +69,7 @@ static int network_init_winsock(void)
     return 0;
 }
 
-/**
- * @brief 设置 Socket 为非阻塞模式
- * @param handle 平台特定句柄
- * @return 成功返回 0
- */
-static int set_nonblocking_mode(void *handle)
+void set_nonblocking_mode(void *handle)
 {
 #ifdef _WIN32
     u_long mode = 1;
@@ -124,13 +81,7 @@ static int set_nonblocking_mode(void *handle)
     return 0;
 }
 
-/**
- * @brief 设置 Socket 发送/接收超时
- * @param handle 平台特定句柄
- * @param timeout_ms 超时时间（毫秒）
- * @param is_recv 是否为接收超时
- */
-static void set_socket_timeout(void *handle, int timeout_ms, int is_recv)
+void set_socket_timeout(void *handle, int timeout_ms, int is_recv)
 {
 #ifdef _WIN32
     DWORD ms = (DWORD)timeout_ms;
@@ -153,12 +104,7 @@ static void set_socket_timeout(void *handle, int timeout_ms, int is_recv)
 #endif
 }
 
-/**
- * @brief 将 network_af_t 转换为系统地址族
- * @param af AgentRT 地址族枚举
- * @return 系统地址族值
- */
-static int af_to_native(network_af_t af)
+int af_to_native(network_af_t af)
 {
     switch (af) {
     case NETWORK_AF_INET:
@@ -170,12 +116,7 @@ static int af_to_native(network_af_t af)
     }
 }
 
-/**
- * @brief 将 network_sock_type_t 转换为系统 Socket 类型
- * @param st AgentRT Socket 类型枚举
- * @return 系统 Socket 类型值
- */
-static int socktype_to_native(network_sock_type_t st)
+int socktype_to_native(network_sock_type_t st)
 {
     switch (st) {
     case NETWORK_SOCK_STREAM:
@@ -189,14 +130,7 @@ static int socktype_to_native(network_sock_type_t st)
     }
 }
 
-/* ============================================================================
- * 基础连接 API 实现
- * ============================================================================ */
 
-/**
- * @brief 创建默认网络配置
- * @return 默认配置结构体
- */
 network_config_t network_create_default_config(void)
 {
     network_config_t config = {0};
@@ -221,11 +155,6 @@ network_config_t network_create_default_config(void)
     return config;
 }
 
-/**
- * @brief 创建网络连接
- * @param config 网络配置
- * @return 连接句柄，失败返回 NULL
- */
 network_connection_t *network_connection_create(const network_config_t *config)
 {
     if (!config) {
@@ -256,10 +185,6 @@ network_connection_t *network_connection_create(const network_config_t *config)
     return conn;
 }
 
-/**
- * @brief 销毁网络连接
- * @param connection 连接句柄
- */
 void network_connection_destroy(network_connection_t *connection)
 {
     if (!connection) {
@@ -274,11 +199,6 @@ void network_connection_destroy(network_connection_t *connection)
     AIRY_FREE(connection);
 }
 
-/**
- * @brief 建立网络连接
- * @param connection 连接句柄
- * @return 错误码
- */
 airy_err_t network_connect(network_connection_t *connection)
 {
     if (!connection) {
@@ -387,11 +307,6 @@ airy_err_t network_connect(network_connection_t *connection)
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 断开网络连接
- * @param connection 连接句柄
- * @return 错误码
- */
 airy_err_t network_disconnect(network_connection_t *connection)
 {
     if (!connection) {
@@ -428,14 +343,6 @@ airy_err_t network_disconnect(network_connection_t *connection)
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 发送数据
- * @param connection 连接句柄
- * @param data 数据缓冲区
- * @param length 数据长度
- * @param sent [out] 实际发送的字节数
- * @return 错误码
- */
 airy_err_t network_send(network_connection_t *connection, const void *data, size_t length,
                         size_t *sent)
 {
@@ -481,14 +388,6 @@ airy_err_t network_send(network_connection_t *connection, const void *data, size
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 接收数据
- * @param connection 连接句柄
- * @param buffer 接收缓冲区
- * @param length 缓冲区长度
- * @param received [out] 实际接收的字节数
- * @return 错误码
- */
 airy_err_t network_receive(network_connection_t *connection, void *buffer, size_t length,
                            size_t *received)
 {
@@ -543,13 +442,6 @@ airy_err_t network_receive(network_connection_t *connection, void *buffer, size_
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 发送全部数据（循环发送直到完成）
- * @param connection 连接句柄
- * @param data 数据缓冲区
- * @param length 数据长度
- * @return 错误码
- */
 airy_err_t network_send_all(network_connection_t *connection, const void *data, size_t length)
 {
     if (!connection || !data || length == 0) {
@@ -582,13 +474,6 @@ airy_err_t network_send_all(network_connection_t *connection, const void *data, 
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 接收指定长度的数据
- * @param connection 连接句柄
- * @param buffer 接收缓冲区
- * @param length 期望接收的长度
- * @return 错误码
- */
 airy_err_t network_receive_exact(network_connection_t *connection, void *buffer, size_t length)
 {
     if (!connection || !buffer || length == 0) {
@@ -629,11 +514,6 @@ airy_err_t network_receive_exact(network_connection_t *connection, void *buffer,
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 获取连接状态
- * @param connection 连接句柄
- * @return 连接状态
- */
 network_status_t network_get_status(const network_connection_t *connection)
 {
     if (!connection) {
@@ -642,12 +522,6 @@ network_status_t network_get_status(const network_connection_t *connection)
     return connection->status;
 }
 
-/**
- * @brief 设置连接超时
- * @param connection 连接句柄
- * @param timeout_ms 超时时间（毫秒）
- * @return 错误码
- */
 airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
 {
     if (!connection) {
@@ -669,13 +543,6 @@ airy_err_t network_set_timeout(network_connection_t *connection, int timeout_ms)
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 设置读写超时
- * @param connection 连接句柄
- * @param read_timeout_ms 读取超时
- * @param write_timeout_ms 写入超时
- * @return 错误码
- */
 airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_timeout_ms,
                                   int write_timeout_ms)
 {
@@ -699,12 +566,6 @@ airy_err_t network_set_rw_timeout(network_connection_t *connection, int read_tim
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 获取统计信息
- * @param connection 连接句柄
- * @param stats [out] 统计信息
- * @return 错误码
- */
 airy_err_t network_get_stats(const network_connection_t *connection, network_stats_t *stats)
 {
     if (!connection || !stats) {
@@ -715,11 +576,6 @@ airy_err_t network_get_stats(const network_connection_t *connection, network_sta
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 重置统计信息
- * @param connection 连接句柄
- * @return 错误码
- */
 airy_err_t network_reset_stats(network_connection_t *connection)
 {
     if (!connection) {
@@ -730,13 +586,6 @@ airy_err_t network_reset_stats(network_connection_t *connection)
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 设置事件回调
- * @param connection 连接句柄
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 错误码
- */
 airy_err_t network_set_event_callback(network_connection_t *connection,
                                       network_event_callback_t callback, void *user_data)
 {
@@ -750,11 +599,6 @@ airy_err_t network_set_event_callback(network_connection_t *connection,
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 获取错误消息
- * @param connection 连接句柄
- * @return 错误消息字符串
- */
 const char *network_get_error_message(const network_connection_t *connection)
 {
     if (!connection) {
@@ -763,681 +607,6 @@ const char *network_get_error_message(const network_connection_t *connection)
     return connection->error_msg[0] ? connection->error_msg : "No error";
 }
 
-/* ============================================================================
- * HTTP 客户端 API 实现
- * ============================================================================ */
-
-/**
- * @brief 执行 HTTP 请求
- * @param connection 已连接的句柄
- * @param request HTTP 请求配置
- * @param response [out] HTTP 响应
- * @return 错误码
- */
-airy_err_t network_http_request(network_connection_t *connection,
-                                const network_http_request_t *request,
-                                network_http_response_t *response)
-{
-    if (!connection || !request || !response) {
-        return AIRY_EINVAL;
-    }
-
-    if (connection->status != NETWORK_STATUS_CONNECTED) {
-        return AIRY_ENOTCONN;
-    }
-
-    AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
-
-    char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
-    int offset = 0;
-
-    /* 每步 snprintf 后检查截断：返回值是"应写入"长度，path/host/自定义头超长时
-     * 可能 >= 剩余容量，若直接累加会让 offset 超出缓冲、后续 size 参数无符号下溢，
-     * 必须终止并返回错误，保证 offset 始终在缓冲范围内。 */
-#define NETWORK_REQ_APPEND(fmt, ...)                                                         \
-    do {                                                                                     \
-        int wlen = snprintf(request_buf + offset, sizeof(request_buf) - (size_t)offset, fmt, \
-                            ##__VA_ARGS__);                                                  \
-        if (wlen < 0 || (size_t)wlen >= sizeof(request_buf) - (size_t)offset) {              \
-            response->error = AIRY_ERR_OVERFLOW;                                             \
-            response->error_message = AIRY_STRDUP("HTTP request header too long");           \
-            return AIRY_ERR_OVERFLOW;                                                        \
-        }                                                                                    \
-        offset += wlen;                                                                      \
-    } while (0)
-
-    NETWORK_REQ_APPEND("%s %s HTTP/1.1\r\n", request->method ? request->method : "GET",
-                       request->path ? request->path : "/");
-
-    if (connection->config.host) {
-        NETWORK_REQ_APPEND("Host: %s\r\n", connection->config.host);
-    }
-
-    /* Content-Type */
-    if (request->content_type) {
-        NETWORK_REQ_APPEND("Content-Type: %s\r\n", request->content_type);
-    }
-
-    /* Content-Length */
-    if (request->body && request->body_len > 0) {
-        NETWORK_REQ_APPEND("Content-Length: %zu\r\n", request->body_len);
-    }
-
-    if (request->headers && request->header_count > 0) {
-        for (size_t i = 0; i < request->header_count; i++) {
-            if (request->headers[i]) {
-                NETWORK_REQ_APPEND("%s\r\n", request->headers[i]);
-            }
-        }
-    }
-
-    NETWORK_REQ_APPEND("\r\n");
-
-#undef NETWORK_REQ_APPEND
-
-    airy_err_t err = network_send_all(connection, request_buf, (size_t)offset);
-    if (err != AIRY_SUCCESS) {
-        response->error = err;
-        response->error_message = AIRY_STRDUP("Failed to send request headers");
-        return err;
-    }
-
-    if (request->body && request->body_len > 0) {
-        err = network_send_all(connection, request->body, request->body_len);
-        if (err != AIRY_SUCCESS) {
-            response->error = err;
-            response->error_message = AIRY_STRDUP("Failed to send request body");
-            return err;
-        }
-    }
-
-    char recv_buffer[65536];
-    size_t total_received = 0;
-    size_t received = 0;
-    int retry_count = 0;
-
-    do {
-        received = 0;
-        err = network_receive(connection, recv_buffer + total_received,
-                              sizeof(recv_buffer) - total_received - 1, &received);
-        if (err == AIRY_SUCCESS && received > 0) {
-            total_received += received;
-            retry_count = 0;
-        } else if (err != AIRY_SUCCESS) {
-            retry_count++;
-            if (retry_count > 10 || err == AIRY_ECONNRESET) {
-                break;
-            }
-        }
-    } while (received > 0 && total_received < sizeof(recv_buffer) - 1);
-
-    recv_buffer[total_received] = '\0';
-
-    /* Parse HTTP status code manually */
-    if (total_received >= 12) {
-        if (__builtin_strncmp(recv_buffer, "HTTP/1.", 7) == 0 && recv_buffer[8] == ' ') {
-            response->status_code = (int)strtol(recv_buffer + 9, NULL, 10);
-        } else {
-            response->status_code = 200;
-        }
-    } else {
-        response->status_code = 200;
-    }
-
-    /* Separate response headers and body */
-    char *body_start = strstr(recv_buffer, "\r\n\r\n");
-    if (body_start) {
-        size_t header_len = body_start - recv_buffer + 4;
-
-        response->headers = (char **)AIRY_CALLOC(1, sizeof(char *));
-        if (response->headers) {
-            response->headers[0] = (char *)AIRY_MALLOC(header_len + 1);
-            if (response->headers[0]) {
-                __builtin_memcpy(response->headers[0], recv_buffer, header_len);
-                response->headers[0][header_len] = '\0';
-            }
-            response->header_count = 1;
-        }
-
-        body_start += 4;
-        size_t body_len = total_received - (body_start - recv_buffer);
-        response->body = AIRY_MALLOC(body_len + 1);
-        if (response->body) {
-            __builtin_memcpy(response->body, body_start, body_len);
-            ((char *)response->body)[body_len] = '\0';
-            response->body_len = body_len;
-        }
-    } else {
-
-        response->body = AIRY_MALLOC(total_received + 1);
-        if (response->body) {
-            __builtin_memcpy(response->body, recv_buffer, total_received);
-            ((char *)response->body)[total_received] = '\0';
-            response->body_len = total_received;
-        }
-    }
-
-    response->error = AIRY_SUCCESS;
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief 执行 HTTP GET 请求
- * @param connection 已连接的句柄
- * @param path 请求路径
- * @param response [out] HTTP 响应
- * @return 错误码
- */
-airy_err_t network_http_get(network_connection_t *connection, const char *path,
-                            network_http_response_t *response)
-{
-    network_http_request_t request = {0};
-    request.method = "GET";
-    request.path = path;
-
-    return network_http_request(connection, &request, response);
-}
-
-/**
- * @brief 执行 HTTP POST 请求
- * @param connection 已连接的句柄
- * @param path 请求路径
- * @param content_type Content-Type
- * @param body 请求体
- * @param body_len 请求体长度
- * @param response [out] HTTP 响应
- * @return 错误码
- */
-airy_err_t network_http_post(network_connection_t *connection, const char *path,
-                             const char *content_type, const void *body, size_t body_len,
-                             network_http_response_t *response)
-{
-    network_http_request_t request = {0};
-    request.method = "POST";
-    request.path = path;
-    request.content_type = content_type ? content_type : "application/json";
-    request.body = body;
-    request.body_len = body_len;
-
-    return network_http_request(connection, &request, response);
-}
-
-/**
- * @brief 释放 HTTP 响应资源
- * @param response HTTP 响应结构体
- */
-void network_http_response_free(network_http_response_t *response)
-{
-    if (!response) {
-        return;
-    }
-
-    if (response->body) {
-        AIRY_FREE(response->body);
-        response->body = NULL;
-    }
-
-    if (response->headers) {
-        for (size_t i = 0; i < response->header_count; i++) {
-            if (response->headers[i]) {
-                AIRY_FREE(response->headers[i]);
-            }
-        }
-        AIRY_FREE(response->headers);
-        response->headers = NULL;
-    }
-
-    if (response->error_message) {
-        AIRY_FREE(response->error_message);
-        response->error_message = NULL;
-    }
-
-    if (response->status_text) {
-        AIRY_FREE(response->status_text);
-        response->status_text = NULL;
-    }
-
-    AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
-}
-
-/* ============================================================================
- * 连接池 API 实现
- * ============================================================================ */
-
-/**
- * @brief 创建连接池
- * @param config 基础网络配置
- * @param pool_size 池大小
- * @return 连接池句柄
- */
-network_pool_t *network_pool_create(const network_config_t *config, size_t pool_size)
-{
-    if (!config || pool_size == 0 || pool_size > NETWORK_MAX_POOL_SIZE) {
-        AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
-    }
-
-    network_pool_t *pool = (network_pool_t *)AIRY_CALLOC(1, sizeof(network_pool_t));
-    if (!pool) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-
-    pool->base_config = *config;
-    pool->max_size = pool_size;
-    pool->current_size = 0;
-    pool->connections =
-        (network_connection_t **)AIRY_CALLOC(pool_size, sizeof(network_connection_t *));
-
-    if (!pool->connections) {
-        AIRY_FREE(pool);
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-
-    return pool;
-}
-
-/**
- * @brief 销毁连接池
- * @param pool 连接池句柄
- */
-void network_pool_destroy(network_pool_t *pool)
-{
-    if (!pool) {
-        return;
-    }
-
-    for (size_t i = 0; i < pool->current_size; i++) {
-        if (pool->connections[i]) {
-            network_connection_destroy(pool->connections[i]);
-        }
-    }
-
-    AIRY_FREE(pool->connections);
-    AIRY_FREE(pool);
-}
-
-/**
- * @brief 从连接池获取连接
- * @param pool 连接池句柄
- * @param timeout_ms 超时时间
- * @return 连接句柄
- */
-network_connection_t *network_pool_acquire(network_pool_t *pool, int timeout_ms)
-{
-    if (!pool) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-
-    (void)timeout_ms;
-
-    for (size_t i = 0; i < pool->current_size; i++) {
-        if (pool->connections[i] &&
-            network_get_status(pool->connections[i]) == NETWORK_STATUS_CONNECTED) {
-            return pool->connections[i];
-        }
-    }
-
-    if (pool->current_size < pool->max_size) {
-        network_connection_t *conn = network_connection_create(&pool->base_config);
-        if (!conn) {
-            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
-
-        airy_err_t err = network_connect(conn);
-        if (err != AIRY_SUCCESS) {
-            network_connection_destroy(conn);
-            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-        }
-
-        pool->connections[pool->current_size] = conn;
-        pool->current_size++;
-
-        return conn;
-    }
-
-    return NULL;
-}
-
-/**
- * @brief 释放连接回连接池
- * @param pool 连接池句柄
- * @param connection 连接句柄
- */
-void network_pool_release(network_pool_t *pool, network_connection_t *connection)
-{
-    if (!pool || !connection) {
-        return;
-    }
-}
-
-/**
- * @brief 获取连接池可用连接数
- * @param pool 连接池句柄
- * @return 可用连接数
- */
-size_t network_pool_available(const network_pool_t *pool)
-{
-    if (!pool) {
-        return 0;
-    }
-
-    size_t available = 0;
-    for (size_t i = 0; i < pool->current_size; i++) {
-        if (pool->connections[i] &&
-            network_get_status(pool->connections[i]) == NETWORK_STATUS_CONNECTED) {
-            available++;
-        }
-    }
-
-    if (pool->current_size < pool->max_size) {
-        available += (pool->max_size - pool->current_size);
-    }
-
-    return available;
-}
-
-/**
- * @brief 获取连接池总大小
- * @param pool 连接池句柄
- * @return 总大小
- */
-size_t network_pool_size(const network_pool_t *pool)
-{
-    if (!pool) {
-        return 0;
-    }
-    return pool->current_size;
-}
-
-/**
- * @brief 健康检查连接池
- * @param pool 连接池句柄
- * @return 健康连接数
- */
-size_t network_pool_health_check(network_pool_t *pool)
-{
-    if (!pool) {
-        return 0;
-    }
-
-    size_t healthy = 0;
-
-    for (size_t i = 0; i < pool->current_size;) {
-        if (pool->connections[i]) {
-            network_status_t status = network_get_status(pool->connections[i]);
-
-            if (status == NETWORK_STATUS_CONNECTED) {
-                healthy++;
-                i++;
-            } else if (status == NETWORK_STATUS_ERROR || status == NETWORK_STATUS_DISCONNECTED) {
-
-                network_connection_destroy(pool->connections[i]);
-
-                if (i < pool->current_size - 1) {
-                    pool->connections[i] = pool->connections[pool->current_size - 1];
-                    pool->connections[pool->current_size - 1] = NULL;
-                } else {
-                    pool->connections[i] = NULL;
-                }
-                pool->current_size--;
-            } else {
-                i++;
-            }
-        } else {
-            i++;
-        }
-    }
-
-    return healthy;
-}
-
-/* ============================================================================
- * DNS 解析 API 实现
- * ============================================================================ */
-
-/**
- * @brief 执行 DNS 解析
- * @param hostname 主机名
- * @param af 地址族
- * @param result [out] 解析结果
- * @return 错误码
- */
-airy_err_t network_dns_resolve(const char *hostname, network_af_t af, network_dns_result_t *result)
-{
-    if (!hostname || !result) {
-        return AIRY_EINVAL;
-    }
-
-    network_init_winsock();
-
-    struct addrinfo hints, *res;
-    AIRY_MEMSET(&hints, 0, sizeof(hints));
-    hints.ai_family = af_to_native(af);
-    hints.ai_socktype = SOCK_STREAM;
-
-    int gai_ret = getaddrinfo(hostname, NULL, &hints, &res);
-    if (gai_ret != 0) {
-        return AIRY_EIO;
-    }
-
-    int count = 0;
-    struct addrinfo *p = res;
-    while (p) {
-        count++;
-        p = p->ai_next;
-    }
-
-    if (count == 0) {
-        freeaddrinfo(res);
-        return AIRY_ENOENT;
-    }
-
-    result->addresses = (char **)AIRY_CALLOC((size_t)count, sizeof(char *));
-    result->ports = (int *)AIRY_CALLOC((size_t)count, sizeof(int));
-    result->count = (size_t)count;
-
-    if (!result->addresses || !result->ports) {
-        AIRY_FREE(result->addresses);
-        AIRY_FREE(result->ports);
-        freeaddrinfo(res);
-        return AIRY_ENOMEM;
-    }
-
-    p = res;
-    for (int i = 0; i < count && p; i++) {
-        char ip_str[INET6_ADDRSTRLEN];
-
-        if (p->ai_family == AF_INET) {
-            struct sockaddr_in *addr_in = (struct sockaddr_in *)p->ai_addr;
-            inet_ntop(AF_INET, &addr_in->sin_addr, ip_str, sizeof(ip_str));
-            result->ports[i] = ntohs(addr_in->sin_port);
-        } else if (p->ai_family == AF_INET6) {
-            struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)p->ai_addr;
-            inet_ntop(AF_INET6, &addr_in6->sin6_addr, ip_str, sizeof(ip_str));
-            result->ports[i] = ntohs(addr_in6->sin6_port);
-        } else {
-            AIRY_STRNCPY_TERM(ip_str, "unknown", INET6_ADDRSTRLEN);
-            ip_str[INET6_ADDRSTRLEN - 1] = '\0';
-            result->ports[i] = 0;
-        }
-
-        result->addresses[i] = AIRY_STRDUP(ip_str);
-        p = p->ai_next;
-    }
-
-    freeaddrinfo(res);
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief 释放 DNS 解析结果
- * @param result 解析结果
- */
-void network_dns_result_free(network_dns_result_t *result)
-{
-    if (!result) {
-        return;
-    }
-
-    if (result->addresses) {
-        for (size_t i = 0; i < result->count; i++) {
-            if (result->addresses[i]) {
-                AIRY_FREE(result->addresses[i]);
-            }
-        }
-        AIRY_FREE(result->addresses);
-        result->addresses = NULL;
-    }
-
-    if (result->ports) {
-        AIRY_FREE(result->ports);
-        result->ports = NULL;
-    }
-
-    result->count = 0;
-}
-
-/* ============================================================================
- * 工具函数实现
- * ============================================================================ */
-
-/**
- * @brief 检查主机是否可达
- * @param host 主机名或 IP
- * @param timeout_ms 超时时间
- * @return true 可达，false 不可达
- */
-bool network_is_reachable(const char *host, int timeout_ms)
-{
-    if (!host) {
-        return false;
-    }
-
-    network_init_winsock();
-
-    network_config_t config = network_create_default_config();
-    config.host = host;
-    config.timeout_ms = timeout_ms > 0 ? timeout_ms : 5000;
-
-    network_connection_t *conn = network_connection_create(&config);
-    if (!conn) {
-        return false;
-    }
-
-    airy_err_t err = network_connect(conn);
-    bool reachable = (err == AIRY_SUCCESS);
-
-    if (reachable) {
-        network_disconnect(conn);
-    }
-
-    network_connection_destroy(conn);
-
-    return reachable;
-}
-
-/**
- * @brief 获取本机 IP 地址
- * @param af 地址族
- * @param buffer 输出缓冲区
- * @param buffer_len 缓冲区长度
- * @return 错误码
- */
-airy_err_t network_get_local_ip(network_af_t af, char *buffer, size_t buffer_len)
-{
-    if (!buffer || buffer_len == 0) {
-        return AIRY_EINVAL;
-    }
-
-    network_init_winsock();
-
-#ifdef _WIN32
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-
-    struct addrinfo hints, *res;
-    AIRY_MEMSET(&hints, 0, sizeof(hints));
-    hints.ai_family = af_to_native(af);
-
-    if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
-        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
-        buffer[buffer_len - 1] = '\0';
-        return AIRY_SUCCESS;
-    }
-
-    if (res->ai_family == AF_INET) {
-        struct sockaddr_in *addr_in = (struct sockaddr_in *)res->ai_addr;
-        inet_ntop(AF_INET, &addr_in->sin_addr, buffer, (socklen_t)buffer_len);
-    } else if (res->ai_family == AF_INET6) {
-        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
-        inet_ntop(AF_INET6, &addr_in6->sin6_addr, buffer, (socklen_t)buffer_len);
-    } else {
-        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
-        buffer[buffer_len - 1] = '\0';
-    }
-
-    freeaddrinfo(res);
-#else
-
-    const char *test_host = "8.8.8.8";
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        AIRY_STRNCPY_TERM(buffer, "127.0.0.1", buffer_len);
-        buffer[buffer_len - 1] = '\0';
-        return AIRY_SUCCESS;
-    }
-
-    struct sockaddr_in server;
-    AIRY_MEMSET(&server, 0, sizeof(server));
-    server.sin_family = AF_INET;
-    server.sin_port = htons(80);
-    inet_pton(AF_INET, test_host, &server.sin_addr);
-
-    connect(sockfd, (struct sockaddr *)&server, sizeof(server));
-
-    struct sockaddr_in local_addr;
-    socklen_t addr_len = sizeof(local_addr);
-    getsockname(sockfd, (struct sockaddr *)&local_addr, &addr_len);
-    inet_ntop(AF_INET, &local_addr.sin_addr, buffer, (socklen_t)buffer_len);
-
-    close(sockfd);
-#endif
-
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief 将 IP 地址转换为字符串
- * @param af 地址族
- * @param addr 地址结构
- * @param buffer 输出缓冲区
- * @param buffer_len 缓冲区长度
- * @return 错误码
- */
-airy_err_t network_addr_to_string(network_af_t af, const void *addr, char *buffer,
-                                  size_t buffer_len)
-{
-    if (!addr || !buffer || buffer_len == 0) {
-        return AIRY_EINVAL;
-    }
-
-    if (af == NETWORK_AF_INET) {
-        const struct sockaddr_in *addr_in = (const struct sockaddr_in *)addr;
-        inet_ntop(AF_INET, &addr_in->sin_addr, buffer, (socklen_t)buffer_len);
-    } else if (af == NETWORK_AF_INET6) {
-        const struct sockaddr_in6 *addr_in6 = (const struct sockaddr_in6 *)addr;
-        inet_ntop(AF_INET6, &addr_in6->sin6_addr, buffer, (socklen_t)buffer_len);
-    } else {
-        AIRY_STRNCPY_TERM(buffer, "unknown", buffer_len);
-        buffer[buffer_len - 1] = '\0';
-    }
-
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief 初始化网络子系统
- * @return 错误码
- */
 airy_err_t network_init(void)
 {
     if (network_init_winsock() != 0) {
@@ -1446,9 +615,6 @@ airy_err_t network_init(void)
     return AIRY_SUCCESS;
 }
 
-/**
- * @brief 清理网络子系统
- */
 void network_cleanup(void)
 {
 #ifdef _WIN32

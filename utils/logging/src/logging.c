@@ -108,9 +108,6 @@ static atomic_uint g_sample_counter_debug = 0;
 static atomic_uint g_sample_counter_info = 0;
 static atomic_uint g_sample_counter_warn = 0;
 
-/**
- * @brief 计算消息哈希（用于节流去重）
- */
 static uint64_t throttle_hash(const char *module, int line, const char *message)
 {
     uint64_t h = 14695981039346656037ULL;
@@ -136,15 +133,6 @@ static uint64_t throttle_hash(const char *module, int line, const char *message)
     return h;
 }
 
-/**
- * @brief 检查日志是否应被节流抑制
- *
- * @param module 模块名
- * @param line 行号
- * @param message 日志消息
- * @param now_sec 当前时间（秒）
- * @return true 应抑制（跳过），false 应输出
- */
 static bool throttle_should_suppress(const char *module, int line, const char *message,
                                      uint64_t now_sec)
 {
@@ -228,14 +216,6 @@ typedef struct {
 
 static logging_state_t g_logging_state = {.initialized = false, .module_level_count = 0};
 
-/**
- * @brief 获取当前时间戳（毫秒）
- *
- * 获取当前时间的Unix时间戳，毫秒精度。
- *
- * @return 当前时间戳（毫秒）
- */
-
 static uint64_t get_current_timestamp(void)
 {
     struct timespec ts;
@@ -243,40 +223,16 @@ static uint64_t get_current_timestamp(void)
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
 }
 
-/**
- * @brief 获取当前线程ID
- *
- * 获取当前线程的ID，用于日志记录。
- *
- * @return 线程ID
- */
 static uint64_t get_current_thread_id(void)
 {
     return airy_thread_id();
 }
 
-/**
- * @brief 获取当前进程ID
- *
- * 获取当前进程的ID，用于日志记录。
- *
- * @return 进程ID
- */
 static uint32_t get_current_process_id(void)
 {
     return (uint32_t)getpid();
 }
 
-/**
- * @brief 格式化日志消息
- *
- * 将日志记录格式化为字符串，根据配置的格式。
- *
- * @param record 日志记录
- * @param buffer 输出缓冲区
- * @param buffer_size 缓冲区大小
- * @return 格式化后的字符串长度
- */
 static size_t format_log_message(const log_record_t *record, char *buffer, size_t buffer_size)
 {
     if (!record || !buffer || buffer_size == 0) {
@@ -339,15 +295,6 @@ static size_t format_log_message(const log_record_t *record, char *buffer, size_
     return (size_t)len;
 }
 
-/**
- * @brief 检查日志是否应该被记录
- *
- * 根据全局级别和模块级别检查日志是否应该被记录。
- *
- * @param level 日志级别
- * @param module 模块名称
- * @return true 应该记录，false 应该过滤
- */
 static bool should_log(log_level_t level, const char *module)
 {
     if (level < g_logging_state.manager.level) {
@@ -574,9 +521,6 @@ int log_init(const log_config_t *manager)
         g_logging_state.manager.enable_statistics = false;
     }
 
-    /* AIRY_LOG_LEVEL 环境变量覆盖默认级别（debug/info/warn/error），
-     * 便于运行时开启 DEBUG 日志排查调度阻塞等问题：
-     * AIRY_LOG_LEVEL=debug ./bin/sched_d */
     {
         const char *env_level = getenv("AIRY_LOG_LEVEL");
         if (env_level && env_level[0]) {

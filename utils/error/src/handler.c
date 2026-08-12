@@ -300,11 +300,6 @@ static const error_info_t g_error_info[] = {
 
 static const size_t g_error_info_count = sizeof(g_error_info) / sizeof(g_error_info[0]);
 
-/**
- * @brief 获取错误码的英文描述字符串
- * @param code 错误码
- * @return 错误描述字符串（英文）
- */
 const char *airy_err_str(airy_err_t code)
 {
     for (size_t i = 0; i < g_error_info_count; i++) {
@@ -315,11 +310,6 @@ const char *airy_err_str(airy_err_t code)
     return "Unknown error";
 }
 
-/**
- * @brief 获取错误码的严重程度
- * @param code 错误码
- * @return 错误严重程度级别
- */
 airy_err_severity_t airy_err_get_severity(airy_err_t code)
 {
     for (size_t i = 0; i < g_error_info_count; i++) {
@@ -330,10 +320,6 @@ airy_err_severity_t airy_err_get_severity(airy_err_t code)
     return AIRY_ERR_SEVERITY_ERROR;
 }
 
-/**
- * @brief 获取当前线程的错误链
- * @return 错误链指针，失败返回 NULL
- */
 airy_err_chain_t *airy_err_get_chain(void)
 {
     thread_error_state_t *state = get_thread_error_state();
@@ -343,9 +329,6 @@ airy_err_chain_t *airy_err_get_chain(void)
     return &state->chain;
 }
 
-/**
- * @brief 清除当前线程的错误链
- */
 void airy_err_clear(void)
 {
     thread_error_state_t *state = get_thread_error_state();
@@ -389,10 +372,6 @@ void airy_err_thread_cleanup(void)
 #endif
 }
 
-/**
- * @brief 获取当前时间（纳秒级）
- * @return 纳秒级时间戳
- */
 static uint64_t get_current_time_ns(void)
 {
 #ifdef _WIN32
@@ -407,15 +386,6 @@ static uint64_t get_current_time_ns(void)
 #endif
 }
 
-/**
- * @brief 向错误链中添加错误上下文信息（带详细位置）
- * @param code 错误码
- * @param file 文件名
- * @param line 行号
- * @param func 函数名
- * @param fmt 错误消息格式字符串
- * @param ... 可变参数
- */
 void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *func,
                       const char *fmt, ...)
 {
@@ -470,10 +440,6 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
     chain->code = code;
 }
 
-/**
- * @brief 打印错误链信息到控制台
- * @param chain 错误链指针
- */
 void airy_err_print_chain(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
@@ -491,11 +457,6 @@ void airy_err_print_chain(const airy_err_chain_t *chain)
     }
 }
 
-/**
- * @brief 将错误链转换为 JSON 格式
- * @param chain 错误链指针
- * @return JSON 字符串（需要调用 AIRY_FREE 释放）
- */
 char *airy_err_chain_to_json(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
@@ -505,10 +466,6 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain)
     return airy_err_chain_to_json_i18n(chain, -1);
 }
 
-/**
- * @brief 获取错误统计信息
- * @param stats 输出统计信息结构
- */
 void airy_err_get_stats(airy_err_stats_t *stats)
 {
     if (stats == NULL) {
@@ -525,9 +482,6 @@ void airy_err_get_stats(airy_err_stats_t *stats)
     STATS_UNLOCK();
 }
 
-/**
- * @brief 重置错误统计信息
- */
 void airy_err_reset_stats(void)
 {
     STATS_LOCK();
@@ -540,11 +494,6 @@ void airy_err_reset_stats(void)
     STATS_UNLOCK();
 }
 
-/**
- * @brief 设置错误描述的语言
- * @param lang 语言类型
- * @return 成功返回 AIRY_OK，失败返回错误码
- */
 airy_err_t airy_err_set_language(airy_language_t lang)
 {
     if ((int)lang < 0 || (int)lang > 7) {
@@ -555,21 +504,11 @@ airy_err_t airy_err_set_language(airy_language_t lang)
     return AIRY_OK;
 }
 
-/**
- * @brief 获取当前设置的语言
- * @return 当前语言类型
- */
 airy_language_t airy_err_get_language(void)
 {
     return g_current_language;
 }
 
-/**
- * @brief 获取指定语言的错误描述字符串
- * @param code 错误码
- * @param lang 语言类型（-1 表示使用当前语言）
- * @return 错误描述字符串
- */
 const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
 {
     airy_language_t use_lang = lang;
@@ -605,12 +544,6 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
     return airy_err_str(code);
 }
 
-/**
- * @brief 注册自定义多语言错误描述
- * @param entries 多语言错误描述条目数组
- * @param count 条目数量
- * @return 成功返回 AIRY_OK，失败返回错误码
- */
 airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t count)
 {
 
@@ -637,12 +570,6 @@ airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t c
     return AIRY_OK;
 }
 
-/**
- * @brief 将错误链转换为多语言 JSON 格式
- * @param chain 错误链指针
- * @param lang 语言类型（-1 表示使用当前语言）
- * @return JSON 字符串（需要调用 AIRY_FREE 释放）
- */
 char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t lang)
 {
 
@@ -717,11 +644,6 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
     return buf;
 }
 
-/**
- * @brief 初始化错误链迭代器
- * @param chain 错误链指针
- * @param iter 迭代器结构
- */
 void airy_err_chain_iter_init(const airy_err_chain_t *chain, airy_err_chain_iterator_t *iter)
 {
 
@@ -732,11 +654,6 @@ void airy_err_chain_iter_init(const airy_err_chain_t *chain, airy_err_chain_iter
     iter->current_index = 0;
 }
 
-/**
- * @brief 迭代器获取下一个错误上下文
- * @param iter 迭代器指针
- * @return 错误上下文条目，到达末尾返回 NULL
- */
 const airy_err_context_entry_t *airy_err_chain_iter_next(airy_err_chain_iterator_t *iter)
 {
 
@@ -754,10 +671,6 @@ const airy_err_context_entry_t *airy_err_chain_iter_next(airy_err_chain_iterator
     return ctx;
 }
 
-/**
- * @brief 重置迭代器到起始位置
- * @param iter 迭代器指针
- */
 void airy_err_chain_iter_reset(airy_err_chain_iterator_t *iter)
 {
     if (!iter)
@@ -766,11 +679,6 @@ void airy_err_chain_iter_reset(airy_err_chain_iterator_t *iter)
     iter->current_index = 0;
 }
 
-/**
- * @brief 获取错误链的深度
- * @param chain 错误链指针
- * @return 错误链深度，失败返回 0
- */
 int airy_err_chain_get_depth(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
@@ -779,11 +687,6 @@ int airy_err_chain_get_depth(const airy_err_chain_t *chain)
     return chain->depth;
 }
 
-/**
- * @brief 获取错误链的根错误（最早的错误）
- * @param chain 错误链指针
- * @return 根错误码，失败返回 AIRY_OK
- */
 airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL || chain->depth <= 0) {
@@ -792,12 +695,7 @@ airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
     return chain->contexts[0].error_code;
 }
 
-/**
- * @brief 获取错误链的最新错误
- * @param chain 错误链指针
- * @return 最新错误码，失败返回 AIRY_OK
- */
-airy_err_t airy_ech_get_latest_error(const airy_err_chain_t *chain)
+airy_err_t airy_err_ech_get_latest_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
         return AIRY_OK;
@@ -805,12 +703,6 @@ airy_err_t airy_ech_get_latest_error(const airy_err_chain_t *chain)
     return chain->code;
 }
 
-/**
- * @brief 格式化错误链为字符串
- * @param chain 错误链指针
- * @param lang 语言类型
- * @return 格式化后的字符串（需要调用 AIRY_FREE 释放）
- */
 char *airy_err_chain_format(const airy_err_chain_t *chain, airy_language_t lang)
 {
 
@@ -839,10 +731,6 @@ char *airy_err_chain_format(const airy_err_chain_t *chain, airy_language_t lang)
     return buf;
 }
 
-/**
- * @brief 设置错误处理回调（兼容旧代码）
- * @param handler 错误处理回调函数
- */
 void airy_err_set_handler(airy_err_handler_t handler)
 {
     (void)handler;

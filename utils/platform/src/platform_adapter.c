@@ -44,9 +44,6 @@
 #include "airy_memory.h"
 #include "error.h"
 
-/**
- * @brief 获取当前平台类型
- */
 platform_type_t platform_get_type(void)
 {
 #if defined(_WIN32)
@@ -62,9 +59,6 @@ platform_type_t platform_get_type(void)
 #endif
 }
 
-/**
- * @brief 获取平台名称
- */
 const char *platform_get_name(void)
 {
     switch (platform_get_type()) {
@@ -86,9 +80,6 @@ const char *platform_get_name(void)
  * 统一使用 airy_process_run_capture()（fork+execvp，不经 shell）作为规范子进程 API。
  * 见 platform.h 的 airy_process_run_capture 声明。 */
 
-/**
- * @brief 获取文件信息
- */
 platform_file_info_t platform_get_file_info(const char *path)
 {
     platform_file_info_t info = {
@@ -125,9 +116,6 @@ platform_file_info_t platform_get_file_info(const char *path)
     return info;
 }
 
-/**
- * @brief 创建目录
- */
 bool platform_mkdir(const char *path)
 {
     if (!path) {
@@ -141,9 +129,6 @@ bool platform_mkdir(const char *path)
 #endif
 }
 
-/**
- * @brief 创建目录（递归）
- */
 bool platform_mkdir_recursive(const char *path)
 {
     if (!path) {
@@ -183,9 +168,6 @@ bool platform_mkdir_recursive(const char *path)
     return true;
 }
 
-/**
- * @brief 删除文件
- */
 bool platform_unlink(const char *path)
 {
     if (!path) {
@@ -199,9 +181,6 @@ bool platform_unlink(const char *path)
 #endif
 }
 
-/**
- * @brief 删除目录
- */
 bool platform_rmdir(const char *path)
 {
     if (!path) {
@@ -215,9 +194,6 @@ bool platform_rmdir(const char *path)
 #endif
 }
 
-/**
- * @brief 复制文件
- */
 bool platform_copy_file(const char *src, const char *dest)
 {
     if (!src || !dest) {
@@ -255,9 +231,6 @@ bool platform_copy_file(const char *src, const char *dest)
 #endif
 }
 
-/**
- * @brief 移动文件
- */
 bool platform_move_file(const char *src, const char *dest)
 {
     if (!src || !dest) {
@@ -271,9 +244,6 @@ bool platform_move_file(const char *src, const char *dest)
 #endif
 }
 
-/**
- * @brief 获取环境变量
- */
 char *platform_get_env(const char *name, const char *default_value)
 {
     if (!name) {
@@ -307,9 +277,6 @@ char *platform_get_env(const char *name, const char *default_value)
 #endif
 }
 
-/**
- * @brief 设置环境变量
- */
 bool platform_set_env(const char *name, const char *value)
 {
     if (!name) {
@@ -323,9 +290,6 @@ bool platform_set_env(const char *name, const char *value)
 #endif
 }
 
-/**
- * @brief 获取当前工作目录
- */
 char *platform_get_cwd(void)
 {
 #if defined(_WIN32)
@@ -344,9 +308,6 @@ char *platform_get_cwd(void)
     AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
-/**
- * @brief 改变当前工作目录
- */
 bool platform_chdir(const char *path)
 {
     if (!path) {
@@ -360,9 +321,6 @@ bool platform_chdir(const char *path)
 #endif
 }
 
-/**
- * @brief 获取临时目录
- */
 char *platform_get_temp_dir(void)
 {
 #if defined(_WIN32)
@@ -380,9 +338,6 @@ char *platform_get_temp_dir(void)
     AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
-/**
- * @brief 生成临时文件路径
- */
 char *platform_get_temp_file(const char *prefix)
 {
     char *temp_dir = platform_get_temp_dir();
@@ -413,9 +368,6 @@ char *platform_get_temp_file(const char *prefix)
     return path;
 }
 
-/**
- * @brief 路径连接
- */
 char *platform_path_join(const char *path1, const char *path2)
 {
     if (!path1 || !path2) {
@@ -440,9 +392,6 @@ char *platform_path_join(const char *path1, const char *path2)
     return result;
 }
 
-/**
- * @brief 路径规范化
- */
 char *platform_path_normalize(const char *path)
 {
     if (!path) {
@@ -453,9 +402,6 @@ char *platform_path_normalize(const char *path)
     return AIRY_STRDUP(path);
 }
 
-/**
- * @brief 获取路径中的文件名部分
- */
 char *platform_path_basename(const char *path)
 {
     if (!path) {
@@ -469,9 +415,6 @@ char *platform_path_basename(const char *path)
     return AIRY_STRDUP(path);
 }
 
-/**
- * @brief 获取路径中的目录部分
- */
 char *platform_path_dirname(const char *path)
 {
     if (!path) {
@@ -492,9 +435,6 @@ char *platform_path_dirname(const char *path)
     return result;
 }
 
-/**
- * @brief 检查路径是否存在
- */
 bool platform_path_exists(const char *path)
 {
     if (!path) {
@@ -505,9 +445,6 @@ bool platform_path_exists(const char *path)
     return info.exists;
 }
 
-/**
- * @brief 检查路径是否为目录
- */
 bool platform_path_is_directory(const char *path)
 {
     if (!path) {
@@ -518,9 +455,6 @@ bool platform_path_is_directory(const char *path)
     return info.exists && info.is_directory;
 }
 
-/**
- * @brief 检查路径是否为文件
- */
 bool platform_path_is_file(const char *path)
 {
     if (!path) {
@@ -531,9 +465,6 @@ bool platform_path_is_file(const char *path)
     return info.exists && !info.is_directory;
 }
 
-/**
- * @brief 获取系统时间戳（毫秒）
- */
 uint64_t platform_get_timestamp_ms(void)
 {
 #if defined(_WIN32)
@@ -546,9 +477,6 @@ uint64_t platform_get_timestamp_ms(void)
 #endif
 }
 
-/**
- * @brief 获取系统时间戳（微秒）
- */
 uint64_t platform_get_timestamp_us(void)
 {
 #if defined(_WIN32)
@@ -561,9 +489,6 @@ uint64_t platform_get_timestamp_us(void)
 #endif
 }
 
-/**
- * @brief 休眠指定毫秒数
- */
 void platform_sleep_ms(unsigned int ms)
 {
 #if defined(_WIN32)
@@ -573,9 +498,6 @@ void platform_sleep_ms(unsigned int ms)
 #endif
 }
 
-/**
- * @brief 初始化平台适配器
- */
 bool platform_adapter_init(void)
 {
 #if defined(_WIN32)
@@ -586,9 +508,6 @@ bool platform_adapter_init(void)
 #endif
 }
 
-/**
- * @brief 清理平台适配器
- */
 void platform_adapter_cleanup(void)
 {
 #if defined(_WIN32)

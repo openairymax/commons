@@ -41,9 +41,6 @@
 #define MAX_TRACE_ID_LEN 64
 #define MAX_SPAN_ID_LEN 32
 
-/**
- * @brief 追踪事件结构
- */
 typedef struct trace_event {
     char name[128];
     int64_t timestamp;
@@ -51,46 +48,28 @@ typedef struct trace_event {
     struct trace_event *next;
 } trace_event_t;
 
-/**
- * @brief 跨平台互斥锁类型
- */
 typedef airy_mtx_t trace_mutex_t;
 
-/**
- * @brief 初始化互斥锁
- */
 static int trace_mutex_init(trace_mutex_t *mutex)
 {
     return airy_mtx_init(mutex);
 }
 
-/**
- * @brief 销毁互斥锁
- */
 static void trace_mutex_destroy(trace_mutex_t *mutex)
 {
     airy_mtx_destroy(mutex);
 }
 
-/**
- * @brief 加锁
- */
 static void trace_mutex_lock(trace_mutex_t *mutex)
 {
     airy_mtx_lock(mutex);
 }
 
-/**
- * @brief 解锁
- */
 static void trace_mutex_unlock(trace_mutex_t *mutex)
 {
     airy_mtx_unlock(mutex);
 }
 
-/**
- * @brief 追踪Span内部结构
- */
 struct airy_trace_span {
     char trace_id[MAX_TRACE_ID_LEN];
     char span_id[MAX_SPAN_ID_LEN]; /**< Span ID */
@@ -106,9 +85,6 @@ struct airy_trace_span {
     struct airy_trace_span *next;
 };
 
-/**
- * @brief 全局追踪状态
- */
 static struct {
     atomic_uint64_t span_counter;
     atomic_uint64_t trace_counter;
@@ -118,9 +94,6 @@ static struct {
     int initialized;
 } g_trace_state;
 
-/**
- * @brief 获取当前时间戳（微秒），跨平台实现
- */
 static int64_t get_current_time_us(void)
 {
 #ifdef _WIN32
@@ -135,9 +108,6 @@ static int64_t get_current_time_us(void)
 #endif
 }
 
-/**
- * @brief 初始化追踪系统
- */
 static int init_trace_system(void)
 {
     if (g_trace_state.initialized) {
@@ -156,18 +126,12 @@ static int init_trace_system(void)
     return 0;
 }
 
-/**
- * @brief 生成ID
- */
 static void generate_id(char *buffer, size_t size, uint64_t counter, const char *prefix)
 {
     snprintf(buffer, size, "%s-%016llx-%08llx", prefix, (unsigned long long)time(NULL),
              (unsigned long long)counter);
 }
 
-/**
- * @brief 创建追踪事件
- */
 static trace_event_t *create_event(const char *name, const char *attributes)
 {
     trace_event_t *event = (trace_event_t *)AIRY_MALLOC(sizeof(trace_event_t));
@@ -192,9 +156,6 @@ static trace_event_t *create_event(const char *name, const char *attributes)
     return event;
 }
 
-/**
- * @brief 释放事件链表
- */
 static void free_events(trace_event_t *head)
 {
     while (head) {

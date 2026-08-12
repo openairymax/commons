@@ -57,9 +57,6 @@ char *string_common_strlcat(char *dest, size_t dest_size, const char *src)
     return dest;
 }
 
-/**
- * @brief 字符串复制（动态内存分配）
- */
 char *string_common_strdup(const char *str)
 {
     if (!str) {
@@ -74,9 +71,6 @@ char *string_common_strdup(const char *str)
     return dup;
 }
 
-/**
- * @brief 字符串复制（指定长度，动态内存分配）
- */
 char *string_common_strndup(const char *str, size_t n)
 {
     if (!str) {
@@ -92,9 +86,6 @@ char *string_common_strndup(const char *str, size_t n)
     return dup;
 }
 
-/**
- * @brief 大小写不敏感的字符串比较
- */
 int string_common_strcasecmp(const char *s1, const char *s2)
 {
     if (!s1 || !s2) {
@@ -114,9 +105,6 @@ int string_common_strcasecmp(const char *s1, const char *s2)
     return tolower((unsigned char)*s1) - tolower((unsigned char)*s2);
 }
 
-/**
- * @brief 大小写不敏感的字符串比较（指定长度）
- */
 int string_common_strncasecmp(const char *s1, const char *s2, size_t n)
 {
     if (!s1 || !s2) {
@@ -137,17 +125,11 @@ int string_common_strncasecmp(const char *s1, const char *s2, size_t n)
     return 0;
 }
 
-/**
- * @brief 字符串查找
- */
 char *string_common_strstr(const char *haystack, const char *needle)
 {
     return strstr(haystack, needle);
 }
 
-/**
- * @brief 字符串分割
- */
 char **string_common_strsplit(const char *str, const char *delim)
 {
     if (!str || !delim) {
@@ -187,9 +169,6 @@ char **string_common_strsplit(const char *str, const char *delim)
     return arr;
 }
 
-/**
- * @brief 释放字符串数组
- */
 void string_common_strsplit_free(char **arr)
 {
     if (!arr) {
@@ -202,9 +181,6 @@ void string_common_strsplit_free(char **arr)
     AIRY_FREE(arr);
 }
 
-/**
- * @brief 字符串转换为整数
- */
 bool string_common_strtoint(const char *str, int base, int *result)
 {
     if (!str || !result) {
@@ -222,9 +198,6 @@ bool string_common_strtoint(const char *str, int base, int *result)
     return true;
 }
 
-/**
- * @brief 字符串转换为无符号整数
- */
 bool string_common_strtouint(const char *str, int base, uint32_t *result)
 {
     if (!str || !result) {
@@ -242,9 +215,6 @@ bool string_common_strtouint(const char *str, int base, uint32_t *result)
     return true;
 }
 
-/**
- * @brief 字符串转换为双精度浮点数
- */
 bool string_common_strtod(const char *str, double *result)
 {
     if (!str || !result) {
@@ -262,9 +232,6 @@ bool string_common_strtod(const char *str, double *result)
     return true;
 }
 
-/**
- * @brief 整数转换为字符串
- */
 size_t string_common_itoa(int value, int base, char *buf, size_t buf_size)
 {
     if (!buf || buf_size == 0) {
@@ -304,9 +271,6 @@ size_t string_common_itoa(int value, int base, char *buf, size_t buf_size)
     return len;
 }
 
-/**
- * @brief 无符号整数转换为字符串
- */
 size_t string_common_utoa(uint32_t value, int base, char *buf, size_t buf_size)
 {
     if (!buf || buf_size == 0) {
@@ -337,9 +301,6 @@ size_t string_common_utoa(uint32_t value, int base, char *buf, size_t buf_size)
     return len;
 }
 
-/**
- * @brief 双精度浮点数转换为字符串
- */
 size_t string_common_ftoa(double value, int precision, char *buf, size_t buf_size)
 {
     if (!buf || buf_size == 0) {
@@ -350,9 +311,6 @@ size_t string_common_ftoa(double value, int precision, char *buf, size_t buf_siz
     return (len < 0) ? 0 : (size_t)len;
 }
 
-/**
- * @brief 字符串修剪（去除首尾空白字符）
- */
 char *string_common_strtrim(char *str)
 {
     if (!str) {
@@ -373,9 +331,6 @@ char *string_common_strtrim(char *str)
     return str;
 }
 
-/**
- * @brief 字符串转小写
- */
 char *string_common_strtolower(char *str)
 {
     if (!str) {
@@ -391,9 +346,6 @@ char *string_common_strtolower(char *str)
     return str;
 }
 
-/**
- * @brief 字符串转大写
- */
 char *string_common_strtoupper(char *str)
 {
     if (!str) {

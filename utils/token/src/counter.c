@@ -42,9 +42,6 @@ struct airy_token_counter {
     size_t max_token_length;
 };
 
-/**
- * @brief 计算文本的Token数量
- */
 size_t airy_token_count(const char *text, const airy_token_config_t *config)
 {
     if (!text)

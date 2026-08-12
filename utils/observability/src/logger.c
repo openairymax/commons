@@ -45,8 +45,6 @@ static void ensure_log_initialized(void)
 const char *airy_log_set_trace_id(const char *trace_id)
 {
     ensure_log_initialized();
-    /* log_set_trace_id 内部使用 AIRY_THREAD_LOCAL g_tls_trace_id，语义等价于
-     * 原 logging_compat.c 的 _Thread_local g_thread_trace_id 缓存（且自动同步）。 */
     return log_set_trace_id(trace_id);
 }
 

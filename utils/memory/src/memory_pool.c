@@ -45,9 +45,6 @@ typedef struct memory_region_node {
     struct memory_region_node *next;
 } memory_region_node_t;
 
-/**
- * @brief 内存池内部结构
- */
 struct memory_pool {
     memory_pool_options_t options;
 
@@ -60,7 +57,6 @@ struct memory_pool {
 
     memory_pool_stats_t stats;
 
-    // 线程同步
     airy_mtx_t lock;
 
     char *name;
@@ -68,12 +64,6 @@ struct memory_pool {
     memory_region_node_t *old_regions;
 };
 
-/**
- * @brief 内部锁初始化
- *
- * @param[in] pool 内存池指针
- * @return 成功返回 true，失败返回 false
- */
 static bool memory_pool_lock_init(memory_pool_t *pool)
 {
     if (!pool->options.thread_safe) {
@@ -83,11 +73,6 @@ static bool memory_pool_lock_init(memory_pool_t *pool)
     return airy_mtx_init(&pool->lock) == 0;
 }
 
-/**
- * @brief 内部锁销毁
- *
- * @param[in] pool 内存池
- */
 static void memory_pool_lock_destroy(memory_pool_t *pool)
 {
     if (!pool->options.thread_safe) {
@@ -97,11 +82,6 @@ static void memory_pool_lock_destroy(memory_pool_t *pool)
     airy_mtx_destroy(&pool->lock);
 }
 
-/**
- * @brief 加锁
- *
- * @param[in] pool 内存池
- */
 static void memory_pool_lock(memory_pool_t *pool)
 {
     if (!pool->options.thread_safe) {
@@ -111,11 +91,6 @@ static void memory_pool_lock(memory_pool_t *pool)
     airy_mtx_lock(&pool->lock);
 }
 
-/**
- * @brief 解锁
- *
- * @param[in] pool 内存池
- */
 static void memory_pool_unlock(memory_pool_t *pool)
 {
     if (!pool->options.thread_safe) {
@@ -125,13 +100,6 @@ static void memory_pool_unlock(memory_pool_t *pool)
     airy_mtx_unlock(&pool->lock);
 }
 
-/**
- * @brief 计算内存对齐
- *
- * @param[in] size 原始大小
- * @param[in] alignment 对齐要求
- * @return 对齐后的大小
- */
 static size_t memory_pool_align_size(size_t size, size_t alignment)
 {
     if (alignment == 0) {
@@ -141,13 +109,6 @@ static size_t memory_pool_align_size(size_t size, size_t alignment)
     return ((size + alignment - 1) / alignment) * alignment;
 }
 
-/**
- * @brief 分配新的内存区域
- *
- * @param[in] pool 内存池指针
- * @param[in] block_count 块数量
- * @return 成功返回 true，失败返回 false
- */
 static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
 {
     if (pool == NULL || block_count == 0) {
@@ -158,7 +119,6 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
         memory_pool_align_size(sizeof(memory_pool_block_t) + pool->options.block_size,
                                sizeof(void *));
 
-    // 计算总内存大小（带溢出检查）
     if (block_count > 0 && aligned_block_size > SIZE_MAX / block_count) {
         return false;
     }
@@ -194,7 +154,6 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
     pool->memory_area = new_memory;
     pool->memory_area_size = total_size;
 
-    // 扩展块指针数组（带溢出检查）
     size_t new_capacity = pool->blocks_capacity + block_count;
     if (new_capacity > SIZE_MAX / sizeof(memory_pool_block_t *)) {
         return false;
@@ -216,7 +175,6 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
     for (size_t i = 0; i < block_count; i++) {
         memory_pool_block_t *block = (memory_pool_block_t *)memory_ptr;
 
-        // 初始化块（含 O(1) 验证用池指针）
         block->next = NULL;
         block->allocated = false;
         block->index = pool->stats.total_blocks + i;
@@ -237,11 +195,6 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
     return true;
 }
 
-/**
- * @brief 释放内存区域
- *
- * @param[in] pool 内存池指针
- */
 static void memory_pool_free_blocks(memory_pool_t *pool)
 {
     if (pool == NULL) {

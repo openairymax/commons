@@ -48,25 +48,16 @@
 
 #include "logging.h"
 
-/**
- * @brief 全局同步模块状态结构体
- */
 typedef struct {
     sync_error_callback_t error_callback;
     void *user_context;
     bool initialized;
 } sync_global_state_t;
 
-/**
- * @brief 全局同步模块状态
- */
 static sync_global_state_t g_sync_state = {NULL, NULL, false};
 
 static bool g_initialized = false;
 
-/**
- * @brief 初始化同步模块
- */
 sync_result_t sync_init(sync_error_callback_t error_callback, void *context)
 {
     if (g_initialized) {
@@ -81,9 +72,6 @@ sync_result_t sync_init(sync_error_callback_t error_callback, void *context)
     return SYNC_SUCCESS;
 }
 
-/**
- * @brief 清理同步模块
- */
 void sync_cleanup(void)
 {
     if (!g_initialized) {
@@ -96,9 +84,6 @@ void sync_cleanup(void)
     g_initialized = false;
 }
 
-/**
- * @brief 获取同步原语类型
- */
 sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
 {
     (void)lock;
@@ -124,9 +109,6 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
     }
 }
 
-/**
- * @brief 获取锁的名称
- */
 const char *sync_get_name(void *lock)
 {
     if (lock == NULL) {
@@ -160,9 +142,6 @@ const char *sync_get_name(void *lock)
     }
 }
 
-/**
- * @brief 获取锁的统计信息
- */
 sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
 {
     if (lock == NULL || stats == NULL) {
@@ -179,9 +158,6 @@ sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
     return SYNC_SUCCESS;
 }
 
-/**
- * @brief 重置锁的统计信息
- */
 sync_result_t sync_reset_stats(void *lock)
 {
     if (lock == NULL) {
@@ -322,17 +298,11 @@ sync_result_t sync_get_option(void *lock, int option, void *value)
     }
 }
 
-/**
- * @brief 检查锁是否有效
- */
 bool sync_is_valid(void *lock)
 {
     return lock != NULL;
 }
 
-/**
- * @brief 打印锁的调试信息
- */
 sync_result_t sync_debug(void *lock)
 {
     if (lock == NULL) {
@@ -370,9 +340,6 @@ sync_result_t sync_debug(void *lock)
     return SYNC_SUCCESS;
 }
 
-/**
- * @brief 获取当前时间戳（毫秒）
- */
 uint64_t sync_get_timestamp_ms(void)
 {
 #ifdef _WIN32
@@ -387,9 +354,6 @@ uint64_t sync_get_timestamp_ms(void)
 #endif
 }
 
-/**
- * @brief 线程睡眠（毫秒）
- */
 void sync_sleep_ms(uint64_t ms)
 {
 #ifdef _WIN32
@@ -399,9 +363,6 @@ void sync_sleep_ms(uint64_t ms)
 #endif
 }
 
-/**
- * @brief 线程 yield
- */
 void sync_yield(void)
 {
 #ifdef _WIN32
@@ -411,9 +372,6 @@ void sync_yield(void)
 #endif
 }
 
-/**
- * @brief 线程休眠（匹配 sync.h 声明的签名）
- */
 void sync_sleep(unsigned int ms)
 {
     sync_sleep_ms((uint64_t)ms);
@@ -453,9 +411,6 @@ static pthread_mutex_t s_registry_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define REGISTRY_UNLOCK() (void)pthread_mutex_unlock(&s_registry_mutex)
 #endif
 
-/**
- * @brief 向全局注册表注册/更新一个命名锁（用于死锁检测诊断）
- */
 static void registry_register(void *lock, const char *name, sync_type_t type)
 {
     REGISTRY_LOCK();
@@ -493,9 +448,6 @@ static void registry_register(void *lock, const char *name, sync_type_t type)
     REGISTRY_UNLOCK();
 }
 
-/**
- * @brief 从全局注册表移除一个锁
- */
 static void registry_unregister(void *lock)
 {
     REGISTRY_LOCK();
@@ -512,13 +464,6 @@ static void registry_unregister(void *lock)
     REGISTRY_UNLOCK();
 }
 
-/**
- * @brief 使用非阻塞 trylock 探测锁是否被持有
- *
- * 对已注册的锁执行 trylock：成功获取则立即释放（未被持有），
- * 返回 EBUSY/EAGAIN 则说明锁被持有。
- * 对于 condition/barrier/event 等无"持有"概念的类型，跳过探测。
- */
 static bool registry_lock_is_held(void *lock, sync_type_t type)
 {
     struct sync_mutex *base = (struct sync_mutex *)lock;
@@ -604,14 +549,6 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
     }
 }
 
-/**
- * @brief 设置锁名称
- *
- * 使用 strdup 复制名称（注册表拥有独立副本），释放旧名称，
- * 按锁类型分发到正确的结构体字段。同时将锁注册到全局注册表，
- * 供 sync_check_deadlock() 诊断使用。
- * 传入 name=NULL 时取消注册并清除名称。
- */
 sync_result_t sync_set_name(void *lock, const char *name)
 {
     if (lock == NULL) {
@@ -700,17 +637,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
     return SYNC_SUCCESS;
 }
 
-/**
- * @brief 检查死锁
- *
- * 遍历全局锁注册表，对每个已注册的命名锁执行非阻塞 trylock 探测，
- * 检测当前被持有的锁。被持有的锁可能是死锁的参与者。
- * 自清理：遍历时移除已释放（initialized=false）的陈旧条目。
- *
- * @param[out] info 死锁信息（如果检测到）
- * @param[in] max_info_size lock_names/thread_names 数组的最大条目数
- * @return 检测到被持有的锁返回 SYNC_ERROR_DEADLOCK，否则返回 SYNC_SUCCESS
- */
 sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_size)
 {
     if (info == NULL || max_info_size == 0) {
@@ -777,9 +703,6 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
     return SYNC_SUCCESS;
 }
 
-/**
- * @brief 获取当前线程ID
- */
 uint64_t sync_get_thread_id(void)
 {
 #ifdef _WIN32
@@ -789,9 +712,6 @@ uint64_t sync_get_thread_id(void)
 #endif
 }
 
-/**
- * @brief 原子操作：比较并交换
- */
 bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
 {
 #ifdef _WIN32
@@ -802,9 +722,6 @@ bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
 #endif
 }
 
-/**
- * @brief 原子操作：增加
- */
 uintptr_t sync_atomic_add(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
@@ -814,9 +731,6 @@ uintptr_t sync_atomic_add(volatile void *ptr, uintptr_t value)
 #endif
 }
 
-/**
- * @brief 原子操作：减少
- */
 uintptr_t sync_atomic_sub(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
@@ -826,9 +740,6 @@ uintptr_t sync_atomic_sub(volatile void *ptr, uintptr_t value)
 #endif
 }
 
-/**
- * @brief 原子操作：获取
- */
 uintptr_t sync_atomic_load(volatile void *ptr)
 {
 #ifdef _WIN32
@@ -838,9 +749,6 @@ uintptr_t sync_atomic_load(volatile void *ptr)
 #endif
 }
 
-/**
- * @brief 原子操作：存储
- */
 void sync_atomic_store(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
