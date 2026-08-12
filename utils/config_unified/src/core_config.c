@@ -84,12 +84,6 @@ struct config_context {
     bool encryption_enabled;
 };
 
-/**
- * @brief 分配配置值内存
- * 分配配置值内存并初始化基本字段。
- * @param type 配置值类型
- * @return 配置值对象，失败返回NULL
- */
 static config_value_t *config_value_alloc(config_value_type_t type)
 {
     config_value_t *value = (config_value_t *)AIRY_CALLOC(1, sizeof(config_value_t));
@@ -99,12 +93,6 @@ static config_value_t *config_value_alloc(config_value_type_t type)
     return value;
 }
 
-/**
- * @brief 复制字符串
- * 安全复制字符串，返回新分配的字符串。
- * @param str 源字符串
- * @return 新分配的字符串，失败返回NULL
- */
 static char *duplicate_string(const char *str)
 {
     if (!str) {
@@ -119,13 +107,6 @@ static char *duplicate_string(const char *str)
     return copy;
 }
 
-/**
- * @brief 查找配置项索引
- * 在配置上下文中查找指定键的索引。
- * @param ctx 配置上下文
- * @param key 配置键
- * @return 索引，未找到返回-1
- */
 static int find_item_index(const config_context_t *ctx, const char *key)
 {
     if (!ctx || !key) {
@@ -141,11 +122,6 @@ static int find_item_index(const config_context_t *ctx, const char *key)
     return INDEX_NOT_FOUND;
 }
 
-/**
- * @brief 扩展配置上下文容量
- * 扩展配置上下文的容量以容纳更多配置项。
- * @param ctx 配置上下文
- * @return 错误码 */
 static config_error_t expand_context_capacity(config_context_t *ctx)
 {
     if (!ctx) {

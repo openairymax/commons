@@ -47,10 +47,6 @@ int agent_info_init(agent_info_t *agent, const char *agent_id)
     return 0;
 }
 
-/**
- * @brief 清理Agent信息
- * @param agent Agent信息指针
- */
 void agent_info_cleanup(agent_info_t *agent)
 {
     if (!agent) {
@@ -70,12 +66,6 @@ void agent_info_cleanup(agent_info_t *agent)
     agent->last_used = 0;
 }
 
-/**
- * @brief 更新Agent性能统计
- * @param agent Agent信息指针
- * @param success 是否成功
- * @param latency 延迟时间
- */
 void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency)
 {
     if (!agent) {
@@ -97,11 +87,6 @@ void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency
     agent->weight = agent_info_calculate_weight(agent);
 }
 
-/**
- * @brief 计算Agent权重
- * @param agent Agent信息指针
- * @return 计算后的权重
- */
 double agent_info_calculate_weight(const agent_info_t *agent)
 {
     if (!agent) {
@@ -116,14 +101,6 @@ double agent_info_calculate_weight(const agent_info_t *agent)
     return weight;
 }
 
-/**
- * @brief 初始化任务信息
- * @param task 任务信息指针
- * @param task_id 任务ID
- * @param task_type 任务类型
- * @param task_content 任务内容
- * @return 0 成功，非0 失败
- */
 int task_info_init(task_info_t *task, const char *task_id, const char *task_type,
                    const char *task_content)
 {
@@ -146,10 +123,6 @@ int task_info_init(task_info_t *task, const char *task_id, const char *task_type
     return 0;
 }
 
-/**
- * @brief 清理任务信息
- * @param task 任务信息指针
- */
 void task_info_cleanup(task_info_t *task)
 {
     if (!task) {
@@ -175,11 +148,6 @@ void task_info_cleanup(task_info_t *task)
     task->deadline = 0;
 }
 
-/**
- * @brief 初始化计划结果
- * @param result 计划结果指针
- * @return 0 成功，非0 失败
- */
 int plan_result_init(plan_result_t *result)
 {
     if (!result) {
@@ -195,10 +163,6 @@ int plan_result_init(plan_result_t *result)
     return 0;
 }
 
-/**
- * @brief 清理计划结果
- * @param result 计划结果指针
- */
 void plan_result_cleanup(plan_result_t *result)
 {
     if (!result) {
@@ -220,11 +184,6 @@ void plan_result_cleanup(plan_result_t *result)
     result->error_size = 0;
 }
 
-/**
- * @brief 初始化调度结果
- * @param result 调度结果指针
- * @return 0 成功，非0 失败
- */
 int dispatch_result_init(dispatch_result_t *result)
 {
     if (!result) {
@@ -240,10 +199,6 @@ int dispatch_result_init(dispatch_result_t *result)
     return 0;
 }
 
-/**
- * @brief 清理调度结果
- * @param result 调度结果指针
- */
 void dispatch_result_cleanup(dispatch_result_t *result)
 {
     if (!result) {
@@ -265,11 +220,6 @@ void dispatch_result_cleanup(dispatch_result_t *result)
     result->error_size = 0;
 }
 
-/**
- * @brief 初始化协调结果
- * @param result 协调结果指针
- * @return 0 成功，非0 失败
- */
 int coordination_result_init(coordination_result_t *result)
 {
     if (!result) {
@@ -285,10 +235,6 @@ int coordination_result_init(coordination_result_t *result)
     return 0;
 }
 
-/**
- * @brief 清理协调结果
- * @param result 协调结果指针
- */
 void coordination_result_cleanup(coordination_result_t *result)
 {
     if (!result) {
@@ -310,14 +256,6 @@ void coordination_result_cleanup(coordination_result_t *result)
     result->error_size = 0;
 }
 
-/**
- * @brief 选择最佳Agent
- * @param agents Agent数组
- * @param agent_count Agent数量
- * @param task 任务信息
- * @param result 调度结果
- * @return 0 成功，非0 失败
- */
 int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const task_info_t *task,
                                 dispatch_result_t *result)
 {
@@ -349,12 +287,6 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
     return 0;
 }
 
-/**
- * @brief 生成计划
- * @param task 任务信息
- * @param result 计划结果
- * @return 0 成功，非0 失败
- */
 int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
 {
     if (!task || !result) {
@@ -380,13 +312,6 @@ int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
     return 0;
 }
 
-/**
- * @brief 协调多个Agent的结果
- * @param agent_results 多个Agent的结果
- * @param result_count 结果数量
- * @param result 协调结果
- * @return 0 成功，非0 失败
- */
 int cognition_coordinate_results(const char **agent_results, size_t result_count,
                                  coordination_result_t *result)
 {
@@ -413,11 +338,6 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
     return 0;
 }
 
-/**
- * @brief 计算任务优先级
- * @param task 任务信息
- * @return 优先级值
- */
 uint64_t cognition_calculate_task_priority(const task_info_t *task)
 {
     if (!task) {
@@ -450,12 +370,6 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
     return priority;
 }
 
-/**
- * @brief 评估计划质量
- * @param plan 计划内容
- * @param task 任务信息
- * @return 质量分数（0-100）
- */
 int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task)
 {
     if (!plan || !task) {
@@ -473,7 +387,6 @@ int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task)
         score += 20;
     }
 
-    // 确保分数在0-100范围内
     if (score > 100) {
         score = 100;
     }

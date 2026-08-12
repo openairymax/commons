@@ -46,9 +46,6 @@ __u32 airy_task_desc_crc32(const void *data, size_t len)
     return ~crc;
 }
 
-/* ============================================================================
- * 内部工具
- * ============================================================================ */
 
 /**
  * @brief 计算 header[0:crc32 偏移) + payload 的整体 CRC32
@@ -88,9 +85,6 @@ static __u32 task_desc_compute_crc(const struct airy_task_desc *desc, const void
     return ~crc;
 }
 
-/**
- * @brief 获取单调时钟纳秒时间戳
- */
 static __u64 task_desc_monotonic_ns(void)
 {
 #ifdef _WIN32
@@ -108,9 +102,6 @@ static __u64 task_desc_monotonic_ns(void)
 #endif
 }
 
-/* ============================================================================
- * 公共 API
- * ============================================================================ */
 
 airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u64 task_id,
                                  __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,

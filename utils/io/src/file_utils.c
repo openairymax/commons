@@ -64,9 +64,6 @@ char *airy_io_read_file(const char *path, size_t *out_len)
     return buf;
 }
 
-/**
- * @brief 写入文件内容
- */
 int airy_io_write_file(const char *path, const void *data, size_t len)
 {
     if (!path || !data)
@@ -81,9 +78,6 @@ int airy_io_write_file(const char *path, const void *data, size_t len)
     return (written == len) ? 0 : -1;
 }
 
-/**
- * @brief 确保目录存在
- */
 int airy_io_ensure_dir(const char *path)
 {
     if (!path)
@@ -101,9 +95,6 @@ int airy_io_ensure_dir(const char *path)
     return 0;
 }
 
-/**
- * @brief 列出目录中的文件
- */
 int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
 {
     if (!path || !out_files || !out_count)
@@ -196,9 +187,6 @@ int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
 #endif
 }
 
-/**
- * @brief 释放文件列表
- */
 void airy_io_free_list(char **files, size_t count)
 {
     if (!files)
@@ -208,12 +196,6 @@ void airy_io_free_list(char **files, size_t count)
     AIRY_FREE(files);
 }
 
-/**
- * @brief 递归创建目录（跨平台）
- * @param path 目录路径
- * @param mode 目录权限（Unix风格，Windows忽略）
- * @return 0成功，-1失败
- */
 int airy_io_mkdir_p(const char *path, int mode)
 {
     if (!path)

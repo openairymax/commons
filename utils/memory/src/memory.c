@@ -50,49 +50,28 @@ typedef struct {
     void *fail_callback_user_data;
 } memory_state_t;
 
-/**
- * @brief 全局模块状态实例
- */
 static memory_state_t g_state = {0};
 
-/**
- * @brief 内部锁初始化
- *
- * @return 成功返回true，失败返回false
- */
 static bool memory_lock_init(void)
 {
     return airy_mtx_init(&g_state.lock) == 0;
 }
 
-/**
- * @brief 内部锁销毁
- */
 static void memory_lock_destroy(void)
 {
     airy_mtx_destroy(&g_state.lock);
 }
 
-/**
- * @brief 加锁
- */
 static void memory_lock(void)
 {
     airy_mtx_lock(&g_state.lock);
 }
 
-/**
- * @brief 解锁
- */
 static void memory_unlock(void)
 {
     airy_mtx_unlock(&g_state.lock);
 }
 
-/**
- * @brief 获取当前时间戳（毫秒）
- *
- * @return 时间戳 */
 static uint64_t memory_get_timestamp(void)
 {
 #ifdef _WIN32
@@ -107,12 +86,6 @@ static uint64_t memory_get_timestamp(void)
 #endif
 }
 
-/**
- * @brief 处理内存分配失败
- *
- * @param[in] size 请求分配的大小
- * @param[in] tag 分配标签
- */
 static void memory_handle_fail(size_t size, const char *tag)
 {
     if (g_state.fail_callback != NULL) {
@@ -137,16 +110,6 @@ static void memory_handle_fail(size_t size, const char *tag)
     }
 }
 
-/**
- * @brief 添加调试信息记录
- *
- * @param[in] addr 内存地址
- * @param[in] size 分配大小
- * @param[in] tag 分配标签
- * @param[in] file 源文件
- * @param[in] line 行号
- * @param[in] function 函数
- */
 static void memory_add_debug_info(void *addr, size_t size, size_t alignment, const char *tag,
                                   const char *file, int line, const char *function)
 {
@@ -171,11 +134,6 @@ static void memory_add_debug_info(void *addr, size_t size, size_t alignment, con
     g_state.debug_list_head = info;
 }
 
-/**
- * @brief 移除调试信息记录
- *
- * @param[in] addr 内存地址
- */
 static void memory_remove_debug_info(void *addr)
 {
     if (!g_state.debug_enabled || addr == NULL) {
@@ -205,12 +163,6 @@ static void memory_remove_debug_info(void *addr)
     }
 }
 
-/**
- * @brief 查找调试信息记录
- *
- * @param[in] addr 内存地址
- * @return 调试信息指针，未找到返回NULL
- */
 static struct memory_debug_info *memory_find_debug_info(void *addr)
 {
     if (!g_state.debug_enabled || addr == NULL) {
@@ -228,11 +180,6 @@ static struct memory_debug_info *memory_find_debug_info(void *addr)
     return NULL;
 }
 
-/**
- * @brief 更新统计信息（分配）
- *
- * @param[in] size 分配大小
- */
 static void memory_update_stats_alloc(size_t size)
 {
     g_state.stats.total_allocated += size;
@@ -244,11 +191,6 @@ static void memory_update_stats_alloc(size_t size)
     }
 }
 
-/**
- * @brief 更新统计信息（释放）
- *
- * @param[in] size 释放大小
- */
 static void memory_update_stats_free(size_t size)
 {
     g_state.stats.total_freed += size;
@@ -256,15 +198,6 @@ static void memory_update_stats_free(size_t size)
     g_state.stats.free_count++;
 }
 
-/**
- * @brief 实际内存分配函数（内部使用）
- *
- * @param[in] size 分配大小
- * @param[in] tag 分配标签
- * @param[in] zero 是否清零
- * @param[in] alignment 对齐要求
- * @return 分配的内存指针
- */
 static void *memory_allocate_internal(size_t size, const char *tag, bool zero, size_t alignment)
 {
     if (size == 0) {
@@ -357,7 +290,6 @@ void memory_cleanup(void)
 
     memory_lock();
 
-    // 检查内存泄漏
     if (g_state.debug_enabled && g_state.debug_list_head != NULL) {
         LOG_WARN("警告：内存清理时发现未释放的内存块");
 
@@ -371,7 +303,6 @@ void memory_cleanup(void)
             LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
                      current->tag ? current->tag : "(null)");
 
-            // 释放泄漏的内存（可选）
             // AIRY_FREE(current->address);
 
             struct memory_debug_info *next = current->next;
@@ -633,7 +564,6 @@ bool memory_get_stats(memory_stats_t *stats)
     memory_lock();
     __builtin_memcpy(stats, &g_state.stats, sizeof(memory_stats_t));
 
-    // 计算泄漏次数
     if (g_state.debug_enabled) {
         struct memory_debug_info *current = g_state.debug_list_head;
         size_t leak_count = 0;

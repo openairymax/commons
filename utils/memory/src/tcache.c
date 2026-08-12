@@ -59,9 +59,6 @@ struct airy_tcache {
     uint64_t bypass_count;
 };
 
-/* ============================================================================
- * 生命周期 API 实现
- * ============================================================================ */
 
 airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached)
 {
@@ -116,9 +113,6 @@ void tcache_destroy(airy_tcache_t *tc)
     LOG_DEBUG("tcache: tcache_destroy done");
 }
 
-/* ============================================================================
- * 分配 / 释放 API 实现
- * ============================================================================ */
 
 void *tcache_alloc(airy_tcache_t *tc)
 {
@@ -184,9 +178,6 @@ void tcache_free(airy_tcache_t *tc, void *ptr)
               (void *)tc, ptr, tc->cached_count, tc->max_cached, tc->free_count);
 }
 
-/* ============================================================================
- * 批量操作实现
- * ============================================================================ */
 
 size_t tcache_batch_fill(airy_tcache_t *tc)
 {
@@ -283,9 +274,6 @@ void tcache_flush_all(airy_tcache_t *tc)
     }
 }
 
-/* ============================================================================
- * 查询 API 实现
- * ============================================================================ */
 
 bool tcache_get_stats(airy_tcache_t *tc, tcache_stats_t *stats)
 {

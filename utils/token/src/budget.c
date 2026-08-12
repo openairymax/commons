@@ -51,9 +51,6 @@ static int budget_mutex_init(budget_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 销毁互斥锁
- */
 static void budget_mutex_destroy(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -63,9 +60,6 @@ static void budget_mutex_destroy(budget_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 加锁
- */
 static void budget_mutex_lock(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -75,9 +69,6 @@ static void budget_mutex_lock(budget_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 解锁
- */
 static void budget_mutex_unlock(budget_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -87,9 +78,6 @@ static void budget_mutex_unlock(budget_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief Token预算内部结构
- */
 struct airy_token_budget {
     size_t max_tokens;
     atomic_size_t used_tokens;
@@ -102,9 +90,6 @@ struct airy_token_budget {
     size_t window_seconds;
 };
 
-/**
- * @brief 检查预算是否充足
- */
 static int check_budget_available(airy_token_budget_t *budget, size_t input, size_t output)
 {
     if (!budget) {

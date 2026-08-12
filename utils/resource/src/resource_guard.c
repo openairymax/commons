@@ -177,7 +177,7 @@ int airy_resource_track_report(char **out_report)
         if (n < 0)                                                         \
             break;                                                         \
         if ((size_t)n >= buf_size - offset)                                \
-            offset = buf_size; /* 已截断，标记缓冲区已满 */                \
+            offset = buf_size;                                                              \
         else                                                               \
             offset += (size_t)n;                                           \
     } while (0)

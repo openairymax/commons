@@ -50,9 +50,6 @@ static int budget_ctrl_mutex_init(budget_ctrl_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 销毁互斥锁
- */
 static void budget_ctrl_mutex_destroy(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -62,9 +59,6 @@ static void budget_ctrl_mutex_destroy(budget_ctrl_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 加锁
- */
 static void budget_ctrl_mutex_lock(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -74,9 +68,6 @@ static void budget_ctrl_mutex_lock(budget_ctrl_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 解锁
- */
 static void budget_ctrl_mutex_unlock(budget_ctrl_mutex_t *mutex)
 {
 #ifdef _WIN32
@@ -86,9 +77,6 @@ static void budget_ctrl_mutex_unlock(budget_ctrl_mutex_t *mutex)
 #endif
 }
 
-/**
- * @brief 预算控制器内部结构
- */
 struct airy_budget_controller {
     double max_cost_usd;
     double warning_threshold;
@@ -102,17 +90,11 @@ struct airy_budget_controller {
     double average_cost;
 };
 
-/**
- * @brief 获取当前时间
- */
 static time_t get_current_time(void)
 {
     return time(NULL);
 }
 
-/**
- * @brief 检查并重置周期
- */
 static int check_and_reset_period(airy_budget_controller_t *controller)
 {
     if (!controller) {

@@ -61,18 +61,12 @@ int strategy_select_best_agent(const strategy_agent_info_t *agents, size_t agent
     return 0;
 }
 
-/**
- * @brief 创建默认加权配置
- */
 weighted_config_t strategy_create_default_weighted_config(void)
 {
     weighted_config_t manager = {.cost_weight = 0.33f, .perf_weight = 0.34f, .trust_weight = 0.33f};
     return manager;
 }
 
-/**
- * @brief 验证加权配置
- */
 bool strategy_validate_weighted_config(const weighted_config_t *manager)
 {
     if (!manager) {
@@ -92,9 +86,6 @@ bool strategy_validate_weighted_config(const weighted_config_t *manager)
     return true;
 }
 
-/**
- * @brief 归一化权重
- */
 weighted_config_t strategy_normalize_weights(const weighted_config_t *manager)
 {
     weighted_config_t normalized = *manager;
@@ -111,9 +102,6 @@ weighted_config_t strategy_normalize_weights(const weighted_config_t *manager)
     return normalized;
 }
 
-/**
- * @brief 策略数据结构通用清理函数
- */
 void strategy_cleanup_data(void *data, void (*free_func)(void *))
 {
     if (data && free_func) {
@@ -121,9 +109,6 @@ void strategy_cleanup_data(void *data, void (*free_func)(void *))
     }
 }
 
-/**
- * @brief 策略名称生成器
- */
 char *strategy_generate_name(const char *base_name, const char *suffix)
 {
     if (!base_name) {

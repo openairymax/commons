@@ -2,7 +2,11 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SOURCES
+    # platform 兼容层按功能域拆分：主文件/同步原语/进程/路径
     platform/platform.c
+    platform/platform_sync.c
+    platform/platform_process.c
+    platform/platform_paths.c
     utils/platform/src/platform_adapter.c
     utils/token/src/counter.c
     utils/token/src/budget.c
@@ -22,7 +26,12 @@ set(SOURCES
     utils/logging/src/service_logging.c
     utils/memory/src/memory.c
     utils/memory/src/memory_pool.c
+    # memory_debug 模块按功能域拆分：生命周期/分配追踪/泄漏检测/校验/统计
     utils/memory/src/memory_debug.c
+    utils/memory/src/memory_debug_track.c
+    utils/memory/src/memory_debug_leak.c
+    utils/memory/src/memory_debug_validate.c
+    utils/memory/src/memory_debug_stats.c
     utils/memory/src/memory_common.c
     utils/memory/src/memory_stats_reporter.c
     utils/memory/src/memory_prealloc.c
@@ -30,6 +39,13 @@ set(SOURCES
     utils/memory/src/tcache.c
     utils/string/src/string_common.c
     utils/string/src/string.c
+    utils/string/src/string_find.c
+    utils/string/src/string_split.c
+    utils/string/src/string_classify.c
+    utils/string/src/string_format.c
+    utils/string/src/string_buffer.c
+    utils/string/src/string_view.c
+    utils/string/src/string_encode.c
     utils/string/src/safe_string_utils.c
     utils/sync/src/sync.c
     utils/sync/src/sync_platform.c
@@ -50,17 +66,44 @@ set(SOURCES
     utils/compat/src/compat2.c
     utils/cognition/src/cognition_common.c
     utils/strategy/src/strategy_common.c
+    # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
     utils/network/src/network_common.c
+    utils/network/src/network_http.c
+    utils/network/src/network_pool.c
+    utils/network/src/network_dns.c
     utils/uuid/src/uuid_generator.c
     utils/config_unified/src/config_service.c
+    utils/config_unified/src/config_service_validator.c
+    utils/config_unified/src/config_service_hotreload.c
+    utils/config_unified/src/config_service_crypto.c
+    utils/config_unified/src/config_service_version.c
     utils/config_unified/src/core_config.c
     utils/config_unified/src/config_source.c
+    utils/config_unified/src/config_source_file.c
+    utils/config_unified/src/config_source_env.c
+    utils/config_unified/src/config_source_args.c
+    utils/config_unified/src/config_source_memory.c
+    utils/config_unified/src/config_source_manager.c
+    utils/config_unified/src/config_parse.c
     utils/config_unified/src/yaml_minimal.c
+    utils/config_unified/src/yaml_minimal_lexer.c
+    utils/config_unified/src/yaml_minimal_parser.c
+    utils/config_unified/src/yaml_minimal_node.c
+    utils/config_unified/src/yaml_minimal_scalar.c
+    utils/config_unified/src/yaml_minimal_serialize.c
+    # execution/checkpoint 模块按功能域拆分：生命周期/持久化/快照/会话管理
     utils/execution/src/checkpoint.c
+    utils/execution/src/checkpoint_persist.c
+    utils/execution/src/checkpoint_snapshot.c
+    utils/execution/src/checkpoint_session.c
     utils/task/src/task_desc.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_server_client.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_shm.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_mq.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_rpc.c)
 endif()
 
 add_library(airy_common STATIC ${SOURCES})
@@ -131,6 +174,10 @@ set_source_files_properties(
     utils/memory/src/memory.c
     utils/memory/src/memory_pool.c
     utils/memory/src/memory_debug.c
+    utils/memory/src/memory_debug_track.c
+    utils/memory/src/memory_debug_leak.c
+    utils/memory/src/memory_debug_validate.c
+    utils/memory/src/memory_debug_stats.c
     utils/memory/src/memory_common.c
     utils/memory/src/memory_stats_reporter.c
     utils/memory/src/memory_prealloc.c

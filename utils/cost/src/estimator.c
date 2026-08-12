@@ -52,9 +52,6 @@ struct airy_cost_estimator {
     uint64_t request_count;
 };
 
-/**
- * @brief 默认模型配置
- */
 static const model_cost_config_t default_configs[] = {
     {"gpt-4o", 0.005, 0.015, 128000, 16384},
     {"gpt-4-turbo", 0.01, 0.03, 128000, 4096},
@@ -67,9 +64,6 @@ static const model_cost_config_t default_configs[] = {
     {"deepseek-coder", 0.00014, 0.00028, 163840, 16384},
     {"", 0.001, 0.002, 4096, 4096}};
 
-/**
- * @brief 查找模型配置
- */
 static const model_cost_config_t *find_model_config(airy_cost_estimator_t *estimator,
                                                     const char *model_name)
 {
@@ -92,9 +86,6 @@ static const model_cost_config_t *find_model_config(airy_cost_estimator_t *estim
     return &default_configs[sizeof(default_configs) / sizeof(default_configs[0]) - 1];
 }
 
-/**
- * @brief 规范化模型名称
- */
 static void normalize_model_name(const char *input, char *output, size_t output_size)
 {
     if (!input || !output) {

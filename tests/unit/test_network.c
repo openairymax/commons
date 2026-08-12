@@ -52,9 +52,6 @@ static void test_network_default_config(void **state)
     assert_false(config.ssl_enable);
 }
 
-/**
- * @brief 测试连接创建和销毁
- */
 static void test_network_connection_create_destroy(void **state)
 {
     (void)state;
@@ -74,9 +71,6 @@ static void test_network_connection_create_destroy(void **state)
     network_connection_destroy(conn);
 }
 
-/**
- * @brief 测试 NULL 参数处理
- */
 static void test_network_null_handling(void **state)
 {
     (void)state;
