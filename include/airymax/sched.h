@@ -73,10 +73,11 @@ _Static_assert(sizeof(struct airy_task_desc) == 64, "airy_task_desc must be exac
 /* ─── Agent Lifecycle States (8 states, SSoT-aligned) ──────────────────
  * SSoT: docs/AirymaxOS/30-interfaces/10-sc-sched-extension.md §2.1
  *
- * sched_tac 核心成果：8 态与 Linux 进程状态天然映射，无需新增内核
- * 调度器状态，仅复用 SCHED_DEADLINE/SCHED_FIFO/EEVDF。状态迁移由
- * Macro-Supervisor 驱动，Micro-Supervisor 仅在检测到异常时触发
- * RUNNING -> STOPPING 的强制迁移。
+ * sched_tac core result: the 8 states map naturally onto Linux process
+ * states, requiring no new kernel scheduler states — only
+ * SCHED_DEADLINE/SCHED_FIFO/EEVDF are reused. State transitions are driven
+ * by the Macro-Supervisor; the Micro-Supervisor only triggers the forced
+ * RUNNING -> STOPPING transition when it detects an anomaly.
  */
 enum airy_agent_state {
     AIRY_AGENT_INACTIVE = 0,

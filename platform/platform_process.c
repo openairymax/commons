@@ -153,9 +153,11 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
 {
     (void)envp;
     (void)timeout_ms;
-    /* BAN-211/235: 使用 CreateProcess + 匿名管道替代 _popen（消除 cmd.exe 注入风险）。
-     * CreateProcess 直接解析命令行，不经 shell，行为对齐 POSIX 的 fork/execvp。
-     * 与 market_service_impl.c 的 win_run_command 安全模式一致。 */
+    /* BAN-211/235: use CreateProcess + anonymous pipes instead of _popen
+     * (eliminates cmd.exe injection risk). CreateProcess parses the command
+     * line directly without a shell, aligning behavior with POSIX
+     * fork/execvp. Consistent with the win_run_command secure pattern in
+     * market_service_impl.c. */
     char cmdline[4096] = {0};
     snprintf(cmdline, sizeof(cmdline), "\"%s\"", executable);
     for (int i = 1; argv && argv[i]; i++) {
@@ -363,7 +365,8 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
                                        NULL);
 }
 
-// 取消经 select 短片轮询实现（cancel_token.h 暂无 unregister 接口，避免栈 ctx 悬垂）
+// Cancellation via short select polling (cancel_token.h has no unregister
+// interface yet, avoiding a dangling stack ctx)
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
                                 uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
@@ -427,10 +430,12 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
                 max_fd = proc.stderr_fd;
         }
         if (max_fd < 0) {
-            /* 所有管道已 EOF：子进程已退出（管道写端随子进程关闭）。
-             * 必须阻塞回收，消除 EOF 与 waitpid 之间的竞态窗口——否则
-             * 窗口内 break 会以 exit_code=-1 误报"启动失败"（间歇性 heisenbug，
-             * 见 tool_d test_sandbox_integration Test 1 随机失败）。 */
+            /* All pipes hit EOF: the child exited (its write ends closed
+             * with the process). Must reap it blocking here to close the
+             * race window between EOF and waitpid -- otherwise a break in
+             * that window would report "start failure" with exit_code=-1
+             * (an intermittent heisenbug; see tool_d
+             * test_sandbox_integration Test 1 random failures). */
             int eof_status = 0;
             if (waitpid(proc.pid, &eof_status, 0) == proc.pid) {
                 if (WIFEXITED(eof_status))

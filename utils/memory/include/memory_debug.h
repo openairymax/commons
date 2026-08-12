@@ -3,11 +3,11 @@
 
 /**
  * @file memory_debug.h
- * @brief 统一内存管理模块 - 内存调试功能
+ * @brief Unified memory management module: memory debugging features.
  *
- * 提供高级内存调试功能，包括泄漏检测、边界检查、使用分析等。
- * 主要用于开发和测试阶段，帮助发现和修复内存相关错误。
- *
+ * Provides advanced memory debugging features, including leak detection,
+ * boundary checks, and usage analysis. Mainly used during development and
+ * testing to find and fix memory-related errors.
  */
 
 #ifndef AIRY_RT_MEMORY_DEBUG_H
@@ -22,12 +22,12 @@ extern "C" {
 #endif
 
 /**
- * @defgroup memory_debug_api 内存调试API
+ * @defgroup memory_debug_api Memory debugging API
  * @{
  */
 
 /**
- * @brief 内存调试选项
+ * @brief Memory debugging options
  */
 typedef struct {
     bool enable_leak_check;
@@ -46,7 +46,7 @@ typedef struct {
 } memory_debug_options_t;
 
 /**
- * @brief 内存泄漏报告
+ * @brief Memory leak report
  */
 typedef struct {
     size_t leak_count;
@@ -63,7 +63,7 @@ typedef struct {
 } memory_leak_report_t;
 
 /**
- * @brief 内存错误类型
+ * @brief Memory error types
  */
 typedef enum {
     MEMORY_ERROR_NONE = 0,
@@ -77,7 +77,7 @@ typedef enum {
 } memory_error_type_t;
 
 /**
- * @brief 内存错误报告
+ * @brief Memory error report
  */
 typedef struct {
     memory_error_type_t type;
@@ -91,194 +91,197 @@ typedef struct {
 } memory_error_report_t;
 
 /**
- * @brief 内存调试回调函数类型
+ * @brief Memory debugging callback function type
  */
 typedef void (*memory_debug_callback_t)(const memory_error_report_t *report, void *user_data);
 
 /**
- * @brief 初始化内存调试功能
+ * @brief Initialize memory debugging
  *
- * @param[in] options 调试选项（可为NULL，使用默认选项）
- * @return 成功返回true，失败返回false
+ * @param[in] options Debug options (may be NULL, uses defaults)
+ * @return true on success, false on failure
  *
- * @note 需要先启用内存调试（memory_debug_enable）才能使用此功能
+ * @note Memory debugging must be enabled first (memory_debug_enable) to
+ *       use this feature
  */
 bool memory_debug_init(const memory_debug_options_t *options);
 
 /**
- * @brief 启用内存调试
+ * @brief Enable memory debugging
  *
- * @param[in] enable 是否启用
- * @return 成功返回true，失败返回false
+ * @param[in] enable Whether to enable
+ * @return true on success, false on failure
  *
- * @note 启用调试会增加内存开销和性能开销
+ * @note Enabling debugging increases memory and performance overhead
  */
 bool memory_debug_enable(bool enable);
 
 /**
- * @brief 检查内存调试是否启用
+ * @brief Check whether memory debugging is enabled
  *
- * @return 启用返回true，禁用返回false
+ * @return true if enabled, false if disabled
  */
 bool memory_debug_is_enabled(void);
 
 /**
- * @brief 设置内存调试回调函数
+ * @brief Set the memory debugging callback
  *
- * @param[in] callback 回调函数
- * @param[in] user_data 用户数据
+ * @param[in] callback Callback function
+ * @param[in] user_data User data
  */
 void memory_debug_set_callback(memory_debug_callback_t callback, void *user_data);
 
 /**
- * @brief 检查内存泄漏
+ * @brief Check for memory leaks
  *
- * @param[out] report 泄漏报告输出缓冲区（可为NULL）
- * @param[in] dump_to_log 是否将泄漏信息输出到日志
- * @return 泄漏的字节数，0表示无泄漏
+ * @param[out] report Leak report output buffer (may be NULL)
+ * @param[in] dump_to_log Whether to log the leak information
+ * @return Number of leaked bytes, 0 for no leaks
  */
 size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log);
 
 /**
- * @brief 验证内存块完整性
+ * @brief Validate a memory block's integrity
  *
- * @param[in] ptr 内存指针
- * @param[out] error 错误报告输出缓冲区（可为NULL）
- * @return 内存块完整返回true，损坏返回false
+ * @param[in] ptr Memory pointer
+ * @param[out] error Error report output buffer (may be NULL)
+ * @return true if intact, false if corrupted
  */
 bool memory_debug_validate(void *ptr, memory_error_report_t *error);
 
 /**
- * @brief 验证所有已分配内存块
+ * @brief Validate all allocated memory blocks
  *
- * @param[out] error_count 错误数量输出
- * @param[in] dump_to_log 是否将错误信息输出到日志
- * @return 发现的错误数量
+ * @param[out] error_count Error count output
+ * @param[in] dump_to_log Whether to log the error information
+ * @return Number of errors found
  */
 size_t memory_debug_validate_all(size_t *error_count, bool dump_to_log);
 
 /**
- * @brief 转储内存调试信息
+ * @brief Dump memory debugging information
  *
- * @param[in] file 输出文件名（NULL表示使用初始化时设置的log_file）
- * @param[in] include_stack_trace 是否包含堆栈跟踪
+ * @param[in] file Output file name (NULL uses the log_file set at init)
+ * @param[in] include_stack_trace Whether to include stack traces
  */
 void memory_debug_dump_info(const char *file, bool include_stack_trace);
 
 /**
- * @brief 获取内存块分配信息
+ * @brief Get a memory block's allocation information
  *
- * @param[in] ptr 内存指针
- * @param[out] file 分配位置文件输出（可为NULL）
- * @param[out] line 分配位置行号输出（可为NULL）
- * @param[out] function 分配位置函数输出（可为NULL）
- * @param[out] tag 分配标签输出（可为NULL）
- * @return 成功找到信息返回true，失败返回false
+ * @param[in] ptr Memory pointer
+ * @param[out] file Allocation file output (may be NULL)
+ * @param[out] line Allocation line output (may be NULL)
+ * @param[out] function Allocation function output (may be NULL)
+ * @param[out] tag Allocation tag output (may be NULL)
+ * @return true if found, false on failure
  */
 bool memory_debug_get_allocation_info(void *ptr, const char **file, int *line,
                                       const char **function, const char **tag);
 
 /**
- * @brief 设置内存块标签
+ * @brief Set a memory block's tag
  *
- * @param[in] ptr 内存指针
- * @param[in] tag 新标签（可为NULL）
- * @return 成功返回true，失败返回false
+ * @param[in] ptr Memory pointer
+ * @param[in] tag New tag (may be NULL)
+ * @return true on success, false on failure
  */
 bool memory_debug_set_tag(void *ptr, const char *tag);
 
 /**
- * @brief 启用或禁用特定调试功能
+ * @brief Enable or disable a specific debugging feature
  *
- * @param[in] feature 功能名称（"leak_check", "boundary_check"等）
- * @param[in] enable 是否启用
- * @return 成功返回true，失败返回false
+ * @param[in] feature Feature name ("leak_check", "boundary_check", etc.)
+ * @param[in] enable Whether to enable
+ * @return true on success, false on failure
  */
 bool memory_debug_set_feature(const char *feature, bool enable);
 
 /**
- * @brief 获取内存调试统计信息
+ * @brief Get memory debugging statistics
  *
- * @param[out] total_allocations 总分配次数输出
- * @param[out] total_frees 总释放次数输出
- * @param[out] current_allocations 当前分配数输出
- * @param[out] error_count 错误数量输出
- * @return 成功返回true，失败返回false
+ * @param[out] total_allocations Total allocation count output
+ * @param[out] total_frees Total free count output
+ * @param[out] current_allocations Current allocation count output
+ * @param[out] error_count Error count output
+ * @return true on success, false on failure
  */
 bool memory_debug_get_stats(size_t *total_allocations, size_t *total_frees,
                             size_t *current_allocations, size_t *error_count);
 
 /**
- * @brief 重置内存调试统计信息
+ * @brief Reset memory debugging statistics
  */
 void memory_debug_reset_stats(void);
 
 /**
- * @brief 启用堆栈跟踪
+ * @brief Enable stack tracing
  *
- * @param[in] enable 是否启用
- * @param[in] max_depth 最大堆栈深度（0表示默认）
- * @return 成功返回true，失败返回false
+ * @param[in] enable Whether to enable
+ * @param[in] max_depth Maximum stack depth (0 for the default)
+ * @return true on success, false on failure
  *
- * @note 启用堆栈跟踪会显著增加内存和性能开销
+ * @note Enabling stack tracing significantly increases memory and
+ *       performance overhead
  */
 bool memory_debug_enable_stack_trace(bool enable, size_t max_depth);
 
 /**
- * @brief 获取堆栈跟踪
+ * @brief Get a stack trace
  *
- * @param[in] ptr 内存指针
- * @param[out] frames 堆栈帧输出缓冲区
- * @param[in] max_frames 最大帧数
- * @return 实际获取的帧数
+ * @param[in] ptr Memory pointer
+ * @param[out] frames Stack frame output buffer
+ * @param[in] max_frames Maximum number of frames
+ * @return Number of frames actually captured
  */
 size_t memory_debug_get_stack_trace(void *ptr, void **frames, size_t max_frames);
 
 /**
- * @brief 设置内存调试日志级别
+ * @brief Set the memory debugging log level
  *
- * @param[in] level 日志级别（0-3，0=无，1=错误，2=警告，3=详细）
+ * @param[in] level Log level (0-3, 0=none, 1=error, 2=warning, 3=verbose)
  */
 void memory_debug_set_log_level(int level);
 
 /**
- * @brief 记录内存操作
+ * @brief Log a memory operation
  *
- * @param[in] operation 操作类型（"alloc", "free", "realloc"等）
- * @param[in] ptr 内存指针
- * @param[in] size 大小
- * @param[in] file 文件名
- * @param[in] line 行号
- * @param[in] function 函数名
+ * @param[in] operation Operation type ("alloc", "free", "realloc", etc.)
+ * @param[in] ptr Memory pointer
+ * @param[in] size Size
+ * @param[in] file File name
+ * @param[in] line Line number
+ * @param[in] function Function name
  *
- * @note 主要用于内部使用，也可用于手动记录自定义内存操作
+ * @note Mainly for internal use; can also be used to manually record
+ *       custom memory operations
  */
 void memory_debug_log_operation(const char *operation, void *ptr, size_t size, const char *file,
                                 int line, const char *function);
 
 /**
- * @brief 内存调试检查点
+ * @brief Memory debugging checkpoint
  *
- * 创建内存状态检查点，可用于比较内存使用变化。
+ * Creates a memory state checkpoint for comparing memory usage changes.
  *
- * @param[in] name 检查点名称
- * @return 检查点ID，失败返回0
+ * @param[in] name Checkpoint name
+ * @return Checkpoint ID, 0 on failure
  */
 unsigned int memory_debug_checkpoint(const char *name);
 
 /**
- * @brief 比较检查点
+ * @brief Compare checkpoints
  *
- * @param[in] checkpoint1 第一个检查点ID
- * @param[in] checkpoint2 第二个检查点ID
- * @param[out] diff_report 差异报告输出缓冲区（可为NULL）
- * @return 差异数量，0表示无差异
+ * @param[in] checkpoint1 First checkpoint ID
+ * @param[in] checkpoint2 Second checkpoint ID
+ * @param[out] diff_report Diff report output buffer (may be NULL)
+ * @return Number of differences, 0 for none
  */
 size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int checkpoint2,
                                         memory_leak_report_t *diff_report);
 
 /**
- * @brief 分配时内存调试宏
+ * @brief Memory debugging allocation macro
  */
 #ifdef MEMORY_DEBUG_ENABLED
 #define MEMORY_DEBUG_ALLOC(size, tag)                                                \

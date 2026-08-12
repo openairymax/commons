@@ -3,20 +3,24 @@
 
 /**
  * @file svc_common.h
- * @brief 服务公共定义（commons 权威版本）
+ * @brief Common service definitions (authoritative commons version).
  *
- * 提供所有服务共享的定义和接口。
+ * Provides definitions and interfaces shared by all services.
  *
- * P0.17 阶段 3：从 daemons/common/include/svc_common.h 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出
- * 兼容头（附加 daemon_errors.h 提供 daemons 扩展错误码）。
+ * P0.17 phase 3: migrated from daemons/common/include/svc_common.h into
+ * commons, removing the atoms->daemons compile-time reverse dependency
+ * (IRON-6). The daemons copy is kept as a re-exporting compatibility
+ * header (it additionally provides daemon_errors.h with the daemons
+ * extended error codes).
  *
- * 设计原则（映射架构设计原则 K-2 接口契约化原则）：
- * 1. 统一的服务接口定义
- * 2. 明确的生命周期管理
- * 3. 标准化的错误处理
+ * Design principles (architecture design principle K-2, interface
+ * contract):
+ * 1. Unified service interface definitions
+ * 2. Explicit lifecycle management
+ * 3. Standardized error handling
  *
- * @see agentrt/daemons/common/include/svc_common.h (daemons 重导出兼容头)
+ * @see agentrt/daemons/common/include/svc_common.h (daemons re-export
+ *      compatibility header)
  */
 
 #ifndef AIRY_RT_SVC_COMMON_H
@@ -34,7 +38,7 @@ extern "C" {
 
 
 /**
- * @brief 服务状态枚举
+ * @brief Service state enumeration
  */
 typedef enum {
     AIRY_SVC_STATE_NONE = 0,
@@ -51,7 +55,7 @@ typedef enum {
 
 
 /**
- * @brief 服务能力标志
+ * @brief Service capability flags
  */
 typedef enum {
     AIRY_SVC_CAP_NONE = 0,
@@ -67,7 +71,7 @@ typedef enum {
 
 
 /**
- * @brief 服务配置结构
+ * @brief Service configuration structure
  */
 typedef struct {
     const char *name;
@@ -83,7 +87,7 @@ typedef struct {
 
 
 /**
- * @brief 服务统计信息
+ * @brief Service statistics
  */
 typedef struct {
     uint64_t request_count;
@@ -99,67 +103,67 @@ typedef struct {
 
 
 /**
- * @brief 服务句柄类型
+ * @brief Service handle type
  */
 typedef struct airy_svc_s *airy_svc_t;
 
 
 /**
- * @brief 服务初始化函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param config [in] 配置参数 (BORROW - not stored, copied internally).
- * @return 0成功，非0失败
+ * @brief Service initialization function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param config [in] Configuration (BORROW - not stored, copied internally).
+ * @return 0 on success, non-zero on failure
  */
 typedef airy_err_t (*airy_svc_init_fn)(airy_svc_t service, const airy_svc_config_t *config);
 
 /**
- * @brief 服务启动函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
+ * @brief Service start function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
  */
 typedef airy_err_t (*airy_svc_start_fn)(airy_svc_t service);
 
 /**
- * @brief 服务停止函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param force 是否强制停止
- * @return 0成功，非0失败
+ * @brief Service stop function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param force Whether to force-stop
+ * @return 0 on success, non-zero on failure
  */
 typedef airy_err_t (*airy_svc_stop_fn)(airy_svc_t service, bool force);
 
 /**
- * @brief 服务销毁函数类型
- * @param service [in] 服务句柄 (TRANSFER - function takes ownership and frees).
+ * @brief Service destroy function type
+ * @param service [in] Service handle (TRANSFER - function takes ownership and frees).
  */
 typedef void (*airy_svc_destroy_fn)(airy_svc_t service);
 
 /**
- * @brief 服务健康检查函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0健康，非0不健康
+ * @brief Service health-check function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 if healthy, non-zero if unhealthy
  */
 typedef airy_err_t (*airy_svc_healthcheck_fn)(airy_svc_t service);
 
 /**
- * @brief 服务请求处理函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param method [in] 方法名 (BORROW - valid for function scope only).
- * @param params_json [in] 请求参数JSON (BORROW - valid for function scope only).
- * @param response_json [out] 响应JSON (OWNER - caller must free).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
- * @return 错误码
+ * @brief Service request handler function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param method [in] Method name (BORROW - valid for function scope only).
+ * @param params_json [in] Request parameters JSON (BORROW - valid for function scope only).
+ * @param response_json [out] Response JSON (OWNER - caller must free).
+ * @param user_data [in] User data (BORROW - caller retains ownership).
+ * @return Error code
  */
 typedef airy_err_t (*airy_svc_handle_request_fn)(airy_svc_t service, const char *method,
                                                  const char *params_json, char **response_json,
                                                  void *user_data);
 
 /**
- * @brief 服务异步完成回调函数类型
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param method [in] 方法名 (BORROW - valid for callback scope only).
- * @param error_code 错误码
- * @param response_json [in] 响应JSON (TRANSFER - callback takes ownership and must free).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
+ * @brief Service async-completion callback function type
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param method [in] Method name (BORROW - valid for callback scope only).
+ * @param error_code Error code
+ * @param response_json [in] Response JSON (TRANSFER - callback takes ownership and must free).
+ * @param user_data [in] User data (BORROW - caller retains ownership).
  */
 typedef void (*airy_svc_async_complete_fn)(airy_svc_t service, const char *method,
                                            airy_err_t error_code, char *response_json,
@@ -176,14 +180,14 @@ typedef struct {
 
 
 /**
- * @brief 创建服务实例
- * @param service [out] 服务句柄输出 (OWNER - caller must call airy_svc_destroy).
- * @param name [in] 服务名称 (BORROW - not stored, copied internally).
- * @param iface [in] 服务接口 (BORROW - copied internally, not stored by pointer).
- * @param config [in] 服务配置 (BORROW - not stored, copied internally).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 是
+ * @brief Create a service instance
+ * @param service [out] Service handle output (OWNER - caller must call airy_svc_destroy).
+ * @param name [in] Service name (BORROW - not stored, copied internally).
+ * @param iface [in] Service interface (BORROW - copied internally, not stored by pointer).
+ * @param config [in] Service configuration (BORROW - not stored, copied internally).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: OWNER, name: BORROW, iface: BORROW, config: BORROW
  */
@@ -192,67 +196,67 @@ AIRY_API airy_err_t airy_svc_create(airy_svc_t *service, const char *name,
                                     const airy_svc_config_t *config);
 
 /**
- * @brief 销毁服务实例
- * @param service [in] 服务句柄 (TRANSFER - function takes ownership and frees).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Destroy a service instance
+ * @param service [in] Service handle (TRANSFER - function takes ownership and frees).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: TRANSFER
  */
 AIRY_API void airy_svc_destroy(airy_svc_t service);
 
 /**
- * @brief 初始化服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 否
- * @reentrant 否
+ * @brief Initialize a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe No
+ * @reentrant No
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_init(airy_svc_t service);
 
 /**
- * @brief 启动服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 否
- * @reentrant 否
+ * @brief Start a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe No
+ * @reentrant No
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_start(airy_svc_t service);
 
 /**
- * @brief 停止服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param force [in] 是否强制停止
- * @return 0成功，非0失败
- * @threadsafe 否
- * @reentrant 否
+ * @brief Stop a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param force [in] Whether to force-stop
+ * @return 0 on success, non-zero on failure
+ * @threadsafe No
+ * @reentrant No
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_stop(airy_svc_t service, bool force);
 
 /**
- * @brief Set thread pool for service.
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param pool [in] 线程池指针 (BORROW - service does not take ownership, caller manages lifecycle).
- * @return 错误码
+ * @brief Set the thread pool for a service.
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param pool [in] Thread-pool pointer (BORROW - service does not take ownership, caller manages lifecycle).
+ * @return Error code
  *
  * @ownership service: BORROW, pool: BORROW
  */
 AIRY_API airy_err_t airy_svc_set_thread_pool(airy_svc_t service, void *pool);
 
 /**
- * @brief Handle service request asynchronously.
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param method [in] 方法名 (BORROW - valid for function scope only).
- * @param params_json [in] 请求参数JSON (BORROW - valid for function scope only).
- * @param on_complete [in] 异步完成回调 (BORROW - not stored by pointer, copied internally).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership, must remain valid until callback).
- * @return 错误码
+ * @brief Handle a service request asynchronously.
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param method [in] Method name (BORROW - valid for function scope only).
+ * @param params_json [in] Request parameters JSON (BORROW - valid for function scope only).
+ * @param on_complete [in] Async completion callback (BORROW - not stored by pointer, copied internally).
+ * @param user_data [in] User data (BORROW - caller retains ownership, must remain valid until the callback).
+ * @return Error code
  *
  * @ownership service: BORROW, method: BORROW, params_json: BORROW, on_complete: BORROW, user_data: BORROW
  */
@@ -261,22 +265,22 @@ AIRY_API int airy_svc_handle_request_async(airy_svc_t service, const char *metho
                                            airy_svc_async_complete_fn on_complete, void *user_data);
 
 /**
- * @brief 暂停服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 否
+ * @brief Pause a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant No
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_pause(airy_svc_t service);
 
 /**
- * @brief 恢复服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 否
+ * @brief Resume a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant No
  *
  * @ownership service: BORROW
  */
@@ -284,55 +288,55 @@ AIRY_API airy_err_t airy_svc_resume(airy_svc_t service);
 
 
 /**
- * @brief 获取服务状态
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 服务状态
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get the service state
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return Service state
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_svc_state_t airy_svc_get_state(airy_svc_t service);
 
 /**
- * @brief 检查服务是否就绪
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return true就绪，false未就绪
- * @threadsafe 是
- * @reentrant 是
+ * @brief Check whether the service is ready
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return true if ready, false otherwise
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API bool airy_svc_is_ready(airy_svc_t service);
 
 /**
- * @brief 检查服务是否运行中
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return true运行中，false未运行
- * @threadsafe 是
- * @reentrant 是
+ * @brief Check whether the service is running
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return true if running, false otherwise
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API bool airy_svc_is_running(airy_svc_t service);
 
 /**
- * @brief 获取服务名称
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 服务名称 (BORROW - internal string, do not free).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get the service name
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return Service name (BORROW - internal string, do not free).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW, return: BORROW
  */
 AIRY_API const char *airy_svc_get_name(airy_svc_t service);
 
 /**
- * @brief 获取服务版本
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 服务版本 (BORROW - internal string, do not free).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get the service version
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return Service version (BORROW - internal string, do not free).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW, return: BORROW
  */
@@ -340,22 +344,22 @@ AIRY_API const char *airy_svc_get_version(airy_svc_t service);
 
 
 /**
- * @brief 获取服务统计信息
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param stats [out] 统计信息输出 (BORROW - caller-owned buffer, function writes to it).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get service statistics
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param stats [out] Statistics output (BORROW - caller-owned buffer, function writes to it).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW, stats: BORROW
  */
 AIRY_API airy_err_t airy_svc_get_stats(airy_svc_t service, airy_svc_stats_t *stats);
 
 /**
- * @brief 重置服务统计信息
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Reset service statistics
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
@@ -363,11 +367,11 @@ AIRY_API void airy_svc_reset_stats(airy_svc_t service);
 
 
 /**
- * @brief 执行服务健康检查
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0健康，非0不健康
- * @threadsafe 是
- * @reentrant 是
+ * @brief Run a service health check
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 if healthy, non-zero if unhealthy
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
@@ -375,12 +379,12 @@ AIRY_API airy_err_t airy_svc_healthcheck(airy_svc_t service);
 
 
 /**
- * @brief 检查服务是否支持指定能力
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param capability [in] 能力标志
- * @return true支持，false不支持
- * @threadsafe 是
- * @reentrant 是
+ * @brief Check whether the service supports a given capability
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param capability [in] Capability flag
+ * @return true if supported, false otherwise
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
@@ -388,22 +392,22 @@ AIRY_API bool airy_svc_has_capability(airy_svc_t service, airy_svc_capability_t 
 
 
 /**
- * @brief 服务状态转字符串
- * @param state [in] 服务状态
- * @return 状态字符串 (BORROW - static string, do not free).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Convert a service state to a string
+ * @param state [in] Service state
+ * @return State string (BORROW - static string, do not free).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership return: BORROW
  */
 AIRY_API const char *airy_svc_state_to_string(airy_svc_state_t state);
 
 /**
- * @brief 字符串转服务状态
- * @param str [in] 状态字符串 (BORROW - not stored, copied internally).
- * @return 服务状态
- * @threadsafe 是
- * @reentrant 是
+ * @brief Convert a string to a service state
+ * @param str [in] State string (BORROW - not stored, copied internally).
+ * @return Service state
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership str: BORROW
  */
@@ -411,52 +415,52 @@ AIRY_API airy_svc_state_t airy_svc_state_from_string(const char *str);
 
 
 /**
- * @brief 注册服务
- * @param service [in] 服务句柄 (BORROW - registry stores a reference, caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 是
+ * @brief Register a service
+ * @param service [in] Service handle (BORROW - registry stores a reference, caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_register(airy_svc_t service);
 
 /**
- * @brief 注销服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
- * @reentrant 是
+ * @brief Unregister a service
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_unregister(airy_svc_t service);
 
 /**
- * @brief 根据名称查找服务
- * @param name [in] 服务名称 (BORROW - not stored, copied internally).
- * @return 服务句柄（未找到返回NULL） (BORROW - belongs to registry, do not free).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Find a service by name
+ * @param name [in] Service name (BORROW - not stored, copied internally).
+ * @return Service handle (NULL if not found) (BORROW - belongs to the registry, do not free).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership name: BORROW, return: BORROW
  */
 AIRY_API airy_svc_t airy_svc_find(const char *name);
 
 /**
- * @brief 获取所有服务数量
- * @return 服务数量
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get the total service count
+ * @return Number of services
+ * @threadsafe Yes
+ * @reentrant Yes
  */
 AIRY_API uint32_t airy_svc_count(void);
 
 /**
- * @brief 遍历所有服务
- * @param callback [in] 回调函数 (BORROW - not stored, called during iteration).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership, valid during iteration).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Iterate over all services
+ * @param callback [in] Callback function (BORROW - not stored, called during iteration).
+ * @param user_data [in] User data (BORROW - caller retains ownership, valid during iteration).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership callback: BORROW, user_data: BORROW
  */
@@ -464,23 +468,23 @@ typedef void (*airy_svc_enum_fn)(airy_svc_t service, void *user_data);
 AIRY_API void airy_svc_foreach(airy_svc_enum_fn callback, void *user_data);
 
 /**
- * @brief 设置服务用户数据
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param user_data [in] 用户数据指针 (BORROW - service does not take ownership, caller manages lifecycle).
- * @return 错误码
- * @threadsafe 是
- * @reentrant 是
+ * @brief Set service user data
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param user_data [in] User-data pointer (BORROW - service does not take ownership, caller manages lifecycle).
+ * @return Error code
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW, user_data: BORROW
  */
 AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service, void *user_data);
 
 /**
- * @brief 获取服务用户数据
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 用户数据指针（未设置返回NULL） (BORROW - belongs to service, do not free).
- * @threadsafe 是
- * @reentrant 是
+ * @brief Get service user data
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return User-data pointer (NULL if unset) (BORROW - belongs to the service, do not free).
+ * @threadsafe Yes
+ * @reentrant Yes
  *
  * @ownership service: BORROW, return: BORROW
  */
@@ -492,10 +496,10 @@ AIRY_API void *airy_svc_get_user_data(airy_svc_t service);
 #define AIRY_MAX_TAGS_LEN 256
 
 /**
- * @brief 服务元数据结构
+ * @brief Service metadata structure
  *
- * 用于跨进程服务注册和发现。
- * 包含服务名称、版本、端点、类型、标签、状态、负载等信息。
+ * Used for cross-process service registration and discovery.
+ * Contains name, version, endpoint, type, tags, state, load, etc.
  */
 typedef struct {
     char name[64];
@@ -513,43 +517,43 @@ typedef struct {
 
 
 /**
- * @brief 初始化服务注册中心客户端
- * @param registry_url [in] 注册中心URL（如 http:
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Initialize the service registry client
+ * @param registry_url [in] Registry URL (e.g. http:
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership registry_url: BORROW
  */
 AIRY_API airy_err_t airy_cross_registry_init(const char *registry_url);
 
 /**
- * @brief 向注册中心注册服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param metadata [in] 服务元数据 (BORROW - not stored, copied internally).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Register a service with the registry
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param metadata [in] Service metadata (BORROW - not stored, copied internally).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW, metadata: BORROW
  */
 AIRY_API airy_err_t airy_registry_register(airy_svc_t service, const airy_svc_metadata_t *metadata);
 
 /**
- * @brief 从注册中心注销服务
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Deregister a service from the registry
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_registry_deregister(airy_svc_t service);
 
 /**
- * @brief 从注册中心发现服务
- * @param service_type [in] 服务类型（如 "llm"、"tool"），NULL表示所有类型 (BORROW - not stored, copied internally).
- * @param filter_tags [in] 过滤标签（逗号分隔），NULL表示不过滤 (BORROW - not stored, copied internally).
- * @param result_count [out] 发现的服务数量 (BORROW - caller-owned buffer, function writes to it).
- * @return 服务元数据数组 (OWNER - caller must call airy_registry_discover_free).
- * @threadsafe 是
+ * @brief Discover services from the registry
+ * @param service_type [in] Service type (e.g. "llm", "tool"), NULL for all types (BORROW - not stored, copied internally).
+ * @param filter_tags [in] Filter tags (comma-separated), NULL for no filtering (BORROW - not stored, copied internally).
+ * @param result_count [out] Number of discovered services (BORROW - caller-owned buffer, function writes to it).
+ * @return Service metadata array (OWNER - caller must call airy_registry_discover_free).
+ * @threadsafe Yes
  *
  * @ownership service_type: BORROW, filter_tags: BORROW, result_count: BORROW, return: OWNER
  */
@@ -557,25 +561,25 @@ AIRY_API airy_svc_metadata_t *airy_registry_discover(const char *service_type,
                                                      const char *filter_tags, size_t *result_count);
 
 /**
- * @brief 释放服务发现结果
- * @param results [in] 服务元数据数组 (TRANSFER - function takes ownership and frees).
+ * @brief Free service discovery results
+ * @param results [in] Service metadata array (TRANSFER - function takes ownership and frees).
  *
  * @ownership results: TRANSFER
  */
 AIRY_API void airy_registry_discover_free(airy_svc_metadata_t *results);
 
 /**
- * @brief 发送心跳到注册中心
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Send a heartbeat to the registry
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_registry_heartbeat(airy_svc_t service);
 
 /**
- * @brief 清理注册中心客户端资源
+ * @brief Clean up registry client resources
  */
 AIRY_API void airy_registry_cleanup(void);
 
@@ -583,7 +587,7 @@ AIRY_API void airy_registry_cleanup(void);
 #define AIRY_CONFIG_CHECKSUM_LEN 65
 
 /**
- * @brief 配置数据结构
+ * @brief Configuration data structure
  */
 typedef struct {
     char *raw_config;
@@ -594,11 +598,11 @@ typedef struct {
 } airy_config_t;
 
 /**
- * @brief 配置变更回调函数类型
- * @param service_name [in] 服务名称 (BORROW - valid for callback scope only).
- * @param old_config [in] 旧配置 (BORROW - valid for callback scope only, do not free).
- * @param new_config [in] 新配置 (BORROW - valid for callback scope only, do not free).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
+ * @brief Configuration change callback function type
+ * @param service_name [in] Service name (BORROW - valid for callback scope only).
+ * @param old_config [in] Old configuration (BORROW - valid for callback scope only, do not free).
+ * @param new_config [in] New configuration (BORROW - valid for callback scope only, do not free).
+ * @param user_data [in] User data (BORROW - caller retains ownership).
  *
  * @ownership service_name: BORROW, old_config: BORROW, new_config: BORROW, user_data: BORROW
  */
@@ -607,23 +611,23 @@ typedef void (*airy_config_change_callback_t)(const char *service_name,
                                               const airy_config_t *new_config, void *user_data);
 
 /**
- * @brief 加载服务配置
- * @param service_name [in] 服务名称 (BORROW - not stored, copied internally).
- * @param config [out] 配置输出 (OWNER - caller must call airy_config_free).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Load service configuration
+ * @param service_name [in] Service name (BORROW - not stored, copied internally).
+ * @param config [out] Configuration output (OWNER - caller must call airy_config_free).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service_name: BORROW, config: OWNER
  */
 AIRY_API airy_err_t airy_config_load(const char *service_name, airy_config_t **config);
 
 /**
- * @brief 监视配置变更
- * @param service_name [in] 服务名称 (BORROW - not stored, copied internally).
- * @param callback [in] 变更回调函数 (BORROW - stored by reference, must remain valid until unwatched).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership, must remain valid until unwatched).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Watch for configuration changes
+ * @param service_name [in] Service name (BORROW - not stored, copied internally).
+ * @param callback [in] Change callback (BORROW - stored by reference, must remain valid until unwatched).
+ * @param user_data [in] User data (BORROW - caller retains ownership, must remain valid until unwatched).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service_name: BORROW, callback: BORROW, user_data: BORROW
  */
@@ -631,11 +635,11 @@ AIRY_API airy_err_t airy_config_watch(const char *service_name,
                                       airy_config_change_callback_t callback, void *user_data);
 
 /**
- * @brief 取消配置监视
- * @param service_name [in] 服务名称 (BORROW - not stored, copied internally).
- * @param callback [in] 要移除的回调函数，NULL表示移除所有 (BORROW - used for identification only, not stored).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Cancel configuration watching
+ * @param service_name [in] Service name (BORROW - not stored, copied internally).
+ * @param callback [in] Callback to remove, NULL removes all (BORROW - used for identification only, not stored).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service_name: BORROW, callback: BORROW
  */
@@ -643,8 +647,8 @@ AIRY_API airy_err_t airy_config_unwatch(const char *service_name,
                                         airy_config_change_callback_t callback);
 
 /**
- * @brief 释放配置资源
- * @param config [in] 配置指针 (TRANSFER - function takes ownership and frees).
+ * @brief Free configuration resources
+ * @param config [in] Configuration pointer (TRANSFER - function takes ownership and frees).
  *
  * @ownership config: TRANSFER
  */
@@ -652,7 +656,7 @@ AIRY_API void airy_config_free(airy_config_t *config);
 
 
 /**
- * @brief 监控配置结构
+ * @brief Monitoring configuration structure
  */
 typedef struct {
     uint32_t healthcheck_interval_ms;
@@ -665,11 +669,11 @@ typedef struct {
 } airy_monitor_config_t;
 
 /**
- * @brief 降级处理函数类型
- * @param service [in] 服务句柄 (BORROW - valid for callback scope only).
- * @param reason [in] 降级原因 (BORROW - valid for callback scope only).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
- * @return 0成功降级，非0降级失败
+ * @brief Degradation handler function type
+ * @param service [in] Service handle (BORROW - valid for callback scope only).
+ * @param reason [in] Degradation reason (BORROW - valid for callback scope only).
+ * @param user_data [in] User data (BORROW - caller retains ownership).
+ * @return 0 if degraded successfully, non-zero on failure
  *
  * @ownership service: BORROW, reason: BORROW, user_data: BORROW
  */
@@ -677,33 +681,33 @@ typedef airy_err_t (*airy_degradation_handler_t)(airy_svc_t service, const char 
                                                  void *user_data);
 
 /**
- * @brief 启动服务监控
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param config [in] 监控配置 (BORROW - not stored, copied internally).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Start service monitoring
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param config [in] Monitoring configuration (BORROW - not stored, copied internally).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW, config: BORROW
  */
 AIRY_API airy_err_t airy_svc_monitor_start(airy_svc_t service, const airy_monitor_config_t *config);
 
 /**
- * @brief 停止服务监控
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Stop service monitoring
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW
  */
 AIRY_API airy_err_t airy_svc_monitor_stop(airy_svc_t service);
 
 /**
- * @brief 设置服务降级处理函数
- * @param service [in] 服务句柄 (BORROW - caller retains ownership).
- * @param handler [in] 降级处理函数 (BORROW - stored by reference, must remain valid).
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership, must remain valid).
- * @return 0成功，非0失败
- * @threadsafe 是
+ * @brief Set the service degradation handler
+ * @param service [in] Service handle (BORROW - caller retains ownership).
+ * @param handler [in] Degradation handler (BORROW - stored by reference, must remain valid).
+ * @param user_data [in] User data (BORROW - caller retains ownership, must remain valid).
+ * @return 0 on success, non-zero on failure
+ * @threadsafe Yes
  *
  * @ownership service: BORROW, handler: BORROW, user_data: BORROW
  */
@@ -713,19 +717,20 @@ AIRY_API airy_err_t airy_svc_set_degradation_handler(airy_svc_t service,
 
 
 /**
- * @brief 流式回调函数类型
- * @param data [in] 数据块 (BORROW - valid for callback scope only).
- * @param data_size [in] 数据大小
- * @param user_data [in] 用户数据 (BORROW - caller retains ownership).
- * @return 0继续，非0中断
+ * @brief Streaming callback function type
+ * @param data [in] Data chunk (BORROW - valid for callback scope only).
+ * @param data_size [in] Data size
+ * @param user_data [in] User data (BORROW - caller retains ownership).
+ * @return 0 to continue, non-zero to interrupt
  *
  * @ownership data: BORROW, user_data: BORROW
  */
 typedef int (*airy_stream_callback_t)(const char *data, size_t data_size, void *user_data);
 
 /**
- * @brief 通信协议类型（daemon服务层专用）
- * @note 使用 SVC_ 前缀避免与 commons/types.h 的 AIRY_PROTO_* 冲突
+ * @brief Communication protocol type (daemon service layer only)
+ * @note Uses the SVC_ prefix to avoid conflicts with AIRY_PROTO_* in
+ *       commons/types.h
  */
 typedef enum {
     SVC_PROTO_HTTP = 0,
@@ -735,7 +740,7 @@ typedef enum {
 } airy_svc_protocol_type_t;
 
 /**
- * @brief 服务通信客户端接口
+ * @brief Service communication client interface
  *
  * @ownership call: service_name BORROW, method BORROW, params_json BORROW, response_json OWNER (caller must free).
  * @ownership stream: service_name BORROW, method BORROW, params_json BORROW, callback BORROW, user_data BORROW.
@@ -749,11 +754,11 @@ typedef struct {
 } airy_svc_client_t;
 
 /**
- * @brief 创建服务通信客户端
- * @param protocol [in] 通信协议
- * @param config [in] 客户端配置（JSON格式字符串），NULL使用默认 (BORROW - not stored, copied internally).
- * @param client [out] 客户端输出 (OWNER - caller must call airy_svc_client_destroy).
- * @return 0成功，非0失败
+ * @brief Create a service communication client
+ * @param protocol [in] Communication protocol
+ * @param config [in] Client configuration (JSON string), NULL for defaults (BORROW - not stored, copied internally).
+ * @param client [out] Client output (OWNER - caller must call airy_svc_client_destroy).
+ * @return 0 on success, non-zero on failure
  *
  * @ownership config: BORROW, client: OWNER
  */
@@ -761,8 +766,8 @@ AIRY_API airy_err_t airy_svc_client_create(airy_svc_protocol_type_t protocol, co
                                            airy_svc_client_t **client);
 
 /**
- * @brief 销毁服务通信客户端
- * @param client [in] 客户端指针 (TRANSFER - function takes ownership and frees).
+ * @brief Destroy a service communication client
+ * @param client [in] Client pointer (TRANSFER - function takes ownership and frees).
  *
  * @ownership client: TRANSFER
  */

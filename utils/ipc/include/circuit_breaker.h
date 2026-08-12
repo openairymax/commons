@@ -3,27 +3,34 @@
 
 /**
  * @file circuit_breaker.h
- * @brief 熔断器与自愈框架（commons 权威版本）
+ * @brief Circuit breaker and self-healing framework (authoritative commons
+ *        version).
  *
- * 实现熔断器模式（Circuit Breaker Pattern），提供：
- * - 三态熔断器：关闭（正常）→ 开启（熔断）→ 半开（探测）
- * - 自动故障检测与熔断
- * - 渐进式恢复探测
- * - 级联故障防护
- * - 自动故障转移
- * - 与服务发现联动
+ * Implements the Circuit Breaker pattern, providing:
+ * - Three-state breaker: closed (normal) -> open (tripped) -> half-open
+ *   (probing)
+ * - Automatic failure detection and tripping
+ * - Progressive recovery probing
+ * - Cascading-failure protection
+ * - Automatic failover
+ * - Service-discovery integration
  *
- * P0.17 阶段 5：从 daemons/common/include/circuit_breaker.h 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 5: migrated from daemons/common/include/circuit_breaker.h
+ * into commons, removing the atoms->daemons compile-time reverse
+ * dependency (IRON-6). The daemons copy is kept as a re-exporting
+ * compatibility header.
  *
- * 设计原则：
- * 1. 快速失败：熔断状态下立即返回错误，避免级联阻塞
- * 2. 渐进恢复：半开状态下逐步放行请求，验证服务恢复
- * 3. 可观测性：熔断状态变更触发事件通知
- * 4. 可配置性：阈值、超时、探测策略均可配置
+ * Design principles:
+ * 1. Fail fast: return errors immediately in the open state, avoiding
+ *    cascading blocking
+ * 2. Progressive recovery: in the half-open state, gradually allow
+ *    requests to verify service recovery
+ * 3. Observability: state changes trigger event notifications
+ * 4. Configurability: thresholds, timeouts, and probing strategies are all
+ *    configurable
  *
- * @see svc_common.h 服务管理框架
- * @see service_discovery.h 服务发现
+ * @see svc_common.h service management framework
+ * @see service_discovery.h service discovery
  */
 
 #ifndef AIRY_RT_CIRCUIT_BREAKER_H
@@ -128,166 +135,166 @@ typedef struct cb_manager_s *cb_manager_t;
 
 
 /**
- * @brief 创建熔断器管理器
- * @return 管理器句柄，失败返回NULL
+ * @brief Create a circuit breaker manager
+ * @return Manager handle, NULL on failure
  */
 AIRY_API cb_manager_t cb_manager_create(void);
 
 /**
- * @brief 销毁熔断器管理器
- * @param manager 管理器句柄
+ * @brief Destroy a circuit breaker manager
+ * @param manager Manager handle
  */
 AIRY_API void cb_manager_destroy(cb_manager_t manager);
 
 
 /**
- * @brief 创建熔断器
- * @param manager 管理器句柄
- * @param name 熔断器名称（通常为服务名称）
- * @param config 配置参数（NULL使用默认）
- * @return 熔断器句柄，失败返回NULL
+ * @brief Create a circuit breaker
+ * @param manager Manager handle
+ * @param name Breaker name (usually the service name)
+ * @param config Configuration (NULL for defaults)
+ * @return Breaker handle, NULL on failure
  */
 AIRY_API circuit_breaker_t cb_create(cb_manager_t manager, const char *name,
                                      const cb_config_t *config);
 
 /**
- * @brief 销毁熔断器
- * @param breaker 熔断器句柄
+ * @brief Destroy a circuit breaker
+ * @param breaker Breaker handle
  */
 AIRY_API void cb_destroy(circuit_breaker_t breaker);
 
 /**
- * @brief 检查是否允许请求通过
- * @param breaker 熔断器句柄
- * @return true允许，false拒绝
+ * @brief Check whether a request is allowed through
+ * @param breaker Breaker handle
+ * @return true to allow, false to reject
  */
 AIRY_API bool cb_allow_request(circuit_breaker_t breaker);
 
 /**
- * @brief 记录成功调用
- * @param breaker 熔断器句柄
- * @param duration_ms 调用耗时
+ * @brief Record a successful call
+ * @param breaker Breaker handle
+ * @param duration_ms Call duration
  */
 AIRY_API void cb_record_success(circuit_breaker_t breaker, uint32_t duration_ms);
 
 /**
- * @brief 记录失败调用
- * @param breaker 熔断器句柄
- * @param error_code 错误码
+ * @brief Record a failed call
+ * @param breaker Breaker handle
+ * @param error_code Error code
  */
 AIRY_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code);
 
 /**
- * @brief 记录超时调用
- * @param breaker 熔断器句柄
+ * @brief Record a timed-out call
+ * @param breaker Breaker handle
  */
 AIRY_API void cb_record_timeout(circuit_breaker_t breaker);
 
 
 /**
- * @brief 获取熔断器当前状态
- * @param breaker 熔断器句柄
- * @return 熔断器状态
+ * @brief Get the breaker's current state
+ * @param breaker Breaker handle
+ * @return Breaker state
  */
 AIRY_API cb_state_t cb_get_state(circuit_breaker_t breaker);
 
 /**
- * @brief 获取熔断器名称
- * @param breaker 熔断器句柄
- * @return 名称
+ * @brief Get the breaker name
+ * @param breaker Breaker handle
+ * @return Name
  */
 AIRY_API const char *cb_get_name(circuit_breaker_t breaker);
 
 /**
- * @brief 获取熔断器统计
- * @param breaker 熔断器句柄
- * @param stats [out] 统计信息
- * @return 0成功，非0失败
+ * @brief Get breaker statistics
+ * @param breaker Breaker handle
+ * @param stats [out] Statistics
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t cb_get_stats(circuit_breaker_t breaker, cb_stats_t *stats);
 
 /**
- * @brief 重置熔断器到关闭状态
- * @param breaker 熔断器句柄
+ * @brief Reset the breaker to the closed state
+ * @param breaker Breaker handle
  */
 AIRY_API void cb_reset(circuit_breaker_t breaker);
 
 /**
- * @brief 强制打开熔断器
- * @param breaker 熔断器句柄
+ * @brief Force-open the breaker
+ * @param breaker Breaker handle
  */
 AIRY_API void cb_force_open(circuit_breaker_t breaker);
 
 /**
- * @brief 强制关闭熔断器
- * @param breaker 熔断器句柄
+ * @brief Force-close the breaker
+ * @param breaker Breaker handle
  */
 AIRY_API void cb_force_close(circuit_breaker_t breaker);
 
 
 /**
- * @brief 配置故障转移策略
- * @param breaker 熔断器句柄
- * @param config 故障转移配置
- * @return 0成功，非0失败
+ * @brief Configure the failover strategy
+ * @param breaker Breaker handle
+ * @param config Failover configuration
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t cb_set_failover_config(circuit_breaker_t breaker,
                                            const cb_failover_config_t *config);
 
 /**
- * @brief 执行故障转移
- * @param breaker 熔断器句柄
- * @param original_error 原始错误码
- * @param fallback_result [out] 故障转移结果
- * @param result_size 结果缓冲区大小
- * @return 0成功，非0失败
+ * @brief Execute failover
+ * @param breaker Breaker handle
+ * @param original_error Original error code
+ * @param fallback_result [out] Failover result
+ * @param result_size Result buffer size
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t cb_execute_failover(circuit_breaker_t breaker, int32_t original_error,
                                         char *fallback_result, size_t result_size);
 
 
 /**
- * @brief 注册熔断器事件回调
- * @param manager 管理器句柄
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 0成功，非0失败
+ * @brief Register a breaker event callback
+ * @param manager Manager handle
+ * @param callback Callback function
+ * @param user_data User data
+ * @return 0 on success, non-zero on failure
  */
 AIRY_API airy_err_t cb_register_event_callback(cb_manager_t manager, cb_event_callback_t callback,
                                                void *user_data);
 
 /**
- * @brief 查找熔断器
- * @param manager 管理器句柄
- * @param name 熔断器名称
- * @return 熔断器句柄，未找到返回NULL
+ * @brief Find a circuit breaker
+ * @param manager Manager handle
+ * @param name Breaker name
+ * @return Breaker handle, NULL if not found
  */
 AIRY_API circuit_breaker_t cb_find(cb_manager_t manager, const char *name);
 
 /**
- * @brief 获取所有熔断器数量
- * @param manager 管理器句柄
- * @return 熔断器数量
+ * @brief Get the total breaker count
+ * @param manager Manager handle
+ * @return Number of breakers
  */
 AIRY_API uint32_t cb_count(cb_manager_t manager);
 
 
 /**
- * @brief 熔断器状态转字符串
- * @param state 状态
- * @return 状态名称
+ * @brief Convert a breaker state to a string
+ * @param state State
+ * @return State name
  */
 AIRY_API const char *cb_state_to_string(cb_state_t state);
 
 /**
- * @brief 创建默认配置
- * @return 默认配置
+ * @brief Create the default configuration
+ * @return Default configuration
  */
 AIRY_API cb_config_t cb_create_default_config(void);
 
 /**
- * @brief 创建默认故障转移配置
- * @return 默认故障转移配置
+ * @brief Create the default failover configuration
+ * @return Default failover configuration
  */
 AIRY_API cb_failover_config_t cb_create_default_failover_config(void);
 

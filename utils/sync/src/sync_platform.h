@@ -3,11 +3,10 @@
 
 /**
  * @file sync_platform.h
- * @brief 同步模块平台抽象层 - 内部使用
+ * @brief Synchronization module platform abstraction layer (internal use).
  *
- * 提供跨平台的同步原语底层实现抽象
- * 支持Windows和POSIX系统
- *
+ * Provides the underlying cross-platform implementation abstraction for
+ * the synchronization primitives. Supports Windows and POSIX systems.
  */
 
 #ifndef SYNC_PLATFORM_H
@@ -102,298 +101,298 @@ typedef struct {
 
 #endif /* _WIN32 */
 /**
- * @brief 平台互斥锁初始化
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform mutex
+ * @return 0 on success, non-zero on failure
  */
 int platform_mutex_init(platform_mutex_t *mutex);
 
 /**
- * @brief 平台互斥锁销毁
- * @param[in] mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform mutex
+ * @param[in] mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_mutex_destroy(platform_mutex_t *mutex);
 
 /**
- * @brief 平台互斥锁加锁
- * @param[in] mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Lock a platform mutex
+ * @param[in] mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_mutex_lock(platform_mutex_t *mutex);
 
 /**
- * @brief 平台互斥锁解锁
- * @param[in] mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a platform mutex
+ * @param[in] mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_mutex_unlock(platform_mutex_t *mutex);
 
 /**
- * @brief 平台互斥锁尝试加锁
- * @param[in] mutex 互斥锁指针
- * @return 0 成功，非0 失败/忙
+ * @brief Try to lock a platform mutex
+ * @param[in] mutex Mutex pointer
+ * @return 0 on success, non-zero on failure/busy
  */
 int platform_mutex_trylock(platform_mutex_t *mutex);
 
 /**
- * @brief 平台递归互斥锁初始化
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform recursive mutex
+ * @return 0 on success, non-zero on failure
  */
 int platform_recursive_mutex_init(platform_recursive_mutex_t *mutex);
 
 /**
- * @brief 平台递归互斥锁销毁
- * @param[in] mutex 递归互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform recursive mutex
+ * @param[in] mutex Recursive mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_recursive_mutex_destroy(platform_recursive_mutex_t *mutex);
 
 /**
- * @brief 平台递归互斥锁加锁
- * @param[in] mutex 递归互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Lock a platform recursive mutex
+ * @param[in] mutex Recursive mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_recursive_mutex_lock(platform_recursive_mutex_t *mutex);
 
 /**
- * @brief 平台递归互斥锁解锁
- * @param[in] mutex 递归互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a platform recursive mutex
+ * @param[in] mutex Recursive mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_recursive_mutex_unlock(platform_recursive_mutex_t *mutex);
 
 /**
- * @brief 平台读写锁初始化
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform read-write lock
+ * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_init(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台读写锁销毁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform read-write lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_destroy(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台读锁加锁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Acquire a platform read lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_rdlock(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台写锁加锁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Acquire a platform write lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_wrlock(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台读锁尝试加锁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败/忙
+ * @brief Try to acquire a platform read lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure/busy
  */
 int platform_rwlock_tryrdlock(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台写锁尝试加锁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败/忙
+ * @brief Try to acquire a platform write lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure/busy
  */
 int platform_rwlock_trywrlock(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台读写锁解锁
- * @param[in] rwlock 读写锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a platform read-write lock
+ * @param[in] rwlock Read-write lock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_unlock(platform_rwlock_t *rwlock);
 
 /**
- * @brief 平台自旋锁初始化
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform spinlock
+ * @return 0 on success, non-zero on failure
  */
 int platform_spinlock_init(platform_spinlock_t *spinlock);
 
 /**
- * @brief 平台自旋锁销毁
- * @param[in] spinlock 自旋锁指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform spinlock
+ * @param[in] spinlock Spinlock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_spinlock_destroy(platform_spinlock_t *spinlock);
 
 /**
- * @brief 平台自旋锁加锁
- * @param[in] spinlock 自旋锁指针
- * @return 0 成功，非0 失败
+ * @brief Lock a platform spinlock
+ * @param[in] spinlock Spinlock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_spinlock_lock(platform_spinlock_t *spinlock);
 
 /**
- * @brief 平台自旋锁解锁
- * @param[in] spinlock 自旋锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a platform spinlock
+ * @param[in] spinlock Spinlock pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_spinlock_unlock(platform_spinlock_t *spinlock);
 
 /**
- * @brief 平台信号量初始化
- * @param[in] semaphore 信号量指针
- * @param[in] value 初始值
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform semaphore
+ * @param[in] semaphore Semaphore pointer
+ * @param[in] value Initial value
+ * @return 0 on success, non-zero on failure
  */
 int platform_semaphore_init(platform_semaphore_t *semaphore, unsigned int value);
 
 /**
- * @brief 平台信号量销毁
- * @param[in] semaphore 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform semaphore
+ * @param[in] semaphore Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_semaphore_destroy(platform_semaphore_t *semaphore);
 
 /**
- * @brief 平台信号量等待（P操作）
- * @param[in] semaphore 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Wait on a platform semaphore (P operation)
+ * @param[in] semaphore Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_semaphore_wait(platform_semaphore_t *semaphore);
 
 /**
- * @brief 平台信号量发信号（V操作）
- * @param[in] semaphore 信号量指针
- * @return 0 成功，非0 失败
+ * @brief Post a platform semaphore (V operation)
+ * @param[in] semaphore Semaphore pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_semaphore_post(platform_semaphore_t *semaphore);
 
 /**
- * @brief 平台信号量超时等待
- * @param[in] semaphore 信号量指针
- * @param[in] timeout_ms 超时时间（毫秒）
- * @return 0 成功，非0 失败/超时
+ * @brief Timed wait on a platform semaphore
+ * @param[in] semaphore Semaphore pointer
+ * @param[in] timeout_ms Timeout in milliseconds
+ * @return 0 on success, non-zero on failure/timeout
  */
 int platform_semaphore_timedwait(platform_semaphore_t *semaphore, uint32_t timeout_ms);
 
 /**
- * @brief 平台信号量尝试等待
- * @param[in] semaphore 信号量指针
- * @return 0 成功，非0 失败/忙
+ * @brief Try to wait on a platform semaphore
+ * @param[in] semaphore Semaphore pointer
+ * @return 0 on success, non-zero on failure/busy
  */
 int platform_semaphore_trywait(platform_semaphore_t *semaphore);
 
 /**
- * @brief 平台条件变量初始化
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform condition variable
+ * @return 0 on success, non-zero on failure
  */
 int platform_condition_init(platform_condition_t *cond);
 
 /**
- * @brief 平台条件变量销毁
- * @param[in] cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform condition variable
+ * @param[in] cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_condition_destroy(platform_condition_t *cond);
 
 /**
- * @brief 平台条件变量等待
- * @param[in] cond 条件变量指针
- * @param[in] mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Wait on a platform condition variable
+ * @param[in] cond Condition variable pointer
+ * @param[in] mutex Mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_condition_wait(platform_condition_t *cond, platform_mutex_t *mutex);
 
 /**
- * @brief 平台条件变量超时等待
- * @param[in] cond 条件变量指针
- * @param[in] mutex 互斥锁指针
- * @param[in] timeout_ms 超时时间（毫秒）
- * @return 0 成功，非0 失败/超时
+ * @brief Timed wait on a platform condition variable
+ * @param[in] cond Condition variable pointer
+ * @param[in] mutex Mutex pointer
+ * @param[in] timeout_ms Timeout in milliseconds
+ * @return 0 on success, non-zero on failure/timeout
  */
 int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *mutex,
                                  uint32_t timeout_ms);
 
 /**
- * @brief 平台条件变量唤醒一个线程
- * @param[in] cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake one thread waiting on the condition variable
+ * @param[in] cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_condition_signal(platform_condition_t *cond);
 
 /**
- * @brief 平台条件变量唤醒所有线程
- * @param[in] cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake all threads waiting on the condition variable
+ * @param[in] cond Condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_condition_broadcast(platform_condition_t *cond);
 
 /**
- * @brief 平台屏障初始化
- * @param[in] barrier 屏障指针
- * @param[in] count 等待线程数
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform barrier
+ * @param[in] barrier Barrier pointer
+ * @param[in] count Number of threads to wait for
+ * @return 0 on success, non-zero on failure
  */
 int platform_barrier_init(platform_barrier_t *barrier, unsigned int count);
 
 /**
- * @brief 平台屏障销毁
- * @param[in] barrier 屏障指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform barrier
+ * @param[in] barrier Barrier pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_barrier_destroy(platform_barrier_t *barrier);
 
 /**
- * @brief 平台屏障等待
- * @param[in] barrier 屏障指针
- * @return 0 成功，非0 失败
+ * @brief Wait at a platform barrier
+ * @param[in] barrier Barrier pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_barrier_wait(platform_barrier_t *barrier);
 
 /**
- * @brief 平台事件初始化
- * @param[in] event 事件指针
- * @param[in] manual_reset 是否手动重置
- * @return 0 成功，非0 失败
+ * @brief Initialize a platform event
+ * @param[in] event Event pointer
+ * @param[in] manual_reset Whether manual reset
+ * @return 0 on success, non-zero on failure
  */
 int platform_event_init(platform_event_t *event, bool manual_reset);
 
 /**
- * @brief 平台事件销毁
- * @param[in] event 事件指针
- * @return 0 成功，非0 失败
+ * @brief Destroy a platform event
+ * @param[in] event Event pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_event_destroy(platform_event_t *event);
 
 /**
- * @brief 平台事件设置信号
- * @param[in] event 事件指针
- * @return 0 成功，非0 失败
+ * @brief Set a platform event to the signaled state
+ * @param[in] event Event pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_event_set(platform_event_t *event);
 
 /**
- * @brief 平台事件重置信号
- * @param[in] event 事件指针
- * @return 0 成功，非0 失败
+ * @brief Reset a platform event to the non-signaled state
+ * @param[in] event Event pointer
+ * @return 0 on success, non-zero on failure
  */
 int platform_event_reset(platform_event_t *event);
 
 /**
- * @brief 平台事件等待
- * @param[in] event 事件指针
- * @param[in] timeout_ms 超时时间（毫秒），0表示无限等待
- * @return 0 成功，非0 失败
+ * @brief Wait on a platform event
+ * @param[in] event Event pointer
+ * @param[in] timeout_ms Timeout in milliseconds, 0 waits indefinitely
+ * @return 0 on success, non-zero on failure
  */
 int platform_event_wait(platform_event_t *event, uint64_t timeout_ms);
 
 /**
- * @brief 获取当前时间戳（毫秒）
- * @return 时间戳
+ * @brief Get the current timestamp (milliseconds)
+ * @return Timestamp
  */
 uint64_t platform_get_timestamp_ms(void);
 
 /**
- * @brief 获取当前线程ID
- * @return 线程ID
+ * @brief Get the current thread ID
+ * @return Thread ID
  */
 uint64_t platform_get_thread_id(void);
 

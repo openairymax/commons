@@ -3,52 +3,55 @@
 
 /**
  * @file platform_adapter.h
- * @brief 平台适配器 - 高级跨平台工具集
+ * @brief Platform adapter: advanced cross-platform utility set.
  *
- * @module_positioning 模块定位说明
+ * ## Module positioning
  *
- * 本模块位于 AgentRT commons 的 utils/platform/ 目录下，
- * 提供面向应用层的高级跨平台工具功能。
+ * This module lives in AgentRT commons utils/platform/ and provides
+ * high-level cross-platform utilities for application layers.
  *
- * ## 与顶层 platform/ 模块的区别
+ * ## Difference from the top-level platform/ module
  *
- * | 维度 | 本模块 (utils/platform/) | 顶层模块 (platform/) |
- * |------|------------------------|---------------------|
- * | **位置** | utils/platform/ | platform/ |
- * | **抽象层级** | 应用层 (High-Level) | 系统层 (Low-Level) |
- * | **核心功能** | 文件系统、环境变量、路径操作 | 线程原语、Socket、时间 |
- * | **使用场景** | 业务逻辑代码 | 基础设施代码 |
- * | **性能要求** | 一般 | 关键路径优化 |
- * | **典型用户** | cognition, strategy 等业务模块 | sync, ipc 等底层模块 |
+ * | Aspect     | This module (utils/platform/) | Top-level module (platform/) |
+ * |------------|-------------------------------|------------------------------|
+ * | Location   | utils/platform/               | platform/                    |
+ * | Abstraction| Application layer (high-level)| System layer (low-level)     |
+ * | Core       | File system, env vars, paths  | Thread primitives, Socket, time |
+ * | Use cases  | Business logic code           | Infrastructure code          |
+ * | Perf       | General                       | Critical-path optimized      |
+ * | Users      | cognition, strategy, etc.     | sync, ipc and other low-level |
  *
- * ## 设计理念
+ * ## Design philosophy
  *
- * 遵循 AgentRT 五维正交体系中的"工程维度"原则：
- * - ✅ 统一接口: 所有平台差异通过本模块透明处理
- * - ✅ 最小惊讶: API 设计符合直觉，参数语义清晰
- * - ✅ 渐进式迁移: 可逐步替换原有平台相关代码
+ * Follows the "engineering dimension" principle of the AgentRT five-axis
+ * orthogonal system:
+ * - Unified interface: all platform differences handled transparently
+ * - Least surprise: intuitive APIs with clear parameter semantics
+ * - Incremental migration: platform-specific code can be replaced
+ *   gradually
  *
- * ## 主要功能分类
+ * ## Main feature categories
  *
- * ### 1. 文件系统操作
+ * ### 1. File system operations
  * - platform_mkdir(), platform_unlink(), platform_copy_file()
- * - 递归目录创建、文件信息查询
+ * - Recursive directory creation, file info queries
  *
- * ### 2. 环境与路径
+ * ### 2. Environment and paths
  * - platform_get_env(), platform_set_env()
  * - platform_path_join(), platform_path_normalize()
  *
- * ### 3. 系统服务
+ * ### 3. System services
  * - platform_get_timestamp_ms/us()
  * - platform_sleep_ms()
  *
- * ## 子进程执行
+ * ## Subprocess execution
  *
- * 子进程执行统一使用顶层 platform.h 的 airy_process_run_capture()
- * （fork+execvp，不经 shell），消除命令注入风险。
- * platform_exec()/platform_free_exec_result() 已移除（BAN-211/235 安全合规）。
+ * Subprocess execution uniformly uses airy_process_run_capture() from the
+ * top-level platform.h (fork+execvp, no shell), eliminating command
+ * injection risk. platform_exec()/platform_free_exec_result() were removed
+ * (BAN-211/235 security compliance).
  *
- * @see platform.h (顶层系统抽象层)
+ * @see platform.h (top-level system abstraction layer)
  */
 
 #ifndef AIRY_RT_PLATFORM_ADAPTER_H
@@ -64,7 +67,7 @@
 #include <string.h>
 
 /**
- * @brief 平台类型
+ * @brief Platform types
  */
 typedef enum {
     PLATFORM_UNKNOWN,
@@ -75,7 +78,7 @@ typedef enum {
 } platform_type_t;
 
 /**
- * @brief 文件信息
+ * @brief File information
  */
 typedef struct platform_file_info {
     const char *path;
@@ -86,186 +89,186 @@ typedef struct platform_file_info {
 } platform_file_info_t;
 
 /**
- * @brief 获取当前平台类型
- * @return 平台类型
+ * @brief Get the current platform type
+ * @return Platform type
  */
 platform_type_t platform_get_type(void);
 
 /**
- * @brief 获取平台名称
- * @return 平台名称字符串
+ * @brief Get the platform name
+ * @return Platform name string
  */
 const char *platform_get_name(void);
 
 /**
- * @brief 获取文件信息
- * @param path 文件路径
- * @return 文件信息
+ * @brief Get file information
+ * @param path File path
+ * @return File information
  */
 platform_file_info_t platform_get_file_info(const char *path);
 
 /**
- * @brief 创建目录
- * @param path 目录路径
- * @return true表示成功，false表示失败
+ * @brief Create a directory
+ * @param path Directory path
+ * @return true on success, false on failure
  */
 bool platform_mkdir(const char *path);
 
 /**
- * @brief 创建目录（递归）
- * @param path 目录路径
- * @return true表示成功，false表示失败
+ * @brief Create a directory (recursively)
+ * @param path Directory path
+ * @return true on success, false on failure
  */
 bool platform_mkdir_recursive(const char *path);
 
 /**
- * @brief 删除文件
- * @param path 文件路径
- * @return true表示成功，false表示失败
+ * @brief Delete a file
+ * @param path File path
+ * @return true on success, false on failure
  */
 bool platform_unlink(const char *path);
 
 /**
- * @brief 删除目录
- * @param path 目录路径
- * @return true表示成功，false表示失败
+ * @brief Delete a directory
+ * @param path Directory path
+ * @return true on success, false on failure
  */
 bool platform_rmdir(const char *path);
 
 /**
- * @brief 复制文件
- * @param src 源文件路径
- * @param dest 目标文件路径
- * @return true表示成功，false表示失败
+ * @brief Copy a file
+ * @param src Source file path
+ * @param dest Destination file path
+ * @return true on success, false on failure
  */
 bool platform_copy_file(const char *src, const char *dest);
 
 /**
- * @brief 移动文件
- * @param src 源文件路径
- * @param dest 目标文件路径
- * @return true表示成功，false表示失败
+ * @brief Move a file
+ * @param src Source file path
+ * @param dest Destination file path
+ * @return true on success, false on failure
  */
 bool platform_move_file(const char *src, const char *dest);
 
 /**
- * @brief 获取环境变量
- * @param name 环境变量名称
- * @param default_value 默认值
- * @return 环境变量值（需要调用AIRY_FREE释放）
+ * @brief Get an environment variable
+ * @param name Environment variable name
+ * @param default_value Default value
+ * @return Environment variable value (release with AIRY_FREE)
  */
 char *platform_get_env(const char *name, const char *default_value);
 
 /**
- * @brief 设置环境变量
- * @param name 环境变量名称
- * @param value 环境变量值
- * @return true表示成功，false表示失败
+ * @brief Set an environment variable
+ * @param name Environment variable name
+ * @param value Environment variable value
+ * @return true on success, false on failure
  */
 bool platform_set_env(const char *name, const char *value);
 
 /**
- * @brief 获取当前工作目录
- * @return 当前工作目录（需要调用AIRY_FREE释放）
+ * @brief Get the current working directory
+ * @return Current working directory (release with AIRY_FREE)
  */
 char *platform_get_cwd(void);
 
 /**
- * @brief 改变当前工作目录
- * @param path 目标路径
- * @return true表示成功，false表示失败
+ * @brief Change the current working directory
+ * @param path Target path
+ * @return true on success, false on failure
  */
 bool platform_chdir(const char *path);
 
 /**
- * @brief 获取临时目录
- * @return 临时目录路径（需要调用AIRY_FREE释放）
+ * @brief Get the temp directory
+ * @return Temp directory path (release with AIRY_FREE)
  */
 char *platform_get_temp_dir(void);
 
 /**
- * @brief 生成临时文件路径
- * @param prefix 前缀
- * @return 临时文件路径（需要调用AIRY_FREE释放）
+ * @brief Generate a temp file path
+ * @param prefix Prefix
+ * @return Temp file path (release with AIRY_FREE)
  */
 char *platform_get_temp_file(const char *prefix);
 
 /**
- * @brief 路径连接
- * @param path1 路径1
- * @param path2 路径2
- * @return 连接后的路径（需要调用AIRY_FREE释放）
+ * @brief Join paths
+ * @param path1 Path 1
+ * @param path2 Path 2
+ * @return Joined path (release with AIRY_FREE)
  */
 char *platform_path_join(const char *path1, const char *path2);
 
 /**
- * @brief 路径规范化
- * @param path 路径
- * @return 规范化后的路径（需要调用AIRY_FREE释放）
+ * @brief Normalize a path
+ * @param path Path
+ * @return Normalized path (release with AIRY_FREE)
  */
 char *platform_path_normalize(const char *path);
 
 /**
- * @brief 获取路径中的文件名部分
- * @param path 路径
- * @return 文件名（需要调用AIRY_FREE释放）
+ * @brief Get the file name portion of a path
+ * @param path Path
+ * @return File name (release with AIRY_FREE)
  */
 char *platform_path_basename(const char *path);
 
 /**
- * @brief 获取路径中的目录部分
- * @param path 路径
- * @return 目录路径（需要调用AIRY_FREE释放）
+ * @brief Get the directory portion of a path
+ * @param path Path
+ * @return Directory path (release with AIRY_FREE)
  */
 char *platform_path_dirname(const char *path);
 
 /**
- * @brief 检查路径是否存在
- * @param path 路径
- * @return true表示存在，false表示不存在
+ * @brief Check whether a path exists
+ * @param path Path
+ * @return true if it exists, false otherwise
  */
 bool platform_path_exists(const char *path);
 
 /**
- * @brief 检查路径是否为目录
- * @param path 路径
- * @return true表示是目录，false表示不是
+ * @brief Check whether a path is a directory
+ * @param path Path
+ * @return true if a directory, false otherwise
  */
 bool platform_path_is_directory(const char *path);
 
 /**
- * @brief 检查路径是否为文件
- * @param path 路径
- * @return true表示是文件，false表示不是
+ * @brief Check whether a path is a file
+ * @param path Path
+ * @return true if a file, false otherwise
  */
 bool platform_path_is_file(const char *path);
 
 /**
- * @brief 获取系统时间戳（毫秒）
- * @return 时间戳
+ * @brief Get the system timestamp (milliseconds)
+ * @return Timestamp
  */
 uint64_t platform_get_timestamp_ms(void);
 
 /**
- * @brief 获取系统时间戳（微秒）
- * @return 时间戳
+ * @brief Get the system timestamp (microseconds)
+ * @return Timestamp
  */
 uint64_t platform_get_timestamp_us(void);
 
 /**
- * @brief 休眠指定毫秒数
- * @param ms 毫秒数
+ * @brief Sleep for the given number of milliseconds
+ * @param ms Milliseconds
  */
 void platform_sleep_ms(unsigned int ms);
 
 /**
- * @brief 初始化平台适配器
- * @return true表示成功，false表示失败
+ * @brief Initialize the platform adapter
+ * @return true on success, false on failure
  */
 bool platform_adapter_init(void);
 
 /**
- * @brief 清理平台适配器
+ * @brief Clean up the platform adapter
  */
 void platform_adapter_cleanup(void);
 

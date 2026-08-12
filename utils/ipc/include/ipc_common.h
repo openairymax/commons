@@ -4,34 +4,31 @@
 /*
  *
  * @file ipc_common.h
- * @brief 进程间通信模块 - 跨平台 IPC 抽象层
+ * @brief Inter-process communication module: cross-platform IPC abstraction
+ *        layer.
  *
  * @details
- * 本模块提供跨平台的进程间通信功能，包括：
- * - 管道 (Pipe)
- * - 命名管道 (Named Pipe / FIFO)
+ * This module provides cross-platform IPC functionality, including:
+ * - Pipe
+ * - Named Pipe / FIFO
  * - Unix Domain Socket / Windows Named Pipe
- * - 共享内存 (Shared Memory)
- * - 消息队列 (Message Queue)
- * - RPC 调用框架
+ * - Shared Memory
+ * - Message Queue
+ * - RPC call framework
  *
- * 支持平台：
+ * Supported platforms:
  * - Windows (Named Pipe, Mailslot, Shared Memory)
  * - Linux (Unix Socket, POSIX MQ, Shared Memory)
  * - macOS (Unix Socket, POSIX MQ, Shared Memory)
  *
- * 设计原则：
- * - 统一的消息格式和协议
- * - 支持同步和异步通信模式
- * - 内置超时和重试机制
- * - 线程安全设计
+ * Design principles:
+ * - Unified message format and protocol
+ * - Synchronous and asynchronous communication modes
+ * - Built-in timeout and retry mechanisms
+ * - Thread-safe design
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-02
- * @version 0.1.0
- *
- * @note 线程安全：所有公共接口均为线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-4 跨平台一致性原则
+ * @note Thread safety: all public interfaces are thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md E-4 cross-platform consistency
  */
 
 #ifndef AIRY_RT_IPC_COMMON_H
@@ -45,58 +42,41 @@
 extern "C" {
 #endif
 
-/* ============================================================================
- * 类型系统说明
- * ============================================================================
+/*
+ * This module (ipc_common.h) defines two type systems:
  *
- * 本模块（ipc_common.h）定义了两套类型系统：
+ * 1. IPC-module internal types (defined here, ipc_ prefix)
+ *    - Used for the IPC module's internal implementation
+ *    - Provide finer-grained control (e.g. a dedicated IPC_TYPE_NAMED_PIPE)
+ *    - Cover the full IPC feature set (server/client/SHM/MQ)
  *
- * 1. IPC 模块内部类型（本文件定义，使用 ipc_ 前缀）
- *    - 用于 IPC 模块的内部实现
- *    - 提供更细粒度的控制（如 IPC_TYPE_NAMED_PIPE 单独类型）
- *    - 包含完整的 IPC 功能（服务端/客户端/SHM/MQ）
+ * 2. AgentRT unified types (defined in types.h, airy_ prefix)
+ *    - Used for cross-module interface contracts
+ *    - Provide a simplified abstraction layer
+ *    - Stay consistent with the other AgentRT components
  *
- * 2. AgentRT 统一类型（types.h 定义，使用 airy_ 前缀）
- *    - 用于跨模块接口契约
- *    - 提供简化的抽象层
- *    - 与其他 AgentRT 组件保持一致
- *
- * 使用建议：
- * - 在 IPC 模块内部实现中使用 ipc_* 类型
- * - 在跨模块接口中使用 airy_ipc_* 类型
- * - 两者可通过转换函数互转（见文件末尾的转换 API）
+ * Usage:
+ * - Use ipc_* types inside the IPC module implementation
+ * - Use airy_ipc_* types at cross-module interfaces
+ * - The two are interconvertible (see the conversion API at the end)
  */
-
-/* ============================================================================
- * 常量定义
- * ============================================================================ */
-
 
 #define IPC_MAGIC AIRY_IPC_MAGIC
 
-
 #define IPC_DEFAULT_TIMEOUT_MS 5000
-
 
 #define IPC_MAX_MESSAGE_SIZE (1024 * 1024) /* 1MB */
 
 #define IPC_DEFAULT_BUFFER_SIZE 65536
 
-
 #define IPC_MAX_NAME_LEN 256
-
 
 #define IPC_MAX_CONNECTIONS 128
 
-
 #define IPC_MESSAGE_ALIGN 8
 
-/* ============================================================================
- * 类型定义
- * ============================================================================ */
-
 /**
- * @brief IPC 通道类型枚举
+ * @brief IPC channel type enumeration
  */
 typedef enum {
     IPC_TYPE_PIPE = 0,
@@ -108,12 +88,12 @@ typedef enum {
 } ipc_type_t;
 
 /**
- * @brief IPC 模式枚举
+ * @brief IPC mode enumeration
  */
 typedef enum { IPC_MODE_READ = 1, IPC_MODE_WRITE = 2, IPC_MODE_READ_WRITE = 3 } ipc_mode_t;
 
 /**
- * @brief IPC 状态枚举
+ * @brief IPC state enumeration
  */
 typedef enum {
     IPC_STATE_CLOSED = 0,
@@ -124,7 +104,7 @@ typedef enum {
 } ipc_state_t;
 
 /**
- * @brief IPC 消息标志
+ * @brief IPC message flags
  */
 typedef enum {
     IPC_FLAG_NONE = 0,
@@ -136,7 +116,7 @@ typedef enum {
 } ipc_flag_t;
 
 /**
- * @brief IPC 消息类型
+ * @brief IPC message type
  */
 typedef enum {
     IPC_MSG_DATA = 0,
@@ -148,7 +128,7 @@ typedef enum {
 } ipc_msg_type_t;
 
 /**
- * @brief IPC 事件类型
+ * @brief IPC event type
  */
 typedef enum {
     IPC_EVENT_CONNECTED = 1,
@@ -161,7 +141,7 @@ typedef enum {
 } ipc_event_t;
 
 /**
- * @brief IPC 消息头结构
+ * @brief IPC message header structure
  */
 typedef struct {
     uint32_t magic;
@@ -179,7 +159,7 @@ typedef struct {
 } ipc_message_header_t;
 
 /**
- * @brief IPC 消息结构
+ * @brief IPC message structure
  */
 typedef struct {
     ipc_message_header_t header;
@@ -188,7 +168,7 @@ typedef struct {
 } ipc_message_t;
 
 /**
- * @brief IPC 通道配置
+ * @brief IPC channel configuration
  */
 typedef struct {
     ipc_type_t type;
@@ -204,7 +184,7 @@ typedef struct {
 } ipc_config_t;
 
 /**
- * @brief IPC 统计信息
+ * @brief IPC statistics
  */
 typedef struct {
     uint64_t messages_sent;
@@ -218,345 +198,317 @@ typedef struct {
 } ipc_stats_t;
 
 /**
- * @brief IPC 通道句柄（不透明指针）
+ * @brief IPC channel handle (opaque pointer)
  */
 typedef struct ipc_channel ipc_channel_t;
 
 /**
- * @brief IPC 服务端句柄（不透明指针）
+ * @brief IPC server handle (opaque pointer)
  */
 typedef struct ipc_server ipc_server_t;
 
 /**
- * @brief IPC 客户端句柄（不透明指针）
+ * @brief IPC client handle (opaque pointer)
  */
 typedef struct ipc_client ipc_client_t;
 
 /**
- * @brief IPC 事件回调函数类型
- * @param channel 通道句柄
- * @param event 事件类型
- * @param data 事件数据
- * @param data_len 数据长度
- * @param user_data 用户数据
+ * @brief IPC event callback function type
+ * @param channel Channel handle
+ * @param event Event type
+ * @param data Event data
+ * @param data_len Data length
+ * @param user_data User data
  */
 typedef void (*ipc_event_callback_t)(ipc_channel_t *channel, ipc_event_t event, const void *data,
                                      size_t data_len, void *user_data);
 
 /**
- * @brief IPC 消息回调函数类型
- * @param channel 通道句柄
- * @param message 消息结构
- * @param user_data 用户数据
- * @return 返回 0 表示继续处理，非 0 表示停止处理
+ * @brief IPC message callback function type
+ * @param channel Channel handle
+ * @param message Message structure
+ * @param user_data User data
+ * @return 0 to continue processing, non-zero to stop
  */
 typedef int (*ipc_message_callback_t)(ipc_channel_t *channel, const ipc_message_t *message,
                                       void *user_data);
 
-/* ============================================================================
- * 初始化与清理 API
- * ============================================================================ */
-
 /**
- * @brief 初始化 IPC 子系统
- * @return 错误码
+ * @brief Initialize the IPC subsystem
+ * @return Error code
  */
 airy_err_t ipc_init(void);
 
 /**
- * @brief 清理 IPC 子系统
+ * @brief Clean up the IPC subsystem
  */
 void ipc_cleanup(void);
 
-/* ============================================================================
- * 通道管理 API
- * ============================================================================ */
-
 /**
- * @brief 创建默认 IPC 配置
- * @param type 通道类型
- * @return 默认配置结构体
+ * @brief Create a default IPC configuration
+ * @param type Channel type
+ * @return Default configuration structure
  */
 ipc_config_t ipc_create_default_config(ipc_type_t type);
 
 /**
- * @brief 创建 IPC 通道
- * @param config 通道配置
- * @return 通道句柄，失败返回 NULL
- * @ownership 调用者负责调用 ipc_channel_destroy 释放
+ * @brief Create an IPC channel
+ * @param config Channel configuration
+ * @return Channel handle, NULL on failure
+ * @ownership Caller releases with ipc_channel_destroy
  */
 ipc_channel_t *ipc_channel_create(const ipc_config_t *config);
 
 /**
- * @brief 销毁 IPC 通道
- * @param channel 通道句柄
+ * @brief Destroy an IPC channel
+ * @param channel Channel handle
  */
 void ipc_channel_destroy(ipc_channel_t *channel);
 
 /**
- * @brief 打开 IPC 通道
- * @param channel 通道句柄
- * @return 错误码
+ * @brief Open an IPC channel
+ * @param channel Channel handle
+ * @return Error code
  */
 airy_err_t ipc_channel_open(ipc_channel_t *channel);
 
 /**
- * @brief 关闭 IPC 通道
- * @param channel 通道句柄
- * @return 错误码
+ * @brief Close an IPC channel
+ * @param channel Channel handle
+ * @return Error code
  */
 airy_err_t ipc_channel_close(ipc_channel_t *channel);
 
 /**
- * @brief 获取通道状态
- * @param channel 通道句柄
- * @return 通道状态
+ * @brief Get the channel state
+ * @param channel Channel handle
+ * @return Channel state
  */
 ipc_state_t ipc_channel_get_state(const ipc_channel_t *channel);
 
 /**
- * @brief 获取通道名称
- * @param channel 通道句柄
- * @return 通道名称
+ * @brief Get the channel name
+ * @param channel Channel handle
+ * @return Channel name
  */
 const char *ipc_channel_get_name(const ipc_channel_t *channel);
 
 /**
- * @brief 获取通道类型
- * @param channel 通道句柄
- * @return 通道类型
+ * @brief Get the channel type
+ * @param channel Channel handle
+ * @return Channel type
  */
 ipc_type_t ipc_channel_get_type(const ipc_channel_t *channel);
 
 /**
- * @brief 设置通道超时
- * @param channel 通道句柄
- * @param timeout_ms 超时时间（毫秒）
- * @return 错误码
+ * @brief Set the channel timeout
+ * @param channel Channel handle
+ * @param timeout_ms Timeout in milliseconds
+ * @return Error code
  */
 airy_err_t ipc_channel_set_timeout(ipc_channel_t *channel, uint32_t timeout_ms);
 
 /**
- * @brief 设置事件回调
- * @param channel 通道句柄
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 错误码
+ * @brief Set the event callback
+ * @param channel Channel handle
+ * @param callback Callback function
+ * @param user_data User data
+ * @return Error code
  */
 airy_err_t ipc_channel_set_event_callback(ipc_channel_t *channel, ipc_event_callback_t callback,
                                           void *user_data);
 
 /**
- * @brief 获取统计信息
- * @param channel 通道句柄
- * @param stats [out] 统计信息
- * @return 错误码
+ * @brief Get statistics
+ * @param channel Channel handle
+ * @param stats [out] Statistics
+ * @return Error code
  */
 airy_err_t ipc_channel_get_stats(const ipc_channel_t *channel, ipc_stats_t *stats);
 
 /**
- * @brief 重置统计信息
- * @param channel 通道句柄
- * @return 错误码
+ * @brief Reset statistics
+ * @param channel Channel handle
+ * @return Error code
  */
 airy_err_t ipc_channel_reset_stats(ipc_channel_t *channel);
 
-/* ============================================================================
- * 消息发送 API
- * ============================================================================ */
-
 /**
- * @brief 发送消息
- * @param channel 通道句柄
- * @param message 消息结构
- * @return 错误码
+ * @brief Send a message
+ * @param channel Channel handle
+ * @param message Message structure
+ * @return Error code
  */
 airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message);
 
 /**
- * @brief 发送数据（简化接口）
- * @param channel 通道句柄
- * @param data 数据缓冲区
- * @param len 数据长度
- * @param sent [out] 实际发送字节数（可选）
- * @return 错误码
+ * @brief Send data (simplified interface)
+ * @param channel Channel handle
+ * @param data Data buffer
+ * @param len Data length
+ * @param sent [out] Actual bytes sent (optional)
+ * @return Error code
  */
 airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, size_t *sent);
 
 /**
- * @brief 发送请求并等待响应
- * @param channel 通道句柄
- * @param request 请求消息
- * @param response [out] 响应消息
- * @param timeout_ms 超时时间（毫秒）
- * @return 错误码
+ * @brief Send a request and wait for the response
+ * @param channel Channel handle
+ * @param request Request message
+ * @param response [out] Response message
+ * @param timeout_ms Timeout in milliseconds
+ * @return Error code
  */
 airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_message_t *response,
                             uint32_t timeout_ms);
 
 /**
- * @brief 发送广播消息
- * @param channel 通道句柄
- * @param message 消息结构
- * @return 错误码
+ * @brief Send a broadcast message
+ * @param channel Channel handle
+ * @param message Message structure
+ * @return Error code
  */
 airy_err_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message);
 
 /**
- * @brief 发送通知消息
- * @param channel 通道句柄
- * @param notification 通知数据
- * @param len 数据长度
- * @return 错误码
+ * @brief Send a notification message
+ * @param channel Channel handle
+ * @param notification Notification data
+ * @param len Data length
+ * @return Error code
  */
 airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t len);
 
-/* ============================================================================
- * 消息接收 API
- * ============================================================================ */
-
 /**
- * @brief 接收消息
- * @param channel 通道句柄
- * @param message [out] 消息结构
- * @param timeout_ms 超时时间（毫秒）
- * @return 错误码
+ * @brief Receive a message
+ * @param channel Channel handle
+ * @param message [out] Message structure
+ * @param timeout_ms Timeout in milliseconds
+ * @return Error code
  */
 airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms);
 
 /**
- * @brief 接收数据（简化接口）
- * @param channel 通道句柄
- * @param buffer 接收缓冲区
- * @param len 缓冲区长度
- * @param received [out] 实际接收字节数
- * @return 错误码
+ * @brief Receive data (simplified interface)
+ * @param channel Channel handle
+ * @param buffer Receive buffer
+ * @param len Buffer length
+ * @param received [out] Actual bytes received
+ * @return Error code
  */
 airy_err_t ipc_receive_data(ipc_channel_t *channel, void *buffer, size_t len, size_t *received);
 
 /**
- * @brief 尝试接收消息（非阻塞）
- * @param channel 通道句柄
- * @param message [out] 消息结构
- * @return 错误码，无消息时返回 AIRY_EBUSY
+ * @brief Try to receive a message (non-blocking)
+ * @param channel Channel handle
+ * @param message [out] Message structure
+ * @return Error code, AIRY_EBUSY if no message
  */
 airy_err_t ipc_try_receive(ipc_channel_t *channel, ipc_message_t *message);
 
 /**
- * @brief 设置消息回调
- * @param channel 通道句柄
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 错误码
+ * @brief Set the message callback
+ * @param channel Channel handle
+ * @param callback Callback function
+ * @param user_data User data
+ * @return Error code
  */
 airy_err_t ipc_set_message_callback(ipc_channel_t *channel, ipc_message_callback_t callback,
                                     void *user_data);
 
-/* ============================================================================
- * 服务端 API
- * ============================================================================ */
-
 /**
- * @brief 创建 IPC 服务端
- * @param config 服务端配置
- * @return 服务端句柄，失败返回 NULL
+ * @brief Create an IPC server
+ * @param config Server configuration
+ * @return Server handle, NULL on failure
  */
 ipc_server_t *ipc_server_create(const ipc_config_t *config);
 
 /**
- * @brief 销毁 IPC 服务端
- * @param server 服务端句柄
+ * @brief Destroy an IPC server
+ * @param server Server handle
  */
 void ipc_server_destroy(ipc_server_t *server);
 
 /**
- * @brief 启动 IPC 服务端
- * @param server 服务端句柄
- * @return 错误码
+ * @brief Start an IPC server
+ * @param server Server handle
+ * @return Error code
  */
 airy_err_t ipc_server_start(ipc_server_t *server);
 
 /**
- * @brief 停止 IPC 服务端
- * @param server 服务端句柄
- * @return 错误码
+ * @brief Stop an IPC server
+ * @param server Server handle
+ * @return Error code
  */
 airy_err_t ipc_server_stop(ipc_server_t *server);
 
 /**
- * @brief 接受客户端连接
- * @param server 服务端句柄
- * @param timeout_ms 超时时间（毫秒）
- * @return 客户端通道句柄，失败返回 NULL
- * @ownership 调用者负责调用 ipc_channel_destroy 释放
+ * @brief Accept a client connection
+ * @param server Server handle
+ * @param timeout_ms Timeout in milliseconds
+ * @return Client channel handle, NULL on failure
+ * @ownership Caller releases with ipc_channel_destroy
  */
 ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms);
 
 /**
- * @brief 获取服务端连接数
- * @param server 服务端句柄
- * @return 当前连接数
+ * @brief Get the server connection count
+ * @param server Server handle
+ * @return Current connection count
  */
 size_t ipc_server_connection_count(const ipc_server_t *server);
 
 /**
- * @brief 广播消息给所有客户端
- * @param server 服务端句柄
- * @param message 消息结构
- * @return 错误码
+ * @brief Broadcast a message to all clients
+ * @param server Server handle
+ * @param message Message structure
+ * @return Error code
  */
 airy_err_t ipc_server_broadcast(ipc_server_t *server, const ipc_message_t *message);
 
-/* ============================================================================
- * 客户端 API
- * ============================================================================ */
-
 /**
- * @brief 创建 IPC 客户端
- * @param config 客户端配置
- * @return 客户端句柄，失败返回 NULL
+ * @brief Create an IPC client
+ * @param config Client configuration
+ * @return Client handle, NULL on failure
  */
 ipc_client_t *ipc_client_create(const ipc_config_t *config);
 
 /**
- * @brief 销毁 IPC 客户端
- * @param client 客户端句柄
+ * @brief Destroy an IPC client
+ * @param client Client handle
  */
 void ipc_client_destroy(ipc_client_t *client);
 
 /**
- * @brief 连接到服务端
- * @param client 客户端句柄
- * @param timeout_ms 超时时间（毫秒）
- * @return 错误码
+ * @brief Connect to a server
+ * @param client Client handle
+ * @param timeout_ms Timeout in milliseconds
+ * @return Error code
  */
 airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms);
 
 /**
- * @brief 断开连接
- * @param client 客户端句柄
- * @return 错误码
+ * @brief Disconnect
+ * @param client Client handle
+ * @return Error code
  */
 airy_err_t ipc_client_disconnect(ipc_client_t *client);
 
 /**
- * @brief 获取客户端通道
- * @param client 客户端句柄
- * @return 通道句柄
+ * @brief Get the client channel
+ * @param client Client handle
+ * @return Channel handle
  */
 ipc_channel_t *ipc_client_get_channel(ipc_client_t *client);
 
-/* ============================================================================
- * 共享内存 API
- * ============================================================================ */
-
 /**
- * @brief 共享内存句柄
+ * @brief Shared memory handle
  */
 typedef struct ipc_shm ipc_shm_t;
 
 /**
- * @brief 共享内存配置
+ * @brief Shared memory configuration
  */
 typedef struct {
     const char *name;
@@ -568,57 +520,53 @@ typedef struct {
 } ipc_shm_config_t;
 
 /**
- * @brief 创建共享内存
- * @param config 共享内存配置
- * @return 共享内存句柄，失败返回 NULL
+ * @brief Create shared memory
+ * @param config Shared memory configuration
+ * @return Shared memory handle, NULL on failure
  */
 ipc_shm_t *ipc_shm_create(const ipc_shm_config_t *config);
 
 /**
- * @brief 销毁共享内存
- * @param shm 共享内存句柄
+ * @brief Destroy shared memory
+ * @param shm Shared memory handle
  */
 void ipc_shm_destroy(ipc_shm_t *shm);
 
 /**
- * @brief 映射共享内存到进程地址空间
- * @param shm 共享内存句柄
- * @return 映射地址，失败返回 NULL
+ * @brief Map shared memory into the process address space
+ * @param shm Shared memory handle
+ * @return Mapped address, NULL on failure
  */
 void *ipc_shm_map(ipc_shm_t *shm);
 
 /**
- * @brief 取消映射共享内存
- * @param shm 共享内存句柄
- * @return 错误码
+ * @brief Unmap shared memory
+ * @param shm Shared memory handle
+ * @return Error code
  */
 airy_err_t ipc_shm_unmap(ipc_shm_t *shm);
 
 /**
- * @brief 获取共享内存大小
- * @param shm 共享内存句柄
- * @return 共享内存大小
+ * @brief Get the shared memory size
+ * @param shm Shared memory handle
+ * @return Shared memory size
  */
 size_t ipc_shm_get_size(const ipc_shm_t *shm);
 
 /**
- * @brief 同步共享内存
- * @param shm 共享内存句柄
- * @return 错误码
+ * @brief Synchronize shared memory
+ * @param shm Shared memory handle
+ * @return Error code
  */
 airy_err_t ipc_shm_sync(ipc_shm_t *shm);
 
-/* ============================================================================
- * 消息队列 API
- * ============================================================================ */
-
 /**
- * @brief 消息队列句柄
+ * @brief Message queue handle
  */
 typedef struct ipc_mq ipc_mq_t;
 
 /**
- * @brief 消息队列配置
+ * @brief Message queue configuration
  */
 typedef struct {
     const char *name;
@@ -630,144 +578,140 @@ typedef struct {
 } ipc_mq_config_t;
 
 /**
- * @brief 创建消息队列
- * @param config 消息队列配置
- * @return 消息队列句柄，失败返回 NULL
+ * @brief Create a message queue
+ * @param config Message queue configuration
+ * @return Message queue handle, NULL on failure
  */
 ipc_mq_t *ipc_mq_create(const ipc_mq_config_t *config);
 
 /**
- * @brief 销毁消息队列
- * @param mq 消息队列句柄
+ * @brief Destroy a message queue
+ * @param mq Message queue handle
  */
 void ipc_mq_destroy(ipc_mq_t *mq);
 
 /**
- * @brief 发送消息到队列
- * @param mq 消息队列句柄
- * @param data 消息数据
- * @param len 数据长度
- * @param priority 优先级（0 为最低）
- * @return 错误码
+ * @brief Send a message to the queue
+ * @param mq Message queue handle
+ * @param data Message data
+ * @param len Data length
+ * @param priority Priority (0 is lowest)
+ * @return Error code
  */
 airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int priority);
 
 /**
- * @brief 从队列接收消息
- * @param mq 消息队列句柄
- * @param buffer 接收缓冲区
- * @param len 缓冲区长度
- * @param received [out] 实际接收字节数
- * @param priority [out] 消息优先级（可选）
- * @param timeout_ms 超时时间
- * @return 错误码
+ * @brief Receive a message from the queue
+ * @param mq Message queue handle
+ * @param buffer Receive buffer
+ * @param len Buffer length
+ * @param received [out] Actual bytes received
+ * @param priority [out] Message priority (optional)
+ * @param timeout_ms Timeout
+ * @return Error code
  */
 airy_err_t ipc_mq_receive(ipc_mq_t *mq, void *buffer, size_t len, size_t *received,
                           unsigned int *priority, uint32_t timeout_ms);
 
 /**
- * @brief 获取队列当前消息数
- * @param mq 消息队列句柄
- * @return 消息数量
+ * @brief Get the current message count of the queue
+ * @param mq Message queue handle
+ * @return Message count
  */
 size_t ipc_mq_count(const ipc_mq_t *mq);
 
 /**
- * @brief 清空消息队列
- * @param mq 消息队列句柄
- * @return 错误码
+ * @brief Clear the message queue
+ * @param mq Message queue handle
+ * @return Error code
  */
 airy_err_t ipc_mq_clear(ipc_mq_t *mq);
 
-/* ============================================================================
- * 消息辅助函数
- * ============================================================================ */
-
 /**
- * @brief 创建消息
- * @param type 消息类型
- * @param payload 负载数据
- * @param payload_len 负载长度
- * @return 消息结构，失败返回 NULL
- * @ownership 调用者负责调用 ipc_message_free 释放
+ * @brief Create a message
+ * @param type Message type
+ * @param payload Payload data
+ * @param payload_len Payload length
+ * @return Message structure, NULL on failure
+ * @ownership Caller releases with ipc_message_free
  */
 ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size_t payload_len);
 
 /**
- * @brief 释放消息
- * @param message 消息结构
+ * @brief Free a message
+ * @param message Message structure
  */
 void ipc_message_free(ipc_message_t *message);
 
 /**
- * @brief 复制消息
- * @param message 源消息
- * @return 新消息，失败返回 NULL
+ * @brief Clone a message
+ * @param message Source message
+ * @return New message, NULL on failure
  */
 ipc_message_t *ipc_message_clone(const ipc_message_t *message);
 
 /**
- * @brief 计算消息校验和
- * @param message 消息结构
- * @return CRC32 校验和
+ * @brief Compute the message checksum
+ * @param message Message structure
+ * @return CRC32 checksum
  */
 uint32_t ipc_message_checksum(const ipc_message_t *message);
 
 /**
- * @brief 验证消息校验和
- * @param message 消息结构
- * @return true 校验通过，false 校验失败
+ * @brief Verify the message checksum
+ * @param message Message structure
+ * @return true if valid, false if invalid
  */
 bool ipc_message_verify(const ipc_message_t *message);
 
 /**
- * @brief 序列化消息为字节流
- * @param message 消息结构
- * @param buffer 输出缓冲区
- * @param buffer_len 缓冲区长度
- * @param written [out] 实际写入字节数
- * @return 错误码
+ * @brief Serialize a message into a byte stream
+ * @param message Message structure
+ * @param buffer Output buffer
+ * @param buffer_len Buffer length
+ * @param written [out] Actual bytes written
+ * @return Error code
  */
 airy_err_t ipc_message_serialize(const ipc_message_t *message, void *buffer, size_t buffer_len,
                                  size_t *written);
 
 /**
- * @brief 从字节流反序列化消息
- * @param buffer 输入缓冲区
- * @param len 缓冲区长度
- * @param message [out] 消息结构
- * @return 错误码
+ * @brief Deserialize a message from a byte stream
+ * @param buffer Input buffer
+ * @param len Buffer length
+ * @param message [out] Message structure
+ * @return Error code
  */
 airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t *message);
 
-/* ============================================================================
- * RPC 通道 API (基于传输通道的远程过程调用)
- * ============================================================================ */
+/*
+ * RPC channel API (remote procedure call over a transport channel)
+ */
 
 /**
- * @brief RPC 方法处理函数类型
- * @param request 请求数据
- * @param request_len 请求长度
- * @param response [out] 响应缓冲区
- * @param response_max [in/out] 响应缓冲区大小 / 实际响应长度
- * @param user_data 用户数据
- * @return 错误码
+ * @brief RPC method handler function type
+ * @param request Request data
+ * @param request_len Request length
+ * @param response [out] Response buffer
+ * @param response_max [in/out] Response buffer size / actual response length
+ * @param user_data User data
+ * @return Error code
  */
 typedef airy_err_t (*rpc_method_handler_t)(const void *request, size_t request_len, void *response,
                                            size_t *response_max, void *user_data);
 
 /**
- * @brief RPC 服务端句柄
+ * @brief RPC server handle
  */
 typedef struct ipc_rpc_server ipc_rpc_server_t;
 
 /**
- * @brief RPC 客户端句柄
+ * @brief RPC client handle
  */
 typedef struct ipc_rpc_client ipc_rpc_client_t;
 
 /**
- * @brief RPC 方法注册信息
+ * @brief RPC method registration information
  */
 typedef struct {
     const char *method_name;
@@ -776,7 +720,7 @@ typedef struct {
 } ipc_rpc_method_t;
 
 /**
- * @brief RPC 服务端配置
+ * @brief RPC server configuration
  */
 typedef struct {
     ipc_channel_t *transport;
@@ -788,42 +732,43 @@ typedef struct {
 } ipc_rpc_server_config_t;
 
 /**
- * @brief 创建 RPC 服务端
- * @param config 服务端配置
- * @return RPC 服务端句柄，失败返回 NULL
+ * @brief Create an RPC server
+ * @param config Server configuration
+ * @return RPC server handle, NULL on failure
  */
 ipc_rpc_server_t *ipc_rpc_server_create(const ipc_rpc_server_config_t *config);
 
 /**
- * @brief 销毁 RPC 服务端
- * @param server RPC 服务端句柄
+ * @brief Destroy an RPC server
+ * @param server RPC server handle
  */
 void ipc_rpc_server_destroy(ipc_rpc_server_t *server);
 
 /**
- * @brief 启动 RPC 服务端（开始处理请求）
- * @param server RPC 服务端句柄
- * @return 错误码
+ * @brief Start an RPC server (begins processing requests)
+ * @param server RPC server handle
+ * @return Error code
  */
 airy_err_t ipc_rpc_server_start(ipc_rpc_server_t *server);
 
 /**
- * @brief 停止 RPC 服务端
- * @param server RPC 服务端句柄
- * @return 错误码
+ * @brief Stop an RPC server
+ * @param server RPC server handle
+ * @return Error code
  */
 airy_err_t ipc_rpc_server_stop(ipc_rpc_server_t *server);
 
 /**
- * @brief 处理单个 RPC 请求（由事件循环调用）
- * @param server RPC 服务端句柄
- * @param timeout_ms 超时时间
- * @return AIRY_SUCCESS 处理成功，AIRY_ETIMEDOUT 无请求，其他为错误
+ * @brief Process a single RPC request (called by the event loop)
+ * @param server RPC server handle
+ * @param timeout_ms Timeout
+ * @return AIRY_SUCCESS on success, AIRY_ETIMEDOUT if no request, other
+ *         values are errors
  */
 airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms);
 
 /**
- * @brief RPC 客户端配置
+ * @brief RPC client configuration
  */
 typedef struct {
     ipc_channel_t *transport;
@@ -831,82 +776,78 @@ typedef struct {
 } ipc_rpc_client_config_t;
 
 /**
- * @brief 创建 RPC 客户端
- * @param config 客户端配置
- * @return RPC 客户端句柄，失败返回 NULL
+ * @brief Create an RPC client
+ * @param config Client configuration
+ * @return RPC client handle, NULL on failure
  */
 ipc_rpc_client_t *ipc_rpc_client_create(const ipc_rpc_client_config_t *config);
 
 /**
- * @brief 销毁 RPC 客户端
- * @param client RPC 客户端句柄
+ * @brief Destroy an RPC client
+ * @param client RPC client handle
  */
 void ipc_rpc_client_destroy(ipc_rpc_client_t *client);
 
 /**
- * @brief 同步 RPC 调用
- * @param client RPC 客户端句柄
- * @param method_name 方法名称
- * @param request 请求数据
- * @param request_len 请求长度
- * @param response [out] 响应缓冲区（调用者分配）
- * @param response_max [in] 响应缓冲区最大大小
- * @param response_len [out] 实际响应长度
- * @return 错误码
+ * @brief Synchronous RPC call
+ * @param client RPC client handle
+ * @param method_name Method name
+ * @param request Request data
+ * @param request_len Request length
+ * @param response [out] Response buffer (caller-allocated)
+ * @param response_max [in] Maximum response buffer size
+ * @param response_len [out] Actual response length
+ * @return Error code
  */
 airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, const void *request,
                              size_t request_len, void *response, size_t response_max,
                              size_t *response_len);
 
 /**
- * @brief 注册单个 RPC 方法（服务端运行时添加）
- * @param server RPC 服务端句柄
- * @param method 方法注册信息
- * @return 错误码
+ * @brief Register a single RPC method (added at runtime on the server)
+ * @param server RPC server handle
+ * @param method Method registration information
+ * @return Error code
  */
 airy_err_t ipc_rpc_server_register_method(ipc_rpc_server_t *server, const ipc_rpc_method_t *method);
 
 /**
- * @brief 查找已注册的 RPC 方法
- * @param server RPC 服务端句柄
- * @param method_name 方法名称
- * @return 方法处理函数，未找到返回 NULL
+ * @brief Find a registered RPC method
+ * @param server RPC server handle
+ * @param method_name Method name
+ * @return Method handler, NULL if not found
  */
 rpc_method_handler_t ipc_rpc_server_find_method(ipc_rpc_server_t *server, const char *method_name);
 
-/* ============================================================================
- * 工具函数
- * ============================================================================ */
-
 /**
- * @brief 获取错误消息
- * @param channel 通道句柄
- * @return 错误消息字符串
+ * @brief Get the error message
+ * @param channel Channel handle
+ * @return Error message string
  */
 const char *ipc_get_error_message(const ipc_channel_t *channel);
 
 /**
- * @brief 检查通道是否可用
- * @param channel 通道句柄
- * @return true 可用，false 不可用
+ * @brief Check whether a channel is usable
+ * @param channel Channel handle
+ * @return true if usable, false otherwise
  */
 bool ipc_is_valid(const ipc_channel_t *channel);
 
 /**
- * @brief 刷新通道缓冲区
- * @param channel 通道句柄
- * @return 错误码
+ * @brief Flush the channel buffer
+ * @param channel Channel handle
+ * @return Error code
  */
 airy_err_t ipc_flush(ipc_channel_t *channel);
 
-/* ============================================================================
- * 类型转换 API（IPC 内部类型 ↔ AgentRT 统一类型）
- * ============================================================================ */
+/*
+ * Type conversion API (IPC internal types <-> AgentRT unified types)
+ */
 
 /**
- * @brief 将 AgentRT 统一 IPC 类型转换为 IPC 模块内部类型
- * @param airy_type AgentRT 统一 IPC 类型
- * @return IPC 模块内部类型
+ * @brief Convert an AgentRT unified IPC type to an IPC-module internal type
+ * @param airy_type AgentRT unified IPC type
+ * @return IPC-module internal type
  */
 static inline ipc_type_t ipc_type_from_agentrt(airy_ipc_type_t airy_type)
 {
@@ -927,9 +868,9 @@ static inline ipc_type_t ipc_type_from_agentrt(airy_ipc_type_t airy_type)
 }
 
 /**
- * @brief 将 IPC 模块内部类型转换为 AgentRT 统一 IPC 类型
- * @param ipc_type IPC 模块内部类型
- * @return AgentRT 统一 IPC 类型
+ * @brief Convert an IPC-module internal type to an AgentRT unified IPC type
+ * @param ipc_type IPC-module internal type
+ * @return AgentRT unified IPC type
  */
 static inline airy_ipc_type_t ipc_type_to_agentrt(ipc_type_t ipc_type)
 {

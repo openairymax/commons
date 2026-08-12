@@ -73,8 +73,10 @@ int airy_platform_thread_join(airy_thread_t thread, void **retval)
 
 int airy_platform_thread_detach(airy_thread_t thread)
 {
-    /* Windows 无 pthread_detach 等价语义：关闭线程句柄即放弃对线程的
-     * 引用，线程继续运行，结束后由系统自动回收资源。detach 后不得再 join。 */
+    /* Windows has no pthread_detach equivalent: closing the thread handle
+     * drops our reference; the thread keeps running and its resources are
+     * reclaimed by the system when it exits. After detach the thread must
+     * not be joined. */
     if (thread != NULL) {
         CloseHandle(thread);
     }

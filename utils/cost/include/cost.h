@@ -3,7 +3,7 @@
 
 /**
  * @file cost.h
- * @brief 成本预估与控制
+ * @brief Cost estimation and control.
  */
 
 #ifndef AIRY_RT_UTILS_COST_H
@@ -19,25 +19,26 @@ extern "C" {
 typedef struct airy_cost_estimator airy_cost_estimator_t;
 
 /**
- * @brief 创建成本预估器
- * @param config_path 配置文件路径（YAML），若为 NULL 则使用内置默认
- * @return 预估器句柄，失败返回 NULL
+ * @brief Create a cost estimator
+ * @param config_path Config file path (YAML); NULL for the built-in
+ *                    defaults
+ * @return Estimator handle, NULL on failure
  */
 airy_cost_estimator_t *airy_cost_estimator_create(const char *config_path);
 
 /* From data intelligence emerges. by spharx */
 /**
- * @brief 销毁预估器
+ * @brief Destroy an estimator
  */
 void airy_cost_estimator_destroy(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 预估一次调用成本
- * @param estimator 预估器
- * @param model_name 模型名称
- * @param input_tokens 输入Token数
- * @param output_tokens 输出Token数
- * @return 成本（美元），失败返回 -1.0
+ * @brief Estimate the cost of one call
+ * @param estimator Estimator
+ * @param model_name Model name
+ * @param input_tokens Input token count
+ * @param output_tokens Output token count
+ * @return Cost (USD), -1.0 on failure
  */
 double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char *model_name,
                                     size_t input_tokens, size_t output_tokens);
@@ -45,131 +46,131 @@ double airy_cost_estimator_estimate(airy_cost_estimator_t *estimator, const char
 typedef struct airy_budget_controller airy_budget_controller_t;
 
 /**
- * @brief 创建预算控制器
- * @param max_cost_usd 最大成本（美元）
- * @param period_seconds 周期（秒）
- * @return 控制器句柄，失败返回 NULL
+ * @brief Create a budget controller
+ * @param max_cost_usd Maximum cost (USD)
+ * @param period_seconds Period (seconds)
+ * @return Controller handle, NULL on failure
  */
 airy_budget_controller_t *airy_budget_controller_create(double max_cost_usd,
                                                         uint32_t period_seconds);
 
 /**
- * @brief 销毁控制器
+ * @brief Destroy a controller
  */
 void airy_budget_controller_destroy(airy_budget_controller_t *controller);
 
 /**
- * @brief 消耗成本
- * @param controller 控制器
- * @param cost_usd 成本
- * @return 0 成功，-1 超出预算
+ * @brief Consume cost
+ * @param controller Controller
+ * @param cost_usd Cost
+ * @return 0 on success, -1 if over budget
  */
 int airy_budget_controller_consume(airy_budget_controller_t *controller, double cost_usd);
 
 /**
- * @brief 获取剩余预算
- * @return 剩余成本（美元）
+ * @brief Get the remaining budget
+ * @return Remaining cost (USD)
  */
 double airy_budget_controller_remaining(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取已消耗成本
- * @param controller 控制器
- * @return 已消耗成本（美元）
+ * @brief Get the consumed cost
+ * @param controller Controller
+ * @return Consumed cost (USD)
  */
 double airy_budget_controller_consumed(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取周期内消耗
- * @param controller 控制器
- * @return 周期内消耗成本（美元）
+ * @brief Get the consumption within the current period
+ * @param controller Controller
+ * @return Period consumption (USD)
  */
 double airy_budget_controller_period_consumed(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取请求计数
- * @param controller 控制器
- * @return 请求计数
+ * @brief Get the request count
+ * @param controller Controller
+ * @return Request count
  */
 uint64_t airy_budget_controller_requests(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取拒绝计数
- * @param controller 控制器
- * @return 拒绝计数
+ * @brief Get the denied count
+ * @param controller Controller
+ * @return Denied count
  */
 uint64_t airy_budget_controller_denied(airy_budget_controller_t *controller);
 
 /**
- * @brief 设置警告阈值
- * @param controller 控制器
- * @param threshold 阈值（0.0-1.0）
- * @return 0 成功，-1 失败
+ * @brief Set the warning threshold
+ * @param controller Controller
+ * @param threshold Threshold (0.0-1.0)
+ * @return 0 on success, -1 on failure
  */
 int airy_budget_controller_set_warning(airy_budget_controller_t *controller, double threshold);
 
 /**
- * @brief 重置周期
- * @param controller 控制器
- * @return 0 成功，-1 失败
+ * @brief Reset the period
+ * @param controller Controller
+ * @return 0 on success, -1 on failure
  */
 int airy_budget_controller_reset_period(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取平均成本
- * @param controller 控制器
- * @return 平均成本（美元）
+ * @brief Get the average cost
+ * @param controller Controller
+ * @return Average cost (USD)
  */
 double airy_budget_controller_average(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取预算状态
- * @param controller 控制器
- * @return 0=正常，1=警告，2=超限，-1=失败
+ * @brief Get the budget status
+ * @param controller Controller
+ * @return 0=normal, 1=warning, 2=over limit, -1=failure
  */
 int airy_budget_controller_get_status(airy_budget_controller_t *controller);
 
 /**
- * @brief 获取累计总成本
- * @param estimator 预估器
- * @return 累计成本（美元）
+ * @brief Get the cumulative total cost
+ * @param estimator Estimator
+ * @return Cumulative cost (USD)
  */
 double airy_cost_estimator_get_total(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 获取累计输入Token数
- * @param estimator 预估器
- * @return 累计输入Token数
+ * @brief Get the cumulative input token count
+ * @param estimator Estimator
+ * @return Cumulative input token count
  */
 size_t airy_cost_estimator_get_input_tokens(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 获取累计输出Token数
- * @param estimator 预估器
- * @return 累计输出Token数
+ * @brief Get the cumulative output token count
+ * @param estimator Estimator
+ * @return Cumulative output token count
  */
 size_t airy_cost_estimator_get_output_tokens(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 获取请求计数
- * @param estimator 预估器
- * @return 请求计数
+ * @brief Get the request count
+ * @param estimator Estimator
+ * @return Request count
  */
 uint64_t airy_cost_estimator_get_request_count(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 重置统计
- * @param estimator 预估器
+ * @brief Reset statistics
+ * @param estimator Estimator
  */
 void airy_cost_estimator_reset(airy_cost_estimator_t *estimator);
 
 /**
- * @brief 添加自定义模型配置
- * @param estimator 预估器
- * @param model_name 模型名称
- * @param input_cost_per_1k 输入成本（美元/1K Token）
- * @param output_cost_per_1k 输出成本（美元/1K Token）
- * @return 0 成功，-1 失败
+ * @brief Add a custom model configuration
+ * @param estimator Estimator
+ * @param model_name Model name
+ * @param input_cost_per_1k Input cost (USD per 1K tokens)
+ * @param output_cost_per_1k Output cost (USD per 1K tokens)
+ * @return 0 on success, -1 on failure
  */
 int airy_cost_estimator_add_model(airy_cost_estimator_t *estimator, const char *model_name,
                                   double input_cost_per_1k, double output_cost_per_1k);

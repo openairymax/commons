@@ -3,11 +3,11 @@
 
 /**
  * @file memory_pool.h
- * @brief 统一内存管理模块 - 内存池管理
+ * @brief Unified memory management module: memory pool management.
  *
- * 提供高效的内存池管理功能，减少内存碎片和分配开销。
- * 适用于频繁分配和释放相同大小内存块的场景。
- *
+ * Provides efficient memory pool management, reducing memory fragmentation
+ * and allocation overhead. Suitable for scenarios that frequently allocate
+ * and free same-size memory blocks.
  */
 
 #ifndef AIRY_RT_MEMORY_POOL_H
@@ -21,12 +21,12 @@ extern "C" {
 #endif
 
 /**
- * @defgroup memory_pool_api 内存池API
+ * @defgroup memory_pool_api Memory pool API
  * @{
  */
 
 /**
- * @brief 内存池选项
+ * @brief Memory pool options
  */
 typedef struct {
     size_t block_size;
@@ -38,12 +38,12 @@ typedef struct {
 } memory_pool_options_t;
 
 /**
- * @brief 内存池句柄（不透明类型）
+ * @brief Memory pool handle (opaque type)
  */
 typedef struct memory_pool memory_pool_t;
 
 /**
- * @brief 内存池统计信息
+ * @brief Memory pool statistics
  */
 typedef struct {
     size_t block_size;
@@ -59,74 +59,79 @@ typedef struct {
 } memory_pool_stats_t;
 
 /**
- * @brief 创建内存池
+ * @brief Create a memory pool
  *
- * @ownership alloc — 返回的内存池句柄由调用者持有，需通过 memory_pool_destroy 释放
+ * @ownership alloc -- the returned pool handle is caller-owned; release
+ *                     with memory_pool_destroy
  *
- * @param[in] options 内存池选项（不能为NULL）
- * @return 成功返回内存池句柄，失败返回NULL
+ * @param[in] options Memory pool options (must not be NULL)
+ * @return Pool handle on success, NULL on failure
  *
- * @note 内存池创建后会预分配initial_blocks个内存块
+ * @note The pool preallocates initial_blocks blocks on creation
  */
 memory_pool_t *memory_pool_create(const memory_pool_options_t *options);
 
 /**
- * @brief 销毁内存池
+ * @brief Destroy a memory pool
  *
- * @ownership release — 释放 pool 句柄的所有权，销毁后 pool 失效
+ * @ownership release -- releases ownership of the pool handle; pool is
+ *                       invalid after destruction
  *
- * @param[in] pool 内存池句柄
+ * @param[in] pool Memory pool handle
  *
- * @note 如果池中还有未释放的内存块，会输出警告信息
- * @note 如果启用了内存调试，会检查内存泄漏
+ * @note Warns if the pool still contains unreleased blocks
+ * @note Checks for leaks if memory debugging is enabled
  */
 void memory_pool_destroy(memory_pool_t *pool);
 
 /**
- * @brief 从内存池分配内存块
+ * @brief Allocate a block from the memory pool
  *
- * @ownership alloc — 返回的内存块由调用者持有，需通过 memory_pool_free 归还
+ * @ownership alloc -- the returned block is caller-owned; return it with
+ *                     memory_pool_free
  *
- * @param[in] pool 内存池句柄
- * @return 成功返回内存块指针，失败返回NULL
+ * @param[in] pool Memory pool handle
+ * @return Block pointer on success, NULL on failure
  *
- * @note 分配的内存块大小为创建时指定的block_size
- * @note 分配的内存块未初始化
+ * @note The block size is the block_size specified at creation
+ * @note The allocated block is uninitialized
  */
 void *memory_pool_alloc(memory_pool_t *pool);
 
 /**
- * @brief 从内存池分配并清零内存块
+ * @brief Allocate and zero a block from the memory pool
  *
- * @ownership alloc — 返回的内存块由调用者持有，需通过 memory_pool_free 归还
+ * @ownership alloc -- the returned block is caller-owned; return it with
+ *                     memory_pool_free
  *
- * @param[in] pool 内存池句柄
- * @return 成功返回内存块指针，失败返回NULL
+ * @param[in] pool Memory pool handle
+ * @return Block pointer on success, NULL on failure
  *
- * @note 分配的内存块会被清零
+ * @note The allocated block is zeroed
  */
 void *memory_pool_calloc(memory_pool_t *pool);
 
 /**
- * @brief 释放内存块回内存池
+ * @brief Return a block to the memory pool
  *
- * @ownership release — 释放 ptr 的所有权，调用后 ptr 失效
+ * @ownership release -- releases ownership of ptr; ptr is invalid after
+ *                       the call
  *
- * @param[in] pool 内存池句柄
- * @param[in] ptr 要释放的内存块指针
+ * @param[in] pool Memory pool handle
+ * @param[in] ptr Block pointer to release
  *
- * @note 如果ptr为NULL，函数无操作
- * @note 只能释放从同一内存池分配的内存块
+ * @note No-op if ptr is NULL
+ * @note Only blocks allocated from the same pool may be released
  */
 void memory_pool_free(memory_pool_t *pool, void *ptr);
 
 /**
- * @brief 安全释放内存块并将指针置为NULL
+ * @brief Safely release a block and set the pointer to NULL
  *
- * @param[in] pool 内存池句柄
- * @param[inout] ptr_ptr 指向内存块指针的指针
+ * @param[in] pool Memory pool handle
+ * @param[inout] ptr_ptr Pointer to the block pointer
  *
- * @note 释放后会自动将指针置为NULL
+ * @note Automatically sets the pointer to NULL after release
  */
 #define MEMORY_POOL_FREE_SAFE(pool, ptr_ptr)           \
     do {                                               \
@@ -137,162 +142,172 @@ void memory_pool_free(memory_pool_t *pool, void *ptr);
     } while (0)
 
 /**
- * @brief 获取内存池统计信息
+ * @brief Get memory pool statistics
  *
- * @param[in] pool 内存池句柄
- * @param[out] stats 统计信息输出缓冲区
- * @return 成功返回true，失败返回false
+ * @param[in] pool Memory pool handle
+ * @param[out] stats Statistics output buffer
+ * @return true on success, false on failure
  */
 bool memory_pool_get_stats(memory_pool_t *pool, memory_pool_stats_t *stats);
 
 /**
- * @brief 重置内存池统计信息
+ * @brief Reset memory pool statistics
  *
- * @param[in] pool 内存池句柄
+ * @param[in] pool Memory pool handle
  */
 void memory_pool_reset_stats(memory_pool_t *pool);
 
 /**
- * @brief 预分配内存块
+ * @brief Preallocate blocks
  *
- * @param[in] pool 内存池句柄
- * @param[in] count 要预分配的块数
- * @return 成功返回true，失败返回false
+ * @param[in] pool Memory pool handle
+ * @param[in] count Number of blocks to preallocate
+ * @return true on success, false on failure
  *
- * @note 预分配可以提高后续分配的性能
+ * @note Preallocation improves the performance of subsequent allocations
  */
 bool memory_pool_prealloc(memory_pool_t *pool, size_t count);
 
 /**
- * @brief 清空内存池中的所有空闲块
+ * @brief Clear all free blocks in the pool
  *
- * @param[in] pool 内存池句柄
+ * @param[in] pool Memory pool handle
  *
- * @note 只清空空闲块，已分配块不受影响
- * @note 调用后，内存池的大小会减少到只包含已分配块
+ * @note Only free blocks are cleared; allocated blocks are unaffected
+ * @note After the call, the pool shrinks to contain only allocated blocks
  */
 void memory_pool_clear(memory_pool_t *pool);
 
 /**
- * @brief 检查内存池是否为空
+ * @brief Check whether the pool is empty
  *
- * @param[in] pool 内存池句柄
- * @return 如果内存池中没有已分配块，返回true
+ * @param[in] pool Memory pool handle
+ * @return true if the pool has no allocated blocks
  */
 bool memory_pool_is_empty(memory_pool_t *pool);
 
 /**
- * @brief 检查内存池是否已满
+ * @brief Check whether the pool is full
  *
- * @param[in] pool 内存池句柄
- * @return 如果内存池已满（达到max_blocks限制），返回true
+ * @param[in] pool Memory pool handle
+ * @return true if the pool is full (reached the max_blocks limit)
  */
 bool memory_pool_is_full(memory_pool_t *pool);
 
 /**
- * @brief 扩展内存池
+ * @brief Expand the memory pool
  *
- * @param[in] pool 内存池句柄
- * @param[in] additional_blocks 要添加的块数
- * @return 成功返回true，失败返回false
+ * @param[in] pool Memory pool handle
+ * @param[in] additional_blocks Number of blocks to add
+ * @return true on success, false on failure
  */
 bool memory_pool_expand(memory_pool_t *pool, size_t additional_blocks);
 
 /**
- * @brief 收缩内存池
+ * @brief Shrink the memory pool
  *
- * @param[in] pool 内存池句柄
- * @param[in] blocks_to_keep 要保留的最小块数（包括已分配块）
- * @return 成功释放的块数
+ * @param[in] pool Memory pool handle
+ * @param[in] blocks_to_keep Minimum blocks to keep (including allocated)
+ * @return Number of blocks successfully released
  *
- * @note 只能收缩空闲块，确保至少保留blocks_to_keep个块
+ * @note Only free blocks can be shrunk; at least blocks_to_keep blocks are
+ *       retained
  */
 size_t memory_pool_shrink(memory_pool_t *pool, size_t blocks_to_keep);
 
 /**
- * @brief 验证内存池完整性
+ * @brief Validate pool integrity
  *
- * @param[in] pool 内存池句柄
- * @return 内存池完整返回true，损坏返回false
+ * @param[in] pool Memory pool handle
+ * @return true if intact, false if corrupted
  *
- * @note 需要启用内存调试功能
+ * @note Requires memory debugging to be enabled
  */
 bool memory_pool_validate(memory_pool_t *pool);
 
 /**
- * @brief 遍历内存池中的所有块
+ * @brief Iterate over all blocks in the pool
  *
- * @param[in] pool 内存池句柄
- * @param[in] callback 回调函数，对每个块调用
- * @param[in] user_data 用户数据，传递给回调函数
+ * @param[in] pool Memory pool handle
+ * @param[in] callback Callback invoked for each block
+ * @param[in] user_data User data passed to the callback
  *
- * @note 回调函数原型：void callback(void* block, bool allocated, void* user_data)
- * @note 主要用于调试和监控
+ * @note Callback prototype: void callback(void* block, bool allocated,
+ *       void* user_data)
+ * @note Mainly for debugging and monitoring
  */
 void memory_pool_iterate(memory_pool_t *pool,
                          void (*callback)(void *block, bool allocated, void *user_data),
                          void *user_data);
 
 /**
- * @brief 获取内存池名称
+ * @brief Get the memory pool name
  *
- * @param[in] pool 内存池句柄
- * @return 内存池名称（可能为NULL）
+ * @param[in] pool Memory pool handle
+ * @return Pool name (may be NULL)
  */
 const char *memory_pool_get_name(memory_pool_t *pool);
 
 /**
- * @brief 设置内存池名称
+ * @brief Set the memory pool name
  *
- * @param[in] pool 内存池句柄
- * @param[in] name 新名称（可为NULL）
+ * @param[in] pool Memory pool handle
+ * @param[in] name New name (may be NULL)
  */
 void memory_pool_set_name(memory_pool_t *pool, const char *name);
 
 /**
- * @brief 创建默认选项的内存池
+ * @brief Create a pool with default options
  *
- * @param[in] block_size 内存块大小
- * @return 成功返回内存池句柄，失败返回NULL
+ * @param[in] block_size Block size
+ * @return Pool handle on success, NULL on failure
  *
- * @note 使用默认选项：initial_blocks=16, max_blocks=0, expansion_size=8, thread_safe=true
+ * @note Uses default options: initial_blocks=16, max_blocks=0,
+ *       expansion_size=8, thread_safe=true
  */
 memory_pool_t *memory_pool_create_default(size_t block_size);
 
 
 /**
- * @brief P1.20.3: 批量分配内存块（单次锁获取）
+ * @brief P1.20.3: Batch-allocate blocks (single lock acquisition)
  *
- * @ownership alloc — 返回的内存块由调用者持有，需逐个通过 memory_pool_free 归还
+ * @ownership alloc -- the returned blocks are caller-owned; return each
+ *                     with memory_pool_free
  *
- * 一次锁操作分配多个内存块，减少锁竞争开销。
- * 专为 tcache 批量填充设计，也可用于其他批量分配场景。
+ * Allocates multiple blocks in one lock operation, reducing lock
+ * contention. Designed for tcache batch filling, also usable for other
+ * batch-allocation scenarios.
  *
- * @param[in]  pool       内存池句柄
- * @param[in]  count      请求分配的块数
- * @param[out] out_blocks 输出块指针数组（调用者分配，大小 >= count）
- * @return 实际分配的块数（可能 < count 如果池已空）
+ * @param[in]  pool       Memory pool handle
+ * @param[in]  count      Number of blocks requested
+ * @param[out] out_blocks Output block pointer array (caller-allocated,
+ *                        size >= count)
+ * @return Number of blocks actually allocated (may be < count if the pool
+ *         is empty)
  *
- * @note 返回的块未初始化
- * @note 性能：比循环调用 memory_pool_alloc 减少 N-1 次锁操作
+ * @note The returned blocks are uninitialized
+ * @note Performance: N-1 fewer lock operations than a loop of
+ *       memory_pool_alloc calls
  */
 size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blocks);
 
 /**
- * @brief P1.20.3: 批量释放内存块（单次锁获取）
+ * @brief P1.20.3: Batch-release blocks (single lock acquisition)
  *
- * @ownership release — 释放 blocks 中所有指针的所有权
+ * @ownership release -- releases ownership of all pointers in blocks
  *
- * 一次锁操作释放多个内存块，减少锁竞争开销。
- * 专为 tcache 批量归还设计，也可用于其他批量释放场景。
+ * Releases multiple blocks in one lock operation, reducing lock
+ * contention. Designed for tcache batch return, also usable for other
+ * batch-release scenarios.
  *
- * @param[in] pool   内存池句柄
- * @param[in] blocks 要释放的块指针数组
- * @param[in] count  块数量
- * @return 成功释放的块数
+ * @param[in] pool   Memory pool handle
+ * @param[in] blocks Block pointer array to release
+ * @param[in] count  Number of blocks
+ * @return Number of blocks successfully released
  *
- * @note 无效块（NULL 或不属于此池）会被跳过
- * @note 性能：比循环调用 memory_pool_free 减少 N-1 次锁操作
+ * @note Invalid blocks (NULL or not from this pool) are skipped
+ * @note Performance: N-1 fewer lock operations than a loop of
+ *       memory_pool_free calls
  */
 size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count);
 

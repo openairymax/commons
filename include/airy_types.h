@@ -2,15 +2,17 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0 */
 
 /*
- * airy_types.h - AgentRT 统一类型定义权威源
+ * airy_types.h - authoritative source for unified type definitions
  *
- * 作为全项目唯一的类型定义权威源，解决模块间类型定义冲突。
- * 遵循标准化统一方案，确保跨平台编译兼容性。
+ * Serves as the single source of truth for type definitions across the
+ * project, resolving conflicts between modules. Follows the standardized
+ * unification scheme to ensure cross-platform compile compatibility.
  *
- * 设计原则：
- * 1. 权威性：commons作为唯一权威基础库
- * 2. 统一性：全项目使用统一的类型定义和接口契约
- * 3. 兼容性：确保Windows、Linux、macOS三平台兼容
+ * Design principles:
+ * 1. Authority: commons is the single authoritative base library
+ * 2. Uniformity: the whole project uses unified type definitions and
+ *    interface contracts
+ * 3. Compatibility: ensure Windows, Linux and macOS compatibility
  *
  */
 
@@ -33,24 +35,29 @@ extern "C" {
 
 
 /**
- * @brief 错误码类型
- * @details 所有错误码为负值，成功为0。SSoT 方案 A（POSIX errno 负值）。
- *          详见 docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.5。
+ * @brief Error code type
+ * @details All error codes are negative; success is 0. SSoT scheme A
+ *          (negative POSIX errno values). See
+ *          docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.5.
  */
 typedef int32_t airy_err_t;
 
 /**
- * @brief 成功返回值
- * @note AIRY_EOK 与 AIRY_SUCCESS 等价，均为 0。推荐使用 AIRY_EOK（与 POSIX E* 命名风格一致）。
+ * @brief Success return value
+ * @note AIRY_EOK and AIRY_SUCCESS are equivalent, both 0. Prefer AIRY_EOK
+ *       (consistent with the POSIX E* naming style).
  */
 #define AIRY_SUCCESS 0
 #define AIRY_EOK 0
 
 /**
- * @brief 通用错误码定义（权威定义，方案 A：POSIX errno 负值）
- * @details 有对应 POSIX errno 的错误码使用 POSIX errno 负值（参考 Linux errno.h）；
- *          无对应 POSIX errno 的保留自定义负值（如 AIRY_ENOTINIT、AIRY_ECANCELLED 等）。
- *          跨平台兼容：数值固定（不依赖目标平台 errno.h），仅与 Linux errno 值对齐作为命名参考。
+ * @brief Common error code definitions (authoritative, scheme A: negative POSIX errno)
+ * @details Error codes with a POSIX errno counterpart use the negative POSIX
+ *          errno value (see Linux errno.h); those without keep custom
+ *          negative values (e.g. AIRY_ENOTINIT, AIRY_ECANCELLED).
+ *          Cross-platform compatibility: values are fixed (independent of the
+ *          target platform errno.h) and only aligned with Linux errno as a
+ *          naming reference.
  */
 #define AIRY_EPERM (-1)
 #define AIRY_ENOENT (-2)
@@ -90,7 +97,7 @@ typedef int32_t airy_err_t;
 
 
 /*
- * 以下类型在platform.h中定义，此处仅作声明引用：
+ * The following types are defined in platform.h and only referenced here:
  * - airy_thread_t
  * - airy_thread_id_t
  * - airy_mtx_t
@@ -102,50 +109,56 @@ typedef int32_t airy_err_t;
 
 
 /**
- * @section IPC类型架构说明
+ * @section IPC type architecture
  *
- * AgentRT采用**分层IPC架构**，遵循微内核设计原则（Liedtke微内核原则）：
+ * AgentRT uses a **layered IPC architecture** following microkernel design
+ * principles (Liedtke's microkernel principles):
  *
- * **Level 1: 内核级IPC (Kernel-Level)**
- * - 类型：airy_kernel_ipc_message_t
- * - 位置：corekern/include/ipc.h
- * - 用途：微内核内部进程间通信
- * - 特点：
- *   ✓ 轻量级结构（40字节）：code, data, size, fd, msg_id
- *   ✓ 零外部依赖（不依赖commons）
- *   ✓ 极致性能（微秒级延迟）
- *   ✓ 简单易用（适合内核态编程）
+ * **Level 1: kernel-level IPC**
+ * - Type: airy_kernel_ipc_message_t
+ * - Location: corekern/include/ipc.h
+ * - Purpose: inter-process communication inside the microkernel
+ * - Features:
+ *   ✓ Lightweight structure (40 bytes): code, data, size, fd, msg_id
+ *   ✓ Zero external dependencies (does not depend on commons)
+ *   ✓ Extreme performance (microsecond latency)
+ *   ✓ Simple to use (suited for kernel-mode programming)
  *
- * **Level 2: 应用级IPC (Application-Level)**
- * - 类型：airy_ipc_message_t + airy_ipc_header_t
- * - 位置：本文件（权威定义）
- * - 用途：跨模块、应用层、服务间通信
- * - 特点：
- *   ✓ 完整元数据（magic, version, source, target等）
- *   ✓ 标准化接口（支持序列化、校验和）
- *   ✓ 功能丰富（RPC、Pub/Sub、流式传输）
- *   ✓ 跨平台兼容（Windows/Linux/macOS）
+ * **Level 2: application-level IPC**
+ * - Type: airy_ipc_message_t + airy_ipc_header_t
+ * - Location: this file (authoritative definition)
+ * - Purpose: cross-module, application-layer and inter-service communication
+ * - Features:
+ *   ✓ Full metadata (magic, version, source, target, etc.)
+ *   ✓ Standardized interface (serialization and checksum support)
+ *   ✓ Feature-rich (RPC, Pub/Sub, streaming)
+ *   ✓ Cross-platform (Windows/Linux/macOS)
  *
- * **Level 3: IPC模块内部类型 (Implementation Detail)**
- * - 类型：ipc_message_t + ipc_message_header_t
- * - 位置：commons/utils/ipc/include/ipc_common.h
- * - 用途：IPC子系统内部实现
- * - 特点：包含实现细节字段（reserved等），不应在公共API中使用
+ * **Level 3: IPC module internal types (implementation detail)**
+ * - Type: ipc_message_t + ipc_message_header_t
+ * - Location: commons/utils/ipc/include/ipc_common.h
+ * - Purpose: IPC subsystem internal implementation
+ * - Features: contains implementation-detail fields (reserved, etc.); must not
+ *   be used in public APIs
  *
- * **设计决策理由：**
- * 1. **微内核纯净性**：corekern不依赖任何外部库，保持最小化
- * 2. **性能优化**：内核级IPC避免不必要的内存拷贝和解析开销
- * 3. **职责分离**：内核关注机制，应用层关注策略和功能
- * 4. **向前兼容**：两级架构允许独立演进，不影响对方
+ * **Design rationale:**
+ * 1. **Microkernel purity**: corekern depends on no external library, keeping
+ *    it minimal
+ * 2. **Performance**: kernel-level IPC avoids unnecessary memory copies and
+ *    parsing overhead
+ * 3. **Separation of concerns**: the kernel provides mechanisms; the
+ *    application layer handles policy and features
+ * 4. **Forward compatibility**: the two-level architecture allows independent
+ *    evolution without affecting each other
  *
- * **使用指南：**
- * - 在corekern模块内 → 使用 airy_kernel_ipc_message_t
- * - 在daemons/services/应用层 → 使用 airy_ipc_message_t
- * - 跨层通信 → 使用转换函数（见下方）
+ * **Usage guide:**
+ * - Inside corekern modules → use airy_kernel_ipc_message_t
+ * - In daemons/services/application layer → use airy_ipc_message_t
+ * - Cross-layer communication → use the conversion functions (see below)
  */
 
 /**
- * @brief IPC消息头结构（权威定义）
+ * @brief IPC message header structure (authoritative)
  */
 typedef struct {
     uint32_t magic;
@@ -162,8 +175,9 @@ typedef struct {
 } airy_ipc_header_t;
 
 /**
- * @brief 应用级IPC消息结构（权威定义）
- * @note 这是应用层标准的airy_ipc_message_t定义，与内核级airy_kernel_ipc_message_t区分
+ * @brief Application-level IPC message structure (authoritative)
+ * @note This is the standard application-layer airy_ipc_message_t definition,
+ *       distinct from the kernel-level airy_kernel_ipc_message_t
  */
 typedef struct {
     airy_ipc_header_t header;
@@ -173,36 +187,39 @@ typedef struct {
 
 
 /*
- * 内核级IPC消息类型说明：
+ * Kernel-level IPC message type notes:
  *
- * 类型名：airy_kernel_ipc_message_t
- * 定义位置：corekern/include/ipc.h
- * 用途：微内核内部进程间通信（轻量级、高性能）
+ * Type name: airy_kernel_ipc_message_t
+ * Definition location: corekern/include/ipc.h
+ * Purpose: inter-process communication inside the microkernel
+ *          (lightweight, high performance)
  *
- * 使用场景：
- * - 当daemon服务需要将应用级消息转换为内核级消息时
- * - 当需要在不同IPC层次间桥接时
+ * Use cases:
+ * - When a daemon service needs to convert an application-level message to a
+ *   kernel-level message
+ * - When bridging between different IPC layers
  *
- * 注意：此类型仅在corekern模块内使用，应用层应使用airy_ipc_message_t
+ * Note: this type is only used inside the corekern module; the application
+ * layer should use airy_ipc_message_t
  */
 
 
 /**
- * @brief 任务ID类型
+ * @brief Task ID type
  */
 typedef uint64_t airy_task_id_t;
 
 /**
- * @brief 消息ID类型
+ * @brief Message ID type
  */
 typedef uint64_t airy_message_id_t;
 
 
 /*
- * 函数接口契约标准：
- * 1. 所有平台相关函数返回int类型（0成功，负数错误码）
- * 2. 参数顺序：输出参数在前，输入参数在后（遵循C语言惯例）
- * 3. 错误处理：使用统一的错误码定义
+ * Function interface contract standards:
+ * 1. All platform-related functions return int (0 on success, negative error code)
+ * 2. Parameter order: output parameters first, input parameters last (C convention)
+ * 3. Error handling: use the unified error code definitions
  */
 
 #ifdef __cplusplus

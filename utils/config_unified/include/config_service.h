@@ -3,14 +3,14 @@
 
 /**
  * @file config_service.h
- * @brief 统一配置模块 - 服务层接口
+ * @brief Unified configuration module: service-layer interface.
  *
- * 服务层提供配置模块的高级功能：
- * 1. 配置验证和Schema定义
- * 2. 热更新和变化通知
- * 3. 配置加密和安全存储
- * 4. 配置版本管理和回滚
- * 5. 配置模板和变量展开
+ * The service layer provides advanced configuration features:
+ * 1. Configuration validation and schema definition
+ * 2. Hot reload and change notification
+ * 3. Configuration encryption and secure storage
+ * 4. Configuration versioning and rollback
+ * 5. Configuration templates and variable expansion
  */
 
 #ifndef AIRY_RT_CONFIG_SERVICE_H
@@ -29,22 +29,22 @@ extern "C" {
 
 
 /**
- * @brief 配置验证器回调函数
- * @param key 配置键
- * @param value 配置值
- * @param user_data 用户数据
- * @return 验证结果（true:有效，false:无效）
+ * @brief Configuration validator callback function
+ * @param key Configuration key
+ * @param value Configuration value
+ * @param user_data User data
+ * @return Validation result (true: valid, false: invalid)
  */
 typedef bool (*config_validator_cb_t)(const char *key, const config_value_t *value,
                                       void *user_data);
 
 /**
- * @brief 配置验证器
+ * @brief Configuration validator
  */
 typedef struct config_validator config_validator_t;
 
 /**
- * @brief 验证器类型
+ * @brief Validator types
  */
 typedef enum {
     VALIDATOR_TYPE_RANGE = 0,
@@ -54,7 +54,7 @@ typedef enum {
 } validator_type_t;
 
 /**
- * @brief 验证器选项
+ * @brief Validator options
  */
 typedef struct {
     validator_type_t type;
@@ -67,7 +67,7 @@ typedef struct {
 
 
 /**
- * @brief 配置Schema项
+ * @brief Configuration schema item
  */
 typedef struct {
     const char *key;
@@ -79,31 +79,31 @@ typedef struct {
 } config_schema_item_t;
 
 /**
- * @brief 配置Schema
+ * @brief Configuration schema
  */
 typedef struct config_schema config_schema_t;
 
 
 /**
- * @brief 配置变化回调函数
- * @param ctx 配置上下文
- * @param key 变化的配置键（NULL表示全部变化）
- * @param old_value 旧值（可能为NULL）
- * @param new_value 新值
- * @param user_data 用户数据
+ * @brief Configuration change callback function
+ * @param ctx Configuration context
+ * @param key Changed configuration key (NULL for all changes)
+ * @param old_value Old value (may be NULL)
+ * @param new_value New value
+ * @param user_data User data
  */
 typedef void (*config_change_cb_t)(config_context_t *ctx, const char *key,
                                    const config_value_t *old_value, const config_value_t *new_value,
                                    void *user_data);
 
 /**
- * @brief 热更新管理器
+ * @brief Hot-reload manager
  */
 typedef struct config_hot_reload_manager config_hot_reload_manager_t;
 
 
 /**
- * @brief 加密算法类型
+ * @brief Encryption algorithm types
  */
 typedef enum {
     ENCRYPTION_NONE = 0,
@@ -112,7 +112,7 @@ typedef enum {
 } encryption_algorithm_t;
 
 /**
- * @brief 加密配置
+ * @brief Encryption configuration
  */
 typedef struct {
     encryption_algorithm_t algorithm;
@@ -124,7 +124,7 @@ typedef struct {
 
 
 /**
- * @brief 配置版本信息
+ * @brief Configuration version information
  */
 typedef struct {
     uint32_t version;
@@ -135,294 +135,294 @@ typedef struct {
 } config_version_info_t;
 
 /**
- * @brief 版本管理器
+ * @brief Version manager
  */
 typedef struct config_version_manager config_version_manager_t;
 
 
 /**
- * @brief 创建配置验证器
- * @param options 验证器选项
- * @return 验证器对象，失败返回NULL
+ * @brief Create a configuration validator
+ * @param options Validator options
+ * @return Validator object, NULL on failure
  */
 config_validator_t *config_validator_create(const validator_options_t *options);
 
 /**
- * @brief 销毁配置验证器
- * @param validator 验证器
+ * @brief Destroy a configuration validator
+ * @param validator Validator
  */
 void config_validator_destroy(config_validator_t *validator);
 
 /**
- * @brief 验证配置值
- * @param validator 验证器
- * @param key 配置键
- * @param value 配置值
- * @return 验证结果
+ * @brief Validate a configuration value
+ * @param validator Validator
+ * @param key Configuration key
+ * @param value Configuration value
+ * @return Validation result
  */
 bool config_validator_validate(config_validator_t *validator, const char *key,
                                const config_value_t *value);
 
 /**
- * @brief 创建范围验证器
- * @param min 最小值（字符串形式）
- * @param max 最大值（字符串形式）
- * @return 验证器对象，失败返回NULL
+ * @brief Create a range validator
+ * @param min Minimum value (string form)
+ * @param max Maximum value (string form)
+ * @return Validator object, NULL on failure
  */
 config_validator_t *config_validator_create_range(const char *min, const char *max);
 
 /**
- * @brief 创建正则表达式验证器
- * @param pattern 正则表达式
- * @return 验证器对象，失败返回NULL
+ * @brief Create a regular-expression validator
+ * @param pattern Regular expression
+ * @return Validator object, NULL on failure
  */
 config_validator_t *config_validator_create_regex(const char *pattern);
 
 /**
- * @brief 创建枚举值验证器
- * @param values 枚举值数组
- * @param count 枚举值数量
- * @return 验证器对象，失败返回NULL
+ * @brief Create an enum-value validator
+ * @param values Enum value array
+ * @param count Number of enum values
+ * @return Validator object, NULL on failure
  */
 config_validator_t *config_validator_create_enum(const char **values, size_t count);
 
 
 /**
- * @brief 创建配置Schema
- * @param name Schema名称
- * @return Schema对象，失败返回NULL
+ * @brief Create a configuration schema
+ * @param name Schema name
+ * @return Schema object, NULL on failure
  */
 config_schema_t *config_schema_create(const char *name);
 
 /**
- * @brief 销毁配置Schema
- * @param schema Schema对象
+ * @brief Destroy a configuration schema
+ * @param schema Schema object
  */
 void config_schema_destroy(config_schema_t *schema);
 
 /**
- * @brief 添加Schema项
- * @param schema Schema对象
- * @param item Schema项
- * @return 错误码
+ * @brief Add a schema item
+ * @param schema Schema object
+ * @param item Schema item
+ * @return Error code
  */
 config_error_t config_schema_add_item(config_schema_t *schema, const config_schema_item_t *item);
 
 /**
- * @brief 验证配置上下文是否符合Schema
- * @param schema Schema对象
- * @param ctx 配置上下文
- * @param strict 是否严格模式（是否检查多余配置项）
- * @return 验证结果（true:有效，false:无效）
+ * @brief Validate a configuration context against a schema
+ * @param schema Schema object
+ * @param ctx Configuration context
+ * @param strict Whether strict mode (checks for extra items)
+ * @return Validation result (true: valid, false: invalid)
  */
 bool config_schema_validate(config_schema_t *schema, const config_context_t *ctx, bool strict);
 
 /**
- * @brief 获取Schema验证错误信息
- * @param schema Schema对象
- * @param index 错误索引
- * @return 错误信息，无错误返回NULL
+ * @brief Get a schema validation error message
+ * @param schema Schema object
+ * @param index Error index
+ * @return Error message, NULL if no error
  */
 const char *config_schema_get_error(config_schema_t *schema, int index);
 
 /**
- * @brief 应用Schema默认值到配置上下文
- * @param schema Schema对象
- * @param ctx 配置上下文
- * @return 错误码
+ * @brief Apply schema defaults to a configuration context
+ * @param schema Schema object
+ * @param ctx Configuration context
+ * @return Error code
  */
 config_error_t config_schema_apply_defaults(config_schema_t *schema, config_context_t *ctx);
 
 
 /**
- * @brief 创建热更新管理器
- * @param ctx 配置上下文
- * @param source_manager 配置源管理器
- * @return 热更新管理器，失败返回NULL
+ * @brief Create a hot-reload manager
+ * @param ctx Configuration context
+ * @param source_manager Configuration source manager
+ * @return Hot-reload manager, NULL on failure
  */
 config_hot_reload_manager_t *config_hot_reload_manager_create(
     config_context_t *ctx, config_source_manager_t *source_manager);
 
 /**
- * @brief 销毁热更新管理器
- * @param manager 热更新管理器
+ * @brief Destroy a hot-reload manager
+ * @param manager Hot-reload manager
  */
 void config_hot_reload_manager_destroy(config_hot_reload_manager_t *manager);
 
 /**
- * @brief 注册配置变化回调
- * @param manager 热更新管理器
- * @param key 配置键（NULL表示监听所有变化）
- * @param callback 回调函数
- * @param user_data 用户数据
- * @return 错误码
+ * @brief Register a configuration change callback
+ * @param manager Hot-reload manager
+ * @param key Configuration key (NULL listens for all changes)
+ * @param callback Callback function
+ * @param user_data User data
+ * @return Error code
  */
 config_error_t config_hot_reload_register_callback(config_hot_reload_manager_t *manager,
                                                    const char *key, config_change_cb_t callback,
                                                    void *user_data);
 
 /**
- * @brief 开始监控配置变化
- * @param manager 热更新管理器
- * @param check_interval_ms 检查间隔（毫秒）
- * @return 错误码
+ * @brief Start monitoring configuration changes
+ * @param manager Hot-reload manager
+ * @param check_interval_ms Check interval (ms)
+ * @return Error code
  */
 config_error_t config_hot_reload_start(config_hot_reload_manager_t *manager,
                                        uint32_t check_interval_ms);
 
 /**
- * @brief 停止监控配置变化
- * @param manager 热更新管理器
- * @return 错误码
+ * @brief Stop monitoring configuration changes
+ * @param manager Hot-reload manager
+ * @return Error code
  */
 config_error_t config_hot_reload_stop(config_hot_reload_manager_t *manager);
 
 /**
- * @brief 手动触发配置重载
- * @param manager 热更新管理器
- * @return 错误码
+ * @brief Manually trigger a configuration reload
+ * @param manager Hot-reload manager
+ * @return Error code
  */
 config_error_t config_hot_reload_trigger(config_hot_reload_manager_t *manager);
 
 
 /**
- * @brief 加密配置值
- * @param value 配置值
- * @param manager 加密配置
- * @return 加密后的配置值，失败返回NULL
+ * @brief Encrypt a configuration value
+ * @param value Configuration value
+ * @param manager Encryption configuration
+ * @return Encrypted configuration value, NULL on failure
  */
 config_value_t *config_encrypt_value(const config_value_t *value,
                                      const encryption_config_t *manager);
 
 /**
- * @brief 解密配置值
- * @param encrypted_value 加密的配置值
- * @param manager 加密配置
- * @return 解密后的配置值，失败返回NULL
+ * @brief Decrypt a configuration value
+ * @param encrypted_value Encrypted configuration value
+ * @param manager Encryption configuration
+ * @return Decrypted configuration value, NULL on failure
  */
 config_value_t *config_decrypt_value(const config_value_t *encrypted_value,
                                      const encryption_config_t *manager);
 
 /**
- * @brief 创建加密配置源包装器
- * @param source 原始配置源
- * @param manager 加密配置
- * @return 加密配置源，失败返回NULL
+ * @brief Create an encrypted configuration source wrapper
+ * @param source Original configuration source
+ * @param manager Encryption configuration
+ * @return Encrypted configuration source, NULL on failure
  */
 config_source_t *config_source_create_encrypted(config_source_t *source,
                                                 const encryption_config_t *manager);
 
 
 /**
- * @brief 创建配置版本管理器
- * @param ctx 配置上下文
- * @param max_versions 最大保留版本数
- * @return 版本管理器，失败返回NULL
+ * @brief Create a configuration version manager
+ * @param ctx Configuration context
+ * @param max_versions Maximum retained versions
+ * @return Version manager, NULL on failure
  */
 config_version_manager_t *config_version_manager_create(config_context_t *ctx, size_t max_versions);
 
 /**
- * @brief 销毁配置版本管理器
- * @param manager 版本管理器
+ * @brief Destroy a configuration version manager
+ * @param manager Version manager
  */
 void config_version_manager_destroy(config_version_manager_t *manager);
 
 /**
- * @brief 创建配置快照（新版本）
- * @param manager 版本管理器
- * @param author 作者
- * @param description 描述
- * @return 版本号，失败返回0
+ * @brief Create a configuration snapshot (new version)
+ * @param manager Version manager
+ * @param author Author
+ * @param description Description
+ * @return Version number, 0 on failure
  */
 uint32_t config_version_create_snapshot(config_version_manager_t *manager, const char *author,
                                         const char *description);
 
 /**
- * @brief 回滚到指定版本
- * @param manager 版本管理器
- * @param version 版本号
- * @return 错误码
+ * @brief Roll back to a specific version
+ * @param manager Version manager
+ * @param version Version number
+ * @return Error code
  */
 config_error_t config_version_rollback(config_version_manager_t *manager, uint32_t version);
 
 /**
- * @brief 获取版本列表
- * @param manager 版本管理器
- * @param versions 版本信息数组（输出）
- * @param max_count 最大数量
- * @return 实际返回的版本数量
+ * @brief Get the version list
+ * @param manager Version manager
+ * @param versions Version information array (output)
+ * @param max_count Maximum count
+ * @return Actual number of versions returned
  */
 size_t config_version_get_list(config_version_manager_t *manager, config_version_info_t *versions,
                                size_t max_count);
 
 /**
- * @brief 获取版本差异
- * @param manager 版本管理器
- * @param version1 版本1
- * @param version2 版本2
- * @param diff 差异输出缓冲区
- * @param diff_size 缓冲区大小
- * @return 差异大小
+ * @brief Get the diff between two versions
+ * @param manager Version manager
+ * @param version1 Version 1
+ * @param version2 Version 2
+ * @param diff Diff output buffer
+ * @param diff_size Buffer size
+ * @return Diff size
  */
 size_t config_version_get_diff(config_version_manager_t *manager, uint32_t version1,
                                uint32_t version2, char *diff, size_t diff_size);
 
 
 /**
- * @brief 展开配置模板变量
- * @param ctx 配置上下文
- * @param template_str 模板字符串
- * @param result 结果输出缓冲区
- * @param result_size 缓冲区大小
- * @return 错误码
+ * @brief Expand configuration template variables
+ * @param ctx Configuration context
+ * @param template_str Template string
+ * @param result Result output buffer
+ * @param result_size Buffer size
+ * @return Error code
  */
 config_error_t config_expand_template(config_context_t *ctx, const char *template_str, char *result,
                                       size_t result_size);
 
 /**
- * @brief 应用配置模板到上下文
- * @param ctx 配置上下文
- * @param template_ctx 模板配置上下文
- * @return 错误码
+ * @brief Apply a configuration template to a context
+ * @param ctx Configuration context
+ * @param template_ctx Template configuration context
+ * @return Error code
  */
 config_error_t config_apply_template(config_context_t *ctx, config_context_t *template_ctx);
 
 
 /**
- * @brief 创建完整的配置服务
- * @param service_name 服务名称
- * @param schema 配置Schema（可为NULL）
- * @param enable_hot_reload 是否启用热更新
- * @param enable_encryption 是否启用加密
- * @return 配置服务上下文，失败返回NULL
+ * @brief Create a complete configuration service
+ * @param service_name Service name
+ * @param schema Configuration schema (may be NULL)
+ * @param enable_hot_reload Whether to enable hot reload
+ * @param enable_encryption Whether to enable encryption
+ * @return Configuration service context, NULL on failure
  */
 config_context_t *config_service_create(const char *service_name, config_schema_t *schema,
                                         bool enable_hot_reload, bool enable_encryption);
 
 /**
- * @brief 加载配置服务
- * @param ctx 配置服务上下文
- * @param sources 配置源数组
- * @param source_count 配置源数量
- * @return 错误码
+ * @brief Load a configuration service
+ * @param ctx Configuration service context
+ * @param sources Configuration source array
+ * @param source_count Number of configuration sources
+ * @return Error code
  */
 config_error_t config_service_load(config_context_t *ctx, config_source_t **sources,
                                    size_t source_count);
 
 /**
- * @brief 保存配置服务
- * @param ctx 配置服务上下文
- * @param primary_source 主配置源
- * @return 错误码
+ * @brief Save a configuration service
+ * @param ctx Configuration service context
+ * @param primary_source Primary configuration source
+ * @return Error code
  */
 config_error_t config_service_save(config_context_t *ctx, config_source_t *primary_source);
 
 /**
- * @brief 获取配置服务状态
- * @param ctx 配置服务上下文
- * @param status_json 状态JSON输出缓冲区
- * @param status_size 缓冲区大小
- * @return 错误码
+ * @brief Get the configuration service status
+ * @param ctx Configuration service context
+ * @param status_json Status JSON output buffer
+ * @param status_size Buffer size
+ * @return Error code
  */
 config_error_t config_service_get_status(config_context_t *ctx, char *status_json,
                                          size_t status_size);

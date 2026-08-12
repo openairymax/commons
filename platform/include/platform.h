@@ -4,24 +4,21 @@
 /*
  *
  * @file platform.h
- * @brief 跨平台兼容层 - 统一不同操作系统的API差异
+ * @brief Cross-platform compatibility layer - unifies OS API differences
  *
- * 支持平台：
+ * Supported platforms:
  * - Linux (POSIX)
  * - macOS (Darwin)
  * - Windows (Win32/Win64)
  *
- * 设计原则：
- * - 单一职责：仅处理平台差异
- * - 零开销：内联函数 + 宏定义
- * - 类型安全：强类型封装
+ * Design principles:
+ * - Single responsibility: handle platform differences only
+ * - Zero overhead: inline functions + macro definitions
+ * - Type safety: strongly-typed wrappers
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-03-30
- * @version 2.0
- *
- * @note 线程安全：平台抽象层本身不涉及线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md E-4 跨平台一致性原则
+ * @note Thread safety: the platform abstraction layer itself does not
+ *       involve thread safety
+ * @see ARCHITECTURAL_PRINCIPLES.md E-4 cross-platform consistency principle
  */
 
 #ifndef AIRY_RT_PLATFORM_H
@@ -215,135 +212,135 @@ typedef pid_t airy_process_t;
 
 
 /**
- * @brief 初始化互斥锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a mutex
+ * @param mutex mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_mtx_init(airy_mtx_t *mutex);
 
 /**
- * @brief 销毁互斥锁
- * @param mutex 互斥锁指针
+ * @brief Destroy a mutex
+ * @param mutex mutex pointer
  */
 void airy_mtx_destroy(airy_mtx_t *mutex);
 
 /**
- * @brief 加锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Lock a mutex
+ * @param mutex mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_mtx_lock(airy_mtx_t *mutex);
 
 /**
- * @brief 尝试加锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败或已锁定
+ * @brief Try to lock a mutex
+ * @param mutex mutex pointer
+ * @return 0 on success, non-zero on failure or already locked
  */
 int airy_mtx_trylock(airy_mtx_t *mutex);
 
 /**
- * @brief 解锁
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Unlock a mutex
+ * @param mutex mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_mtx_unlock(airy_mtx_t *mutex);
 
 /**
- * @brief 动态创建互斥锁（分配内存并初始化）
- * @return 互斥锁指针，失败返回NULL
+ * @brief Dynamically create a mutex (allocate and initialize)
+ * @return mutex pointer, NULL on failure
  */
 airy_mtx_t *airy_mtx_create(void);
 
 /**
- * @brief 动态销毁互斥锁（销毁并释放内存）
- * @param mutex 互斥锁指针
+ * @brief Dynamically destroy a mutex (destroy and free memory)
+ * @param mutex mutex pointer
  */
 void airy_mtx_free(airy_mtx_t *mutex);
 
 
 /**
- * @brief 初始化条件变量
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Initialize a condition variable
+ * @param cond condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_cond_init(airy_cond_t *cond);
 
 /**
- * @brief 销毁条件变量
- * @param cond 条件变量指针
+ * @brief Destroy a condition variable
+ * @param cond condition variable pointer
  */
 void airy_cond_destroy(airy_cond_t *cond);
 
 /**
- * @brief 等待条件变量
- * @param cond 条件变量指针
- * @param mutex 互斥锁指针
- * @return 0 成功，非0 失败
+ * @brief Wait on a condition variable
+ * @param cond condition variable pointer
+ * @param mutex mutex pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_cond_wait(airy_cond_t *cond, airy_mtx_t *mutex);
 
 /**
- * @brief 超时等待条件变量
- * @param cond 条件变量指针
- * @param mutex 互斥锁指针
- * @param timeout_ms 超时时间（毫秒）
- * @return 0 成功，非0 失败或超时
+ * @brief Timed wait on a condition variable
+ * @param cond condition variable pointer
+ * @param mutex mutex pointer
+ * @param timeout_ms timeout in milliseconds
+ * @return 0 on success, non-zero on failure or timeout
  */
 int airy_cond_timedwait(airy_cond_t *cond, airy_mtx_t *mutex, uint32_t timeout_ms);
 
 /**
- * @brief 唤醒一个等待线程
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake up one waiting thread
+ * @param cond condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_cond_signal(airy_cond_t *cond);
 
 /**
- * @brief 唤醒所有等待线程
- * @param cond 条件变量指针
- * @return 0 成功，非0 失败
+ * @brief Wake up all waiting threads
+ * @param cond condition variable pointer
+ * @return 0 on success, non-zero on failure
  */
 int airy_cond_broadcast(airy_cond_t *cond);
 
 /**
- * @brief 动态创建条件变量（分配内存并初始化）
- * @return 条件变量指针，失败返回NULL
+ * @brief Dynamically create a condition variable (allocate and initialize)
+ * @return condition variable pointer, NULL on failure
  */
 airy_cond_t *airy_cond_create(void);
 
 /**
- * @brief 动态销毁条件变量（销毁并释放内存）
- * @param cond 条件变量指针
+ * @brief Dynamically destroy a condition variable (destroy and free memory)
+ * @param cond condition variable pointer
  */
 void airy_cond_free(airy_cond_t *cond);
 
 
 /**
- * @brief 线程函数类型
+ * @brief Thread function type
  */
 typedef void *(*airy_thread_func_t)(void *arg);
 
 /**
- * @brief 创建线程
- * @param thread 线程句柄指针
- * @param func 线程函数
- * @param arg 线程参数
- * @return 0 成功，非0 失败
+ * @brief Create a thread
+ * @param thread thread handle pointer
+ * @param func thread function
+ * @param arg thread argument
+ * @return 0 on success, non-zero on failure
  */
 int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg);
 
 /**
- * @brief 等待线程结束
- * @param thread 线程句柄
- * @param retval 返回值指针（可为NULL）
- * @return 0 成功，非0 失败
+ * @brief Wait for a thread to finish
+ * @param thread thread handle
+ * @param retval return value pointer (may be NULL)
+ * @return 0 on success, non-zero on failure
  */
 int airy_platform_thread_join(airy_thread_t thread, void **retval);
 
 /**
- * @brief 分离线程（线程结束后自动回收资源）
- * @param thread 线程句柄
- * @return 0 成功，非0 失败
+ * @brief Detach a thread (resources reclaimed automatically on exit)
+ * @param thread thread handle
+ * @return 0 on success, non-zero on failure
  */
 int airy_platform_thread_detach(airy_thread_t thread);
 
@@ -354,55 +351,57 @@ int airy_platform_thread_detach(airy_thread_t thread);
 #endif
 
 /**
- * @brief 获取当前线程ID
- * @return 线程ID
+ * @brief Get the current thread ID
+ * @return thread ID
  */
 uint64_t airy_thread_id(void);
 
 
 /**
- * @brief 创建 TCP Socket
- * @return Socket 句柄，失败返回 AIRY_INVALID_SOCKET
+ * @brief Create a TCP socket
+ * @return socket handle, AIRY_INVALID_SOCKET on failure
  */
 airy_sock_t airy_sock_tcp(void);
 
 /**
- * @brief 创建 Unix Domain Socket（仅 POSIX）
- * @return Socket 句柄，失败返回 AIRY_INVALID_SOCKET
+ * @brief Create a Unix domain socket (POSIX only)
+ * @return socket handle, AIRY_INVALID_SOCKET on failure
  */
 airy_sock_t airy_sock_unix(void);
 
 /**
- * @brief 关闭 Socket
- * @param sock Socket 句柄
+ * @brief Close a socket
+ * @param sock socket handle
  */
 void airy_sock_close(airy_sock_t sock);
 
 /**
- * @brief 设置 Socket 非阻塞模式
- * @param sock Socket 句柄
- * @param nonblock 是否非阻塞
- * @return 0 成功，非0 失败
+ * @brief Set socket non-blocking mode
+ * @param sock socket handle
+ * @param nonblock non-blocking flag
+ * @return 0 on success, non-zero on failure
  */
 int airy_sock_set_nonblock(airy_sock_t sock, int nonblock);
 
 /**
- * @brief 设置 Socket 复用地址
- * @param sock Socket 句柄
- * @param reuse 是否复用
- * @return 0 成功，非0 失败
+ * @brief Set socket address reuse
+ * @param sock socket handle
+ * @param reuse reuse flag
+ * @return 0 on success, non-zero on failure
  */
 int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse);
 
 
-/* 前向声明：取消令牌（改进1 "取消下探"）。完整定义见
- * commons/utils/sync/include/cancel_token.h（该头 include platform.h，
- * 此处仅声明指针参数，避免循环依赖）。 */
+/* Forward declaration: cancellation token (improvement 1 "cancellation
+ * push-down"). Full definition in
+ * commons/utils/sync/include/cancel_token.h (that header includes
+ * platform.h, so only a pointer parameter is declared here to avoid a
+ * circular dependency). */
 struct airy_cancel_token;
 typedef struct airy_cancel_token airy_cancel_token_t;
 
 /**
- * @brief 进程信息结构
+ * @brief Process info structure
  */
 typedef struct {
     airy_pid_t pid;
@@ -410,76 +409,83 @@ typedef struct {
     int stdout_fd;
     int stderr_fd;
 #if AIRY_PLATFORM_WINDOWS
-    /* Windows 子进程句柄，存入结构体以支持多进程并发与线程安全，
-     * 替代原先的全局变量（单进程限制）。使用 void* 避免在此处引入 windows.h。 */
+    /* Child process handles are stored in the struct to support concurrent
+     * multi-process and thread safety, replacing the previous global
+     * variables (single-process limitation). void* avoids pulling in
+     * windows.h here. */
     void *process_handle; /* HANDLE to the child process */
     void *thread_handle; /* HANDLE to the child's primary thread */
 #endif
 } airy_process_info_t;
 
 /**
- * @brief 启动进程
- * @param executable 可执行文件路径
- * @param argv 参数数组（以NULL结尾）
- * @param envp 环境变量数组（以NULL结尾，可为NULL）
- * @param proc 输出进程信息
- * @return 0 成功，非0 失败
+ * @brief Start a process
+ * @param executable executable file path
+ * @param argv argument array (NULL-terminated)
+ * @param envp environment array (NULL-terminated, may be NULL)
+ * @param proc output process info
+ * @return 0 on success, non-zero on failure
  */
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
                        airy_process_info_t *proc);
 
 /**
- * @brief 等待进程结束
- * @param proc 进程信息
- * @param timeout_ms 超时时间（毫秒），0表示无限等待
- * @param exit_code 输出退出码（可为NULL）
- * @return 0 成功，非0 失败或超时
+ * @brief Wait for a process to finish
+ * @param proc process info
+ * @param timeout_ms timeout in milliseconds, 0 means wait indefinitely
+ * @param exit_code output exit code (may be NULL)
+ * @return 0 on success, non-zero on failure or timeout
  */
 int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_code);
 
 /**
- * @brief 终止进程
- * @param proc 进程信息
- * @return 0 成功，非0 失败
+ * @brief Terminate a process
+ * @param proc process info
+ * @return 0 on success, non-zero on failure
  */
 int airy_process_kill(airy_process_info_t *proc);
 
 /**
- * @brief 关闭进程管道
- * @param proc 进程信息
+ * @brief Close process pipes
+ * @param proc process info
  */
 void airy_process_close_pipes(airy_process_info_t *proc);
 
 /**
- * @brief 运行命令并捕获合并输出（高层便捷接口）
+ * @brief Run a command and capture merged output (high-level convenience API)
  *
- * 内部完成 start → 读取 stdout+stderr 合并输出 → wait → close 全流程。
- * POSIX 路径使用 fork + execvp（不经过 shell，无命令注入风险，BAN-211/235 合规）。
+ * Internally completes the full start -> read merged stdout+stderr -> wait
+ * -> close flow. The POSIX path uses fork + execvp (no shell, no command
+ * injection risk, BAN-211/235 compliant).
  *
- * @param executable 可执行文件路径（execvp 搜索 PATH）
- * @param argv       参数数组（以 NULL 结尾，argv[0] 通常为程序名）
- * @param envp       环境变量数组（以 NULL 结尾，可为 NULL 表示继承）
- * @param timeout_ms 超时（毫秒），0 表示无限等待
- * @param output     输出缓冲区（可为 NULL 表示不捕获，但仍排空管道防止子进程阻塞）
- * @param output_size 输出缓冲区大小（含 '\0'）
- * @return 退出码(0-255)；-1=启动失败；-2=超时
+ * @param executable executable file path (searched in PATH by execvp)
+ * @param argv       argument array (NULL-terminated, argv[0] is usually the program name)
+ * @param envp       environment array (NULL-terminated, NULL means inherit)
+ * @param timeout_ms timeout in milliseconds, 0 means wait indefinitely
+ * @param output     output buffer (NULL means don't capture, but pipes are
+ *                   still drained to prevent the child from blocking)
+ * @param output_size output buffer size (including '\0')
+ * @return exit code (0-255); -1 = launch failure; -2 = timeout
  */
 int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
                              uint32_t timeout_ms, char *output, size_t output_size);
 
 /**
- * @brief 事件源驱动的可取消命令执行（改进1 "tool_d 事件源驱动"）
+ * @brief Event-source-driven cancellable command execution
+ *        (improvement 1 "tool_d event-source-driven")
  *
- * 与 airy_process_run_capture 同语义，但等待机制为**事件源驱动**而非
- * select 阻塞轮询 + 阻塞 waitpid：
- *   - 自建唤醒管道（wake pipe）作为事件源：取消令牌命中时回调写入唤醒，
- *     select 立即返回，无需 1s 粒度轮询；
- *   - 子进程退出经管道 EOF 事件感知，waitpid WNOHANG **非阻塞**回收
- *     （替代循环结束后的阻塞 waitpid）；
- *   - 超时判定精确到毫秒（单调时钟 deadline）。
+ * Same semantics as airy_process_run_capture, but the wait mechanism is
+ * event-source-driven instead of select blocking polling + blocking waitpid:
+ *   - A self-built wake pipe serves as the event source: the cancel-token
+ *     callback writes a wakeup on match, select returns immediately, no
+ *     1s-granularity polling needed;
+ *   - Child exit is detected via pipe EOF, and waitpid WNOHANG reaps the
+ *     child non-blockingly (replacing the blocking waitpid after the loop);
+ *   - Timeout is precise to the millisecond (monotonic-clock deadline).
  *
- * @param cancel_token 取消令牌（可为 NULL = 等同 airy_process_run_capture）
- * @return 退出码(0-255)；-1=启动失败；-2=超时；-3=取消（AIRY_PROCESS_RC_CANCELED）
+ * @param cancel_token cancellation token (may be NULL = same as airy_process_run_capture)
+ * @return exit code (0-255); -1 = launch failure; -2 = timeout;
+ *         -3 = canceled (AIRY_PROCESS_RC_CANCELED)
  */
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
                                 uint32_t timeout_ms, char *output, size_t output_size,
@@ -490,121 +496,121 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
 
 
 /**
- * @brief 获取高精度时间戳（纳秒）
- * @return 时间戳
+ * @brief Get high-precision timestamp (nanoseconds)
+ * @return timestamp
  */
 uint64_t airy_time_ns(void);
 
 /**
- * @brief 获取当前时间戳（毫秒）
- * @return 时间戳
+ * @brief Get current timestamp (milliseconds)
+ * @return timestamp
  */
 uint64_t airy_time_ms(void);
 
 /**
- * @brief 睡眠指定毫秒数
- * @param ms 毫秒数
+ * @brief Sleep for the given number of milliseconds
+ * @param ms milliseconds
  */
 void airy_sleep_ms(uint32_t ms);
 
 
 /**
- * @brief 初始化随机数生成器（线程安全）
+ * @brief Initialize the random number generator (thread-safe)
  */
 void airy_random_init(void);
 
 /**
- * @brief 生成随机数（线程安全）
- * @param min 最小值
- * @param max 最大值
- * @return 随机数
+ * @brief Generate a random number (thread-safe)
+ * @param min minimum value
+ * @param max maximum value
+ * @return random number
  */
 uint32_t airy_random_uint32(uint32_t min, uint32_t max);
 
 /**
- * @brief 生成随机浮点数（线程安全）
- * @return 0.0 到 1.0 之间的随机数
+ * @brief Generate a random float (thread-safe)
+ * @return random number between 0.0 and 1.0
  */
 float airy_random_float(void);
 
 /**
- * @brief 生成随机字节（线程安全）
- * @param buf 缓冲区
- * @param len 长度
- * @return 0 成功，非0 失败
+ * @brief Generate random bytes (thread-safe)
+ * @param buf buffer
+ * @param len length
+ * @return 0 on success, non-zero on failure
  */
 int airy_random_bytes(void *buf, size_t len);
 
 
 /**
- * @brief 检查文件是否存在
- * @param path 文件路径
- * @return 1 存在，0 不存在
+ * @brief Check whether a file exists
+ * @param path file path
+ * @return 1 exists, 0 not exists
  */
 int airy_file_exists(const char *path);
 
 /**
- * @brief 创建目录（递归）
- * @param path 目录路径
- * @return 0 成功，非0 失败
+ * @brief Create a directory (recursive)
+ * @param path directory path
+ * @return 0 on success, non-zero on failure
  */
 int airy_mkdir_p(const char *path);
 
 /**
- * @brief 获取文件大小
- * @param path 文件路径
- * @return 文件大小，失败返回 -1
+ * @brief Get file size
+ * @param path file path
+ * @return file size, -1 on failure
  */
 int64_t airy_file_size(const char *path);
 
 
 /**
- * @brief 初始化网络库（Windows需要）
- * @return 0 成功
+ * @brief Initialize the network library (required on Windows)
+ * @return 0 on success
  */
 int airy_network_init(void);
 
 /**
- * @brief 清理网络库（Windows需要）
+ * @brief Clean up the network library (required on Windows)
  */
 void airy_network_cleanup(void);
 
 
 /**
- * @brief 忽略 SIGPIPE 信号
+ * @brief Ignore SIGPIPE signal
  */
 void airy_ignore_sigpipe(void);
 
 
 /**
- * @brief 安全的字符串复制
- * @param dest 目标缓冲区
- * @param src 源字符串
- * @param dest_size 目标缓冲区大小
- * @return 0成功，非0失败
+ * @brief Safe string copy
+ * @param dest destination buffer
+ * @param src source string
+ * @param dest_size destination buffer size
+ * @return 0 on success, non-zero on failure
  */
 int airy_strlcpy(char *dest, const char *src, size_t dest_size);
 
 /**
- * @brief 安全的字符串连接
- * @param dest 目标缓冲区
- * @param src 源字符串
- * @param dest_size 目标缓冲区大小
- * @return 0成功，非0失败
+ * @brief Safe string concatenation
+ * @param dest destination buffer
+ * @param src source string
+ * @param dest_size destination buffer size
+ * @return 0 on success, non-zero on failure
  */
 int airy_strlcat(char *dest, const char *src, size_t dest_size);
 
 
 /**
- * @brief 获取最后错误的错误码
- * @return 错误码
+ * @brief Get the last error code
+ * @return error code
  */
 int airy_get_last_error(void);
 
 /**
- * @brief 获取错误描述字符串
- * @param error 错误码
- * @return 错误描述字符串
+ * @brief Get error description string
+ * @param error error code
+ * @return error description string
  */
 const char *airy_strerror(int error);
 
@@ -636,34 +642,38 @@ int airy_atomic_fetch_add(airy_atomic_int_t *atomic, int value);
 int airy_atomic_fetch_sub(airy_atomic_int_t *atomic, int value);
 
 
-/* d8 清理：从 sync_compat.h 迁移到 platform.h（RAII 守卫依赖 airy_mtx_lock/unlock，
- * 逻辑上属于 platform.h API 的辅助工具）。消除 sync_compat.h 的兼容层定位。 */
+/* d8 cleanup: migrated from sync_compat.h to platform.h (the RAII guard
+ * depends on airy_mtx_lock/unlock, logically a helper of the platform.h
+ * API). Removes sync_compat.h's compatibility-layer positioning. */
 
 /**
- * @defgroup mutex_guard RAII 互斥锁守卫（P0.18.3）
+ * @defgroup mutex_guard RAII mutex guard (P0.18.3)
  * @{
  *
- * AIRY_MUTEX_LOCK_GUARD 将 mutex 加锁 + 作用域退出自动解锁二合一，
- * 消除手工 lock/unlock 配对样板。
+ * AIRY_MUTEX_LOCK_GUARD combines mutex lock + automatic unlock on scope
+ * exit, eliminating manual lock/unlock pairing boilerplate.
  *
- * 基于 GCC/Clang 的 __attribute__((cleanup)) 实现 RAII 语义。
- * guard 跟踪锁状态，仅当加锁成功时才在 cleanup 中解锁，避免对未锁定的
- * 互斥锁调用 unlock。MSVC 回退到仅加锁（需手动解锁）。
+ * Based on GCC/Clang __attribute__((cleanup)) for RAII semantics.
+ * The guard tracks lock state and only unlocks in cleanup when the lock
+ * was acquired, avoiding unlock on an unheld mutex. MSVC falls back to
+ * lock-only (manual unlock required).
  *
- * 用法：
+ * Usage:
  *   AIRY_MUTEX_LOCK_GUARD(m);
  *
  *
- * 注意：宏不检查加锁是否成功。若加锁可能失败（如死锁检测），请使用
- * airy_mtx_lock + 手动 if 检查 + airy_mtx_unlock。
+ * Note: the macro does not check whether locking succeeded. If locking can
+ * fail (e.g. deadlock detection), use airy_mtx_lock + manual if check +
+ * airy_mtx_unlock.
  */
 
 #if defined(__GNUC__) || defined(__clang__)
 
 /**
- * @brief 互斥锁守卫类型 — 跟踪锁状态
+ * @brief Mutex guard type - tracks lock state
  *
- * 保存互斥锁指针和加锁状态，用于 cleanup 时判断是否需要解锁。
+ * Stores the mutex pointer and lock state, used to decide at cleanup
+ * whether to unlock.
  */
 typedef struct {
     airy_mtx_t *mutex;
@@ -671,12 +681,13 @@ typedef struct {
 } airy_mtx_guard_t;
 
 /**
- * @brief 互斥锁守卫 cleanup 函数（由 cleanup 属性自动调用）
+ * @brief Mutex guard cleanup function (auto-invoked by the cleanup attribute)
  *
- * 当 AIRY_MUTEX_LOCK_GUARD 标记的变量离开作用域时自动调用。
- * 仅当 acquired 为 true 且 mutex 非空时才解锁，避免对未锁定的互斥锁调用 unlock。
+ * Automatically called when a variable marked with AIRY_MUTEX_LOCK_GUARD
+ * leaves scope. Unlocks only when acquired is true and mutex is non-NULL,
+ * avoiding unlock on an unheld mutex.
  *
- * @param g 指向 guard 变量的指针
+ * @param g pointer to the guard variable
  */
 static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 {
@@ -689,11 +700,11 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 /**
  * @def AIRY_MUTEX_LOCK_GUARD(m)
- * @brief RAII 互斥锁守卫：加锁 + 作用域退出自动解锁
+ * @brief RAII mutex guard: lock + auto-unlock on scope exit
  *
- * @param m 互斥锁变量（airy_mtx_t 类型，宏内部取地址 &m）
+ * @param m mutex variable (airy_mtx_t type; the macro takes its address &m)
  *
- * 使用示例：
+ * Usage example:
  *   static airy_mtx_t my_lock;
  *   airy_mtx_init(&my_lock);
  *   {
@@ -701,16 +712,20 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  *
  *   }
  *
- * @note 使用 __COUNTER__ 生成唯一变量名，同一作用域可多次使用
- * @note 加锁失败时 acquired=false，cleanup 不会解锁；后续代码在未加锁状态下执行
+ * @note Uses __COUNTER__ to generate a unique variable name, so the macro
+ *       can be used multiple times in the same scope
+ * @note On lock failure acquired=false, cleanup will not unlock; subsequent
+ *       code runs in the unlocked state
  */
 #define AIRY_MUTEX_LOCK_GUARD_(m, counter)                                                  \
     airy_mtx_guard_t __attribute__((cleanup(airy_mtx_guard_cleanup))) __guard_##counter = { \
         .mutex = &(m), .acquired = (airy_mtx_lock(&(m)) == 0)}
 
-/* 两层间接：强制 __COUNTER__ 在 ## 拼接前展开为数字，避免变量名冲突。
- * 直接 AIRY_MUTEX_LOCK_GUARD_(m, __COUNTER__) 会拼接成 __guard___COUNTER__
- * （字面值，不展开），导致同作用域多次使用时变量名冲突。 */
+/* Two levels of indirection: force __COUNTER__ to expand to a number before
+ * ## concatenation, avoiding variable name collisions. A direct
+ * AIRY_MUTEX_LOCK_GUARD_(m, __COUNTER__) would paste into
+ * __guard___COUNTER__ (a literal, not expanded), causing name collisions
+ * when used multiple times in the same scope. */
 #define AIRY_MUTEX_LOCK_GUARD_EXPAND(m, counter) AIRY_MUTEX_LOCK_GUARD_(m, counter)
 #define AIRY_MUTEX_LOCK_GUARD(m) AIRY_MUTEX_LOCK_GUARD_EXPAND(m, __COUNTER__)
 
@@ -718,10 +733,11 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 /**
  * @def AIRY_MUTEX_LOCK_GUARD(m)
- * @brief RAII 互斥锁守卫（MSVC — 回退到仅加锁，需手动解锁）
+ * @brief RAII mutex guard (MSVC -- falls back to lock-only, manual unlock
+ *        required)
  *
- * MSVC 不支持 __attribute__((cleanup))，此宏仅执行加锁。
- * 使用 MSVC 时需在函数返回前手动调用 airy_mtx_unlock。
+ * MSVC does not support __attribute__((cleanup)); this macro only locks.
+ * With MSVC, airy_mtx_unlock must be called manually before returning.
  */
 #define AIRY_MUTEX_LOCK_GUARD(m) ((void)airy_mtx_lock(&(m)))
 
@@ -729,7 +745,8 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 /**
  * @def AIRY_MUTEX_LOCK_GUARD(m)
- * @brief RAII 互斥锁守卫（未知编译器 — 回退到仅加锁，需手动解锁）
+ * @brief RAII mutex guard (unknown compiler - falls back to lock-only,
+ *        manual unlock required)
  */
 #define AIRY_MUTEX_LOCK_GUARD(m) ((void)airy_mtx_lock(&(m)))
 
@@ -737,67 +754,72 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 
 /** @} */ /* end of mutex_guard */
 
-/* d8 清理：sync_compat.h 已迁移，但部分代码仍使用 AIRY_MUTEX_* 宏形式。
- * 这里提供与 airy_mtx_* 函数的兼容映射，避免调用方逐一改写。
- * 调用约定：调用方传入指针（如 AIRY_MUTEX_LOCK(&ctx->mutex)），
- * 宏直接转发指针给 airy_mtx_* 函数。
- * 新代码应直接使用 airy_mtx_init/lock/unlock/destroy 函数形式。 */
+/* d8 cleanup: sync_compat.h has been migrated, but some code still uses the
+ * AIRY_MUTEX_* macro form. These provide compatibility mappings to the
+ * airy_mtx_* functions so callers don't need to be rewritten one by one.
+ * Calling convention: callers pass a pointer (e.g.
+ * AIRY_MUTEX_LOCK(&ctx->mutex)); the macros forward the pointer directly
+ * to the airy_mtx_* functions.
+ * New code should use the airy_mtx_init/lock/unlock/destroy function form
+ * directly. */
 
 /**
  * @def AIRY_MUTEX_INIT(m, attr)
- * @brief 初始化互斥锁（兼容宏 — 转发至 airy_mtx_init）
- * @param m airy_mtx_t* 指针
- * @param attr 未使用（保留兼容 pthread_mutex_init 签名）
- * @return 0 成功，非 0 失败
+ * @brief Initialize a mutex (compat macro - forwards to airy_mtx_init)
+ * @param m airy_mtx_t* pointer
+ * @param attr unused (kept for pthread_mutex_init signature compatibility)
+ * @return 0 on success, non-zero on failure
  */
 #define AIRY_MUTEX_INIT(m, attr) airy_mtx_init(m)
 
 /**
  * @def AIRY_MUTEX_DESTROY(m)
- * @brief 销毁互斥锁（兼容宏 — 转发至 airy_mtx_destroy）
- * @param m airy_mtx_t* 指针
+ * @brief Destroy a mutex (compat macro - forwards to airy_mtx_destroy)
+ * @param m airy_mtx_t* pointer
  */
 #define AIRY_MUTEX_DESTROY(m) airy_mtx_destroy(m)
 
 /**
  * @def AIRY_MUTEX_LOCK(m)
- * @brief 加锁（兼容宏 — 转发至 airy_mtx_lock）
- * @param m airy_mtx_t* 指针
- * @return 0 成功，非 0 失败
+ * @brief Lock a mutex (compat macro - forwards to airy_mtx_lock)
+ * @param m airy_mtx_t* pointer
+ * @return 0 on success, non-zero on failure
  */
 #define AIRY_MUTEX_LOCK(m) airy_mtx_lock(m)
 
 /**
  * @def AIRY_MUTEX_UNLOCK(m)
- * @brief 解锁（兼容宏 — 转发至 airy_mtx_unlock）
- * @param m airy_mtx_t* 指针
- * @return 0 成功，非 0 失败
+ * @brief Unlock a mutex (compat macro - forwards to airy_mtx_unlock)
+ * @param m airy_mtx_t* pointer
+ * @return 0 on success, non-zero on failure
  */
 #define AIRY_MUTEX_UNLOCK(m) airy_mtx_unlock(m)
 
 /**
  * @def AIRY_MUTEX_TRYLOCK(m)
- * @brief 尝试加锁（兼容宏 — 转发至 airy_mtx_trylock）
- * @param m airy_mtx_t* 指针
- * @return 0 成功，非 0 失败（EBUSY 表示已锁定）
+ * @brief Try to lock a mutex (compat macro - forwards to airy_mtx_trylock)
+ * @param m airy_mtx_t* pointer
+ * @return 0 on success, non-zero on failure (EBUSY means already locked)
  */
 #define AIRY_MUTEX_TRYLOCK(m) airy_mtx_trylock(m)
 
-/* ==================== AIRY_HOME 路径体系（生产就绪） ====================
+/* ==================== AIRY_HOME path system (production-ready) ====================
  *
- * 统一安装根目录：默认 $HOME/.airymaxrt，可用环境变量 AIRY_HOME 覆盖。
- * 全部运行时产物（socket/pid/日志/配置/数据）收敛于其下，非 root 部署、
- * 容器化与卸载均干净，替代散布的 FHS 路径（/tmp、/var/log、/etc...）。
+ * Unified install root: defaults to $HOME/.airymaxrt, overridable via the
+ * AIRY_HOME environment variable. All runtime artifacts (socket/pid/log/
+ * config/data) are consolidated under it, keeping non-root deployments,
+ * containerization and uninstall clean, replacing scattered FHS paths
+ * (/tmp, /var/log, /etc...).
  *
- * 目录布局：
- *   $AIRY_HOME/bin      — 可执行文件（agentrt、agent_d、llm_d、mem_d、airy_cli）
- *   $AIRY_HOME/lib      — 运行时依赖（airymax_agents、openlab、sdk-python）
- *   $AIRY_HOME/run      — Unix socket、PID 文件
- *   $AIRY_HOME/logs     — daemon 日志、审计日志、agent 子进程日志
- *   $AIRY_HOME/config   — agentrt.yaml、model.yaml、secrets.env
- *   $AIRY_HOME/data     — 持久化数据（记忆等）
- *   $AIRY_HOME/tmp      — 临时文件
- *   $AIRY_HOME/cache    — 缓存
+ * Directory layout:
+ *   $AIRY_HOME/bin      - executables (agentrt, agent_d, llm_d, mem_d, airy_cli)
+ *   $AIRY_HOME/lib      - runtime dependencies (airymax_agents, openlab, sdk-python)
+ *   $AIRY_HOME/run      - Unix sockets, PID files
+ *   $AIRY_HOME/logs     - daemon logs, audit logs, agent subprocess logs
+ *   $AIRY_HOME/config   - agentrt.yaml, model.yaml, secrets.env
+ *   $AIRY_HOME/data     - persistent data (memory, etc.)
+ *   $AIRY_HOME/tmp      - temporary files
+ *   $AIRY_HOME/cache    - caches
  */
 
 #define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
@@ -820,14 +842,18 @@ const char *airy_lib_dir(void);
 const char *airy_runtime_dir(void);
 
 /**
- * @brief 解析运行时 socket 路径：$AIRY_HOME/run/<name>（AIRY_HOME 路径体系）。
+ * @brief Resolve runtime socket path: $AIRY_HOME/run/<name>
+ *        (AIRY_HOME path system).
  *
- * 统一收敛各 daemon 的 socket 位置：历史宏 AIRY_RUNTIME_DIR "/<name>.sock"
- * 是编译期常量（默认 /tmp/agentrt），不随 AIRY_HOME 部署生效。此 helper
- * 在运行时拼接 airy_runtime_dir()，使 socket 始终落在 $AIRY_HOME/run。
+ * Consolidates daemon socket locations: the legacy macro
+ * AIRY_RUNTIME_DIR "/<name>.sock" is a compile-time constant (default
+ * /tmp/agentrt) and does not follow AIRY_HOME deployments. This helper
+ * appends airy_runtime_dir() at runtime so the socket always lands in
+ * $AIRY_HOME/run.
  *
- * @param name socket 文件名（如 "agent.sock"）
- * @return 静态缓冲（仅启动期一次性读取，daemon 单线程初始化阶段安全）
+ * @param name socket file name (e.g. "agent.sock")
+ * @return static buffer (read once at startup; safe during the daemon's
+ *         single-threaded init phase)
  */
 const char *airy_runtime_dir_socket(const char *name);
 
@@ -842,14 +868,15 @@ const char *airy_tmp_dir(void);
 const char *airy_cache_dir(void);
 
 /**
- * @brief 初始化 AIRY_HOME 路径体系
+ * @brief Initialize the AIRY_HOME path system
  *
- * 解析各目录路径并创建（mkdir -p），同时向环境变量 setenv
- * AIRY_RUNTIME_DIR/AIRY_LOG_DIR/AIRY_CONFIG_DIR/AIRY_DATA_DIR/
- * AIRY_TMP_DIR/AIRY_CACHE_DIR，使既有 getenv 型消费点立即生效。
- * 各 daemon 在 main 早期（日志初始化前）调用一次。
+ * Resolves each directory path and creates them (mkdir -p), while also
+ * setenv-ing AIRY_RUNTIME_DIR/AIRY_LOG_DIR/AIRY_CONFIG_DIR/AIRY_DATA_DIR/
+ * AIRY_TMP_DIR/AIRY_CACHE_DIR so existing getenv-style consumers take
+ * effect immediately. Each daemon calls this once early in main (before
+ * log initialization).
  *
- * @return AIRY_SUCCESS 成功；AIRY_ERR_SYS_FILE 目录创建失败
+ * @return AIRY_SUCCESS on success; AIRY_ERR_SYS_FILE on directory creation failure
  */
 int airy_paths_init(void);
 

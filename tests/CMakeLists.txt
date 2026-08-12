@@ -17,7 +17,7 @@ set(UNIT_TEST_SOURCES
     unit/test_token.c
     unit/test_cost.c
     # unit/test_types.c  # 禁用：需要cmocka测试框架
-    # unit/test_ipc.c    # 禁用：需要cmocka测试框架
+    unit/test_ipc.c      # 已改为 cmocka_stub 适配（无真实 cmocka 依赖）
     # unit/test_network.c # 禁用：需要cmocka测试框架
     unit/test_arena_tcache.c
     unit/test_print.c
@@ -36,6 +36,17 @@ foreach(test_source ${UNIT_TEST_SOURCES})
 
     add_executable(${test_name} ${test_source})
 
+    # test_ipc.c 已按功能域拆分，需一并编译各域文件
+    if(test_source STREQUAL "unit/test_ipc.c")
+        target_sources(${test_name} PRIVATE
+            unit/test_ipc_channel.c
+            unit/test_ipc_send.c
+            unit/test_ipc_server.c
+            unit/test_ipc_shm_mq.c
+            unit/test_ipc_message.c
+        )
+    endif()
+
     target_include_directories(${test_name} PRIVATE
         ${COMMONS_ROOT}/include
         ${COMMONS_ROOT}/platform/include
@@ -51,7 +62,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/memory/include
         ${COMMONS_ROOT}/utils/print/include
         ${COMMONS_ROOT}/utils/sync/include
-        ${COMMONS_ROOT}/../atoms/corekern/include
+        ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 

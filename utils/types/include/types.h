@@ -4,30 +4,28 @@
 /*
  *
  * @file types.h
- * @brief AgentRT 统一类型定义 - 核心基础类型
+ * @brief AgentRT unified type definitions: core basic types.
  *
  * @details
- * 本文件定义了 AgentRT 系统范围内使用的所有核心数据类型。
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - K-2 接口契约化：所有类型都有明确的语义和所有权规则
- * - E-5 命名语义化：类型名称精确表达其用途
+ * This file defines all core data types used across the AgentRT system.
+ * Follows the ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - K-2 interface contracts: every type has clear semantics and ownership
+ *   rules
+ * - E-5 semantic naming: type names precisely express their purpose
  *
- * 类型分类：
- * 1. 基础类型：错误码、状态枚举、结果类型
- * 2. 任务类型：任务状态、优先级、结果
- * 3. 记忆类型：记忆层级、存储结构
- * 4. 会话类型：会话状态、上下文
- * 5. Agent类型：Agent契约、能力定义
- * 6. 可观测性类型：指标、追踪、日志
+ * Type categories:
+ * 1. Basic types: error codes, state enums, result types
+ * 2. Task types: task state, priority, results
+ * 3. Memory types: memory layers, storage structures
+ * 4. Session types: session state, context
+ * 5. Agent types: agent contract, capability definitions
+ * 6. Observability types: metrics, traces, logs
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-03
- * @version 0.1.0
- *
- * @note 线程安全：本文件定义的类型均为值类型或不可变类型，线程安全
- * @see ARCHITECTURAL_PRINCIPLES.md K-2 接口契约化原则
- * @see syscall_api_contract.md 系统调用 API 契约
- * @see agent_contract.md Agent 契约规范
+ * @note Thread safety: the types defined here are value types or immutable
+ *       types; thread-safe
+ * @see ARCHITECTURAL_PRINCIPLES.md K-2 interface contract principle
+ * @see syscall_api_contract.md syscall API contract
+ * @see agent_contract.md agent contract specification
  */
 
 #ifndef AIRY_RT_TYPES_H
@@ -45,35 +43,38 @@
 extern "C" {
 #endif
 
-/* ============================================================================
- * 第一部分：基础类型定义
- * ============================================================================ */
+/*
+ * Part 1: Basic type definitions
+ */
 
 /**
- * @defgroup BasicTypes 基础类型
- * @brief 系统范围内使用的基础数据类型
+ * @defgroup BasicTypes Basic types
+ * @brief Basic data types used system-wide
  * @{
  */
 
 /**
- * @brief 错误码类型
- * @details 所有错误码为负值，成功为0。遵循 syscall_api_contract.md 规范。
+ * @brief Error code type
+ * @details All error codes are negative; success is 0. Follows the
+ *          syscall_api_contract.md specification.
  */
 typedef int32_t airy_err_t;
 
 /**
- * @brief 成功返回值
+ * @brief Success return value
  */
 #define AIRY_SUCCESS 0
 
 /**
- * @brief 通用错误码定义
+ * @brief Generic error code definitions
  *
- * v4.0 SSoT 修复：所有与 airy_types.h 重复的宏均以 #ifndef 保护，确保
- * airy_types.h（本文件 line 36 已先行 include）的 POSIX 权威值优先生效。
- * types.h 原先的无条件 #define 覆盖了 airy_types.h 的 POSIX 值（如将
- * AIRY_EINVAL 从 -22 覆盖为 -1），破坏 v3.0 SSoT 统一收敛。现通过 #ifndef
- * 让权威源生效；仅 AIRY_ENOTFOUND 为 airy_types.h 未定义的补充宏。
+ * v4.0 SSoT fix: every macro duplicated in airy_types.h is guarded with
+ * #ifndef so the POSIX authoritative values from airy_types.h (included
+ * first at line 36) take effect. types.h's former unconditional #define
+ * overrode airy_types.h's POSIX values (e.g. turning AIRY_EINVAL from -22
+ * into -1), breaking the v3.0 SSoT convergence. The #ifndef guards let
+ * the authoritative source win; only AIRY_ENOTFOUND is a supplemental
+ * macro not defined in airy_types.h.
  */
 #ifndef AIRY_EINVAL
 #define AIRY_EINVAL (-1)
@@ -143,24 +144,24 @@ typedef int32_t airy_err_t;
 #endif
 
 /**
- * @brief 时间戳类型（纳秒）
- * @details 使用 Unix 时间戳，纳秒精度
+ * @brief Timestamp type (nanoseconds)
+ * @details Unix timestamp with nanosecond precision
  */
 typedef uint64_t airy_timestamp_t;
 
 /**
- * @brief 毫秒时间类型
+ * @brief Millisecond time type
  */
 typedef uint64_t airy_millis_t;
 
 /**
- * @brief 唯一标识符类型
- * @details 用于 task_id, session_id, agent_id 等标识符
+ * @brief Unique identifier type
+ * @details Used for task_id, session_id, agent_id, etc.
  */
 typedef char airy_uuid_t[37];
 
 /**
- * @brief 优先级枚举
+ * @brief Priority enumeration
  */
 typedef enum {
     AIRY_PRIORITY_LOW = 0,
@@ -170,8 +171,8 @@ typedef enum {
 } airy_priority_t;
 
 /**
- * @brief 通用结果类型
- * @details 用于返回操作结果和错误信息
+ * @brief Generic result type
+ * @details Used to return operation results and error information
  */
 typedef struct {
     airy_err_t code;
@@ -180,19 +181,19 @@ typedef struct {
 } airy_result_t;
 
 /** @} */ /* end of BasicTypes */
-/* ============================================================================
- * 第二部分：任务类型定义
- * ============================================================================ */
+/*
+ * Part 2: Task type definitions
+ */
 
 /**
- * @defgroup TaskTypes 任务类型
- * @brief 任务管理相关的数据类型
+ * @defgroup TaskTypes Task types
+ * @brief Data types related to task management
  * @{
  */
 
 /**
- * @brief 任务状态枚举
- * @details 定义任务的生命周期状态
+ * @brief Task state enumeration
+ * @details Defines the task lifecycle states
  */
 #ifndef AIRY_TASK_STATUS_T_DEFINED
 #define AIRY_TASK_STATUS_T_DEFINED
@@ -217,7 +218,7 @@ typedef enum {
 #endif
 
 /**
- * @brief 任务类型枚举
+ * @brief Task type enumeration
  */
 typedef enum {
     AIRY_TASKTYPE_ONESHOT = 0,
@@ -226,8 +227,8 @@ typedef enum {
 } airy_task_type_t;
 
 /**
- * @brief 任务句柄类型
- * @details 用于引用任务实例
+ * @brief Task handle type
+ * @details Used to reference task instances
  */
 #ifndef AIRY_TASK_T_DEFINED
 #define AIRY_TASK_T_DEFINED
@@ -235,7 +236,7 @@ typedef struct airy_task airy_task_t;
 #endif
 
 /**
- * @brief 任务配置结构
+ * @brief Task configuration structure
  */
 typedef struct {
     const char *input;
@@ -249,7 +250,7 @@ typedef struct {
 } airy_task_config_t;
 
 /**
- * @brief 任务结果结构
+ * @brief Task result structure
  */
 typedef struct {
     char *task_id;
@@ -265,19 +266,19 @@ typedef struct {
 } airy_task_result_t;
 
 /** @} */ /* end of TaskTypes */
-/* ============================================================================
- * 第三部分：记忆类型定义
- * ============================================================================ */
+/*
+ * Part 3: Memory type definitions
+ */
 
 /**
- * @defgroup MemoryTypes 记忆类型
- * @brief 记忆管理相关的数据类型
+ * @defgroup MemoryTypes Memory types
+ * @brief Data types related to memory management
  * @{
  */
 
 /**
- * @brief 记忆层级枚举
- * @details 四层记忆卷载结构
+ * @brief Memory layer enumeration
+ * @details Four-layer memory hierarchy
  */
 typedef enum {
     AIRY_MEM_LAYER1_RAW = 0,
@@ -287,7 +288,7 @@ typedef enum {
 } airy_memory_layer_t;
 
 /**
- * @brief 记忆类型枚举
+ * @brief Memory type enumeration
  */
 #ifndef AIRY_MEMORY_TYPE_T_DEFINED
 #define AIRY_MEMORY_TYPE_T_DEFINED
@@ -300,13 +301,14 @@ typedef enum {
 #endif
 
 /**
- * @brief 记忆句柄类型 - forward declaration (defined in memory_provider.h)
+ * @brief Memory handle type - forward declaration (defined in
+ *        memory_provider.h)
  */
 struct airy_memory;
 typedef struct airy_memory airy_memory_t;
 
 /**
- * @brief 记忆条目结构
+ * @brief Memory entry structure
  */
 typedef struct {
     char *memory_id;
@@ -328,7 +330,7 @@ typedef struct {
 } airy_memory_entry_t;
 
 /**
- * @brief 记忆搜索配置
+ * @brief Memory search configuration
  */
 typedef struct {
     const char *query;
@@ -341,7 +343,7 @@ typedef struct {
 } airy_memory_search_t;
 
 /**
- * @brief 记忆搜索结果
+ * @brief Memory search results
  */
 #ifndef AIRY_MEMORY_RESULT_T_DEFINED
 #define AIRY_MEMORY_RESULT_T_DEFINED
@@ -353,18 +355,18 @@ typedef struct {
 #endif
 
 /** @} */ /* end of MemoryTypes */
-/* ============================================================================
- * 第四部分：会话类型定义
- * ============================================================================ */
+/*
+ * Part 4: Session type definitions
+ */
 
 /**
- * @defgroup SessionTypes 会话类型
- * @brief 会话管理相关的数据类型
+ * @defgroup SessionTypes Session types
+ * @brief Data types related to session management
  * @{
  */
 
 /**
- * @brief 会话状态枚举
+ * @brief Session state enumeration
  */
 typedef enum {
     AIRY_SESSION_ACTIVE = 0,
@@ -374,12 +376,12 @@ typedef enum {
 } airy_session_status_t;
 
 /**
- * @brief 会话句柄类型
+ * @brief Session handle type
  */
 typedef struct airy_session *airy_session_t;
 
 /**
- * @brief 会话配置结构
+ * @brief Session configuration structure
  */
 typedef struct {
     const char *user_id;
@@ -390,7 +392,7 @@ typedef struct {
 } airy_session_config_t;
 
 /**
- * @brief 会话信息结构
+ * @brief Session information structure
  */
 typedef struct {
     char *session_id;
@@ -407,8 +409,8 @@ typedef struct {
 } airy_session_info_t;
 
 /**
- * @brief 执行上下文结构
- * @details 用于传递请求链路的上下文信息
+ * @brief Execution context structure
+ * @details Carries context information along the request chain
  */
 typedef struct {
     char *agent_id; /**< Agent ID */
@@ -423,18 +425,18 @@ typedef struct {
 } airy_context_t;
 
 /** @} */ /* end of SessionTypes */
-/* ============================================================================
- * 第五部分：Agent 类型定义
- * ============================================================================ */
+/*
+ * Part 5: Agent type definitions
+ */
 
 /**
- * @defgroup AgentTypes Agent 类型
- * @brief Agent 契约和能力相关的数据类型
+ * @defgroup AgentTypes Agent types
+ * @brief Data types related to agent contracts and capabilities
  * @{
  */
 
 /**
- * @brief Agent 维护级别枚举
+ * @brief Agent maintenance level enumeration
  */
 typedef enum {
     AIRY_AGENT_COMMUNITY = 0,
@@ -445,7 +447,7 @@ typedef enum {
 #ifndef AIRY_CAPABILITY_T_DEFINED
 #define AIRY_CAPABILITY_T_DEFINED
 /**
- * @brief Agent 能力结构
+ * @brief Agent capability structure
  */
 typedef struct {
     char *name;
@@ -459,7 +461,7 @@ typedef struct {
 #endif
 
 /**
- * @brief Agent 模型配置
+ * @brief Agent model configuration
  */
 typedef struct {
     char *system1;
@@ -467,7 +469,7 @@ typedef struct {
 } airy_models_t;
 
 /**
- * @brief Agent 成本概览
+ * @brief Agent cost overview
  */
 typedef struct {
     uint32_t token_per_task_avg;
@@ -476,7 +478,7 @@ typedef struct {
 } airy_cost_profile_t;
 
 /**
- * @brief Agent 信任指标
+ * @brief Agent trust metrics
  */
 typedef struct {
     uint32_t install_count;
@@ -486,8 +488,8 @@ typedef struct {
 } airy_trust_metrics_t;
 
 /**
- * @brief Agent 契约结构
- * @details 完整的 Agent 元数据定义
+ * @brief Agent contract structure
+ * @details Complete agent metadata definition
  */
 typedef struct {
     char *schema_version;
@@ -507,18 +509,18 @@ typedef struct {
 } airy_agent_contract_t;
 
 /** @} */ /* end of AgentTypes */
-/* ============================================================================
- * 第六部分：可观测性类型定义
- * ============================================================================ */
+/*
+ * Part 6: Observability type definitions
+ */
 
 /**
- * @defgroup ObservabilityTypes 可观测性类型
- * @brief 指标、追踪、日志相关的数据类型
+ * @defgroup ObservabilityTypes Observability types
+ * @brief Data types related to metrics, traces, and logs
  * @{
  */
 
 /**
- * @brief 日志级别枚举
+ * @brief Log level enumeration
  */
 #ifndef AIRY_LOG_LEVEL_T_DEFINED
 #define AIRY_LOG_LEVEL_T_DEFINED
@@ -532,7 +534,7 @@ typedef enum {
 #endif
 
 /**
- * @brief 指标类型枚举
+ * @brief Metric type enumeration
  */
 #ifndef AIRY_METRIC_TYPE_T_DEFINED
 #define AIRY_METRIC_TYPE_T_DEFINED
@@ -545,7 +547,7 @@ typedef enum {
 #endif
 
 /**
- * @brief Span 类型枚举
+ * @brief Span type enumeration
  */
 typedef enum {
     AIRY_SPAN_INTERNAL = 0,
@@ -556,12 +558,12 @@ typedef enum {
 } airy_span_kind_t;
 
 /**
- * @brief Span 状态枚举
+ * @brief Span state enumeration
  */
 typedef enum { AIRY_SPAN_UNSET = 0, AIRY_SPAN_OK = 1, AIRY_SPAN_ERROR = 2 } airy_span_status_t;
 
 /**
- * @brief 指标数据结构
+ * @brief Metric data structure
  */
 typedef struct {
     char *name;
@@ -575,7 +577,7 @@ typedef struct {
 } airy_metric_t;
 
 /**
- * @brief Span 数据结构
+ * @brief Span data structure
  */
 typedef struct {
     char *trace_id;
@@ -593,7 +595,7 @@ typedef struct {
 } airy_span_t;
 
 /**
- * @brief 遥测数据结构
+ * @brief Telemetry data structure
  */
 typedef struct {
     airy_metric_t *metrics;
@@ -604,18 +606,18 @@ typedef struct {
 } airy_telemetry_t;
 
 /** @} */ /* end of ObservabilityTypes */
-/* ============================================================================
- * 第七部分：IPC 类型定义
- * ============================================================================ */
+/*
+ * Part 7: IPC type definitions
+ */
 
 /**
- * @defgroup IPCTypes IPC 类型
- * @brief 进程间通信相关的数据类型
+ * @defgroup IPCTypes IPC types
+ * @brief Data types related to inter-process communication
  * @{
  */
 
 /**
- * @brief IPC 通道类型枚举
+ * @brief IPC channel type enumeration
  */
 typedef enum {
     AIRY_IPC_PIPE = 0,
@@ -626,7 +628,7 @@ typedef enum {
 } airy_ipc_type_t;
 
 /**
- * @brief IPC 消息标志
+ * @brief IPC message flags
  */
 typedef enum {
     AIRY_IPC_FLAG_NONE = 0,
@@ -637,13 +639,14 @@ typedef enum {
 
 
 /**
- * @brief IPC 通道句柄类型
- * @note 内核级IPC通道类型，完整定义见corekern/include/ipc.h
- *       应用层应使用commons/utils/ipc/include/ipc_common.h中的ipc_channel_t
+ * @brief IPC channel handle type
+ * @note Kernel-level IPC channel type; full definition in
+ *       corekern/include/ipc.h. Application layers should use
+ *       ipc_channel_t from commons/utils/ipc/include/ipc_common.h
  */
 
 /**
- * @brief IPC 通道配置
+ * @brief IPC channel configuration
  */
 typedef struct {
     airy_ipc_type_t type;
@@ -655,18 +658,18 @@ typedef struct {
 } airy_ipc_config_t;
 
 /** @} */ /* end of IPCTypes */
-/* ============================================================================
- * 第八部分：网络类型定义
- * ============================================================================ */
+/*
+ * Part 8: Network type definitions
+ */
 
 /**
- * @defgroup NetworkTypes 网络类型
- * @brief 网络通信相关的数据类型
+ * @defgroup NetworkTypes Network types
+ * @brief Data types related to network communication
  * @{
  */
 
 /**
- * @brief 协议类型枚举
+ * @brief Protocol type enumeration
  */
 typedef enum {
     AIRY_PROTO_TCP = 0,
@@ -678,7 +681,7 @@ typedef enum {
 } airy_protocol_t;
 
 /**
- * @brief 连接状态枚举
+ * @brief Connection state enumeration
  */
 typedef enum {
     AIRY_CONN_DISCONNECTED = 0,
@@ -689,13 +692,13 @@ typedef enum {
 } airy_conn_state_t;
 
 /**
- * @brief Socket 句柄类型
- * 定义在 platform.h 中
+ * @brief Socket handle type
+ * Defined in platform.h
  */
 /* typedef struct airy_socket* airy_sock_t; */
 
 /**
- * @brief 连接端点结构
+ * @brief Connection endpoint structure
  */
 typedef struct {
     char *host;
@@ -705,7 +708,7 @@ typedef struct {
 } airy_endpoint_t;
 
 /**
- * @brief 连接配置结构
+ * @brief Connection configuration structure
  */
 typedef struct {
     airy_endpoint_t remote;
@@ -721,7 +724,7 @@ typedef struct {
 } airy_conn_config_t;
 
 /**
- * @brief HTTP 请求结构
+ * @brief HTTP request structure
  */
 typedef struct {
     const char *method;
@@ -734,7 +737,7 @@ typedef struct {
 } airy_http_request_t;
 
 /**
- * @brief HTTP 响应结构
+ * @brief HTTP response structure
  */
 typedef struct {
     int status_code;
@@ -746,50 +749,50 @@ typedef struct {
 } airy_http_response_t;
 
 /** @} */ /* end of NetworkTypes */
-/* ============================================================================
- * 第九部分：辅助宏定义
- * ============================================================================ */
+/*
+ * Part 9: Helper macro definitions
+ */
 
 /**
- * @defgroup HelperMacros 辅助宏
- * @brief 常用的辅助宏定义
+ * @defgroup HelperMacros Helper macros
+ * @brief Common helper macro definitions
  * @{
  */
 
 /**
- * @brief 数组元素数量计算
+ * @brief Array element count
  */
 #define AIRY_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /**
- * @brief 最小值宏
+ * @brief Minimum-value macro
  */
 #define AIRY_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /**
- * @brief 最大值宏
+ * @brief Maximum-value macro
  */
 #define AIRY_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /**
- * @brief 对齐宏
+ * @brief Alignment macro
  */
 #define AIRY_ALIGN_UP(x, align) (((x) + (align) - 1) & ~((align) - 1))
 
 /**
- * @brief 字符串化宏
+ * @brief Stringification macros
  */
 #define AIRY_STRINGIFY(x) #x
 #define AIRY_TOSTRING(x) AIRY_STRINGIFY(x)
 
 /**
- * @brief 连接宏
+ * @brief Concatenation macros
  */
 #define AIRY_CONCAT(a, b) a##b
 #define AIRY_CONCAT3(a, b, c) a##b##c
 
 /**
- * @brief 版本号解析宏
+ * @brief Version number parsing macros
  */
 #ifndef AIRY_VERSION_MAJOR
 #define AIRY_VERSION_MAJOR(v) (((v) >> 24) & 0xFF)
@@ -805,7 +808,7 @@ typedef struct {
 #endif
 
 /**
- * @brief 时间转换宏
+ * @brief Time conversion macros
  */
 #define AIRY_MS_TO_NS(ms) ((uint64_t)(ms) * 1000000ULL)
 #define AIRY_SEC_TO_MS(s) ((uint64_t)(s) * 1000ULL)

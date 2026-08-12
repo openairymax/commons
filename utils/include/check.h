@@ -4,17 +4,15 @@
 /*
  *
  * @file check.h
- * @brief 通用检查宏 - 减少重复的参数验证和错误处理代码
+ * @brief Common check macros: reduce duplicated parameter validation and
+ *        error-handling code.
  *
- * 提供一组通用的检查宏，用于参数验证、错误处理和资源清理。
- * 旨在消除项目中分散的检查代码，提供一致的验证模式。
+ * Provides a set of common check macros for parameter validation, error
+ * handling, and resource cleanup. Aims to eliminate scattered check code
+ * across the project and provide consistent validation patterns.
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-07
- * @version 1.0
- *
- * @note 线程安全：所有宏均为线程安全（无副作用）
- * @see ARCHITECTURAL_PRINCIPLES.md E-1 安全内生原则
+ * @note Thread safety: all macros are thread-safe (no side effects)
+ * @see ARCHITECTURAL_PRINCIPLES.md E-1 security-by-design principle
  */
 
 #ifndef AIRY_RT_CHECK_H
@@ -25,15 +23,15 @@
 #include <stdbool.h>
 
 /**
- * @defgroup check_macros 检查宏
+ * @defgroup check_macros Check macros
  * @{
  */
 
 /**
- * @brief 检查指针是否为NULL，如果是则返回错误码
- * @param ptr 要检查的指针
- * @param err_code 错误码（如AIRY_EINVAL）
- * @return 如果ptr为NULL，返回err_code
+ * @brief Check that a pointer is not NULL; return the error code if it is
+ * @param ptr Pointer to check
+ * @param err_code Error code (e.g. AIRY_EINVAL)
+ * @return err_code if ptr is NULL
  *
  * @code
  * CHECK_NULL_RET(input, AIRY_EINVAL);
@@ -47,17 +45,17 @@
     } while (0)
 
 /**
- * @brief 检查指针是否为NULL，如果是则返回默认错误AIRY_EINVAL
- * @param ptr 要检查的指针
- * @return 如果ptr为NULL，返回AIRY_EINVAL
+ * @brief Check that a pointer is not NULL; return AIRY_EINVAL if it is
+ * @param ptr Pointer to check
+ * @return AIRY_EINVAL if ptr is NULL
  */
 #define CHECK_NULL(ptr) CHECK_NULL_RET(ptr, AIRY_EINVAL)
 
 /**
- * @brief 检查表达式是否为真，如果为假则返回错误码
- * @param expr 要检查的表达式
- * @param err_code 错误码
- * @return 如果expr为假，返回err_code
+ * @brief Check that an expression is true; return the error code if false
+ * @param expr Expression to check
+ * @param err_code Error code
+ * @return err_code if expr is false
  *
  * @code
  * CHECK_COND_RET(size > 0, AIRY_EINVAL);
@@ -71,17 +69,17 @@
     } while (0)
 
 /**
- * @brief 检查表达式是否为真，如果为假则返回默认错误AIRY_EINVAL
- * @param expr 要检查的表达式
- * @return 如果expr为假，返回AIRY_EINVAL
+ * @brief Check that an expression is true; return AIRY_EINVAL if false
+ * @param expr Expression to check
+ * @return AIRY_EINVAL if expr is false
  */
 #define CHECK_COND(expr) CHECK_COND_RET(expr, AIRY_EINVAL)
 
 /**
- * @brief 检查函数调用结果，如果失败则返回错误码
- * @param func_call 函数调用表达式（返回airy_err_t）
- * @param err_var 存储错误结果的变量名
- * @return 如果func_call失败，返回错误码
+ * @brief Check a function-call result; return the error code on failure
+ * @param func_call Function-call expression (returns airy_err_t)
+ * @param err_var Variable name storing the error result
+ * @return The error code if func_call failed
  *
  * @code
  * CHECK_ERR_RET(airy_init(), err);
@@ -96,9 +94,9 @@
     } while (0)
 
 /**
- * @brief 检查函数调用结果，如果失败则跳转到清理标签
- * @param func_call 函数调用表达式（返回airy_err_t）
- * @param err_var 存储错误结果的变量名
+ * @brief Check a function-call result; jump to the cleanup label on failure
+ * @param func_call Function-call expression (returns airy_err_t)
+ * @param err_var Variable name storing the error result
  *
  * @code
  * CHECK_ERR_GOTO(airy_alloc(&ptr), err, cleanup);
@@ -113,9 +111,9 @@
     } while (0)
 
 /**
- * @brief 检查指针是否为NULL，如果是则跳转到清理标签
- * @param ptr 要检查的指针
- * @param label 跳转标签
+ * @brief Check that a pointer is not NULL; jump to the cleanup label if it is
+ * @param ptr Pointer to check
+ * @param label Jump label
  *
  * @code
  * CHECK_NULL_GOTO(buffer, cleanup);
@@ -129,10 +127,10 @@
     } while (0)
 
 /**
- * @brief 安全释放指针并将其置为NULL
- * @param ptr 要释放的指针
+ * @brief Safely free a pointer and set it to NULL
+ * @param ptr Pointer to free
  *
- * @note 使用AIRY_FREE进行释放
+ * @note Releases with AIRY_FREE
  * @code
  * SAFE_FREE(buffer);
  * @endcode
@@ -146,10 +144,11 @@
     } while (0)
 
 /**
- * @brief 分配内存并检查结果，失败则跳转到清理标签
- * @param ptr_var 指针变量名
- * @param size 分配大小
- * @param label 跳转标签
+ * @brief Allocate memory and check the result; jump to the cleanup label on
+ *        failure
+ * @param ptr_var Pointer variable name
+ * @param size Allocation size
+ * @param label Jump label
  *
  * @code
  * ALLOC_CHECK(buffer, sizeof(buffer_t), cleanup);
@@ -162,11 +161,11 @@
     } while (0)
 
 /**
- * @brief 分配并清零内存，失败则跳转到清理标签
- * @param ptr_var 指针变量名
- * @param count 元素数量
- * @param size 元素大小
- * @param label 跳转标签
+ * @brief Allocate and zero memory; jump to the cleanup label on failure
+ * @param ptr_var Pointer variable name
+ * @param count Element count
+ * @param size Element size
+ * @param label Jump label
  *
  * @code
  * CALLOC_CHECK(array, 10, sizeof(int), cleanup);
@@ -179,10 +178,10 @@
     } while (0)
 
 /**
- * @brief 字符串复制检查，失败则跳转到清理标签
- * @param dest 目标指针变量
- * @param src 源字符串
- * @param label 跳转标签
+ * @brief String duplication check; jump to the cleanup label on failure
+ * @param dest Destination pointer variable
+ * @param src Source string
+ * @param label Jump label
  *
  * @code
  * STRDUP_CHECK(copy, original, cleanup);
@@ -195,12 +194,12 @@
     } while (0)
 
 /**
- * @brief 范围检查，确保值在[min, max]范围内
- * @param value 要检查的值
- * @param min 最小值
- * @param max 最大值
- * @param err_code 错误码
- * @return 如果值超出范围，返回err_code
+ * @brief Range check, ensuring the value is within [min, max]
+ * @param value Value to check
+ * @param min Minimum value
+ * @param max Maximum value
+ * @param err_code Error code
+ * @return err_code if the value is out of range
  */
 #define CHECK_RANGE_RET(value, min, max, err_code) \
     do {                                           \
@@ -210,10 +209,10 @@
     } while (0)
 
 /**
- * @brief 非零检查，确保值不为零
- * @param value 要检查的值
- * @param err_code 错误码
- * @return 如果值为零，返回err_code
+ * @brief Non-zero check, ensuring the value is not zero
+ * @param value Value to check
+ * @param err_code Error code
+ * @return err_code if the value is zero
  */
 #define CHECK_NONZERO_RET(value, err_code) \
     do {                                   \
@@ -223,10 +222,10 @@
     } while (0)
 
 /**
- * @brief 检查字符串是否为空或NULL
- * @param str 要检查的字符串
- * @param err_code 错误码
- * @return 如果字符串为空或NULL，返回err_code
+ * @brief Check that a string is neither NULL nor empty
+ * @param str String to check
+ * @param err_code Error code
+ * @return err_code if the string is NULL or empty
  */
 #define CHECK_STRING_RET(str, err_code)          \
     do {                                         \
@@ -236,11 +235,12 @@
     } while (0)
 
 /**
- * @brief 检查指针是否为NULL，如果是则设置错误码并跳转
- * @param ptr 要检查的指针
- * @param label 跳转标签
- * @param err_var 错误变量名（如ret）
- * @param err_code 错误码
+ * @brief Check that a pointer is not NULL; set the error code and jump if it
+ *        is
+ * @param ptr Pointer to check
+ * @param label Jump label
+ * @param err_var Error variable name (e.g. ret)
+ * @param err_code Error code
  *
  * @code
  * CHECK_NULL_GOTO_ERR(buffer, cleanup, ret, AIRY_ENOMEM);
@@ -255,12 +255,12 @@
     } while (0)
 
 /**
- * @brief 字符串复制检查，失败则设置错误码并跳转
- * @param dest 目标指针变量
- * @param src 源字符串
- * @param label 跳转标签
- * @param err_var 错误变量名
- * @param err_code 错误码
+ * @brief String duplication check; set the error code and jump on failure
+ * @param dest Destination pointer variable
+ * @param src Source string
+ * @param label Jump label
+ * @param err_var Error variable name
+ * @param err_code Error code
  *
  * @code
  * STRDUP_CHECK_ERR(copy, original, cleanup, ret, AIRY_ENOMEM);
@@ -273,12 +273,12 @@
     } while (0)
 
 /**
- * @brief 分配内存检查，失败则设置错误码并跳转
- * @param ptr_var 指针变量名
- * @param size 分配大小
- * @param label 跳转标签
- * @param err_var 错误变量名
- * @param err_code 错误码
+ * @brief Allocation check; set the error code and jump on failure
+ * @param ptr_var Pointer variable name
+ * @param size Allocation size
+ * @param label Jump label
+ * @param err_var Error variable name
+ * @param err_code Error code
  *
  * @code
  * MALLOC_CHECK_ERR(buffer, sizeof(buffer_t), cleanup, ret, AIRY_ENOMEM);
@@ -291,13 +291,13 @@
     } while (0)
 
 /**
- * @brief 分配并清零内存检查，失败则设置错误码并跳转
- * @param ptr_var 指针变量名
- * @param count 元素数量
- * @param size 元素大小
- * @param label 跳转标签
- * @param err_var 错误变量名
- * @param err_code 错误码
+ * @brief Allocate-and-zero check; set the error code and jump on failure
+ * @param ptr_var Pointer variable name
+ * @param count Element count
+ * @param size Element size
+ * @param label Jump label
+ * @param err_var Error variable name
+ * @param err_code Error code
  *
  * @code
  * CALLOC_CHECK_ERR(array, 10, sizeof(int), cleanup, ret, AIRY_ENOMEM);

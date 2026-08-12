@@ -3,14 +3,15 @@
 
 /**
  * @file core_config.h
- * @brief 统一配置模块 - 核心层接口
+ * @brief Unified configuration module: core-layer interface.
  *
- * 统一配置模块核心层，提供统一的配置数据模型和基础接口。
- * 设计原则：
- * 1. 统一的配置数据模型，支持多种数据类型
- * 2. 类型安全的配置访问接口
- * 3. 内存所有权明确，避免内存泄漏
- * 4. 线程安全的基础操作
+ * Core layer of the unified configuration module, providing a unified
+ * configuration data model and basic interfaces.
+ * Design principles:
+ * 1. Unified configuration data model supporting multiple data types
+ * 2. Type-safe configuration access interfaces
+ * 3. Explicit memory ownership, avoiding memory leaks
+ * 4. Thread-safe basic operations
  */
 
 #ifndef AIRY_RT_CORE_CONFIG_H
@@ -60,117 +61,117 @@ typedef struct config_context config_context_t;
 
 
 /**
- * @brief 创建空配置值
- * @return 配置值对象，失败返回NULL
+ * @brief Create a null config value
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_null(void);
 
 /**
- * @brief 创建布尔配置值
- * @param value 布尔值
- * @return 配置值对象，失败返回NULL
+ * @brief Create a boolean config value
+ * @param value Boolean value
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_bool(bool value);
 
 /**
- * @brief 创建整数配置值
- * @param value 整数值
- * @return 配置值对象，失败返回NULL
+ * @brief Create an integer config value
+ * @param value Integer value
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_int(int32_t value);
 
 /**
- * @brief 创建64位整数配置值
- * @param value 64位整数值
- * @return 配置值对象，失败返回NULL
+ * @brief Create a 64-bit integer config value
+ * @param value 64-bit integer value
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_int64(int64_t value);
 
 /**
- * @brief 创建浮点数配置值
- * @param value 浮点数值
- * @return 配置值对象，失败返回NULL
+ * @brief Create a double config value
+ * @param value Double value
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_double(double value);
 
 /**
- * @brief 创建字符串配置值
- * @param value 字符串值（会被复制）
- * @return 配置值对象，失败返回NULL
+ * @brief Create a string config value
+ * @param value String value (copied)
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_string(const char *value);
 
 /**
- * @brief 创建数组配置值
- * @param capacity 初始容量
- * @return 配置值对象，失败返回NULL
+ * @brief Create an array config value
+ * @param capacity Initial capacity
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_array(size_t capacity);
 
 /**
- * @brief 创建对象配置值
- * @param capacity 初始容量
- * @return 配置值对象，失败返回NULL
+ * @brief Create an object config value
+ * @param capacity Initial capacity
+ * @return Config value object, NULL on failure
  */
 config_value_t *config_value_create_object(size_t capacity);
 
 /**
- * @brief 复制配置值
- * @param value 源配置值
- * @return 新的配置值副本，失败返回NULL
+ * @brief Clone a config value
+ * @param value Source config value
+ * @return New config value copy, NULL on failure
  */
 config_value_t *config_value_clone(const config_value_t *value);
 
 /**
- * @brief 销毁配置值
- * @param value 配置值对象
+ * @brief Destroy a config value
+ * @param value Config value object
  */
 void config_value_destroy(config_value_t *value);
 
 /**
- * @brief 获取配置值类型
- * @param value 配置值
- * @return 配置值类型
+ * @brief Get a config value's type
+ * @param value Config value
+ * @return Config value type
  */
 config_value_type_t config_value_get_type(const config_value_t *value);
 
 /**
- * @brief 获取布尔值
- * @param value 配置值
- * @param default_value 默认值（当类型不匹配或为空时返回）
- * @return 布尔值
+ * @brief Get the boolean value
+ * @param value Config value
+ * @param default_value Default (returned on type mismatch or NULL)
+ * @return Boolean value
  */
 bool config_value_get_bool(const config_value_t *value, bool default_value);
 
 /**
- * @brief 获取整数值
- * @param value 配置值
- * @param default_value 默认值（当类型不匹配或为空时返回）
- * @return 整数值
+ * @brief Get the integer value
+ * @param value Config value
+ * @param default_value Default (returned on type mismatch or NULL)
+ * @return Integer value
  */
 int32_t config_value_get_int(const config_value_t *value, int32_t default_value);
 
 /**
- * @brief 获取64位整数值
- * @param value 配置值
- * @param default_value 默认值（当类型不匹配或为空时返回）
- * @return 64位整数值
+ * @brief Get the 64-bit integer value
+ * @param value Config value
+ * @param default_value Default (returned on type mismatch or NULL)
+ * @return 64-bit integer value
  */
 int64_t config_value_get_int64(const config_value_t *value, int64_t default_value);
 
 /**
- * @brief 获取浮点数值
- * @param value 配置值
- * @param default_value 默认值（当类型不匹配或为空时返回）
- * @return 浮点数值
+ * @brief Get the double value
+ * @param value Config value
+ * @param default_value Default (returned on type mismatch or NULL)
+ * @return Double value
  */
 double config_value_get_double(const config_value_t *value, double default_value);
 
 /**
- * @brief 获取字符串值
- * @param value 配置值
- * @param default_value 默认值（当类型不匹配或为空时返回）
- * @return 字符串指针（内部所有，勿释放）
+ * @brief Get the string value
+ * @param value Config value
+ * @param default_value Default (returned on type mismatch or NULL)
+ * @return String pointer (internally owned, do not free)
  */
 const char *config_value_get_string(const config_value_t *value, const char *default_value);
 
@@ -190,75 +191,76 @@ const char *config_iterator_next_key(const config_iterator_t *it);
 
 
 /**
- * @brief 创建配置上下文
- * @param name 上下文名称（用于调试和日志）
- * @return 配置上下文，失败返回NULL
+ * @brief Create a configuration context
+ * @param name Context name (for debugging and logging)
+ * @return Configuration context, NULL on failure
  */
 config_context_t *config_context_create(const char *name);
 
 /**
- * @brief 销毁配置上下文
- * @param ctx 配置上下文
+ * @brief Destroy a configuration context
+ * @param ctx Configuration context
  */
 void config_context_destroy(config_context_t *ctx);
 
 /**
- * @brief 设置配置值
- * @param ctx 配置上下文
- * @param key 配置键（点分格式，如"database.host"）
- * @param value 配置值（所有权转移给上下文）
- * @return 错误码
+ * @brief Set a config value
+ * @param ctx Configuration context
+ * @param key Configuration key (dot format, e.g. "database.host")
+ * @param value Config value (ownership transferred to the context)
+ * @return Error code
  */
 config_error_t config_context_set(config_context_t *ctx, const char *key, config_value_t *value);
 
 /**
- * @brief 获取配置值
- * @param ctx 配置上下文
- * @param key 配置键
- * @return 配置值（内部所有，勿释放或修改），不存在返回NULL
+ * @brief Get a config value
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @return Config value (internally owned, do not free or modify), NULL if
+ *         absent
  */
 const config_value_t *config_context_get(const config_context_t *ctx, const char *key);
 
 /**
- * @brief 删除配置项
- * @param ctx 配置上下文
- * @param key 配置键
- * @return 错误码
+ * @brief Delete a config entry
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @return Error code
  */
 config_error_t config_context_delete(config_context_t *ctx, const char *key);
 
 /**
- * @brief 检查配置项是否存在
- * @param ctx 配置上下文
- * @param key 配置键
- * @return 是否存在
+ * @brief Check whether a config entry exists
+ * @param ctx Configuration context
+ * @param key Configuration key
+ * @return Whether it exists
  */
 bool config_context_has(const config_context_t *ctx, const char *key);
 
 /**
- * @brief 清除所有配置项
- * @param ctx 配置上下文
+ * @brief Clear all config entries
+ * @param ctx Configuration context
  */
 void config_context_clear(config_context_t *ctx);
 
 /**
- * @brief 获取配置项数量
- * @param ctx 配置上下文
- * @return 配置项数量
+ * @brief Get the number of config entries
+ * @param ctx Configuration context
+ * @return Number of config entries
  */
 size_t config_context_count(const config_context_t *ctx);
 
 /**
- * @brief 锁定配置上下文（防止修改）
- * @param ctx 配置上下文
- * @return 错误码
+ * @brief Lock the configuration context (prevent modification)
+ * @param ctx Configuration context
+ * @return Error code
  */
 config_error_t config_context_lock(config_context_t *ctx);
 
 /**
- * @brief 解锁配置上下文
- * @param ctx 配置上下文
- * @return 错误码
+ * @brief Unlock the configuration context
+ * @param ctx Configuration context
+ * @return Error code
  */
 config_error_t config_context_unlock(config_context_t *ctx);
 
@@ -278,23 +280,23 @@ void config_context_set_encryption(config_context_t *ctx, bool enabled);
 
 
 /**
- * @brief 获取错误码描述
- * @param error 错误码
- * @return 错误描述字符串
+ * @brief Get an error code description
+ * @param error Error code
+ * @return Error description string
  */
 const char *config_error_to_string(config_error_t error);
 
 /**
- * @brief 获取配置值类型描述
- * @param type 配置值类型
- * @return 类型描述字符串
+ * @brief Get a config value type description
+ * @param type Config value type
+ * @return Type description string
  */
 const char *config_type_to_string(config_value_type_t type);
 
 /**
- * @brief 打印配置值（用于调试）
- * @param value 配置值
- * @param indent 缩进级别
+ * @brief Print a config value (for debugging)
+ * @param value Config value
+ * @param indent Indent level
  */
 void config_value_print(const config_value_t *value, int indent);
 
