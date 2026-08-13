@@ -3,10 +3,11 @@
 
 /**
  * @file config_source_manager.c
- * @brief 统一配置模块 - 配置源管理器与变化监控实现
+ * @brief Unified config module - source manager and change monitoring.
  *
- * 本文件实现配置源管理器：源的注册/移除/查找/批量加载、
- * 变化监听与防抖轮询通知，单一职责。
+ * Implements the config source manager: source register/remove/find/
+ * batch load, change watching and debounced poll notification, single
+ * responsibility.
  */
 
 #include "config_source.h"

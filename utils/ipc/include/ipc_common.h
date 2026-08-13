@@ -448,9 +448,23 @@ airy_err_t ipc_server_stop(ipc_server_t *server);
  * @param server Server handle
  * @param timeout_ms Timeout in milliseconds
  * @return Client channel handle, NULL on failure
- * @ownership Caller releases with ipc_channel_destroy
+ * @ownership Server owns the connection; release with ipc_server_disconnect
  */
 ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms);
+
+/**
+ * @brief Disconnect and release an accepted client connection
+ *
+ * Removes the connection from the server's tracking array and destroys
+ * the channel. Must be used instead of ipc_channel_destroy for
+ * connections obtained via ipc_server_accept, so that the server does
+ * not retain a dangling reference.
+ *
+ * @param server Server handle
+ * @param channel Connection channel returned by ipc_server_accept
+ * @return Error code
+ */
+airy_err_t ipc_server_disconnect(ipc_server_t *server, ipc_channel_t *channel);
 
 /**
  * @brief Get the server connection count

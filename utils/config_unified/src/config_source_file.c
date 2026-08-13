@@ -3,11 +3,11 @@
 
 /**
  * @file config_source_file.c
- * @brief 统一配置模块 - 文件配置源实现
+ * @brief Unified config module - file config source.
  *
- * 本文件实现文件配置源：文件加载/保存、格式识别、
- * 变化检测（inotify/kqueue/ReadDirectoryChangesW 与 mtime 兜底），
- * 单一职责。
+ * Implements the file config source: file load/save, format detection,
+ * change detection (inotify/kqueue/ReadDirectoryChangesW with an mtime
+ * fallback), single responsibility.
  */
 
 #include "config_source.h"

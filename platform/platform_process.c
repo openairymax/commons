@@ -3,7 +3,8 @@
 
 /**
  * @file platform_process.c
- * @brief 进程管理域：进程启动/等待/终止、管道关闭与命令输出捕获的跨平台实现
+ * @brief Process management domain: cross-platform process start/wait/
+ * terminate, pipe shutdown and command output capture.
  */
 
 #include <time.h>

@@ -3,13 +3,13 @@
 
 /**
  * @file service_logging.c
- * @brief 统一分层日志系统服务层实现
+ * @brief Unified layered logging system - service layer implementation.
  *
- * 本文件实现统一分层日志系统的服务层功能，提供：
- * 1. 日志轮转和归档（基于文件大小和时间）
- * 2. 日志过滤和格式化（JSON/Text双格式）
- * 3. 日志传输和输出（文件/控制台/syslog）
- * 4. 监控统计和管理接口
+ * Implements the service layer of the unified logging system, providing:
+ * 1. Log rotation and archival (size- and time-based)
+ * 2. Log filtering and formatting (JSON/Text dual format)
+ * 3. Log transport and output (file/console/syslog)
+ * 4. Monitoring stats and management interfaces
  */
 
 #include "service_logging.h"
@@ -70,8 +70,9 @@ static int console_outputter_output(outputter_t *self, const log_record_t *recor
     (void)self;
     if (!record)
         return AIRY_EINVAL;
-    /* 路由到核心层 log_write()，统一处理色彩/时间戳/节流/trace_id
-     * 注意：此处使用 log_write 而非直接 fprintf，确保所有日志经核心层格式化 */
+    /* Route to the core log_write() so color/timestamp/throttle/trace_id
+     * are handled uniformly. Use log_write rather than direct fprintf to
+     * ensure all logs pass through the core formatter. */
     log_write(record->level, record->module, record->line, "[SERVICE] %s", record->message);
     return 0;
 }

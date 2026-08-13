@@ -3,14 +3,15 @@
 
 /**
  * @file config_source.c
- * @brief 统一配置模块 - 源适配层主入口
+ * @brief Unified config module - source adapter main entry.
  *
- * 本文件保留源适配层基类与通用 API：配置源对象的基础创建/释放、
- * 通用加载/保存/变更检测/属性访问以及工具函数。
+ * Keeps the source adapter base class and common API: config source
+ * object create/release, generic load/save/change-detection/attribute
+ * access and utility functions.
  *
- * 各类型配置源与管理器分别拆至
+ * The per-type config sources and the manager are split into
  * config_source_file.c / config_source_env.c / config_source_args.c /
- * config_source_memory.c / config_source_manager.c。
+ * config_source_memory.c / config_source_manager.c.
  */
 
 #include "config_source.h"

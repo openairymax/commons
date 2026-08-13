@@ -3,10 +3,11 @@
 
 /**
  * @file config_source_memory.c
- * @brief 统一配置模块 - 内存/默认值/远程配置源实现
+ * @brief Unified config module - memory/default/remote config sources.
  *
- * 本文件实现三种只读直读型配置源：内存配置源、默认值配置源
- * 与远程配置源（轮询式变化检测），单一职责。
+ * Implements three read-only direct-read config sources: the memory
+ * source, the default-value source and the remote source (polling change
+ * detection), single responsibility.
  */
 
 #include "config_source.h"

@@ -3,10 +3,10 @@
 
 /**
  * @file memory_debug_track.c
- * @brief 统一内存管理模块 - 分配追踪域
+ * @brief Unified memory management module - allocation tracking domain.
  *
- * 本文件实现调试块的链表管理、分配点定位、标签设置、堆栈跟踪捕获
- * 与操作日志等分配追踪能力。
+ * Implements debug block linked-list management, allocation point
+ * location, tag setting, stack trace capture and operation logging.
  */
 
 #include "memory_debug.h"
@@ -144,7 +144,8 @@ bool memory_debug_set_tag(void *ptr, const char *tag)
     bool success = (block != NULL);
 
     if (success) {
-        // 注意：这里不释放旧的tag，因为它是静态字符串或由memory.c管理
+        /* Note: do not free the old tag; it is a static string or
+         * managed by memory.c. */
         block->tag = tag;
     }
 

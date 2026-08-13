@@ -3,13 +3,13 @@
 
 /**
  * @file handler.c
- * @brief 统一错误处理模块实现
+ * @brief Unified error handling module implementation.
  *
- * 本模块提供统一的错误处理功能，包括：
- * - 错误码描述和严重程度管理
- * - 错误链追踪和上下文管理
- * - 多语言错误描述支持
- * - 错误统计和报告
+ * Provides unified error handling:
+ * - Error code description and severity management
+ * - Error chain tracking and context management
+ * - Multi-language error description support
+ * - Error statistics and reporting
  */
 
 #include "atomic_compat.h"
@@ -592,9 +592,10 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
     int n = snprintf(buf, buf_size,
                      "{\"code\": %d, \"message\": \"%s\", \"depth\": %d, \"contexts\": [",
                      chain->code, airy_err_str_i18n(chain->code, use_lang), chain->depth);
-    /* snprintf 返回"应写入"的字符数，可能 >= 剩余空间；offset 必须始终 <= buf_size，
-     * 否则 buf_size - offset 无符号下溢会写入越界（与 resource_guard.c 的
-     * AIRY_REPORT_APPEND 防护模式一致）。 */
+    /* snprintf returns the number of chars "that would have been written",
+     * possibly >= remaining space; offset must always stay <= buf_size,
+     * otherwise buf_size - offset underflows and writes out of bounds
+     * (same protection pattern as AIRY_REPORT_APPEND in resource_guard.c). */
     if (n < 0) {
         offset = buf_size;
     } else if ((size_t)n >= buf_size) {

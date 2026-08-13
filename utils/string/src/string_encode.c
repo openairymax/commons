@@ -3,7 +3,8 @@
 
 /**
  * @file string_encode.c
- * @brief 编解码域：JSON 转义、编码转换与 UTF-8 工具
+ * @brief Encode/decode domain: JSON escaping, encoding conversion and
+ * UTF-8 utilities.
  */
 
 #include "airy_string.h"

@@ -3,12 +3,13 @@
 
 /*
  * @file ipc_common_message.c
- * @brief IPC 消息辅助函数域（创建/释放/克隆/校验/序列化）
+ * @brief IPC message helper functions domain (create/free/clone/validate/
+ * serialize).
  *
- * 自 ipc_common.c 拆分：承载 ipc_message_create/free/clone/checksum/
- * verify/serialize/deserialize。通道生命周期与收发见 ipc_common.c，
- * 服务端/客户端、共享内存、消息队列与 RPC 见 ipc_server_client.c /
- * ipc_shm.c / ipc_mq.c / ipc_rpc.c。
+ * Split out of ipc_common.c: hosts ipc_message_create/free/clone/checksum/
+ * verify/serialize/deserialize. Channel lifecycle and send/receive are in
+ * ipc_common.c; server/client, shared memory, message queue and RPC are in
+ * ipc_server_client.c / ipc_shm.c / ipc_mq.c / ipc_rpc.c.
  */
 
 #include "ipc_common.h"

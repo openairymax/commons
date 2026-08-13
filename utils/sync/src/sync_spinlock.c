@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_spinlock.c
- * @brief 自旋锁实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Spinlock implementation.
  */
 
 #include "check.h"

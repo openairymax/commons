@@ -3,10 +3,11 @@
 
 /**
  * @file config_service_validator.c
- * @brief 统一配置模块 - 校验器与 Schema 实现
+ * @brief Unified config module - validator and Schema implementation.
  *
- * 本文件实现配置验证器（范围/正则/枚举/自定义）与配置 Schema
- * 的创建、校验、错误收集与默认值应用，单一职责。
+ * Implements the config validator (range/regex/enum/custom) and config
+ * Schema creation, validation, error collection and default value
+ * application, single responsibility.
  */
 
 #include "config_service.h"

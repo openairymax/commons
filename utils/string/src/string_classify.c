@@ -3,7 +3,7 @@
 
 /**
  * @file string_classify.c
- * @brief 字符分类域：数字/字母/字母数字内容判断
+ * @brief Character classification domain: digit/letter/alnum checks.
  */
 
 #include "airy_string.h"

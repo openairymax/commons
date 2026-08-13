@@ -31,10 +31,12 @@ typedef enum {
     MEMORY_STRATEGY_LOW_LATENCY
 } memory_strategy_t;
 
-/* 注意：旧版 memory_pool_t / memory_pool_config_t / memory_pool_init /
- *       memory_pool_alloc 等已移除，与 memory_pool.h 中的新版实现冲突。
- *       新版内存池 API 详见 memory_pool.h（memory_pool_create / memory_pool_alloc 等）。
- *       保留的 memory_pool_t 定义在 memory_pool.h 中（不透明指针 struct memory_pool *）。
+/* Note: the old memory_pool_t / memory_pool_config_t / memory_pool_init /
+ * memory_pool_alloc etc. have been removed; they conflict with the new
+ * implementations in memory_pool.h. See memory_pool.h for the new pool
+ * API (memory_pool_create / memory_pool_alloc etc.). The retained
+ * memory_pool_t is defined in memory_pool.h as an opaque pointer
+ * (struct memory_pool *).
  */
 
 void *memory_safe_alloc(size_t size);

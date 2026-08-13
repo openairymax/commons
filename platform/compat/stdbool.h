@@ -6,8 +6,8 @@
  *
  * Provides <stdbool.h> for compilers that lack it.
  *
- * 原位置: agentrt/include/agentrt/compat/stdbool.h
- * 迁移至: agentrt/commons/platform/compat/ (2026-04-19 include/整合重构)
+ * Original location: agentrt/include/agentrt/compat/stdbool.h
+ * Moved to: agentrt/commons/platform/compat/ (2026-04-19 include refactor)
  */
 
 #ifndef AIRY_RT_COMPAT_STDBOOL_H

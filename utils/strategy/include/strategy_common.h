@@ -3,14 +3,13 @@
 
 /**
  * @file strategy_common.h
- * @brief 策略模式共享工具 - 消除策略相关代码重复
+ * @brief Strategy pattern shared utilities - eliminates strategy code dup.
  *
- * 提供策略模式的通用实现，包括：
- * - 加权评分算法
- * - 调度策略通用结构
- * - 规划策略通用结构
- * - 跨模块共享的策略工具函数
- *
+ * Provides common strategy-pattern implementations, including:
+ * - Weighted scoring algorithm
+ * - Scheduling strategy common structures
+ * - Planning strategy common structures
+ * - Cross-module shared strategy utility functions
  */
 
 #ifndef AIRY_RT_STRATEGY_COMMON_H
@@ -26,7 +25,7 @@
 #include <string.h>
 
 /**
- * @brief 加权评分配置
+ * @brief Weighted scoring config.
  */
 typedef struct weighted_config {
     float cost_weight;
@@ -35,7 +34,7 @@ typedef struct weighted_config {
 } weighted_config_t;
 
 /**
- * @brief 代理信息结构（策略通用）
+ * @brief Agent info structure (strategy common).
  */
 typedef struct strategy_agent_info {
     float cost_estimate;
@@ -46,7 +45,7 @@ typedef struct strategy_agent_info {
 } strategy_agent_info_t;
 
 /**
- * @brief 策略结果结构
+ * @brief Strategy result structure.
  */
 typedef struct strategy_result {
     int selected_index;
@@ -55,57 +54,57 @@ typedef struct strategy_result {
 } strategy_result_t;
 
 /**
- * @brief 计算加权评分
- * @param agent 代理信息
- * @param manager 加权配置
- * @return 计算的评分
+ * @brief Compute the weighted score.
+ * @param agent Agent info
+ * @param manager Weighted config
+ * @return The computed score
  */
 float strategy_compute_weighted_score(const strategy_agent_info_t *agent,
                                       const weighted_config_t *manager);
 
 /**
- * @brief 从代理数组中选择最佳代理
- * @param agents 代理数组
- * @param agent_count 代理数量
- * @param manager 加权配置
- * @param result 输出结果
- * @return 0表示成功，非0表示失败
+ * @brief Select the best agent from an agent array.
+ * @param agents Agent array
+ * @param agent_count Agent count
+ * @param manager Weighted config
+ * @param result Output result
+ * @return 0 on success, nonzero on failure
  */
 int strategy_select_best_agent(const strategy_agent_info_t *agents, size_t agent_count,
                                const weighted_config_t *manager, strategy_result_t *result);
 
 /**
- * @brief 创建默认加权配置
- * @return 默认加权配置
+ * @brief Create the default weighted config.
+ * @return Default weighted config
  */
 weighted_config_t strategy_create_default_weighted_config(void);
 
 /**
- * @brief 验证加权配置
- * @param manager 加权配置
- * @return true表示有效，false表示无效
+ * @brief Validate a weighted config.
+ * @param manager Weighted config
+ * @return true if valid, false otherwise
  */
 bool strategy_validate_weighted_config(const weighted_config_t *manager);
 
 /**
- * @brief 归一化权重
- * @param manager 加权配置
- * @return 归一化后的配置
+ * @brief Normalize weights.
+ * @param manager Weighted config
+ * @return The normalized config
  */
 weighted_config_t strategy_normalize_weights(const weighted_config_t *manager);
 
 /**
- * @brief 策略数据结构通用清理函数
- * @param data 数据指针
- * @param free_func 释放函数
+ * @brief Common strategy data cleanup function.
+ * @param data Data pointer
+ * @param free_func Free function
  */
 void strategy_cleanup_data(void *data, void (*free_func)(void *));
 
 /**
- * @brief 策略名称生成器
- * @param base_name 基础名称
- * @param suffix 后缀
- * @return 生成的策略名称（需要调用AIRY_FREE释放）
+ * @brief Strategy name generator.
+ * @param base_name Base name
+ * @param suffix Suffix
+ * @return Generated strategy name (free with AIRY_FREE)
  */
 char *strategy_generate_name(const char *base_name, const char *suffix);
 

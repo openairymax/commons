@@ -3,17 +3,17 @@
 
 /**
  * @file counter.c
- * @brief Token计数器实现
+ * @brief Token counter implementation.
  *
- * @details
- * 本模块实现Token计数与预算管理功能：
- * - 基于字符级启发式近似（word/CJK/punctuation 分词）
- * - 支持按模型类型调整系数（GPT-4/GPT-3.5/Claude/Llama）
- * - 支持批量计数和截断
- * - 线程安全的计数器操作
+ * Implements token counting and budget management:
+ * - Character-level heuristic approximation (word/CJK/punctuation tokenization)
+ * - Model-type coefficient adjustment (GPT-4/GPT-3.5/Claude/Llama)
+ * - Batch counting and truncation
+ * - Thread-safe counter operations
  *
- * @note 本实现使用轻量级字符启发式算法，非完整BPE编码器。
- *       对于生产环境高精度需求，建议集成TikToken或等效库。
+ * @note This implementation uses a lightweight character heuristic, not a
+ * full BPE encoder. For high-precision production needs, consider
+ * integrating TikToken or an equivalent library.
  */
 
 #include "../../platform/include/platform.h"
@@ -32,7 +32,7 @@
 #define MAX_MODEL_NAME 64
 
 /**
- * @brief Token计数器内部结构
+ * @brief Token counter internal structure.
  */
 struct airy_token_counter {
     char model_name[MAX_MODEL_NAME];

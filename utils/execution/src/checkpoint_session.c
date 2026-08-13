@@ -3,10 +3,10 @@
 
 /**
  * @file checkpoint_session.c
- * @brief AgentRT 任务检查点 - 会话管理域
+ * @brief AgentRT task checkpoint - session management domain.
  *
- * 本文件负责检查点会话维护：删除/列举/过期清理，以及
- * auto-checkpoint hook 机制（CoreLoopThree 集成）。
+ * Handles checkpoint session maintenance: delete/list/expiry cleanup and
+ * the auto-checkpoint hook mechanism (CoreLoopThree integration).
  */
 
 #include "checkpoint.h"
@@ -120,9 +120,10 @@ airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***o
         seqs[j] = key;
     }
 
-    /* 逐个恢复检查点。collect_task_seqs 给出目录扫描时的快照，
-     * 其间文件可能被并发删除；restore 失败时跳过该条目而非整体失败，
-     * 保证返回的是实际可恢复的检查点集合。 */
+    /* Restore checkpoints one by one. collect_task_seqs gives a snapshot
+     * taken while scanning the directory; files may be removed concurrently.
+     * A failed restore skips that entry instead of failing the whole
+     * operation, so the result is the set that was actually restorable. */
     airy_task_checkpoint_t **arr =
         (airy_task_checkpoint_t **)AIRY_CALLOC(cnt, sizeof(airy_task_checkpoint_t *));
     if (!arr) {
@@ -156,10 +157,11 @@ airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
         return AIRY_ENOTINIT;
 
     airy_mtx_lock(&g_checkpoint_mutex);
-    /* 注意：必须使用 CLOCK_REALTIME 基准（time(NULL)）与文件 st_mtime 比较。
-     * 之前误用 airy_time_ms()（CLOCK_MONOTONIC，系统启动以来的毫秒数），
-     * 与 st_mtime（CLOCK_REALTIME，自 1970 年以来的秒数）基准不一致，
-     * 导致 uint64_t 减法下溢，所有文件被误判为过期而删除。 */
+    /* Must use the CLOCK_REALTIME baseline (time(NULL)) to compare against
+     * file st_mtime. Earlier code wrongly used airy_time_ms()
+     * (CLOCK_MONOTONIC, milliseconds since boot), whose baseline differs
+     * from st_mtime (CLOCK_REALTIME, seconds since 1970); the uint64_t
+     * subtraction underflowed and every file was judged stale and deleted. */
     uint64_t now_sec = (uint64_t)time(NULL);
 
     if (max_age_sec > 0) {

@@ -3,10 +3,11 @@
 
 /**
  * @file config_source_env.c
- * @brief 统一配置模块 - 环境变量配置源实现
+ * @brief Unified config module - environment variable source.
  *
- * 本文件实现环境变量配置源：前缀过滤、键映射（双分隔符转层级点）、
- * 标量类型推断与变化检测（哈希比对），单一职责。
+ * Implements the environment variable config source: prefix filtering,
+ * key mapping (double separators become hierarchy dots), scalar type
+ * inference and change detection (hash comparison), single responsibility.
  */
 
 #include "config_source.h"
@@ -60,7 +61,9 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
         }
         key[key_len] = '\0';
 
-        // key 映射：双分隔符（如 __）映射为层级 .，单 _ 保留为词边界，对齐 YAML dotted path
+        /* Key mapping: doubled separators (e.g. __) become hierarchy dots,
+         * single separators stay as word boundaries, aligning with YAML
+         * dotted paths. */
 
         if (!priv->case_sensitive) {
             for (char *p = key; *p; p++)

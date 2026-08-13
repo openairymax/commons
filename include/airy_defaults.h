@@ -4,15 +4,16 @@
 /*
  *
  * @file airy_defaults.h
- * @brief AgentRT 全局共享默认值集中定义
+ * @brief Centralized definitions of AgentRT global shared defaults.
  *
- * P0.17 阶段 1：从 daemons/common/include/daemon_defaults.h 迁移至
- * commons/include/airy_defaults.h，消除 atoms→daemons 编译期反向依赖
- * （IRON-6: 禁止跨层耦合残留）。宏命名保持 AIRY_ 前缀，表明其全局
- * 共享语义，而非 daemon 专属。
+ * P0.17 phase 1: migrated from daemons/common/include/daemon_defaults.h to
+ * commons/include/airy_defaults.h, removing the compile-time reverse
+ * dependency atoms->daemons (IRON-6: no cross-layer coupling residue).
+ * Macros keep the AIRY_ prefix to signal global shared semantics rather
+ * than daemon-specific ones.
  *
- * 将分散在各模块中的硬编码超时/重试/缓冲区/端口等默认值统一到此处，
- * 便于全局调整策略和运维配置。
+ * Hard-coded timeout/retry/buffer/port defaults scattered across modules
+ * are unified here for global policy tuning and ops configuration.
  */
 
 #ifndef AIRY_RT_DEFAULTS_H

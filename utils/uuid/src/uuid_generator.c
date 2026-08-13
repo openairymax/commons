@@ -3,7 +3,7 @@
 
 /**
  * @file uuid_generator.c
- * @brief UUID v4 生成器实现
+ * @brief UUID v4 generator implementation.
  */
 
 #include "uuid_generator.h"

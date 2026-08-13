@@ -3,9 +3,9 @@
 
 /**
  * @file string.c
- * @brief 统一字符串处理模块 - 核心层实现
- * 实现安全、高效、统一的字符串处理功能，提供完整的字符串操作API。
- * 包括字符串复制、连接、比较、查找、分割、格式化等常用功能。
+ * @brief Unified string handling module - core layer implementation.
+ * Provides safe, efficient, unified string handling with a full string
+ * operation API: copy, concat, compare, search, split, format, etc.
  */
 
 #include "airy_string.h"
@@ -35,12 +35,12 @@
 #endif
 
 /**
- * @brief 空白字符定义
+ * @brief Whitespace character definition.
  */
 static const char *__attribute__((unused)) WHITESPACE_CHARS = " \t\n\r\v\f";
 
 /**
- * @brief 默认字符串格式化选项
+ * @brief Default string formatting options.
  */
 static const string_format_options_t
     __attribute__((unused)) DEFAULT_FORMAT_OPTIONS = {.initial_buffer_size = 256,

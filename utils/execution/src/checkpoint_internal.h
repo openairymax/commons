@@ -3,7 +3,8 @@
 
 /**
  * @file checkpoint_internal.h
- * @brief 检查点模块内部共享定义：全局状态变量、路径宏与跨文件辅助函数声明
+ * @brief Checkpoint module internal shared definitions: global state
+ * variables, path macros and cross-file helper declarations.
  */
 
 #ifndef AIRY_CHECKPOINT_INTERNAL_H

@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_semaphore.c
- * @brief 信号量实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Semaphore implementation.
  */
 
 #include "check.h"

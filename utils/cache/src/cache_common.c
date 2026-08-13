@@ -3,7 +3,7 @@
 
 /**
  * @file cache_common.c
- * @brief 通用缓存库实现
+ * @brief Generic cache library implementation.
  */
 
 #include "cache_common.h"
@@ -19,7 +19,7 @@
 #define HASH_SIZE 1024
 
 /**
- * @brief 缓存条目结构体
+ * @brief Cache entry structure.
  */
 typedef struct cache_entry {
     void *key;
@@ -31,7 +31,7 @@ typedef struct cache_entry {
 } cache_entry_t;
 
 /**
- * @brief 哈希桶结构体
+ * @brief Hash bucket structure.
  */
 typedef struct cache_bucket {
     cache_entry_t *head;
@@ -39,7 +39,7 @@ typedef struct cache_bucket {
 } cache_bucket_t;
 
 /**
- * @brief 缓存实现结构体
+ * @brief Cache implementation structure.
  */
 typedef struct cache_impl {
     cache_bucket_t buckets[HASH_SIZE];
@@ -275,9 +275,11 @@ int cache_get(cache_t cache, const void *key, void **out_value)
     }
 
     /*
-     * 检查过期时间：必须持有 bucket lock，否则 entry 可能在释放锁后被其他线程释放，
-     * 导致后续访问 use-after-free。不能调用 cache_delete()，因为它内部调用 cache_put()
-     * 会尝试重新获取 bucket lock 造成自死锁；改为直接从哈希桶链表摘除。
+     * TTL check: must hold the bucket lock, otherwise the entry may be
+     * freed by another thread after unlock, leading to use-after-free.
+     * Cannot call cache_delete() here because it internally calls
+     * cache_put(), which would re-acquire the bucket lock and deadlock;
+     * unlink the entry from the hash chain directly instead.
      */
     if (impl->ttl_sec > 0 && (time(NULL) - entry->timestamp) > impl->ttl_sec) {
         cache_entry_t **p = &impl->buckets[idx].head;
@@ -301,16 +303,19 @@ int cache_get(cache_t cache, const void *key, void **out_value)
     }
 
     /*
-     * 复制值：在持有 bucket lock 的前提下完成，确保 entry 在此期间不会被驱逐。
-     * value_copy_func 可能分配内存，但不会获取 bucket lock，故不会自死锁。
+     * Copy the value while holding the bucket lock so the entry cannot
+     * be evicted in between. value_copy_func may allocate memory but
+     * never takes the bucket lock, so no self-deadlock occurs.
      */
     *out_value = impl->manager.value_copy_func(entry->value);
 
     /*
-     * 更新 LRU 位置：使用 trylock 而非阻塞锁。evict_lru()（由 cache_put 调用）的
-     * 锁顺序为 lru_lock → bucket_lock；若此处阻塞等待 lru_lock，而持有 lru_lock 的
-     * 线程又等待 bucket_lock，将形成 AB-BA 死锁。LRU 仅是访问热度优化，trylock 失败
-     * 时跳过不影响正确性。
+     * Update the LRU position using trylock instead of a blocking lock.
+     * evict_lru() (called from cache_put) locks in the order
+     * lru_lock -> bucket_lock; if this path blocked on lru_lock while
+     * the holder waited for a bucket lock, it would deadlock (AB-BA).
+     * LRU is only an access-heat optimization, so skipping on trylock
+     * failure does not affect correctness.
      */
     if (sync_mutex_trylock(&impl->lru_lock) == 0) {
         lru_move_to_head(impl, entry);
@@ -402,7 +407,7 @@ void cache_delete(cache_t cache, const void *key)
 }
 
 /**
- * @brief 清空缓存
+ * @brief Clear the cache.
  */
 void cache_clear(cache_t cache)
 {
@@ -433,7 +438,7 @@ void cache_clear(cache_t cache)
 }
 
 /**
- * @brief 获取缓存大小
+ * @brief Get the cache size.
  */
 size_t cache_get_size(cache_t cache)
 {

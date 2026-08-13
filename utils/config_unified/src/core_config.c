@@ -3,13 +3,13 @@
 
 /**
  * @file core_config.c
- * @brief 统一配置模块 - 核心层实现
+ * @brief Unified config module - core layer implementation.
  *
- * 本文件实现统一配置模块的核心层功能，提供：
- * 1. 统一的配置数据模型和基础接口
- * 2. 类型安全的配置访问接口
- * 3. 内存所有权明确，避免内存泄漏
- * 4. 线程安全的基础操作
+ * Implements the core layer of the unified config module, providing:
+ * 1. A unified config data model and basic interfaces
+ * 2. Type-safe config access interfaces
+ * 3. Clear memory ownership to avoid leaks
+ * 4. Thread-safe basic operations
  */
 
 #include "core_config.h"
@@ -527,12 +527,13 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
         return CONFIG_ERROR_INVALID_ARG;
     }
 
-    /* v0.1.1 修复（并发安全 Bug E）：config_context_set 缺少 mutex 保护。
-     * 此前 config_context_get/delete/foreach 等操作均持有 mutex，唯独 set 未加锁，
-     * 导致多线程并发调用 config_source_load 写入同一 context 时，
-     * find_item_index + config_value_destroy + 赋值之间存在 TOCTOU 竞争，
-     * 产生 double-free（ASAN 检测到 config_value_destroy 对同一指针被两个线程
-     * 同时调用）。修复：对 set 操作加 mutex，与 get/delete 保持一致。 */
+    /* v0.1.1 fix (concurrency bug E): config_context_set lacked mutex
+     * protection. get/delete/foreach all held the mutex but set did not,
+     * so concurrent config_source_load calls on the same context raced
+     * between find_item_index + config_value_destroy + assignment
+     * (TOCTOU), causing a double-free (ASAN reported config_value_destroy
+     * invoked concurrently on the same pointer by two threads). Fix: guard
+     * set with the mutex, consistent with get/delete. */
     airy_mtx_lock(&ctx->mutex);
 
     int index = find_item_index(ctx, key);

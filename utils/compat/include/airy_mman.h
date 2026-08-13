@@ -21,12 +21,13 @@
 #define MAP_FAILED ((void *)-1)
 
 /*
- * BAN-073 文件级豁免声明
+ * BAN-073 file-level exemption
  * ================================
- * 本文件为 Windows 平台 POSIX <sys/mman.h> 兼容层。
- * munmap/mprotect/shm_open/shm_unlink 等函数必须返回 -1（并设置 errno）
- * 以匹配 POSIX API 契约，调用方依赖 `if (fn() == -1)` 判断失败。
- * 此处 return -1 不是 AIRY_ERR_* 错误码，属合法 POSIX 语义保留。
+ * This file is a POSIX <sys/mman.h> compatibility layer for Windows.
+ * munmap/mprotect/shm_open/shm_unlink must return -1 (and set errno)
+ * to match the POSIX API contract; callers rely on `if (fn() == -1)`
+ * to detect failure. Returning -1 here is not an AIRY_ERR_* error
+ * code, it preserves legal POSIX semantics.
  */
 
 static inline void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset)

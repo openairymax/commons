@@ -3,15 +3,15 @@
 
 /**
  * @file logging.c
- * @brief 统一分层日志系统核心层实现
+ * @brief Unified layered logging system - core layer implementation.
  *
- * 本文件实现统一分层日志系统的核心层功能，提供：
- * 1. 日志级别管理和转换
- * 2. 日志系统初始化和配置（含热重载）
- * 3. 基本日志记录功能（控制台输出）
- * 4. 追踪ID管理（线程局部存储）
- * 5. 模块级别过滤（支持通配符匹配）
- * 6. 完整线程清理（遍历所有注册线程）
+ * Implements the core layer of the unified logging system, providing:
+ * 1. Log level management and conversion
+ * 2. Log system init and configuration (incl. hot reload)
+ * 3. Basic log recording (console output)
+ * 4. Trace ID management (thread-local storage)
+ * 5. Module-level filtering (wildcard matching)
+ * 6. Complete thread cleanup (iterate all registered threads)
  */
 
 #include "logging.h"

@@ -3,16 +3,17 @@
 
 /**
  * @file ipc_backpressure.h
- * @brief IPC Bus 背压控制 — 三级策略
+ * @brief IPC Bus backpressure control - three-level policy.
  *
- * P0.17 阶段 4：从 daemons/common/include/ 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 4: migrated from daemons/common/include/ to commons,
+ * removing the compile-time reverse dependency atoms->daemons (IRON-6).
+ * The daemons version is kept as a re-export compat header.
  *
- * P1.24: 三级背压策略防止 IPC Bus 过载：
- *   - Queue > 80%: 生产者降速
- *   - Queue > 90%: Droppable 消息丢弃
- *   - Queue > 95%: 拒绝新连接 + 告警
- *   - Queue < 60%: 恢复正常速率
+ * P1.24: three-level backpressure policy prevents IPC Bus overload:
+ *   - Queue > 80%: producers slow down
+ *   - Queue > 90%: droppable messages are dropped
+ *   - Queue > 95%: reject new connections + warn
+ *   - Queue < 60%: resume normal rate
  */
 
 #ifndef AIRY_RT_IPC_BACKPRESSURE_H
@@ -27,7 +28,7 @@ extern "C" {
 #endif
 
 /**
- * @brief 背压级别
+ * @brief Backpressure level.
  */
 typedef enum {
     IPC_BP_NORMAL = 0,
@@ -37,7 +38,7 @@ typedef enum {
 } ipc_bp_level_t;
 
 /**
- * @brief 背压配置
+ * @brief Backpressure config.
  */
 typedef struct {
     size_t queue_capacity;
@@ -49,7 +50,7 @@ typedef struct {
 } ipc_bp_config_t;
 
 /**
- * @brief 背压统计
+ * @brief Backpressure stats.
  */
 typedef struct {
     ipc_bp_level_t current_level;
@@ -63,58 +64,60 @@ typedef struct {
 } ipc_bp_stats_t;
 
 /**
- * @brief 背压控制器句柄
+ * @brief Backpressure controller handle.
  */
 typedef struct ipc_bp_controller ipc_bp_controller_t;
 
 /**
- * @brief 创建背压控制器
+ * @brief Create a backpressure controller.
  *
- * @param config 配置（NULL 使用默认）
- * @return 控制器句柄，失败返回 NULL
+ * @param config Config (NULL uses defaults)
+ * @return Controller handle, NULL on failure
  */
 ipc_bp_controller_t *ipc_bp_create(const ipc_bp_config_t *config);
 
 /**
- * @brief 销毁背压控制器
+ * @brief Destroy a backpressure controller.
  */
 void ipc_bp_destroy(ipc_bp_controller_t *ctrl);
 
 /**
- * @brief 更新队列深度并评估背压级别
+ * @brief Update the queue depth and evaluate the backpressure level.
  *
- * 每 5s 采样一次，根据队列深度计算背压级别。
+ * Sampled every 5s; the backpressure level is computed from the queue
+ * depth.
  *
- * @param ctrl 控制器
- * @param current_depth 当前队列深度
- * @return 当前背压级别
+ * @param ctrl Controller
+ * @param current_depth Current queue depth
+ * @return Current backpressure level
  */
 ipc_bp_level_t ipc_bp_update(ipc_bp_controller_t *ctrl, size_t current_depth);
 
 /**
- * @brief 检查消息是否应被发送
+ * @brief Check whether a message should be sent.
  *
- * @param ctrl 控制器
- * @param is_droppable 消息是否可丢弃（日志/指标等低优先级）
- * @return true 允许发送，false 应丢弃/拒绝
+ * @param ctrl Controller
+ * @param is_droppable Whether the message is droppable
+ *                     (log/metrics and other low priority traffic)
+ * @return true allows sending, false means drop/reject
  */
 bool ipc_bp_should_send(ipc_bp_controller_t *ctrl, bool is_droppable);
 
 /**
- * @brief 检查是否应接受新连接
+ * @brief Check whether a new connection should be accepted.
  *
- * @param ctrl 控制器
- * @return true 接受，false 拒绝
+ * @param ctrl Controller
+ * @return true accepts, false rejects
  */
 bool ipc_bp_should_accept_connection(ipc_bp_controller_t *ctrl);
 
 /**
- * @brief 获取背压统计
+ * @brief Get backpressure stats.
  */
 void ipc_bp_get_stats(ipc_bp_controller_t *ctrl, ipc_bp_stats_t *out_stats);
 
 /**
- * @brief 获取当前背压级别
+ * @brief Get the current backpressure level.
  */
 ipc_bp_level_t ipc_bp_get_level(ipc_bp_controller_t *ctrl);
 

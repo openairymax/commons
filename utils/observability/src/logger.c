@@ -3,19 +3,22 @@
 
 /**
  * @file logger.c
- * @brief airy_log_* API 实现（基于统一分层日志系统 logging.h）
+ * @brief airy_log_* API implementation (built on the unified logging.h).
  *
- * @details
- * d6 清理（IRON-8 兼容层清理）：本文件从 logging_compat.c 迁移 airy_log_* 实现，
- * 消除兼容层包装。logging_compat.h/.c 已删除。
+ * d6 cleanup (IRON-8 compat layer cleanup): the airy_log_* implementation
+ * was migrated here from logging_compat.c and the compat wrapper removed;
+ * logging_compat.h/.c have been deleted.
  *
- * 设计要点：
- *   1. AIRY_LOG_LEVEL_* 与 LOG_LEVEL_* 值完全对齐（DEBUG=0/INFO=1/WARN=2/ERROR=3/FATAL=4），
- *      无需级别转换函数（原 logging_compat.c 的 convert_old_level_to_new 存在级别映射 bug，
- *      把 AIRY_LOG_LEVEL_ERROR=3 错误映射为 LOG_LEVEL_DEBUG，已随迁移自动修复）。
- *   2. log_set_trace_id 在 logging.c 中已使用 AIRY_THREAD_LOCAL g_tls_trace_id，
- *      与原 logging_compat.c 的 _Thread_local g_thread_trace_id 语义等价，直接委托即可。
- *   3. 自动初始化使用 atomic_compare_exchange_strong 确保线程安全。
+ * Design points:
+ *   1. AIRY_LOG_LEVEL_* and LOG_LEVEL_* values align exactly
+ *      (DEBUG=0/INFO=1/WARN=2/ERROR=3/FATAL=4), so no level conversion is
+ *      needed (the old convert_old_level_to_new in logging_compat.c had a
+ *      mapping bug, turning AIRY_LOG_LEVEL_ERROR=3 into LOG_LEVEL_DEBUG;
+ *      fixed by the migration).
+ *   2. log_set_trace_id uses AIRY_THREAD_LOCAL g_tls_trace_id in logging.c,
+ *      semantically equivalent to the old _Thread_local g_thread_trace_id
+ *      in logging_compat.c, so delegate directly.
+ *   3. Auto-init uses atomic_compare_exchange_strong for thread safety.
  */
 
 #include "logger.h"
@@ -27,10 +30,11 @@
 #include <stdarg.h>
 
 /**
- * @brief 日志模块一次性初始化
+ * @brief One-time log module initialization.
  *
- * 使用原子 CAS 确保多线程下 log_init 只调用一次。
- * 替代原 logging_compat.c 的 ensure_compat_initialized + logging_compat_init 双层调用。
+ * Uses atomic CAS so log_init runs exactly once across threads.
+ * Replaces the old ensure_compat_initialized + logging_compat_init
+ * two-layer call chain in logging_compat.c.
  */
 static void ensure_log_initialized(void)
 {
@@ -58,10 +62,11 @@ void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
 {
     ensure_log_initialized();
 
-    /* AIRY_LOG_LEVEL_* 与 LOG_LEVEL_* 值完全对齐，直接传递。
-     * 修复原 logging_compat.c convert_old_level_to_new 的级别映射 bug
-     * （原实现把 0→ERROR/1→WARN/2→INFO/3→DEBUG 反向映射，与 logger.h 定义的
-     *   DEBUG=0/INFO=1/WARN=2/ERROR=3 矛盾，导致 AIRY_LOG_ERROR 实际写入 DEBUG）。 */
+    /* AIRY_LOG_LEVEL_* and LOG_LEVEL_* values align exactly, pass through.
+     * Fixes the level-mapping bug in the old logging_compat.c
+     * convert_old_level_to_new, which mapped 0->ERROR/1->WARN/2->INFO/
+     * 3->DEBUG in reverse, contradicting logger.h (DEBUG=0/INFO=1/WARN=2/
+     * ERROR=3) and making AIRY_LOG_ERROR actually write at DEBUG level. */
     log_level_t new_level = (log_level_t)level;
 
     va_list args;

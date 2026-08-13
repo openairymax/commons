@@ -3,7 +3,7 @@
 
 /**
  * @file compat.c
- * @brief 跨平台兼容性实现
+ * @brief Cross-platform compatibility implementation.
  */
 
 #include "compat.h"

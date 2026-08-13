@@ -3,15 +3,18 @@
 
 /**
  * @file cancel_token.c
- * @brief 取消令牌实现（改进1：Codex parallel.rs cancel_token 模式）
+ * @brief Cancel token implementation (improvement 1: Codex parallel.rs
+ * cancel_token pattern).
  *
- * 原子取消标志 + 条件变量唤醒 + 有界回调唤醒链：
- *   - cancel：置位原子标志 → 广播条件变量 → 触发全部唤醒回调
- *   - is_canceled：无锁原子读（取消判定热路径零开销）
- *   - wait：条件变量阻塞等待（非忙轮询），取消/超时返回
- *   - reset：复位标志（取消后恢复重跑复用，回调链保留）
+ * Atomic cancel flag + condvar wake-up + bounded callback wake chain:
+ *   - cancel: set atomic flag -> broadcast condvar -> fire all callbacks
+ *   - is_canceled: lock-free atomic read (zero-cost hot path)
+ *   - wait: block on the condvar (no busy polling), returns on
+ *     cancel/timeout
+ *   - reset: clear the flag (reuse after cancellation; chain preserved)
  *
- * 回调采用"锁内快照 + 锁外执行"，回调可安全调用本模块 API（无自死锁）。
+ * Callbacks use "snapshot under lock + execute outside lock", so a
+ * callback may safely call the module API (no self-deadlock).
  *
  */
 

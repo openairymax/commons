@@ -3,13 +3,14 @@
 
 /**
  * @file atomic_logging.c
- * @brief 统一分层日志系统原子层实现
+ * @brief Unified layered logging system - atomic layer implementation.
  *
- * 本文件实现统一分层日志系统的原子层功能，提供：
- * 1. 线程安全的日志记录缓冲和环形队列管理
- * 2. 高性能批量提交机制（mutex保护的多生产者-单消费者）
- * 3. 异步刷盘和背压控制
- * 4. 统计信息收集
+ * Implements the atomic layer of the unified logging system, providing:
+ * 1. Thread-safe log record buffering and ring queue management
+ * 2. High-performance batch commit (mutex-protected multi-producer,
+ *    single-consumer)
+ * 3. Async flush and backpressure control
+ * 4. Stats collection
  */
 
 #include "atomic_logging.h"

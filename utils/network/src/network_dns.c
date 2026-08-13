@@ -4,19 +4,14 @@
 /*
  *
  * @file network_dns.c
- * @brief 网络通信模块 - DNS 与地址解析域
+ * @brief Network module - DNS and address resolution domain.
  *
- * @details
- * 本文件实现 network_common.h 中声明的 DNS 解析、可达性探测、本机 IP 查询
- * 与地址转字符串功能。
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：支持 Windows/Linux/macOS
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-03
- * @version 0.1.0
+ * Implements the DNS resolution, reachability probing, local IP query
+ * and address-to-string functions declared in network_common.h.
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-4 Cross-platform consistency: Windows/Linux/macOS
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  */
 
 #ifdef _WIN32

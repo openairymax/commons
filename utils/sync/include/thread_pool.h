@@ -3,13 +3,15 @@
 
 /**
  * @file thread_pool.h
- * @brief 通用工作线程池（commons 权威版本）
+ * @brief Generic worker thread pool (commons authoritative version).
  *
- * 提供固定大小的工作线程池，支持任务提交、优雅关闭。
- * 所有 daemon 服务（gateway_d/llm_d/tool_d 等）及 atoms 编排器共享此基础设施。
+ * Provides a fixed-size worker thread pool with task submission and
+ * graceful shutdown. All daemon services (gateway_d/llm_d/tool_d etc.)
+ * and the atoms orchestrators share this infrastructure.
  *
- * P0.17 阶段 5：从 daemons/common/include/thread_pool.h 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 5: migrated from daemons/common/include/thread_pool.h to
+ * commons, removing the compile-time reverse dependency atoms->daemons
+ * (IRON-6). The daemons version is kept as a re-export compat header.
  */
 
 #ifndef AIRY_RT_THREAD_POOL_H

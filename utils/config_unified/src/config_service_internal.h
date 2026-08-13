@@ -3,14 +3,15 @@
 
 /**
  * @file config_service_internal.h
- * @brief 统一配置模块 - 服务层内部共享定义（模块内私有，勿对外导出）
+ * @brief Unified config module - service layer internal shared defs.
  *
- * config_service.c 按功能域拆分后，本头承载它们之间的共享契约：
- *   - config_service.c           模板展开与服务生命周期
- *   - config_service_validator.c 校验器与 Schema 定义
- *   - config_service_hotreload.c 热更新与变化通知
- *   - config_service_crypto.c    加密与安全存储
- *   - config_service_version.c   版本管理与回滚
+ * After config_service.c was split by functional domain, this header
+ * carries the shared contract between the pieces:
+ *   - config_service.c           template expansion and service lifecycle
+ *   - config_service_validator.c validator and Schema definitions
+ *   - config_service_hotreload.c hot reload and change notification
+ *   - config_service_crypto.c    encryption and secure storage
+ *   - config_service_version.c   version management and rollback
  */
 
 #ifndef AIRY_RT_CONFIG_SERVICE_INTERNAL_H

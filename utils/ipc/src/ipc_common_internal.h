@@ -3,14 +3,15 @@
 
 /**
  * @file ipc_common_internal.h
- * @brief IPC 模块内部共享定义（模块内私有，勿对外导出）
+ * @brief IPC module internal shared definitions.
  *
- * ipc_common.c 按功能域拆分为多个文件后，本头承载它们之间的共享契约：
- *   - ipc_common.c  通道基础 + 消息收发
- *   - ipc_server.c  服务端/客户端
- *   - ipc_shm.c     共享内存
- *   - ipc_mq.c      消息队列
- *   - ipc_rpc.c     RPC 框架
+ * After ipc_common.c was split by functional domain, this header carries
+ * the shared contract between the pieces:
+ *   - ipc_common.c  channel basics + message send/receive
+ *   - ipc_server.c  server/client
+ *   - ipc_shm.c     shared memory
+ *   - ipc_mq.c      message queue
+ *   - ipc_rpc.c     RPC framework
  */
 
 #ifndef AIRY_RT_IPC_COMMON_INTERNAL_H
@@ -63,7 +64,7 @@ extern "C" {
 #include <time.h>
 #include "error.h"
 
-/* ---- 内部 opaque 结构（仅模块内可见，外部经 API 访问） ---- */
+/* ---- Internal opaque structs (module-internal, accessed via API) ---- */
 
 struct ipc_channel {
     ipc_config_t config;
@@ -180,7 +181,7 @@ struct ipc_rpc_client {
     char error_msg[256];
 };
 
-/* ---- 共享辅助函数（定义于 ipc_common.c） ---- */
+/* ---- Shared helper functions (defined in ipc_common.c) ---- */
 uint64_t ipc_get_timestamp_ns(void);
 uint32_t ipc_calc_crc32(const void *data, size_t len);
 extern bool g_ipc_initialized;

@@ -3,15 +3,16 @@
 
 /**
  * @file config_parse.c
- * @brief 统一配置模块 - 格式解析层（JSON/INI/YAML）
+ * @brief Unified config module - format parsing layer (JSON/INI/YAML).
  *
- * 从 config_source.c 拆出的独立解析模块，实现三种配置格式的
- * 纯字符串解析（不依赖任何配置源实现），按 format 字符串分发：
- *   - config_parse_json : 严格 JSON 对象/数组递归解析
- *   - config_parse_ini  : 经典 INI 段/键值解析
- *   - config_parse_yaml : 缩进感知的 YAML 子集解析
+ * Standalone parsing module split out of config_source.c; implements
+ * pure string parsing for three formats, dispatched by format string:
+ *   - config_parse_json : strict recursive JSON object/array parsing
+ *   - config_parse_ini  : classic INI section/key-value parsing
+ *   - config_parse_yaml : indentation-aware YAML subset parsing
  *
- * 解析结果统一写入 config_context_t（dotted key → config_value_t）。
+ * Parsing results are written into config_context_t
+ * (dotted key -> config_value_t).
  */
 
 #include "config_source.h"
@@ -28,7 +29,7 @@
 #include "string_compat.h"
 #include "error.h"
 
-/* ==================== JSON 解析 ==================== */
+/* ==================== JSON parsing ==================== */
 
 static config_error_t parse_json_value(const char **pp, const char *end, config_value_t **out);
 static config_error_t parse_json_object(const char **pp, const char *end, config_context_t *ctx,
@@ -300,7 +301,7 @@ static config_error_t parse_json_object(const char **pp, const char *end, config
     return CONFIG_SUCCESS;
 }
 
-/* ==================== INI 解析 ==================== */
+/* ==================== INI parsing ==================== */
 
 static config_error_t parse_ini_simple(const char *data, size_t data_len, config_context_t *ctx)
 {
@@ -384,7 +385,7 @@ static config_error_t parse_ini_simple(const char *data, size_t data_len, config
     return CONFIG_SUCCESS;
 }
 
-/* ==================== YAML 解析 ==================== */
+/* ==================== YAML parsing ==================== */
 
 typedef struct {
     const char *src;
@@ -623,226 +624,251 @@ static config_error_t yaml_parse_sequence(yaml_parse_state_t *s, int base_indent
     return CONFIG_SUCCESS;
 }
 
-static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, const char *prefix,
-                                       config_context_t *ctx)
+static void yaml_ps_skip_token(yaml_parse_state_t *s)
 {
-    yaml_ps_skip_ws(s);
-    if (s->pos >= s->len)
-        return CONFIG_SUCCESS;
-
-    int c = yaml_ps_peek(s);
-
-    if (c == '&') {
+    while (s->pos < s->len && yaml_ps_peek(s) != ' ' && yaml_ps_peek(s) != '\t' &&
+           yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r')
         yaml_ps_advance(s);
-        while (s->pos < s->len && yaml_ps_peek(s) != ' ' && yaml_ps_peek(s) != '\t' &&
-               yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r')
-            yaml_ps_advance(s);
+}
+
+static void yaml_ps_rtrim(char *buf, size_t *len)
+{
+    while (*len > 0 && (buf[*len - 1] == ' ' || buf[*len - 1] == '\t'))
+        (*len)--;
+}
+
+/* Consume leading anchor ('&'), alias ('*') and tag ('!') prefixes; when an
+ * alias is consumed the value has no payload, so report it via the return
+ * value. Otherwise c receives the first payload character. */
+static bool yaml_ps_skip_anchor_tag(yaml_parse_state_t *s, int *c)
+{
+    int ch = yaml_ps_peek(s);
+    if (ch == '&') {
+        yaml_ps_advance(s);
+        yaml_ps_skip_token(s);
         yaml_ps_skip_ws(s);
-        c = yaml_ps_peek(s);
+        ch = yaml_ps_peek(s);
     }
-
-    if (c == '*') {
+    if (ch == '*') {
         yaml_ps_advance(s);
-        while (s->pos < s->len && yaml_ps_peek(s) != ' ' && yaml_ps_peek(s) != '\t' &&
-               yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r')
-            yaml_ps_advance(s);
-        return CONFIG_SUCCESS;
+        yaml_ps_skip_token(s);
+        return true;
     }
-
-    if (c == '!') {
+    if (ch == '!') {
         yaml_ps_advance(s);
         if (s->pos < s->len && yaml_ps_peek(s) == '!')
             yaml_ps_advance(s);
-        while (s->pos < s->len && yaml_ps_peek(s) != ' ' && yaml_ps_peek(s) != '\t' &&
-               yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r')
-            yaml_ps_advance(s);
+        yaml_ps_skip_token(s);
         yaml_ps_skip_ws(s);
-        c = yaml_ps_peek(s);
+        ch = yaml_ps_peek(s);
     }
+    *c = ch;
+    return false;
+}
 
-    if (c == '"' || c == '\'') {
-        int quote = c;
-        yaml_ps_advance(s);
-        char val_buf[2048];
-        size_t vlen = 0;
-        while (s->pos < s->len && yaml_ps_peek(s) != quote && vlen < sizeof(val_buf) - 1) {
-            int ch = yaml_ps_advance(s);
-            if (ch == '\\' && s->pos < s->len) {
-                ch = yaml_ps_advance(s);
-                switch (ch) {
-                case 'n':
-                    ch = '\n';
-                    break;
-                case 't':
-                    ch = '\t';
-                    break;
-                case 'r':
-                    ch = '\r';
-                    break;
-                default:
-                    break;
-                }
+static config_error_t yaml_parse_quoted(yaml_parse_state_t *s, int quote,
+                                        const char *prefix, config_context_t *ctx)
+{
+    yaml_ps_advance(s);
+    char val_buf[2048];
+    size_t vlen = 0;
+    while (s->pos < s->len && yaml_ps_peek(s) != quote && vlen < sizeof(val_buf) - 1) {
+        int ch = yaml_ps_advance(s);
+        if (ch == '\\' && s->pos < s->len) {
+            ch = yaml_ps_advance(s);
+            switch (ch) {
+            case 'n':
+                ch = '\n';
+                break;
+            case 't':
+                ch = '\t';
+                break;
+            case 'r':
+                ch = '\r';
+                break;
+            default:
+                break;
             }
-            val_buf[vlen++] = (char)ch;
         }
-        if (s->pos < s->len && yaml_ps_peek(s) == quote)
-            yaml_ps_advance(s);
-        val_buf[vlen] = '\0';
-        config_value_t *cv = config_value_create_string(val_buf);
-        if (cv)
-            config_context_set(ctx, prefix, cv);
-        return CONFIG_SUCCESS;
+        val_buf[vlen++] = (char)ch;
     }
-
-    if (c == '|' || c == '>') {
+    if (s->pos < s->len && yaml_ps_peek(s) == quote)
         yaml_ps_advance(s);
-        while (s->pos < s->len && (yaml_ps_peek(s) == '-' || yaml_ps_peek(s) == '+' ||
-                                   (yaml_ps_peek(s) >= '1' && yaml_ps_peek(s) <= '9')))
+    val_buf[vlen] = '\0';
+    config_value_t *cv = config_value_create_string(val_buf);
+    if (cv)
+        config_context_set(ctx, prefix, cv);
+    return CONFIG_SUCCESS;
+}
+
+/* Read the indented lines of a literal/folded block scalar into val_buf;
+ * stops at EOF or at a line dedented below the block indent. */
+static void yaml_ps_read_block_lines(yaml_parse_state_t *s, int *block_indent, char *val_buf,
+                                     size_t *vlen, size_t buf_size)
+{
+    while (s->pos < s->len) {
+        size_t saved_pos = s->pos;
+        int line_ind = 0;
+        while (s->pos < s->len && yaml_ps_peek(s) == ' ') {
+            line_ind++;
             yaml_ps_advance(s);
-        yaml_ps_skip_to_eol(s);
-        yaml_ps_skip_eol(s);
-
-        int block_indent = -1;
-        char val_buf[4096];
-        size_t vlen = 0;
-
-        while (s->pos < s->len) {
-            size_t saved_pos = s->pos;
-            int line_ind = 0;
-            while (s->pos < s->len && yaml_ps_peek(s) == ' ') {
-                line_ind++;
-                yaml_ps_advance(s);
-            }
-            if (s->pos >= s->len)
-                break;
-            int lc = yaml_ps_peek(s);
-            if (lc == '\n' || lc == '\r') {
-                yaml_ps_skip_eol(s);
-                if (vlen < sizeof(val_buf) - 1)
-                    val_buf[vlen++] = '\n';
-                continue;
-            }
-            if (block_indent < 0)
-                block_indent = line_ind;
-            if (line_ind < block_indent) {
-                s->pos = saved_pos;
-                break;
-            }
-            if (vlen > 0 && vlen < sizeof(val_buf) - 1)
-                val_buf[vlen++] = '\n';
-            while (s->pos < s->len && yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r') {
-                if (vlen < sizeof(val_buf) - 1)
-                    val_buf[vlen++] = (char)yaml_ps_advance(s);
-                else
-                    yaml_ps_advance(s);
-            }
+        }
+        if (s->pos >= s->len)
+            break;
+        int lc = yaml_ps_peek(s);
+        if (lc == '\n' || lc == '\r') {
             yaml_ps_skip_eol(s);
+            if (*vlen < buf_size - 1)
+                val_buf[(*vlen)++] = '\n';
+            continue;
         }
-        val_buf[vlen] = '\0';
-        config_value_t *cv = config_value_create_string(val_buf);
-        if (cv)
-            config_context_set(ctx, prefix, cv);
-        return CONFIG_SUCCESS;
-    }
-
-    if (c == '-') {
-        if (s->pos + 1 < s->len) {
-            int next = (unsigned char)s->src[s->pos + 1];
-            if (next == ' ' || next == '\t' || next == '\n' || next == '\r') {
-                return yaml_parse_sequence(s, base_indent, prefix, ctx);
-            }
+        if (*block_indent < 0)
+            *block_indent = line_ind;
+        if (line_ind < *block_indent) {
+            s->pos = saved_pos;
+            break;
         }
+        if (*vlen > 0 && *vlen < buf_size - 1)
+            val_buf[(*vlen)++] = '\n';
+        while (s->pos < s->len && yaml_ps_peek(s) != '\n' && yaml_ps_peek(s) != '\r') {
+            if (*vlen < buf_size - 1)
+                val_buf[(*vlen)++] = (char)yaml_ps_advance(s);
+            else
+                yaml_ps_advance(s);
+        }
+        yaml_ps_skip_eol(s);
     }
+}
 
-    if (c == '[') {
+static config_error_t yaml_parse_block_scalar(yaml_parse_state_t *s, const char *prefix,
+                                              config_context_t *ctx)
+{
+    yaml_ps_advance(s);
+    while (s->pos < s->len && (yaml_ps_peek(s) == '-' || yaml_ps_peek(s) == '+' ||
+                               (yaml_ps_peek(s) >= '1' && yaml_ps_peek(s) <= '9')))
         yaml_ps_advance(s);
-        yaml_ps_skip_ws(s);
-        int idx = 0;
-        while (s->pos < s->len && yaml_ps_peek(s) != ']' && yaml_ps_peek(s) != '\n' &&
-               yaml_ps_peek(s) != '\r') {
-            if (yaml_ps_peek(s) == ',') {
-                yaml_ps_advance(s);
-                yaml_ps_skip_ws(s);
-                continue;
-            }
-            char idx_key[1024];
-            snprintf(idx_key, sizeof(idx_key), "%s.%d", prefix, idx);
-            char val_buf[1024];
-            size_t vlen = 0;
-            while (s->pos < s->len && yaml_ps_peek(s) != ',' && yaml_ps_peek(s) != ']' &&
-                   yaml_ps_peek(s) != '\n') {
-                if (vlen < sizeof(val_buf) - 1)
-                    val_buf[vlen++] = (char)yaml_ps_advance(s);
-                else
-                    yaml_ps_advance(s);
-            }
-            val_buf[vlen] = '\0';
-            while (vlen > 0 && (val_buf[vlen - 1] == ' ' || val_buf[vlen - 1] == '\t'))
-                val_buf[--vlen] = '\0';
-            config_value_t *cv = config_value_create_string(val_buf);
-            if (cv)
-                config_context_set(ctx, idx_key, cv);
-            idx++;
-            yaml_ps_skip_ws(s);
-        }
-        if (s->pos < s->len && yaml_ps_peek(s) == ']')
-            yaml_ps_advance(s);
-        return CONFIG_SUCCESS;
-    }
+    yaml_ps_skip_to_eol(s);
+    yaml_ps_skip_eol(s);
 
-    if (c == '{') {
+    int block_indent = -1;
+    char val_buf[4096];
+    size_t vlen = 0;
+    yaml_ps_read_block_lines(s, &block_indent, val_buf, &vlen, sizeof(val_buf));
+    val_buf[vlen] = '\0';
+    config_value_t *cv = config_value_create_string(val_buf);
+    if (cv)
+        config_context_set(ctx, prefix, cv);
+    return CONFIG_SUCCESS;
+}
+
+static void yaml_parse_inline_seq_item(yaml_parse_state_t *s, const char *prefix, int idx,
+                                       config_context_t *ctx)
+{
+    char idx_key[1024];
+    snprintf(idx_key, sizeof(idx_key), "%s.%d", prefix, idx);
+    char val_buf[1024];
+    size_t vlen = 0;
+    while (s->pos < s->len && yaml_ps_peek(s) != ',' && yaml_ps_peek(s) != ']' &&
+           yaml_ps_peek(s) != '\n') {
+        if (vlen < sizeof(val_buf) - 1)
+            val_buf[vlen++] = (char)yaml_ps_advance(s);
+        else
+            yaml_ps_advance(s);
+    }
+    val_buf[vlen] = '\0';
+    yaml_ps_rtrim(val_buf, &vlen);
+    val_buf[vlen] = '\0';
+    config_value_t *cv = config_value_create_string(val_buf);
+    if (cv)
+        config_context_set(ctx, idx_key, cv);
+}
+
+static config_error_t yaml_parse_inline_sequence(yaml_parse_state_t *s, const char *prefix,
+                                                 config_context_t *ctx)
+{
+    yaml_ps_advance(s);
+    yaml_ps_skip_ws(s);
+    int idx = 0;
+    while (s->pos < s->len && yaml_ps_peek(s) != ']' && yaml_ps_peek(s) != '\n' &&
+           yaml_ps_peek(s) != '\r') {
+        if (yaml_ps_peek(s) == ',') {
+            yaml_ps_advance(s);
+            yaml_ps_skip_ws(s);
+            continue;
+        }
+        yaml_parse_inline_seq_item(s, prefix, idx, ctx);
+        idx++;
+        yaml_ps_skip_ws(s);
+    }
+    if (s->pos < s->len && yaml_ps_peek(s) == ']')
         yaml_ps_advance(s);
-        yaml_ps_skip_ws(s);
-        while (s->pos < s->len && yaml_ps_peek(s) != '}') {
-            if (yaml_ps_peek(s) == ',') {
-                yaml_ps_advance(s);
-                yaml_ps_skip_ws(s);
-                continue;
-            }
-            char kbuf[512];
-            size_t klen = 0;
-            while (s->pos < s->len && yaml_ps_peek(s) != ':' && yaml_ps_peek(s) != ',' &&
-                   yaml_ps_peek(s) != '}' && yaml_ps_peek(s) != '\n') {
-                if (klen < sizeof(kbuf) - 1)
-                    kbuf[klen++] = (char)yaml_ps_advance(s);
-                else
-                    yaml_ps_advance(s);
-            }
-            kbuf[klen] = '\0';
-            while (klen > 0 && (kbuf[klen - 1] == ' ' || kbuf[klen - 1] == '\t'))
-                kbuf[--klen] = '\0';
-            yaml_ps_skip_ws(s);
-            if (s->pos < s->len && yaml_ps_peek(s) == ':')
-                yaml_ps_advance(s);
-            yaml_ps_skip_ws(s);
-            char fkey[1024];
-            snprintf(fkey, sizeof(fkey), "%s.%s", prefix, kbuf);
-            char vbuf[1024];
-            size_t vlen2 = 0;
-            while (s->pos < s->len && yaml_ps_peek(s) != ',' && yaml_ps_peek(s) != '}' &&
-                   yaml_ps_peek(s) != '\n') {
-                if (vlen2 < sizeof(vbuf) - 1)
-                    vbuf[vlen2++] = (char)yaml_ps_advance(s);
-                else
-                    yaml_ps_advance(s);
-            }
-            vbuf[vlen2] = '\0';
-            while (vlen2 > 0 && (vbuf[vlen2 - 1] == ' ' || vbuf[vlen2 - 1] == '\t'))
-                vbuf[--vlen2] = '\0';
-            config_value_t *cv = config_value_create_string(vbuf);
-            if (cv)
-                config_context_set(ctx, fkey, cv);
-            yaml_ps_skip_ws(s);
-        }
-        if (s->pos < s->len && yaml_ps_peek(s) == '}')
-            yaml_ps_advance(s);
-        return CONFIG_SUCCESS;
-    }
+    return CONFIG_SUCCESS;
+}
 
+static void yaml_parse_inline_map_pair(yaml_parse_state_t *s, const char *prefix,
+                                       config_context_t *ctx)
+{
+    char kbuf[512];
+    size_t klen = 0;
+    while (s->pos < s->len && yaml_ps_peek(s) != ':' && yaml_ps_peek(s) != ',' &&
+           yaml_ps_peek(s) != '}' && yaml_ps_peek(s) != '\n') {
+        if (klen < sizeof(kbuf) - 1)
+            kbuf[klen++] = (char)yaml_ps_advance(s);
+        else
+            yaml_ps_advance(s);
+    }
+    kbuf[klen] = '\0';
+    yaml_ps_rtrim(kbuf, &klen);
+    kbuf[klen] = '\0';
+    yaml_ps_skip_ws(s);
+    if (s->pos < s->len && yaml_ps_peek(s) == ':')
+        yaml_ps_advance(s);
+    yaml_ps_skip_ws(s);
+    char fkey[1024];
+    snprintf(fkey, sizeof(fkey), "%s.%s", prefix, kbuf);
+    char vbuf[1024];
+    size_t vlen2 = 0;
+    while (s->pos < s->len && yaml_ps_peek(s) != ',' && yaml_ps_peek(s) != '}' &&
+           yaml_ps_peek(s) != '\n') {
+        if (vlen2 < sizeof(vbuf) - 1)
+            vbuf[vlen2++] = (char)yaml_ps_advance(s);
+        else
+            yaml_ps_advance(s);
+    }
+    vbuf[vlen2] = '\0';
+    yaml_ps_rtrim(vbuf, &vlen2);
+    vbuf[vlen2] = '\0';
+    config_value_t *cv = config_value_create_string(vbuf);
+    if (cv)
+        config_context_set(ctx, fkey, cv);
+}
+
+static config_error_t yaml_parse_inline_mapping(yaml_parse_state_t *s, const char *prefix,
+                                                config_context_t *ctx)
+{
+    yaml_ps_advance(s);
+    yaml_ps_skip_ws(s);
+    while (s->pos < s->len && yaml_ps_peek(s) != '}') {
+        if (yaml_ps_peek(s) == ',') {
+            yaml_ps_advance(s);
+            yaml_ps_skip_ws(s);
+            continue;
+        }
+        yaml_parse_inline_map_pair(s, prefix, ctx);
+        yaml_ps_skip_ws(s);
+    }
+    if (s->pos < s->len && yaml_ps_peek(s) == '}')
+        yaml_ps_advance(s);
+    return CONFIG_SUCCESS;
+}
+
+static config_error_t yaml_parse_plain_scalar_value(yaml_parse_state_t *s, int base_indent,
+                                                    const char *prefix, config_context_t *ctx)
+{
     char val_buf[2048];
     size_t vlen = 0;
     while (s->pos < s->len) {
-        c = yaml_ps_peek(s);
+        int c = yaml_ps_peek(s);
         if (c == ':' && s->pos + 1 < s->len &&
             (s->src[s->pos + 1] == ' ' || s->src[s->pos + 1] == '\n'))
             break;
@@ -855,8 +881,7 @@ static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, c
         else
             yaml_ps_advance(s);
     }
-    while (vlen > 0 && (val_buf[vlen - 1] == ' ' || val_buf[vlen - 1] == '\t'))
-        vlen--;
+    yaml_ps_rtrim(val_buf, &vlen);
     val_buf[vlen] = '\0';
 
     yaml_ps_skip_ws(s);
@@ -873,7 +898,42 @@ static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, c
     return CONFIG_SUCCESS;
 }
 
-/* ==================== 对外入口 ==================== */
+static config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, const char *prefix,
+                                       config_context_t *ctx)
+{
+    yaml_ps_skip_ws(s);
+    if (s->pos >= s->len)
+        return CONFIG_SUCCESS;
+
+    int c;
+    if (yaml_ps_skip_anchor_tag(s, &c))
+        return CONFIG_SUCCESS;
+
+    if (c == '"' || c == '\'')
+        return yaml_parse_quoted(s, c, prefix, ctx);
+
+    if (c == '|' || c == '>')
+        return yaml_parse_block_scalar(s, prefix, ctx);
+
+    if (c == '-') {
+        if (s->pos + 1 < s->len) {
+            int next = (unsigned char)s->src[s->pos + 1];
+            if (next == ' ' || next == '\t' || next == '\n' || next == '\r') {
+                return yaml_parse_sequence(s, base_indent, prefix, ctx);
+            }
+        }
+    }
+
+    if (c == '[')
+        return yaml_parse_inline_sequence(s, prefix, ctx);
+
+    if (c == '{')
+        return yaml_parse_inline_mapping(s, prefix, ctx);
+
+    return yaml_parse_plain_scalar_value(s, base_indent, prefix, ctx);
+}
+
+/* ==================== Public entry points ==================== */
 
 config_error_t config_parse_json(const char *data, size_t data_len, config_context_t *ctx)
 {

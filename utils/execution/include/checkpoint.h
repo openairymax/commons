@@ -3,7 +3,7 @@
 
 /**
  * @file checkpoint.h
- * @brief AgentRT 任务检查点接口
+ * @brief AgentRT task checkpoint interface.
  *
  */
 

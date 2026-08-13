@@ -3,13 +3,11 @@
 
 /**
  * @file token_standard.c
- * @brief Token 计算标准化实现 - 统一 C/Python Token 计算算法
+ * @brief Standardized token counting - unified C/Python algorithm.
  *
- * 实现 token_standard.h 中定义的标准化接口，确保跨语言一致性。
- * 遵循 AgentRT 架构原则（E-3 资源确定性），提供确定性的 Token 计算。
- *
- * @version 0.1.0
- * @date 2026-04-07
+ * Implements the standardized interfaces declared in token_standard.h,
+ * ensuring cross-language consistency. Follows the AgentRT architecture
+ * principle (E-3 resource determinism) for deterministic token counts.
  */
 
 #include "token_standard.h"
@@ -21,20 +19,20 @@
 #include "error.h"
 
 /**
- * @brief 算法信息字符串
+ * @brief Algorithm info string.
  */
 static const char *ALGORITHM_INFO =
     "AgentRT Token Standard v1.0 - Unified Token Counting Algorithm";
 
 /**
- * @brief 从UTF-8多字节序列解码Unicode代码点
+ * @brief Decode a Unicode code point from a UTF-8 multi-byte sequence.
  *
- * @param text 文本指针
- * @param i 当前位置
- * @param length 文本长度
- * @param[out] code_point 解码出的Unicode代码点
- * @param[out] bytes_consumed 消耗的字节数
- * @return 0成功，-1失败
+ * @param text Text pointer
+ * @param i Current position
+ * @param length Text length
+ * @param[out] code_point Decoded Unicode code point
+ * @param[out] bytes_consumed Number of bytes consumed
+ * @return 0 on success, -1 on failure
  */
 static int utf8_decode_code_point(const char *text, size_t i, size_t length, uint32_t *code_point,
                                   size_t *bytes_consumed)

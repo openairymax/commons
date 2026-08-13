@@ -3,13 +3,12 @@
 
 /**
  * @file estimator.c
- * @brief 成本预估器实现
+ * @brief Cost estimator implementation.
  *
- * @details
- * 本模块实现LLM调用成本预估功能：
- * - 基于模型配置的成本计算
- * - 支持自定义费率配置
- * - 提供成本分析和报告接口
+ * Estimates LLM call cost:
+ * - Cost calculation based on model config
+ * - Custom rate configuration support
+ * - Cost analysis and reporting interfaces
  */
 
 #include "../../platform/include/platform.h"
@@ -29,7 +28,7 @@
 #define MAX_CONFIG_ENTRIES 16
 
 /**
- * @brief 模型成本配置
+ * @brief Model cost configuration.
  */
 typedef struct {
     char model_name[MAX_MODEL_NAME];
@@ -40,7 +39,7 @@ typedef struct {
 } model_cost_config_t;
 
 /**
- * @brief 成本预估器内部结构
+ * @brief Cost estimator internal structure.
  */
 struct airy_cost_estimator {
     model_cost_config_t configs[MAX_CONFIG_ENTRIES];

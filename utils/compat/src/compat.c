@@ -3,7 +3,7 @@
 
 /**
  * @file compat.c
- * @brief 跨平台兼容性实现
+ * @brief Cross-platform compatibility implementation.
  */
 
 #include "compat.h"
@@ -248,8 +248,8 @@ struct tm *localtime_r(const time_t *timer, struct tm *buf)
     AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
 }
 
-/* strtok_r：MSVC 的 strtok_s 第三个参数即 char **context，与
- * POSIX strtok_r 的 char **saveptr 语义一致，直接映射。 */
+/* strtok_r: MSVC's strtok_s takes char **context as the third argument,
+ * which matches POSIX strtok_r's char **saveptr semantics, so map directly. */
 char *strtok_r(char *str, const char *delim, char **saveptr)
 {
     return strtok_s(str, delim, saveptr);

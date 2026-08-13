@@ -3,10 +3,10 @@
 
 /**
  * @file memory_debug_leak.c
- * @brief 统一内存管理模块 - 泄漏检测域
+ * @brief Unified memory management module - leak detection domain.
  *
- * 本文件实现内存泄漏检测报告输出，以及分配检查点（checkpoint）
- * 的建立与对比分析能力。
+ * Implements memory leak detection report output, plus allocation
+ * checkpoint creation and comparison analysis.
  */
 
 #include "memory_debug.h"

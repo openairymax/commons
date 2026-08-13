@@ -3,10 +3,11 @@
 
 /**
  * @file checkpoint_snapshot.c
- * @brief AgentRT 任务检查点 - 快照域
+ * @brief AgentRT task checkpoint - snapshot domain.
  *
- * 本文件负责检查点快照的导出与导入：将最新检查点序列化为
- * SNAPSHOT_V1 文本格式，或从快照文件恢复任务标识。
+ * Handles checkpoint snapshot export/import: serializes the latest
+ * checkpoint into the SNAPSHOT_V1 text format, or restores task identity
+ * from a snapshot file.
  */
 
 #include "checkpoint.h"

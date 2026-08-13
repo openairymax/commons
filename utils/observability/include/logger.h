@@ -3,11 +3,11 @@
 
 /**
  * @file logger.h
- * @brief AgentRT 统一日志接口
+ * @brief AgentRT unified logging interface.
  *
- * 日志级别值定义（与 logging.h 统一）：
+ * Log level values (unified with logging.h):
  *   DEBUG=0, INFO=1, WARN=2, ERROR=3, FATAL=4
- * 值越大越严重，与 syslog/Linux 内核惯例一致。
+ * Higher values are more severe, matching syslog/Linux kernel convention.
  */
 
 #ifndef AIRY_RT_UTILS_LOGGER_H
@@ -17,9 +17,10 @@
 extern "C" {
 #endif
 
-/* 统一日志级别常量 — 值越大越严重
- * 每个宏独立 #ifndef 保护，避免与 observability.h 交叉包含时重定义
- * （d6 清理：logging_compat.h 兼容层已删除，airy_log_* 实现迁移到本目录的 src/logger.c） */
+/* Unified log level constants - higher is more severe. Each macro has an
+ * independent #ifndef guard to avoid redefinition when cross-included
+ * with observability.h (d6 cleanup: the logging_compat.h compat layer was
+ * deleted; the airy_log_* implementation moved to src/logger.c here). */
 #ifndef AIRY_LOG_LEVEL_DEBUG
 #define AIRY_LOG_LEVEL_DEBUG 0
 #endif

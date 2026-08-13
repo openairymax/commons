@@ -3,7 +3,7 @@
 
 /**
  * @file token.h
- * @brief Token计数与预算管理
+ * @brief Token counting and budget management.
  */
 
 #ifndef AIRY_RT_UTILS_TOKEN_H
@@ -19,132 +19,131 @@ extern "C" {
 typedef struct airy_token_counter airy_token_counter_t;
 
 /**
- * @brief 创建Token计数器
- * @param model_name 模型名称（如 "gpt-4"）
- * @return 计数器句柄，失败返回 NULL
+ * @brief Create a token counter.
+ * @param model_name Model name (e.g. "gpt-4")
+ * @return Counter handle, NULL on failure
  */
 airy_token_counter_t *airy_token_counter_create(const char *model_name);
 
-/* From data intelligence emerges. by spharx */
 /**
- * @brief 销毁计数器
+ * @brief Destroy a counter.
  */
 void airy_token_counter_destroy(airy_token_counter_t *counter);
 
 /**
- * @brief 计算文本的Token数量
- * @param counter 计数器
- * @param text 文本
- * @return Token数量，失败返回 (size_t)-1
+ * @brief Count the tokens in a text.
+ * @param counter Counter
+ * @param text Text
+ * @return Token count, (size_t)-1 on failure
  */
 size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text);
 
 /**
- * @brief 批量计算多个文本的Token数量
- * @param counter 计数器
- * @param texts 文本数组
- * @param count 文本数量
- * @param out_counts 输出Token数量数组
- * @return 0 成功，-1 失败
+ * @brief Count tokens for multiple texts in batch.
+ * @param counter Counter
+ * @param texts Text array
+ * @param count Text count
+ * @param out_counts Output token count array
+ * @return 0 on success, -1 on failure
  */
 size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char **texts,
                                       size_t count, size_t *out_counts);
 
 /**
- * @brief 截断文本到指定Token数
- * @param counter 计数器
- * @param text 输入文本
- * @param max_tokens 最大Token数
- * @param side 截断侧："left","right","middle"
- * @return 新分配的截断文本，失败返回 NULL
+ * @brief Truncate text to a given token count.
+ * @param counter Counter
+ * @param text Input text
+ * @param max_tokens Max token count
+ * @param side Truncation side: "left","right","middle"
+ * @return Newly allocated truncated text, NULL on failure
  */
 char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *text,
                                   size_t max_tokens, const char *side);
 
 /**
- * @brief Token预算句柄
+ * @brief Token budget handle.
  */
 typedef struct airy_token_budget airy_token_budget_t;
 
 /**
- * @brief 创建Token预算
- * @param max_tokens 最大Token数
- * @return 预算句柄，失败返回 NULL
+ * @brief Create a token budget.
+ * @param max_tokens Max token count
+ * @return Budget handle, NULL on failure
  */
 airy_token_budget_t *airy_token_budget_create(size_t max_tokens);
 
 /**
- * @brief 销毁预算
+ * @brief Destroy a budget.
  */
 void airy_token_budget_destroy(airy_token_budget_t *budget);
 
 /**
- * @brief 添加Token消耗
- * @param budget 预算
- * @param input_tokens 输入Token数
- * @param output_tokens 输出Token数
- * @return 0 成功，-1 超出预算
+ * @brief Add token consumption.
+ * @param budget Budget
+ * @param input_tokens Input token count
+ * @param output_tokens Output token count
+ * @return 0 on success, -1 over budget
  */
 int airy_token_budget_add(airy_token_budget_t *budget, size_t input_tokens, size_t output_tokens);
 
 /**
- * @brief 获取剩余Token数
- * @return 剩余Token数
+ * @brief Get the remaining token count.
+ * @return Remaining token count
  */
 size_t airy_token_budget_remaining(airy_token_budget_t *budget);
 
 /**
- * @brief 重置预算
+ * @brief Reset the budget.
  */
 void airy_token_budget_reset(airy_token_budget_t *budget);
 
 /**
- * @brief 获取已使用Token数
- * @param budget 预算
- * @return 已使用Token数
+ * @brief Get the used token count.
+ * @param budget Budget
+ * @return Used token count
  */
 size_t airy_token_budget_used(airy_token_budget_t *budget);
 
 /**
- * @brief 获取输入Token数
- * @param budget 预算
- * @return 输入Token数
+ * @brief Get the input token count.
+ * @param budget Budget
+ * @return Input token count
  */
 size_t airy_token_budget_input(airy_token_budget_t *budget);
 
 /**
- * @brief 获取输出Token数
- * @param budget 预算
- * @return 输出Token数
+ * @brief Get the output token count.
+ * @param budget Budget
+ * @return Output token count
  */
 size_t airy_token_budget_output(airy_token_budget_t *budget);
 
 /**
- * @brief 获取请求计数
- * @param budget 预算
- * @return 请求计数
+ * @brief Get the request count.
+ * @param budget Budget
+ * @return Request count
  */
 uint32_t airy_token_budget_requests(airy_token_budget_t *budget);
 
 /**
- * @brief 获取拒绝计数
- * @param budget 预算
- * @return 拒绝计数
+ * @brief Get the denied count.
+ * @param budget Budget
+ * @return Denied count
  */
 uint32_t airy_token_budget_denied(airy_token_budget_t *budget);
 
 /**
- * @brief 设置时间窗口
- * @param budget 预算
- * @param window_seconds 时间窗口（秒）
- * @return 0 成功，-1 失败
+ * @brief Set the time window.
+ * @param budget Budget
+ * @param window_seconds Time window (seconds)
+ * @return 0 on success, -1 on failure
  */
 int airy_token_budget_set_window(airy_token_budget_t *budget, size_t window_seconds);
 
 /**
- * @brief 检查并重置时间窗口
- * @param budget 预算
- * @return 0 成功，-1 失败
+ * @brief Check and reset the time window.
+ * @param budget Budget
+ * @return 0 on success, -1 on failure
  */
 int airy_token_budget_check_window(airy_token_budget_t *budget);
 

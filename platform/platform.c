@@ -3,14 +3,15 @@
 
 /**
  * @file platform.c
- * @brief 跨平台基础工具域：网络初始化、原子操作、Socket 通信、时间与随机数、文件系统与字符串辅助
+ * @brief Cross-platform basic tooling domain: network init, atomics,
+ * socket communication, time & random, filesystem and string helpers.
  *
- * 提供统一的跨平台抽象层：
- * - Socket 网络通信
- * - 原子操作
- * - 时间与随机数
- * - 文件系统操作
- * - 字符串与错误辅助
+ * Provides a unified cross-platform abstraction layer:
+ * - Socket network communication
+ * - Atomic operations
+ * - Time and random numbers
+ * - Filesystem operations
+ * - String and error helpers
  */
 
 #include <time.h>

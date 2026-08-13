@@ -3,7 +3,8 @@
 
 /**
  * @file string_split.c
- * @brief 切分与连接域：字符串分割、连接以及前后缀/空白判断
+ * @brief Split and join domain: string splitting, joining and
+ * prefix/suffix/whitespace checks.
  */
 
 #include "airy_string.h"

@@ -3,7 +3,7 @@
 
 /**
  * @file metrics.h
- * @brief 指标收集接口
+ * @brief Metrics collection interface.
  */
 
 #ifndef AIRY_RT_UTILS_METRICS_H
@@ -19,54 +19,53 @@ extern "C" {
 typedef struct airy_metrics airy_metrics_t;
 
 /**
- * @brief 创建指标收集器
- * @return 收集器句柄，失败返回 NULL
+ * @brief Create a metrics collector.
+ * @return Collector handle, NULL on failure
  */
 airy_metrics_t *airy_metrics_create(void);
 
 /**
-// From data intelligence emerges. by spharx
- * @brief 销毁收集器
+ * @brief Destroy a collector.
  */
 void airy_metrics_destroy(airy_metrics_t *metrics);
 
 /**
- * @brief 增加计数器
- * @param metrics 收集器
- * @param name 指标名
- * @param value 增加值
+ * @brief Increment a counter.
+ * @param metrics Collector
+ * @param name Metric name
+ * @param value Increment value
  */
 void airy_metrics_increment(airy_metrics_t *metrics, const char *name, uint64_t value);
 
 /**
- * @brief 设置仪表值
- * @param metrics 收集器
- * @param name 指标名
- * @param value 值
+ * @brief Set a gauge value.
+ * @param metrics Collector
+ * @param name Metric name
+ * @param value Value
  */
 void airy_metrics_gauge(airy_metrics_t *metrics, const char *name, double value);
 
 /**
- * @brief 记录耗时
- * @param metrics 收集器
- * @param name 指标名
- * @param duration_ms 耗时（毫秒）
+ * @brief Record a timing.
+ * @param metrics Collector
+ * @param name Metric name
+ * @param duration_ms Duration (milliseconds)
  */
 void airy_metrics_timing(airy_metrics_t *metrics, const char *name, double duration_ms);
 
 /**
- * @brief 导出指标为JSON字符串
- * @param metrics 收集器
- * @return JSON字符串（需调用者释放），失败返回 NULL
+ * @brief Export metrics as a JSON string.
+ * @param metrics Collector
+ * @return JSON string (caller must free), NULL on failure
  */
 char *airy_metrics_export(airy_metrics_t *metrics);
 
 /**
- * @brief 导出指标为Prometheus格式字符串
- * @param metrics 收集器
- * @return Prometheus格式字符串（需调用者释放），失败返回 NULL
+ * @brief Export metrics as a Prometheus format string.
+ * @param metrics Collector
+ * @return Prometheus format string (caller must free), NULL on failure
  *
- * 输出格式遵循Prometheus exposition format:
+ * Output follows the Prometheus exposition format:
  * - Counter: # TYPE name counter \n name value
  * - Gauge: # TYPE name gauge \n name value
  * - Timing: # TYPE name summary \n name_sum value \n name_count count
@@ -74,10 +73,10 @@ char *airy_metrics_export(airy_metrics_t *metrics);
 char *airy_metrics_export_prometheus(airy_metrics_t *metrics);
 
 /**
- * @brief 导出指定前缀的指标为Prometheus格式
- * @param metrics 收集器
- * @param prefix 指标名称前缀过滤（NULL导出全部）
- * @return Prometheus格式字符串（需调用者释放），失败返回 NULL
+ * @brief Export metrics with a given prefix as Prometheus format.
+ * @param metrics Collector
+ * @param prefix Metric name prefix filter (NULL exports all)
+ * @return Prometheus format string (caller must free), NULL on failure
  */
 char *airy_metrics_export_prometheus_filtered(airy_metrics_t *metrics, const char *prefix);
 

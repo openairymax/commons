@@ -81,7 +81,7 @@ void test_server_accept(void **state)
     ipc_channel_t *client = ipc_server_accept(server, 1000);
 
     if (client) {
-        ipc_channel_destroy(client);
+        ipc_server_disconnect(server, client);
     }
 
     ipc_server_stop(server);

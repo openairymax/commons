@@ -3,7 +3,8 @@
 
 /**
  * @file platform_sync.c
- * @brief 同步原语域：线程创建/汇合/分离、互斥锁与条件变量的跨平台实现
+ * @brief Sync primitives domain: cross-platform thread create/join/detach,
+ * mutex and condition variable implementations.
  */
 
 #include <time.h>

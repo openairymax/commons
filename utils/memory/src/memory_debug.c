@@ -3,10 +3,12 @@
 
 /**
  * @file memory_debug.c
- * @brief 统一内存管理模块 - 内存调试生命周期与配置域
+ * @brief Unified memory management module - debug lifecycle and config
+ * domain.
  *
- * 本文件保留内存调试模块的入口与核心状态机：初始化、启用状态、
- * 错误回调注册、特性开关与日志级别配置，以及全局状态与锁工具定义。
+ * Keeps the memory debug module entry and core state machine: init,
+ * enable state, error callback registration, feature switches and log
+ * level config, plus global state and lock helper definitions.
  */
 
 #include "memory_debug.h"

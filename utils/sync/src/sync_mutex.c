@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_mutex.c
- * @brief 互斥锁实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Mutex implementation.
  */
 
 #include "sync_internal.h"

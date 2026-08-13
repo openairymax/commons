@@ -3,11 +3,11 @@
 
 /**
  * @file resource_quota.h
- * @brief 资源配额管理接口
+ * @brief Resource quota management interface.
  *
- * @details
- * 基于E-3资源确定性原则实现的资源配额管理系统。
- * 提供内存、CPU、I/O、网络等资源的配额限制和统计功能。
+ * Implements the resource quota management system based on the E-3
+ * resource determinism principle, providing quota limits and stats for
+ * memory, CPU, I/O, network and other resources.
  */
 
 #ifndef RESOURCE_QUOTA_H

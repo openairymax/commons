@@ -3,19 +3,19 @@
 
 /**
  * @file tcache.h
- * @brief P1.20: per-Thread 缓存层 — 减少 pool.c 全局锁竞争
+ * @brief P1.20: per-thread cache layer - reduces pool.c global lock contention.
  *
- * 每个线程维护本地缓存（tcache），批量从全局内存池获取/归还内存块，
- * 减少对 pool.c 全局 airy_mtx_t 的锁竞争。
+ * Each thread keeps a local cache (tcache) and fetches/returns blocks in
+ * batches from the global memory pool, reducing lock contention on the
+ * pool.c global airy_mtx_t.
  *
- * 设计：
- *   - _Thread_local 存储每个线程的缓存
- *   - 批量获取（batch_fill）：一次锁操作获取多个块
- *   - 批量归还（batch_flush）：缓存满时一次归还多个块
- *   - 限流上限：每个 tcache 最多缓存 TCACHE_MAX_CACHED 个块
+ * Design:
+ *   - _Thread_local storage for each thread's cache
+ *   - Batch fill: acquire multiple blocks in one lock operation
+ *   - Batch flush: return multiple blocks at once when the cache is full
+ *   - Cap: each tcache caches at most TCACHE_MAX_CACHED blocks
  *
- * 性能目标：单线程分配延迟降低 > 30%
- *
+ * Performance goal: > 30% lower single-thread allocation latency.
  */
 
 #ifndef AIRY_RT_TCACHE_H
@@ -52,95 +52,99 @@ typedef struct {
 
 
 /**
- * @brief P1.20.1: 创建 tcache（通常每个线程一个）
+ * @brief P1.20.1: Create a tcache (usually one per thread).
  *
- * @ownership alloc — 返回的 tcache 句柄由调用者持有，需通过 tcache_destroy 释放
+ * @ownership alloc - the returned tcache handle is owned by the caller
+ * and must be released with tcache_destroy
  *
- * @param pool       关联的内存池
- * @param batch_size 批量获取大小（0 使用默认）
- * @param max_cached 最大缓存块数（0 使用默认）
- * @return tcache 句柄，失败返回 NULL
+ * @param pool       Associated memory pool
+ * @param batch_size Batch size (0 uses the default)
+ * @param max_cached Max cached blocks (0 uses the default)
+ * @return tcache handle, NULL on failure
  */
 airy_tcache_t *tcache_create(memory_pool_t *pool, size_t batch_size, size_t max_cached);
 
 /**
- * @brief P1.20.1: 销毁 tcache（归还所有缓存块到池）
+ * @brief P1.20.1: Destroy a tcache (return all cached blocks to the pool).
  *
- * @ownership release — 释放 tc 句柄的所有权，销毁后 tc 失效
+ * @ownership release - releases ownership of tc; tc is invalid after
  *
- * @param tc tcache 句柄
+ * @param tc tcache handle
  */
 void tcache_destroy(airy_tcache_t *tc);
 
 
 /**
- * @brief P1.20.2: 从 tcache 快速分配
+ * @brief P1.20.2: Fast allocation from the tcache.
  *
- * @ownership alloc — 返回的内存块由调用者持有，需通过 tcache_free 归还
+ * @ownership alloc - the returned block is owned by the caller and must
+ * be returned via tcache_free
  *
- * 优先从线程本地缓存获取，未命中时才访问全局池。
+ * Serves from the thread-local cache first; only hits the global pool
+ * on a miss.
  *
- * @param tc tcache 句柄
- * @return 内存块指针，失败返回 NULL
+ * @param tc tcache handle
+ * @return Block pointer, NULL on failure
  */
 void *tcache_alloc(airy_tcache_t *tc);
 
 /**
- * @brief P1.20.2: 归还内存块到 tcache
+ * @brief P1.20.2: Return a block to the tcache.
  *
- * @ownership release — 释放 ptr 的所有权，调用后 ptr 失效
+ * @ownership release - releases ownership of ptr; ptr is invalid after
  *
- * 优先归还到线程本地缓存，缓存满时批量归还到全局池。
+ * Returns to the thread-local cache first; when the cache is full,
+ * blocks are returned to the global pool in a batch.
  *
- * @param tc  tcache 句柄
- * @param ptr 内存块指针（可为 NULL）
+ * @param tc  tcache handle
+ * @param ptr Block pointer (may be NULL)
  */
 void tcache_free(airy_tcache_t *tc, void *ptr);
 
 
 /**
- * @brief P1.20.1: 从全局池批量填充 tcache
- * @param tc tcache 句柄
- * @return 填充的块数
+ * @brief P1.20.1: Batch fill the tcache from the global pool.
+ * @param tc tcache handle
+ * @return Number of blocks filled
  */
 size_t tcache_batch_fill(airy_tcache_t *tc);
 
 /**
- * @brief P1.20.1: 将 tcache 缓存批量归还到全局池
+ * @brief P1.20.1: Batch return tcache blocks to the global pool.
  *
- * 将超过 TCACHE_FLUSH_THRESHOLD 的缓存块归还。
+ * Returns cached blocks exceeding TCACHE_FLUSH_THRESHOLD.
  *
- * @param tc tcache 句柄
- * @return 归还的块数
+ * @param tc tcache handle
+ * @return Number of blocks returned
  */
 size_t tcache_batch_flush(airy_tcache_t *tc);
 
 /**
- * @brief 立即归还所有缓存块到全局池
- * @param tc tcache 句柄
+ * @brief Immediately return all cached blocks to the global pool.
+ * @param tc tcache handle
  */
 void tcache_flush_all(airy_tcache_t *tc);
 
 
 /**
- * @brief 获取 tcache 统计信息
- * @param tc    tcache 句柄
- * @param stats 输出统计信息
- * @return true 成功
+ * @brief Get tcache stats.
+ * @param tc    tcache handle
+ * @param stats Output stats
+ * @return true on success
  */
 bool tcache_get_stats(airy_tcache_t *tc, tcache_stats_t *stats);
 
 /**
- * @brief 获取 tcache 当前缓存块数
- * @param tc tcache 句柄
- * @return 缓存块数
+ * @brief Get the tcache's current cached block count.
+ * @param tc tcache handle
+ * @return Cached block count
  */
 size_t tcache_cached_count(airy_tcache_t *tc);
 
 /**
- * @brief 检查 tcache 是否已满（达到 max_cached 上限）
- * @param tc tcache 句柄
- * @return true 已满
+ * @brief Check whether the tcache is full (reached the max_cached cap).
+ * @param tc tcache handle
+ * @return true if full
  */
 bool tcache_is_full(airy_tcache_t *tc);
 

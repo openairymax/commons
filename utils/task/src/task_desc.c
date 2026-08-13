@@ -3,14 +3,16 @@
 
 /*
  *
- * A-TD (Airymax Task Descriptor) — implementation.
+ * A-TD (Airymax Task Descriptor) - implementation.
  *
- * 任务描述符创建与完整性校验（真实实现，非桩）：
- *   - magic 0x41475453 ('AGTS')，独立于 IPC 消息头 magic
- *   - CRC32 覆盖 header[0:72) + payload（与 IPC C-S12 同一算法）
- *   - validate() 依次检查 magic/version/flags/reserved/payload_len/CRC32
+ * Task descriptor creation and integrity validation (real implementation,
+ * not a stub):
+ *   - magic 0x41475453 ('AGTS'), independent of the IPC message header magic
+ *   - CRC32 covers header[0:72) + payload (same algorithm as IPC C-S12)
+ *   - validate() checks magic/version/flags/reserved/payload_len/CRC32
  *
- * 时间戳使用单调时钟（monotonic ns），跨平台（POSIX/Win32）。
+ * Timestamps use a monotonic clock (monotonic ns), cross-platform
+ * (POSIX/Win32).
  */
 
 #include <airymax/task_desc.h>
@@ -25,7 +27,7 @@
 #endif
 
 /* ============================================================================
- * CRC-32（IEEE 802.3，与 IPC ipc_calc_crc32 同一算法）
+ * CRC-32 (IEEE 802.3, same algorithm as the IPC ipc_calc_crc32)
  * ============================================================================ */
 
 __u32 airy_task_desc_crc32(const void *data, size_t len)
@@ -48,10 +50,10 @@ __u32 airy_task_desc_crc32(const void *data, size_t len)
 
 
 /**
- * @brief 计算 header[0:crc32 偏移) + payload 的整体 CRC32
+ * @brief Compute the overall CRC32 over header[0:crc32 offset) + payload.
  *
- * crc32 字段自身（offset 68）不参与计算，与 IPC 头校验（header[0:52)+payload）
- * 的约定一致。
+ * The crc32 field itself (offset 68) is excluded, consistent with the
+ * IPC header checksum convention (header[0:52)+payload).
  */
 static __u32 task_desc_compute_crc(const struct airy_task_desc *desc, const void *payload,
                                    __u32 payload_len)

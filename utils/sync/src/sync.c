@@ -3,21 +3,22 @@
 
 /**
  * @file sync.c
- * @brief 统一线程同步原语模块 - 核心层实现
+ * @brief Unified thread synchronization primitives - core layer.
  *
- * 提供跨平台、安全、高效的线程同步原语实现。
- * 支持Windows和POSIX系统，包含互斥锁、条件变量、信号量、读写锁等。
+ * Provides cross-platform, safe, efficient thread synchronization
+ * primitives for Windows and POSIX: mutex, condition variable, semaphore,
+ * rwlock, etc.
  *
- * @note 本文件为模块入口点，实际实现已拆分到以下文件：
- *       - sync_mutex.c: 互斥锁
- *       - sync_recursive_mutex.c: 递归互斥锁
- *       - sync_rwlock.c: 读写锁
- *       - sync_spinlock.c: 自旋锁
- *       - sync_semaphore.c: 信号量
- *       - sync_condition.c: 条件变量
- *       - sync_barrier.c: 屏障
- *       - sync_event.c: 事件
- *
+ * @note This file is the module entry point; implementations are split
+ *       across:
+ *       - sync_mutex.c: mutex
+ *       - sync_recursive_mutex.c: recursive mutex
+ *       - sync_rwlock.c: rwlock
+ *       - sync_spinlock.c: spinlock
+ *       - sync_semaphore.c: semaphore
+ *       - sync_condition.c: condition variable
+ *       - sync_barrier.c: barrier
+ *       - sync_event.c: event
  */
 
 #include "sync.h"
@@ -225,8 +226,9 @@ sync_result_t sync_set_option(void *lock, int option, void *value)
 
     switch (option) {
     case SYNC_OPTION_NAME: {
-        /* v0.1.1 修复：委托给 sync_set_name 进行 strdup + 注册，
-         * 此前直接 base->name = name 赋值裸指针会导致悬垂指针/泄漏/非法 free。 */
+        /* v0.1.1 fix: delegate to sync_set_name for strdup + registration;
+         * previously base->name = name assigned the raw pointer directly,
+         * causing dangling pointers/leaks/illegal free. */
         return sync_set_name(lock, (const char *)value);
     }
     case SYNC_OPTION_TIMEOUT: {

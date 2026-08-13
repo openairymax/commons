@@ -4,19 +4,15 @@
 /*
  *
  * @file network_common.c
- * @brief 网络通信模块实现 - 连接生命周期与 IO 域
+ * @brief Network module implementation - connection lifecycle and IO domain.
  *
- * @details
- * 本文件实现了 network_common.h 中声明的连接生命周期与收发 IO 功能，
- * 并保留模块级内部辅助工具（Winsock 初始化、超时/非阻塞设置、地址族转换）。
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：支持 Windows/Linux/macOS
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-03
- * @version 0.1.0
+ * Implements the connection lifecycle and send/receive IO functions
+ * declared in network_common.h, and keeps module-level internal helpers
+ * (Winsock init, timeout/non-blocking setup, address family conversion).
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-4 Cross-platform consistency: Windows/Linux/macOS
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  */
 
 #ifdef _WIN32

@@ -3,10 +3,11 @@
 
 /**
  * @file arena.c
- * @brief P1.19: Arena 线性分配器实现
+ * @brief P1.19: arena linear allocator implementation.
  *
- * 实现 arena_create/destroy/alloc/calloc/reset/mark/release API。
- * 使用链表串联多个 chunk，bump 指针线性分配，O(1) 整体释放。
+ * Implements the arena_create/destroy/alloc/calloc/reset/mark/release
+ * API. Chunks are chained via a linked list, bump-pointer linear
+ * allocation, O(1) bulk release.
  *
  */
 

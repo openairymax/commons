@@ -6,21 +6,23 @@
 
 /**
  * @file logging_compat.h
- * @brief AIRY_LOG_* 统一日志宏 — 转发至 logging.h 的 LOG_* 宏
+ * @brief Unified AIRY_LOG_* macros - forwarded to the LOG_* macros of logging.h.
  *
- * 统一日志入口：所有模块使用 AIRY_LOG_ERROR / AIRY_LOG_WARN /
- * AIRY_LOG_INFO / AIRY_LOG_DEBUG，由本头文件转发至
- * logging.h 的 log_write() 实现。
+ * Unified logging entry: all modules use AIRY_LOG_ERROR / AIRY_LOG_WARN /
+ * AIRY_LOG_INFO / AIRY_LOG_DEBUG, forwarded by this header to the
+ * log_write() implementation in logging.h.
  *
- * 当 logging.h 不可用时（未链接日志库），回退至 stderr 直接输出。
+ * When logging.h is unavailable (log library not linked), falls back to
+ * direct stderr output.
  */
 
 
 #if __has_include("logging.h")
 #include "logging.h"
-/* #ifndef 保护：若 observability/include/logger.h 已先于本头文件被包含并定义
-   * AIRY_LOG_* 宏（基于 airy_log_write 实现），则跳过本文件的宏定义，避免重定义
-   * 警告。两条路径最终都调用 log_write()，语义等价。 */
+/* #ifndef guard: if observability/include/logger.h was included before
+ * this header and already defined AIRY_LOG_* (based on airy_log_write),
+ * skip the definitions here to avoid redefinition warnings. Both paths
+ * eventually call log_write(), so the semantics are equivalent. */
 #ifndef AIRY_LOG_ERROR
 #define AIRY_LOG_ERROR(fmt, ...) LOG_ERROR(fmt, ##__VA_ARGS__)
 #endif

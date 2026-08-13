@@ -3,14 +3,13 @@
 
 /**
  * @file trace.c
- * @brief 链路追踪实现（跨平台）
+ * @brief Distributed tracing implementation (cross-platform).
  *
- * @details
- * 本模块实现分布式链路追踪功能。
- * - 支持 Span 的创建和生命周期管理
- * - 提供事件注解和属性添加
- * - 支持 JSON 格式的追踪导出
- * - 符合 OpenTelemetry 追踪规范
+ * Implements distributed tracing:
+ * - Span creation and lifecycle management
+ * - Event annotation and attribute addition
+ * - JSON tracing export
+ * - Conforms to the OpenTelemetry tracing spec
  */
 
 #include "trace.h"
@@ -472,8 +471,10 @@ int64_t airy_tspan_get_end_time_us(const airy_trace_span_t *span)
     return span ? span->end_time : 0;
 }
 
-/* 历史命名差异：头文件以 airy_trace_span_get_* 声明（telemetry.c 等按此调用），
- * 实现长期以 airy_tspan_get_* 定义。此处补全长名定义，保证链接与 API 一致。 */
+/* Historical naming difference: the header declares airy_trace_span_get_*
+ * (called by telemetry.c etc.) while the implementation long used
+ * airy_tspan_get_* definitions. Add the long-name definitions here so
+ * linking and API stay consistent. */
 int64_t airy_trace_span_get_start_time_us(const airy_trace_span_t *span)
 {
     return airy_tspan_get_start_time_us(span);

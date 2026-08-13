@@ -3,7 +3,8 @@
 
 /**
  * @file platform_paths.c
- * @brief AIRY_HOME 路径体系域：运行时目录解析、目录创建与环境变量兼容
+ * @brief AIRY_HOME path system domain: runtime directory resolution,
+ * directory creation and environment variable compatibility.
  */
 
 #include <time.h>

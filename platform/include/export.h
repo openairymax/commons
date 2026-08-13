@@ -3,10 +3,10 @@
 
 /**
  * @file export.h
- * @brief AgentRT 符号导出管理（commons平台层副本）
+ * @brief AgentRT symbol export management (commons platform layer copy).
  *
- * @note 定义了跨平台符号导出宏，支持 Windows 和 POSIX 系统
- *       这是 AIRY_API 的权威定义源之一
+ * @note Defines cross-platform symbol export macros for Windows and POSIX.
+ * This is one of the authoritative definition sources of AIRY_API.
  */
 
 #ifndef AIRY_RT_EXPORT_H

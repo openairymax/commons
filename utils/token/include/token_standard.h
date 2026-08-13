@@ -3,13 +3,12 @@
 
 /**
  * @file token_standard.h
- * @brief Token 计算标准化接口 - 统一 C/Python Token 计算算法
+ * @brief Standardized token counting interface - unified C/Python algorithm.
  *
- * 根据 AgentRT 架构原则（E-3 资源确定性）设计，提供确定性的 Token 计算标准。
- * 确保跨语言实现的一致性，支持资源配额管理和监控集成。
- *
- * @version 0.1.0
- * @date 2026-04-07
+ * Designed per the AgentRT architecture principle (E-3 resource
+ * determinism) to provide a deterministic token counting standard,
+ * ensuring cross-language consistency with resource quota management and
+ * monitoring integration.
  */
 
 #ifndef AIRY_RT_TOKEN_STANDARD_H
@@ -23,12 +22,12 @@ extern "C" {
 #endif
 
 /**
- * @brief Token 计算算法版本
+ * @brief Token counting algorithm version.
  */
 #define AIRY_TOKEN_ALGORITHM_VERSION "1.0"
 
 /**
- * @brief Token 计算模型类型
+ * @brief Token counting model types.
  */
 typedef enum {
     AIRY_TOKEN_MODEL_GENERIC = 0,
@@ -40,7 +39,7 @@ typedef enum {
 } airy_token_model_t;
 
 /**
- * @brief Token 计算配置
+ * @brief Token counting config.
  */
 typedef struct {
     airy_token_model_t model_type;
@@ -51,14 +50,14 @@ typedef struct {
 } airy_token_config_t;
 
 /**
- * @brief Token 计算标志位
+ * @brief Token counting flags.
  */
 #define AIRY_TOKEN_FLAG_ACCURATE 0x01
 #define AIRY_TOKEN_FLAG_ESTIMATE 0x02
 #define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04
 
 /**
- * @brief 默认 Token 计算配置
+ * @brief Default token counting config.
  */
 #define AIRY_TOKEN_CONFIG_DEFAULT            \
     {.model_type = AIRY_TOKEN_MODEL_GENERIC, \
@@ -68,65 +67,66 @@ typedef struct {
      .flags = AIRY_TOKEN_FLAG_ESTIMATE}
 
 /**
- * @brief 标准化 Token 计算函数
+ * @brief Standardized token counting function.
  *
- * 根据配置计算文本的 Token 数量，确保跨语言实现的一致性。
+ * Counts the tokens of a text according to the config, ensuring
+ * consistency across language implementations.
  *
- * @param text 输入文本（UTF-8 编码）
- * @param length 文本长度（字节数），如果为 0 则自动计算
- * @param config Token 计算配置，如果为 NULL 则使用默认配置
- * @return Token 数量，如果出错返回 (size_t)-1
+ * @param text Input text (UTF-8 encoded)
+ * @param length Text length (bytes); 0 auto-computes
+ * @param config Token counting config; NULL uses the default
+ * @return Token count, (size_t)-1 on error
  */
 size_t airy_token_standard_count(const char *text, size_t length,
                                  const airy_token_config_t *config);
 
 /**
- * @brief 批量 Token 计算
+ * @brief Batch token counting.
  *
- * 一次性计算多个文本的 Token 数量，提高效率。
+ * Counts tokens for multiple texts in one call for efficiency.
  *
- * @param texts 文本数组
- * @param lengths 长度数组（字节数），如果为 NULL 则每个文本自动计算长度
- * @param count 文本数量
- * @param out_counts 输出 Token 数量数组
- * @param config Token 计算配置，如果为 NULL 则使用默认配置
- * @return 成功返回 0，失败返回错误码
+ * @param texts Text array
+ * @param lengths Length array (bytes); NULL auto-computes each length
+ * @param count Text count
+ * @param out_counts Output token count array
+ * @param config Token counting config; NULL uses the default
+ * @return 0 on success, error code on failure
  */
 int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
                                     size_t *out_counts, const airy_token_config_t *config);
 
 /**
- * @brief 检测文本语言特征
+ * @brief Detect text language features.
  *
- * 分析文本的语言特征，用于优化 Token 计算。
+ * Analyzes the language features of a text to optimize token counting.
  *
- * @param text 输入文本
- * @param length 文本长度
- * @param out_cjk_chars 输出中日韩字符数量
- * @param out_alpha_chars 输出字母字符数量
- * @param out_total_chars 输出总字符数量
- * @return 成功返回 0，失败返回错误码
+ * @param text Input text
+ * @param length Text length
+ * @param out_cjk_chars Output CJK character count
+ * @param out_alpha_chars Output alphabetic character count
+ * @param out_total_chars Output total character count
+ * @return 0 on success, error code on failure
  */
 int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_chars,
                             size_t *out_alpha_chars, size_t *out_total_chars);
 
 /**
- * @brief 获取 Token 计算算法信息
+ * @brief Get token counting algorithm info.
  *
- * @return 算法描述字符串
+ * @return Algorithm description string
  */
 const char *airy_token_get_algorithm_info(void);
 
 /**
- * @brief 验证 Token 计算配置
+ * @brief Validate a token counting config.
  *
- * @param config 配置参数
- * @return 配置有效返回 0，无效返回错误码
+ * @param config Config params
+ * @return 0 if valid, error code otherwise
  */
 int airy_token_validate_config(const airy_token_config_t *config);
 
 /**
- * @brief Token 计算精度级别
+ * @brief Token counting precision levels.
  */
 typedef enum {
     AIRY_TOKEN_PRECISION_LOW = 0,
@@ -135,16 +135,16 @@ typedef enum {
 } airy_token_precision_t;
 
 /**
- * @brief 设置 Token 计算精度
+ * @brief Set the token counting precision.
  *
- * @param precision 精度级别
- * @param config 输出配置（可选）
- * @return 成功返回 0，失败返回错误码
+ * @param precision Precision level
+ * @param config Output config (optional)
+ * @return 0 on success, error code on failure
  */
 int airy_token_set_precision(airy_token_precision_t precision, airy_token_config_t *config);
 
 /**
- * @brief 资源配额限制
+ * @brief Resource quota limits.
  */
 typedef struct {
     size_t max_tokens_per_request;
@@ -157,7 +157,7 @@ typedef struct {
 } airy_token_quota_t;
 
 /**
- * @brief 默认资源配额
+ * @brief Default resource quota.
  */
 #define AIRY_TOKEN_QUOTA_DEFAULT     \
     {.max_tokens_per_request = 8000, \
@@ -169,7 +169,7 @@ typedef struct {
      .max_requests_per_day = 10000}
 
 /**
- * @brief 资源使用情况
+ * @brief Resource usage.
  */
 typedef struct {
     size_t tokens_used_per_minute;
@@ -181,17 +181,19 @@ typedef struct {
 } airy_token_usage_t;
 
 /**
- * @brief 检查资源配额是否足够
+ * @brief Check whether the resource quota is sufficient.
  *
- * 逐级检查所有配额限制：单次请求、分钟级、小时级、日级。
- * 当 current_usage 为 NULL 时，仅检查单次请求限制。
+ * Checks all quota limits level by level: per-request, per-minute,
+ * per-hour, per-day. When current_usage is NULL, only the per-request
+ * limit is checked.
  *
- * @param quota 配额限制
- * @param requested_tokens 请求的 Token 数量
- * @param current_usage 当前使用情况（可为 NULL）
- * @return 0 配额足够，1 超出单次请求限制，2 超出分钟Token限制，
- *         3 超出小时Token限制，4 超出日Token限制，
- *         5 超出分钟请求限制，6 超出小时请求限制，7 超出日请求限制
+ * @param quota Quota limits
+ * @param requested_tokens Requested token count
+ * @param current_usage Current usage (may be NULL)
+ * @return 0 quota OK, 1 over per-request limit, 2 over per-minute token
+ *         limit, 3 over per-hour token limit, 4 over per-day token
+ *         limit, 5 over per-minute request limit, 6 over per-hour
+ *         request limit, 7 over per-day request limit
  */
 int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
                            const airy_token_usage_t *current_usage);

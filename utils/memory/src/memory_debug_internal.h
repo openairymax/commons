@@ -3,7 +3,8 @@
 
 /**
  * @file memory_debug_internal.h
- * @brief 内存调试模块内部共享定义：调试块/全局状态结构体与跨文件辅助函数声明
+ * @brief Memory debug module internal shared definitions: debug block /
+ * global state structs and cross-file helper declarations.
  */
 
 #ifndef AIRY_MEMORY_DEBUG_INTERNAL_H
@@ -19,7 +20,7 @@
 #include "airy_memory.h"
 
 /**
- * @brief 内存调试块头（红区）
+ * @brief Memory debug block header (redzone).
  */
 typedef struct memory_debug_block {
     size_t magic;
@@ -65,7 +66,7 @@ typedef struct {
 } memory_debug_state_t;
 
 /**
- * @brief 魔数常量
+ * @brief Magic number constants.
  */
 #define MEMORY_DEBUG_MAGIC 0xDEADBEEFCAFEBABEULL
 

@@ -3,34 +3,36 @@
 
 /**
  * @file ipc_shared_buf.h
- * @brief P1.21.3: IPC 共享缓冲区 — 基于 refcounted_t 的引用计数管理
+ * @brief P1.21.3: IPC shared buffer - refcounted_t-based lifetime management.
  *
- * 提供线程安全的 IPC 共享缓冲区，使用 refcounted_t 管理生命周期。
- * 支持零拷贝共享（多个消费者持有同一缓冲区引用）。
+ * Provides a thread-safe IPC shared buffer whose lifetime is managed by
+ * refcounted_t, supporting zero-copy sharing (multiple consumers hold
+ * references to the same buffer).
  *
- * 设计：
- *   - ipc_shared_buf_t 首部嵌入 refcounted_t，由 refcount_alloc/retain/release 管理
- *   - ipc_buf_create()  分配带引用计数的缓冲区（@ownership alloc，引用计数=1）
- *   - ipc_buf_dup()     增加引用计数（@ownership retain）
- *   - ipc_buf_release() 减少引用计数，归零时自动释放
+ * Design:
+ *   - ipc_shared_buf_t embeds refcounted_t at its head, managed by
+ *     refcount_alloc/retain/release
+ *   - ipc_buf_create()  allocates a refcounted buffer (@ownership alloc,
+ *                       refcount = 1)
+ *   - ipc_buf_dup()     increments the refcount (@ownership retain)
+ *   - ipc_buf_release() decrements the refcount, frees at zero
  *
- * 线程安全：
- *   - 引用计数操作基于 _Atomic uint32_t，无锁原子操作
- *   - 生产者-消费者场景：生产者 create → 消费者 dup → 各自 release
+ * Thread safety:
+ *   - Refcount ops are based on _Atomic uint32_t, lock-free atomic ops
+ *   - Producer-consumer: producer create -> consumer dup -> each releases
  *
- * 使用示例：
- *   // 生产者
+ * Usage example:
+ *   // producer
  *   ipc_shared_buf_t *buf = ipc_buf_create(4096);
  *   memcpy(buf->data, payload, payload_len);
- *   send_to_consumer(buf);  // 消费者会 dup
- *   ipc_buf_release(buf);   // 生产者释放自己的引用
+ *   send_to_consumer(buf);  // consumer will dup
+ *   ipc_buf_release(buf);   // producer releases its own reference
  *
- *   // 消费者
+ *   // consumer
  *   void on_message(ipc_shared_buf_t *buf) {
  *       process(buf->data, buf->size);
  *       ipc_buf_release(buf);
  *   }
- *
  */
 
 #ifndef AIRY_RT_IPC_SHARED_BUF_H
@@ -46,18 +48,18 @@ extern "C" {
 #endif
 
 /* ============================================================================
- * IPC 共享缓冲区结构
+ * IPC shared buffer structure
  * ============================================================================ */
 
 /**
- * @brief P1.21.3: IPC 共享缓冲区结构（嵌入 refcounted_t 首部）
+ * @brief P1.21.3: IPC shared buffer structure (embeds refcounted_t header).
  *
- * 使用柔性数组成员 data[] 存储实际数据，
- * 整个结构体通过 refcount_alloc 一次性分配。
+ * A flexible array member data[] stores the payload; the whole structure
+ * is allocated in one shot via refcount_alloc.
  *
- * @ownership alloc  — ipc_buf_create() 返回引用计数=1 的缓冲区
- * @ownership retain — ipc_buf_dup() 增加引用计数
- * @ownership release — ipc_buf_release() 减少引用计数，归零时释放
+ * @ownership alloc  - ipc_buf_create() returns a buffer with refcount = 1
+ * @ownership retain - ipc_buf_dup() increments the refcount
+ * @ownership release - ipc_buf_release() decrements the refcount, frees at 0
  */
 typedef struct {
     AIRY_REFCOUNTED_HEADER;
@@ -67,16 +69,16 @@ typedef struct {
 } ipc_shared_buf_t;
 
 /* ============================================================================
- * 生命周期 API
+ * Lifetime API
  * ============================================================================ */
 
 /**
- * @brief P1.21.3: 创建带引用计数的 IPC 共享缓冲区
+ * @brief P1.21.3: Create a refcounted IPC shared buffer.
  *
- * @ownership alloc — 返回的缓冲区持有 1 个引用
+ * @ownership alloc - the returned buffer holds 1 reference
  *
- * @param size 数据区大小（字节），不包括结构体头部
- * @return 分配的缓冲区指针，失败返回 NULL
+ * @param size Data area size (bytes), not including the struct header
+ * @return Allocated buffer pointer, NULL on failure
  */
 static inline ipc_shared_buf_t *ipc_buf_create(size_t size)
 {
@@ -97,14 +99,15 @@ static inline ipc_shared_buf_t *ipc_buf_create(size_t size)
 }
 
 /**
- * @brief P1.21.3: 复制 IPC 共享缓冲区（增加引用计数）
+ * @brief P1.21.3: Duplicate an IPC shared buffer (increments refcount).
  *
- * @ownership retain — 调用者获得 1 个新引用
+ * @ownership retain - the caller obtains 1 new reference
  *
- * @param buf 源缓冲区（可为 NULL）
- * @return buf 本身（便于链式调用），NULL 如果 buf 为 NULL
+ * @param buf Source buffer (may be NULL)
+ * @return buf itself (for chaining), NULL if buf is NULL
  *
- * @note 不会复制数据，仅增加引用计数（零拷贝共享）
+ * @note Data is not copied; only the refcount is incremented
+ *       (zero-copy sharing)
  */
 static inline ipc_shared_buf_t *ipc_buf_dup(ipc_shared_buf_t *buf)
 {
@@ -112,14 +115,14 @@ static inline ipc_shared_buf_t *ipc_buf_dup(ipc_shared_buf_t *buf)
 }
 
 /**
- * @brief P1.21.3: 释放 IPC 共享缓冲区引用
+ * @brief P1.21.3: Release an IPC shared buffer reference.
  *
- * @ownership release — 调用者释放 1 个引用
+ * @ownership release - the caller releases 1 reference
  *
- * 当引用计数归零时，自动释放内存。
- * 调用后 buf 指针失效。
+ * When the refcount reaches zero the memory is freed automatically.
+ * buf becomes invalid after the call.
  *
- * @param buf 缓冲区指针（可为 NULL）
+ * @param buf Buffer pointer (may be NULL)
  */
 static inline void ipc_buf_release(ipc_shared_buf_t *buf)
 {
@@ -127,13 +130,13 @@ static inline void ipc_buf_release(ipc_shared_buf_t *buf)
 }
 
 /* ============================================================================
- * 查询 API
+ * Query API
  * ============================================================================ */
 
 /**
- * @brief 获取缓冲区的当前引用计数（仅供调试）
- * @param buf 缓冲区指针
- * @return 当前引用计数，buf 为 NULL 返回 0
+ * @brief Get the current refcount of a buffer (debug only).
+ * @param buf Buffer pointer
+ * @return Current refcount, 0 if buf is NULL
  */
 static inline uint32_t ipc_buf_refcount(const ipc_shared_buf_t *buf)
 {
@@ -143,9 +146,9 @@ static inline uint32_t ipc_buf_refcount(const ipc_shared_buf_t *buf)
 }
 
 /**
- * @brief 获取缓冲区数据区大小
- * @param buf 缓冲区指针
- * @return 数据区大小（字节），buf 为 NULL 返回 0
+ * @brief Get the buffer data area size.
+ * @param buf Buffer pointer
+ * @return Data area size (bytes), 0 if buf is NULL
  */
 static inline size_t ipc_buf_size(const ipc_shared_buf_t *buf)
 {
@@ -155,9 +158,9 @@ static inline size_t ipc_buf_size(const ipc_shared_buf_t *buf)
 }
 
 /**
- * @brief 计算缓冲区总内存占用
- * @param buf 缓冲区指针
- * @return 总字节数（含结构体和数据区），buf 为 NULL 返回 0
+ * @brief Compute the total memory footprint of a buffer.
+ * @param buf Buffer pointer
+ * @return Total bytes (struct + data area), 0 if buf is NULL
  */
 static inline size_t ipc_buf_total_size(const ipc_shared_buf_t *buf)
 {
