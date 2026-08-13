@@ -3,10 +3,10 @@
 
 /**
  * @file config_service_version.c
- * @brief 统一配置模块 - 版本管理与回滚实现
+ * @brief Unified config module - version management and rollback.
  *
- * 本文件实现配置版本管理器：快照创建、回滚、版本列表与
- * 版本间差异比对，单一职责。
+ * Implements the config version manager: snapshot creation, rollback,
+ * version listing and version diffing, single responsibility.
  */
 
 #include "config_service.h"

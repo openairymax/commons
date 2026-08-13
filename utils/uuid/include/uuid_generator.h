@@ -3,7 +3,7 @@
 
 /**
  * @file uuid_generator.h
- * @brief UUID v4 生成器接口
+ * @brief UUID v4 generator interface.
  */
 
 #ifndef AIRY_RT_UUID_GENERATOR_H
@@ -17,13 +17,13 @@ extern "C" {
 #endif
 
 /**
- * @brief UUID 格式
+ * @brief UUID format.
  */
 #define AIRY_UUID_STR_LEN 37
 #define AIRY_UUID_PREFIXED_STR_LEN 64
 
 /**
- * @brief UUID 生成错误码
+ * @brief UUID generation error codes.
  */
 typedef enum airy_uuid_error {
     AIRY_UUID_SUCCESS = 0,
@@ -33,54 +33,54 @@ typedef enum airy_uuid_error {
 } airy_uuid_error_t;
 
 /**
- * @brief 初始化 UUID 生成器
- * @return 成功返回 AIRY_UUID_SUCCESS
+ * @brief Initialize the UUID generator.
+ * @return AIRY_UUID_SUCCESS on success
  */
 airy_uuid_error_t airy_uuid_init(void);
 
 /**
- * @brief 清理 UUID 生成器
+ * @brief Clean up the UUID generator.
  */
 void airy_uuid_cleanup(void);
 
 /**
- * @brief 生成标准 UUID v4 字符串
- * @param out_buf 输出缓冲区（至少 AIRY_UUID_STR_LEN 字节）
- * @param buf_len 缓冲区长度
- * @return 成功返回 AIRY_UUID_SUCCESS
+ * @brief Generate a standard UUID v4 string.
+ * @param out_buf Output buffer (at least AIRY_UUID_STR_LEN bytes)
+ * @param buf_len Buffer length
+ * @return AIRY_UUID_SUCCESS on success
  */
 airy_uuid_error_t airy_uuid_v4(char *out_buf, size_t buf_len);
 
 /**
- * @brief 生成带前缀的 UUID
- * @param prefix 前缀字符串（如 "mem_"、"task_"）
- * @param out_buf 输出缓冲区（至少 AIRY_UUID_PREFIXED_STR_LEN 字节）
- * @param buf_len 缓冲区长度
- * @return 成功返回 AIRY_UUID_SUCCESS
+ * @brief Generate a UUID with a prefix.
+ * @param prefix Prefix string (e.g. "mem_", "task_")
+ * @param out_buf Output buffer (at least AIRY_UUID_PREFIXED_STR_LEN bytes)
+ * @param buf_len Buffer length
+ * @return AIRY_UUID_SUCCESS on success
  */
 airy_uuid_error_t airy_uuid_with_prefix(const char *prefix, char *out_buf, size_t buf_len);
 
 /**
- * @brief 验证 UUID 格式是否有效
- * @param uuid UUID 字符串
- * @return 有效返回 1，无效返回 0
+ * @brief Validate a UUID string format.
+ * @param uuid UUID string
+ * @return 1 if valid, 0 otherwise
  */
 int airy_uuid_is_valid(const char *uuid);
 
 /**
- * @brief 将原始 UUID 二进制转换为字符串
- * @param uuid_bin 16 字节原始 UUID
- * @param out_buf 输出缓冲区（至少 AIRY_UUID_STR_LEN 字节）
- * @param buf_len 缓冲区长度
- * @return 成功返回 AIRY_UUID_SUCCESS
+ * @brief Convert raw UUID binary to a string.
+ * @param uuid_bin 16-byte raw UUID
+ * @param out_buf Output buffer (at least AIRY_UUID_STR_LEN bytes)
+ * @param buf_len Buffer length
+ * @return AIRY_UUID_SUCCESS on success
  */
 airy_uuid_error_t airy_uuid_bin_to_str(const uint8_t *uuid_bin, char *out_buf, size_t buf_len);
 
 /**
- * @brief 将 UUID 字符串转换为原始二进制
- * @param uuid_str UUID 字符串
- * @param out_bin 输出缓冲区（至少 16 字节）
- * @return 成功返回 AIRY_UUID_SUCCESS
+ * @brief Convert a UUID string to raw binary.
+ * @param uuid_str UUID string
+ * @param out_bin Output buffer (at least 16 bytes)
+ * @return AIRY_UUID_SUCCESS on success
  */
 airy_uuid_error_t airy_uuid_str_to_bin(const char *uuid_str, uint8_t *out_bin);
 

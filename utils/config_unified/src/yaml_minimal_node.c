@@ -3,10 +3,10 @@
 
 /**
  * @file yaml_minimal_node.c
- * @brief YAML 1.1 解析器 - 节点类型访问
+ * @brief YAML 1.1 parser - node type access.
  *
- * 本文件实现 YAML 节点访问接口：大小统计、键存在判断、
- * 按键/索引取值，单一职责。
+ * Implements the YAML node access interface: size stats, key-existence
+ * checks, key/index lookups, single responsibility.
  */
 
 #include "yaml_minimal.h"

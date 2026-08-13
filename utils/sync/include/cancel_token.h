@@ -3,17 +3,20 @@
 
 /**
  * @file cancel_token.h
- * @brief 异步可中断执行模型：取消令牌（改进1：Codex parallel.rs cancel_token 模式）
+ * @brief Async interruptible execution model: cancel token (improvement 1:
+ * Codex parallel.rs cancel_token pattern).
  *
- * 原子 cancelled 标志 + 回调唤醒链，贯穿 taskflow → work_hall → sched_d
- * executor → agent_d/tool_d。任一持有令牌的实体可请求取消；等待方通过
- * airy_cancel_token_is_canceled() 轮询、airy_cancel_token_wait() 阻塞
- * 等待（条件变量唤醒，非忙轮询）；注册的唤醒回调在取消瞬间触发（用于
- * 唤醒 poll/select 等无法直接阻塞在令牌上的 I/O 等待）。
+ * An atomic cancelled flag plus a callback wake-up chain, spanning
+ * taskflow -> work_hall -> sched_d executor -> agent_d/tool_d. Any entity
+ * holding the token may request cancellation; waiters poll via
+ * airy_cancel_token_is_canceled() or block via airy_cancel_token_wait()
+ * (condition-variable wake-up, not busy polling); registered wake-up
+ * callbacks fire at the moment of cancellation (used to wake poll/select
+ * style I/O waits that cannot block directly on the token).
  *
- * 线程安全：全部公共接口线程安全。
- * 纯 C 核心，跨 Linux/macOS/Windows（依赖 platform 层 airy_mtx/airy_cond/airy_atomic）。
- *
+ * Thread safety: all public interfaces are thread-safe.
+ * Pure C core, cross Linux/macOS/Windows (depends on the platform layer's
+ * airy_mtx/airy_cond/airy_atomic).
  */
 
 #ifndef AIRY_RT_CANCEL_TOKEN_H
@@ -32,13 +35,15 @@ extern "C" {
 #define AIRY_CANCEL_TOKEN_MAX_CBS 8
 
 /**
- * @brief 取消回调：令牌被取消时触发（用于唤醒阻塞 I/O 等待方）
- * @param ctx 注册时透传的用户上下文
+ * @brief Cancel callback: fires when the token is cancelled (used to wake
+ * blocked I/O waiters).
+ * @param ctx User context passed through at registration
  */
 typedef void (*airy_cancel_cb_t)(void *ctx);
 
 /**
- * @brief 取消令牌结构（不透明使用：调用方持有实例，勿直接访问内部字段）
+ * @brief Cancel token structure (opaque usage: callers hold an instance;
+ * do not access internal fields directly).
  */
 typedef struct airy_cancel_token {
     airy_mtx_t lock;
@@ -51,51 +56,57 @@ typedef struct airy_cancel_token {
 } airy_cancel_token_t;
 
 /**
- * @brief 初始化取消令牌（活跃状态）
- * @param token 令牌指针（非 NULL）
- * @return 0 成功；AIRY_EINVAL 参数非法；AIRY_ERR_SYS_MUTEX/CONDITION 底层创建失败
+ * @brief Initialize a cancel token (active state).
+ * @param token Token pointer (non-NULL)
+ * @return 0 on success; AIRY_EINVAL invalid args; AIRY_ERR_SYS_MUTEX/
+ * CONDITION underlying creation failed
  */
 int airy_cancel_token_init(airy_cancel_token_t *token);
 
 /**
- * @brief 销毁取消令牌（幂等）
- * @param token 令牌指针（可为 NULL）
+ * @brief Destroy a cancel token (idempotent).
+ * @param token Token pointer (may be NULL)
  */
 void airy_cancel_token_destroy(airy_cancel_token_t *token);
 
 /**
- * @brief 请求取消：置位原子标志并触发全部唤醒回调（幂等，重复调用仅触发一次）
- * @param token 令牌指针（可为 NULL）
+ * @brief Request cancellation: set the atomic flag and fire all wake-up
+ * callbacks (idempotent; repeated calls only fire once).
+ * @param token Token pointer (may be NULL)
  */
 void airy_cancel_token_cancel(airy_cancel_token_t *token);
 
 /**
- * @brief 检查是否已取消（线程安全，无锁读原子标志）
- * @param token 令牌指针（可为 NULL）
- * @return true 已取消；false 活跃或参数非法
+ * @brief Check whether the token is cancelled (thread-safe, lock-free
+ * read of the atomic flag).
+ * @param token Token pointer (may be NULL)
+ * @return true if cancelled; false if active or invalid args
  */
 bool airy_cancel_token_is_canceled(const airy_cancel_token_t *token);
 
 /**
- * @brief 复位令牌至活跃状态（供取消后恢复重跑复用；不重置回调链）
- * @param token 令牌指针（可为 NULL）
+ * @brief Reset the token to active state (for reuse after cancellation;
+ * does not reset the callback chain).
+ * @param token Token pointer (may be NULL)
  */
 void airy_cancel_token_reset(airy_cancel_token_t *token);
 
 /**
- * @brief 注册唤醒回调（追加到回调链；超上限返回 AIRY_ERR_OVERFLOW）
- * @param token 令牌指针（非 NULL）
- * @param cb 回调（非 NULL）
- * @param ctx 回调上下文（可为 NULL）
- * @return 0 成功；AIRY_EINVAL 参数非法；AIRY_ERR_OVERFLOW 回调链已满
+ * @brief Register a wake-up callback (appended to the chain; returns
+ * AIRY_ERR_OVERFLOW past the limit).
+ * @param token Token pointer (non-NULL)
+ * @param cb Callback (non-NULL)
+ * @param ctx Callback context (may be NULL)
+ * @return 0 on success; AIRY_EINVAL invalid args; AIRY_ERR_OVERFLOW chain full
  */
 int airy_cancel_token_register(airy_cancel_token_t *token, airy_cancel_cb_t cb, void *ctx);
 
 /**
- * @brief 阻塞等待取消或超时（条件变量唤醒，非忙轮询）
- * @param token 令牌指针（非 NULL）
- * @param timeout_ms 超时毫秒（0 = 无限等待）
- * @return 0 已取消；1 超时；AIRY_EINVAL 参数非法
+ * @brief Block waiting for cancellation or timeout (condition-variable
+ * wake-up, not busy polling).
+ * @param token Token pointer (non-NULL)
+ * @param timeout_ms Timeout in ms (0 = wait forever)
+ * @return 0 cancelled; 1 timeout; AIRY_EINVAL invalid args
  */
 int airy_cancel_token_wait(airy_cancel_token_t *token, uint32_t timeout_ms);
 

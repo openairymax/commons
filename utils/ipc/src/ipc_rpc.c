@@ -3,26 +3,22 @@
 
 /*
  * @file ipc_rpc.c
- * @brief 进程间通信模块 - RPC 远程过程调用实现
+ * @brief IPC module - RPC remote procedure call implementation.
  *
- * @details
- * 本文件实现了 ipc_common.h 中声明的 RPC 框架 API：
- * - 服务端：创建/销毁/启动/停止/注册方法/查找方法/处理请求
- * - 客户端：创建/销毁/同步调用
+ * Implements the RPC framework API declared in ipc_common.h:
+ * - Server: create/destroy/start/stop/register-method/find-method/handle
+ * - Client: create/destroy/sync-call
  *
- * 请求/响应协议基于 ipc_channel_t 传输通道承载的 ipc_message_t 消息：
- * - 请求负载 = 方法名字符串 + '\0' + 请求体
- * - 响应负载 = ipc_rpc_header_t（含状态码）+ 响应体
+ * The request/response protocol runs over ipc_message_t messages carried
+ * by the ipc_channel_t transport:
+ * - Request payload = method name string + '\0' + request body
+ * - Response payload = ipc_rpc_header_t (with status code) + response body
  *
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-08-11
- * @version 1.0
- *
- * @see ipc_common_internal.h 内部共享定义
+ * @see ipc_common_internal.h internal shared definitions
  */
 
 #include "ipc_common_internal.h"

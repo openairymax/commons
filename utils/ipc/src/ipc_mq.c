@@ -3,29 +3,24 @@
 
 /*
  * @file ipc_mq.c
- * @brief 进程间通信模块 - 消息队列实现
+ * @brief IPC module - message queue implementation.
  *
- * @details
- * 本文件实现了 ipc_common.h 中声明的消息队列 API：
- * - 创建/销毁消息队列
- * - 发送/接收消息（支持优先级排序与超时等待）
- * - 查询队列消息数、清空队列
+ * Implements the message queue API declared in ipc_common.h:
+ * - Create/destroy message queues
+ * - Send/receive messages (priority ordering and timeout wait)
+ * - Query queue message count, clear the queue
  *
- * 内部基于双向链表 + 互斥锁/条件变量实现：
- * - ipc_mq_lock/ipc_mq_unlock：加锁/解锁（支持超时）
- * - ipc_mq_wait_for_message：等待消息到达（条件变量）
- * - ipc_mq_dequeue_message：从队首取出消息
+ * Internally based on a doubly linked list + mutex/condvar:
+ * - ipc_mq_lock/ipc_mq_unlock: lock/unlock (timeout support)
+ * - ipc_mq_wait_for_message: wait for a message (condvar)
+ * - ipc_mq_dequeue_message: take a message from the queue head
  *
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-3 资源确定性：消息数据与节点随出队即释放
- * - E-6 错误可追溯：统一的错误码体系
- * - E-7 并发安全：互斥锁保护队列状态
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-3 Resource determinism: message data and nodes freed on dequeue
+ * - E-6 Traceable errors: unified error code system
+ * - E-7 Concurrency safety: mutex protects the queue state
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-08-11
- * @version 1.0
- *
- * @see ipc_common_internal.h 内部共享定义
+ * @see ipc_common_internal.h internal shared definitions
  */
 
 #include "ipc_common_internal.h"

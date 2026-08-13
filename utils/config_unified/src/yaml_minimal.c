@@ -3,15 +3,16 @@
 
 /**
  * @file yaml_minimal.c
- * @brief YAML 1.1 解析器 - 文档生命周期与解析入口
+ * @brief YAML 1.1 parser - document lifecycle and parsing entry.
  *
- * 本文件保留文档对象生命周期与解析主入口：文档创建/销毁、
- * 字符串/文件/多文档解析、错误与根节点访问。
+ * Keeps the document object lifecycle and parsing entry: document
+ * create/destroy, string/file/multi-document parsing, error and root
+ * node access.
  *
- * 词法解析、语法树构建、节点访问、标量转换与序列化分别拆至
- * yaml_minimal_lexer.c / yaml_minimal_parser.c /
+ * Lexing, syntax tree building, node access, scalar conversion and
+ * serialization are split into yaml_minimal_lexer.c / yaml_minimal_parser.c /
  * yaml_minimal_node.c / yaml_minimal_scalar.c /
- * yaml_minimal_serialize.c。
+ * yaml_minimal_serialize.c.
  */
 
 #include "yaml_minimal.h"

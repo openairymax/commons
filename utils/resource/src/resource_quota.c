@@ -3,11 +3,11 @@
 
 /**
  * @file resource_quota.c
- * @brief 资源配额管理实现
+ * @brief Resource quota management implementation.
  *
- * @details
- * 基于E-3资源确定性原则实现的资源配额管理系统。
- * 确保每个资源的生命周期可预测、可追踪、可验证。
+ * Implements the resource quota management system based on the E-3
+ * resource determinism principle, ensuring every resource's lifecycle is
+ * predictable, traceable and verifiable.
  */
 
 #include "resource_quota.h"

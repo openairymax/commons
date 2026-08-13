@@ -3,7 +3,7 @@
 
 /**
  * @file string_format.c
- * @brief 格式化与分配域：安全格式化、堆分配复制/连接
+ * @brief Format and allocate domain: safe formatting, heap copy/concat.
  */
 
 #include "airy_string.h"

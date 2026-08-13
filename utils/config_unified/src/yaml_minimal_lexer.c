@@ -3,10 +3,11 @@
 
 /**
  * @file yaml_minimal_lexer.c
- * @brief YAML 1.1 解析器 - 词法解析
+ * @brief YAML 1.1 parser - lexing.
  *
- * 本文件实现 YAML 词法层：字符流游标、空白/缩进跳过、
- * 引号/纯量/标签/锚名扫描与错误记录，单一职责。
+ * Implements the YAML lexical layer: char stream cursor, whitespace/
+ * indentation skipping, quoted/plain/tag/anchor scanning and error
+ * recording, single responsibility.
  */
 
 #include "yaml_minimal.h"
@@ -143,6 +144,20 @@ void skip_ws_and_nl(struct parse_ctx *ctx)
     }
 }
 
+/* Skip inter-line whitespace plus whole-line comments.  A comment starts
+ * with '#' in the first non-blank column and runs to end of line; it must
+ * not be consumed as part of a scalar. */
+void skip_ws_nl_comments(struct parse_ctx *ctx)
+{
+    for (;;) {
+        skip_ws_and_nl(ctx);
+        if (at_end(ctx) || peek(ctx) != '#')
+            break;
+        while (!at_end(ctx) && peek(ctx) != '\n' && peek(ctx) != '\r')
+            advance(ctx);
+    }
+}
+
 int count_indent(struct parse_ctx *ctx)
 {
     int indent = 0;
@@ -157,6 +172,23 @@ int count_indent(struct parse_ctx *ctx)
             indent += 2;
         } else
             break;
+    }
+    return indent;
+}
+
+/* Return the indentation of the line containing the current cursor without
+ * moving it.  Callers that skip inter-line whitespace land on the first
+ * non-blank character, so scanning back to the line start yields the true
+ * line indentation even when the leading blanks were already consumed. */
+int line_indent(struct parse_ctx *ctx)
+{
+    size_t p = ctx->pos;
+    while (p > 0 && ctx->src[p - 1] != '\n' && ctx->src[p - 1] != '\r')
+        p--;
+    int indent = 0;
+    while (p < ctx->pos && ctx->src[p] == ' ') {
+        indent++;
+        p++;
     }
     return indent;
 }

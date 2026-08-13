@@ -3,15 +3,16 @@
 
 /**
  * @file yaml_minimal_internal.h
- * @brief YAML 1.1 解析器内部共享定义（模块内私有，勿对外导出）
+ * @brief YAML 1.1 parser internal shared definitions.
  *
- * yaml_minimal.c 按功能域拆分后，本头承载它们之间的共享契约：
- *   - yaml_minimal.c           文档生命周期与解析入口
- *   - yaml_minimal_lexer.c     词法解析
- *   - yaml_minimal_parser.c    语法树构建
- *   - yaml_minimal_node.c      节点类型访问
- *   - yaml_minimal_scalar.c    标量类型转换
- *   - yaml_minimal_serialize.c 序列化输出
+ * After yaml_minimal.c was split by functional domain, this header
+ * carries the shared contract between the pieces:
+ *   - yaml_minimal.c           document lifecycle and parsing entry
+ *   - yaml_minimal_lexer.c     lexing
+ *   - yaml_minimal_parser.c    syntax tree construction
+ *   - yaml_minimal_node.c      node type access
+ *   - yaml_minimal_scalar.c    scalar type conversion
+ *   - yaml_minimal_serialize.c serialization output
  */
 
 #ifndef AIRY_RT_YAML_MINIMAL_INTERNAL_H
@@ -61,20 +62,22 @@ struct parse_ctx {
 void *yaml_safe_realloc(void *ptr, size_t size);
 void set_error(struct parse_ctx *ctx, const char *fmt, ...);
 
-/* 词法解析 */
+/* Lexer */
 char peek(struct parse_ctx *ctx);
 char advance(struct parse_ctx *ctx);
 bool at_end(struct parse_ctx *ctx);
 void skip_ws(struct parse_ctx *ctx);
 void skip_ws_and_nl(struct parse_ctx *ctx);
+void skip_ws_nl_comments(struct parse_ctx *ctx);
 int count_indent(struct parse_ctx *ctx);
+int line_indent(struct parse_ctx *ctx);
 bool is_plain_scalar_char(char c);
 char *parse_quoted_string(struct parse_ctx *ctx, char quote);
 char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent);
 char *parse_tag(struct parse_ctx *ctx);
 char *parse_anchor_name(struct parse_ctx *ctx);
 
-/* 语法树 */
+/* Syntax tree */
 struct yaml_node *alloc_node(yaml_document_t *doc, yaml_node_type_t type);
 void free_node(struct yaml_node *node);
 void register_anchor(struct parse_ctx *ctx, const char *name, struct yaml_node *node);

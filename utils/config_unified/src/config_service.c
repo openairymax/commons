@@ -3,15 +3,15 @@
 
 /**
  * @file config_service.c
- * @brief 统一配置模块 - 服务层主入口
+ * @brief Unified config module - service layer main entry.
  *
- * 本文件保留服务层主入口与核心状态机，提供：
- * 1. 配置模板和变量展开
- * 2. 配置服务生命周期管理（创建/加载/保存/状态查询）
+ * Keeps the service layer entry and core state machine, providing:
+ * 1. Config template and variable expansion
+ * 2. Config service lifecycle management (create/load/save/status query)
  *
- * 校验器与 Schema、热更新、加密、版本管理分别拆至
- * config_service_validator.c / config_service_hotreload.c /
- * config_service_crypto.c / config_service_version.c。
+ * The validator/Schema, hot reload, crypto and version management are
+ * split into config_service_validator.c / config_service_hotreload.c /
+ * config_service_crypto.c / config_service_version.c.
  */
 
 #include "config_service.h"

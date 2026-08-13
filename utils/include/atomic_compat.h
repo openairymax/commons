@@ -8,20 +8,20 @@
 
 /**
  * @file atomic_compat.h
- * @brief 跨平台原子操作兼容层
+ * @brief Cross-platform atomic operations compatibility layer.
  *
- * 提供 C11 stdatomic.h 的跨平台兼容实现：
- * - C11+ (Linux/macOS): 使用 <stdatomic.h>
- * - Windows: 使用 Interlocked API (intrin.h)
- * - POSIX fallback: 使用 __atomic builtins (GCC/Clang)
+ * Provides a cross-platform implementation of C11 <stdatomic.h>:
+ * - C11+ (Linux/macOS): uses <stdatomic.h>
+ * - Windows: uses the Interlocked API (intrin.h)
+ * - POSIX fallback: uses __atomic builtins (GCC/Clang)
  *
- * 统一类型系统：
+ * Unified type system:
  * - atomic_bool, atomic_int, atomic_uint, atomic_long, atomic_ulong
  * - atomic_int64_t, atomic_uint64_t, atomic_size_t
  * - atomic_uint_fast64_t, atomic_uint_fast32_t
  * - atomic_double
  *
- * @note 所有操作均为线程安全
+ * @note All operations are thread-safe.
  */
 
 #include <stdbool.h>
@@ -205,7 +205,7 @@ typedef enum {
 #endif
 
 /* ====================================================================
- * Windows 实现: 使用 Interlocked API
+ * Windows implementation: Interlocked API
  * ==================================================================== */
 #if defined(_WIN32)
 
@@ -488,8 +488,8 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 }
 
 /* ====================================================================
- * POSIX fallback 实现: 使用 GCC/Clang __atomic builtins
- * 当 AIRY_USE_STDATOMIC=0 且非 Windows 时使用
+ * POSIX fallback implementation: GCC/Clang __atomic builtins
+ * Used when AIRY_USE_STDATOMIC=0 and not Windows
  * ==================================================================== */
 #elif !AIRY_USE_STDATOMIC
 

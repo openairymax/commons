@@ -3,7 +3,7 @@
 
 /**
  * @file string_common.c
- * @brief 字符串工具公共库实现
+ * @brief String utilities common library implementation.
  */
 
 #include "string_common.h"
@@ -16,7 +16,7 @@
 #include "error.h"
 
 /**
- * @brief 安全的字符串复制函数
+ * @brief Safe string copy function.
  */
 char *string_common_strlcpy(char *dest, size_t dest_size, const char *src)
 {
@@ -34,7 +34,7 @@ char *string_common_strlcpy(char *dest, size_t dest_size, const char *src)
 }
 
 /**
- * @brief 安全的字符串连接函数
+ * @brief Safe string concat function.
  */
 char *string_common_strlcat(char *dest, size_t dest_size, const char *src)
 {

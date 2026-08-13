@@ -3,7 +3,7 @@
 
 /**
  * @file metrics.c
- * @brief 指标收集实现
+ * @brief Metrics collection implementation.
  */
 
 #include "metrics.h"

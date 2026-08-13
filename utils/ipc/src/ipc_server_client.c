@@ -3,26 +3,23 @@
 
 /*
  * @file ipc_server_client.c
- * @brief 进程间通信模块 - IPC 服务端/客户端实现
+ * @brief IPC module - server/client implementation.
  *
- * @details
- * 本文件实现了 ipc_common.h 中声明的服务端与客户端 API：
- * - 服务端：创建/销毁/启动/停止/接受连接/连接计数/广播
- * - 客户端：创建/销毁/连接/断开/获取通道
+ * Implements the server and client API declared in ipc_common.h:
+ * - Server: create/destroy/start/stop/accept-connection/connection-count/
+ *   broadcast
+ * - Client: create/destroy/connect/disconnect/get-channel
  *
- * 服务端与客户端基于 ipc_channel_t 通道抽象，通道的创建、打开、
- * 关闭与广播由 ipc_common.c 提供（ipc_channel_create/open/close、
- * ipc_broadcast），本文件只负责连接管理与生命周期控制。
+ * The server and client are built on the ipc_channel_t abstraction;
+ * channel create/open/close and broadcast are provided by ipc_common.c
+ * (ipc_channel_create/open/close, ipc_broadcast). This file only handles
+ * connection management and lifecycle control.
  *
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-08-11
- * @version 1.0
- *
- * @see ipc_common_internal.h 内部共享定义
+ * @see ipc_common_internal.h internal shared definitions
  */
 
 #include "ipc_common_internal.h"
@@ -63,12 +60,6 @@ void ipc_server_destroy(ipc_server_t *server)
         ipc_server_stop(server);
     }
 
-    for (size_t i = 0; i < server->connection_count; i++) {
-        if (server->connections[i]) {
-            ipc_channel_destroy(server->connections[i]);
-        }
-    }
-
     AIRY_FREE(server->connections);
     AIRY_FREE(server);
 }
@@ -107,7 +98,7 @@ airy_err_t ipc_server_stop(ipc_server_t *server)
 
     for (size_t i = 0; i < server->connection_count; i++) {
         if (server->connections[i]) {
-            ipc_channel_close(server->connections[i]);
+            ipc_channel_destroy(server->connections[i]);
         }
     }
 
@@ -118,6 +109,31 @@ airy_err_t ipc_server_stop(ipc_server_t *server)
     server->state = IPC_STATE_CLOSED;
 
     return AIRY_SUCCESS;
+}
+
+airy_err_t ipc_server_disconnect(ipc_server_t *server, ipc_channel_t *channel)
+{
+    if (!server || !channel) {
+        return AIRY_EINVAL;
+    }
+
+    for (size_t i = 0; i < server->connection_count; i++) {
+        if (server->connections[i] != channel) {
+            continue;
+        }
+
+        ipc_channel_destroy(channel);
+
+        for (size_t j = i; j + 1 < server->connection_count; j++) {
+            server->connections[j] = server->connections[j + 1];
+        }
+        server->connection_count--;
+        server->connections[server->connection_count] = NULL;
+
+        return AIRY_SUCCESS;
+    }
+
+    return AIRY_ENOTFOUND;
 }
 
 ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)

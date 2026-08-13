@@ -3,10 +3,10 @@
 
 /**
  * @file strategy_common.c
- * @brief 策略模式共享工具 - 实现
+ * @brief Strategy pattern shared utilities - implementation.
  *
- * 实现策略模式的通用功能，消除跨模块的代码重复。
- *
+ * Implements common strategy-pattern functionality, eliminating
+ * cross-module code duplication.
  */
 
 #include "strategy_common.h"
@@ -16,7 +16,7 @@
 #include "error.h"
 
 /**
- * @brief 计算加权评分
+ * @brief Compute the weighted score.
  */
 float strategy_compute_weighted_score(const strategy_agent_info_t *agent,
                                       const weighted_config_t *manager)
@@ -34,7 +34,7 @@ float strategy_compute_weighted_score(const strategy_agent_info_t *agent,
 }
 
 /**
- * @brief 从代理数组中选择最佳代理
+ * @brief Select the best agent from an agent array.
  */
 int strategy_select_best_agent(const strategy_agent_info_t *agents, size_t agent_count,
                                const weighted_config_t *manager, strategy_result_t *result)

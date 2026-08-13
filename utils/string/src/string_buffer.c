@@ -3,7 +3,8 @@
 
 /**
  * @file string_buffer.c
- * @brief 缓冲区容器域：动态字符串缓冲区创建/追加/清空/查询
+ * @brief Buffer container domain: dynamic string buffer create/append/
+ * clear/query.
  */
 
 #include "airy_string.h"

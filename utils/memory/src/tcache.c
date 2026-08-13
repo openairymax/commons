@@ -3,19 +3,19 @@
 
 /**
  * @file tcache.c
- * @brief P1.20: per-Thread 缓存层实现 — 减少 pool.c 全局锁竞争
+ * @brief P1.20: per-thread cache layer - reduces pool.c global lock contention.
  *
- * 每个线程维护本地缓存（tcache），批量从全局内存池获取/归还内存块，
- * 减少对 pool.c 全局 mutex 的锁竞争。
+ * Each thread keeps a local cache (tcache) and fetches/returns blocks in
+ * batches from the global memory pool, reducing lock contention on the
+ * pool.c global mutex.
  *
- * 设计：
- *   - 每个线程独立缓存，无需锁（单线程访问）
- *   - 批量获取（batch_fill）：一次锁操作获取多个块
- *   - 批量归还（batch_flush）：缓存满时一次归还多个块
- *   - 限流上限：每个 tcache 最多缓存 TCACHE_MAX_CACHED 个块
+ * Design:
+ *   - Per-thread independent cache, no locking needed (single-threaded use)
+ *   - Batch fill: acquire multiple blocks in one lock operation
+ *   - Batch flush: return multiple blocks at once when the cache is full
+ *   - Cap: each tcache caches at most TCACHE_MAX_CACHED blocks
  *
- * 性能目标：单线程分配延迟降低 > 30%
- *
+ * Performance goal: > 30% lower single-thread allocation latency.
  */
 
 #include "tcache.h"
@@ -26,22 +26,23 @@
 #include <string.h>
 
 /* ============================================================================
- * 内部数据结构
+ * Internal data structures
  * ============================================================================
  */
 
 /**
- * @brief tcache 缓存槽（单向链表节点）
+ * @brief tcache slot (single linked list node).
  *
- * 使用单向链表管理缓存的空闲块，分配时从链表头部取出（LIFO），
- * 释放时插入到链表头部，最大化 CPU 缓存局部性。
+ * Free blocks are managed by a singly linked list: allocation pops from
+ * the head (LIFO) and free pushes to the head, maximizing CPU cache
+ * locality.
  */
 typedef struct tcache_slot {
     struct tcache_slot *next;
 } tcache_slot_t;
 
 /**
- * @brief tcache 内部结构
+ * @brief tcache internal structure.
  */
 struct airy_tcache {
     memory_pool_t *pool;

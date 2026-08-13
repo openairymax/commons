@@ -3,7 +3,8 @@
 
 /**
  * @file network_common_internal.h
- * @brief 网络通信模块内部共享定义：连接/连接池结构体与跨文件辅助函数声明
+ * @brief Network module internal shared definitions: connection/connection
+ * pool structs and cross-file helper declarations.
  */
 
 #ifndef AIRY_NETWORK_COMMON_INTERNAL_H

@@ -3,13 +3,12 @@
 
 /**
  * @file controller.c
- * @brief 预算控制器实现（跨平台）
+ * @brief Budget controller implementation (cross-platform).
  *
- * @details
- * 本模块实现成本预算控制功能：
- * - 支持周期性能耗统计
- * - 提供预算预警和限制
- * - 线程安全的预算操作
+ * Implements cost budget control:
+ * - Per-period cost tracking
+ * - Warning and limit enforcement
+ * - Thread-safe budget operations
  */
 
 #include "atomic_compat.h"
@@ -29,7 +28,7 @@
 #endif
 
 /**
- * @brief 跨平台互斥锁类型
+ * @brief Cross-platform mutex type.
  */
 #ifdef _WIN32
 typedef airy_mtx_t budget_ctrl_mutex_t;
@@ -38,7 +37,7 @@ typedef airy_mtx_t budget_ctrl_mutex_t;
 #endif
 
 /**
- * @brief 初始化互斥锁
+ * @brief Initialize a mutex.
  */
 static int budget_ctrl_mutex_init(budget_ctrl_mutex_t *mutex)
 {

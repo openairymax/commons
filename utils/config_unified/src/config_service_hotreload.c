@@ -3,10 +3,11 @@
 
 /**
  * @file config_service_hotreload.c
- * @brief 统一配置模块 - 热更新与变化通知实现
+ * @brief Unified config module - hot reload and change notification.
  *
- * 本文件实现配置热更新管理器：后台监控线程、变化回调注册、
- * 防抖触发与资源管理，单一职责。
+ * Implements the config hot-reload manager: background monitoring thread,
+ * change callback registration, debounced triggering and resource
+ * management, single responsibility.
  */
 
 #include "config_service.h"

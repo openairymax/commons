@@ -3,7 +3,8 @@
 
 /**
  * @file string_internal.h
- * @brief 字符串模块内部共享定义：内部错误码类型与跨文件辅助函数声明
+ * @brief String module internal shared definitions: internal error code
+ * types and cross-file helper declarations.
  */
 
 #ifndef AIRY_STRING_INTERNAL_H

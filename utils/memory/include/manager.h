@@ -3,10 +3,11 @@
 
 /**
  * @file manager.h
- * @brief 向后兼容层 — 旧版 manager.h API 兼容
+ * @brief Backward compatibility layer - legacy manager.h API.
  *
- * 原 agentrt/manager/ 目录已迁移至 ecosystem/manager/。
- * 本文件为 C 测试代码提供向后兼容的类型和函数声明。
+ * The original agentrt/manager/ directory has moved to
+ * ecosystem/manager/. This file provides backward-compatible types and
+ * function declarations for C test code.
  *
  * @owner team-A
  */
@@ -22,22 +23,22 @@ extern "C" {
 #endif
 
 /**
- * @brief 兼容的配置句柄类型（不透明指针）
+ * @brief Compatible config handle type (opaque pointer).
  */
 typedef struct airy_config_s airy_config_t;
 
 /**
- * @brief 向后兼容：加载配置文件
+ * @brief Backward compatibility: load a config file.
  *
- * @param path 配置文件路径
- * @return 配置句柄，失败返回 NULL
+ * @param path Config file path
+ * @return Config handle, NULL on failure
  */
 airy_config_t *airy_config_load(const char *path);
 
 /**
- * @brief 向后兼容：释放配置资源
+ * @brief Backward compatibility: release config resources.
  *
- * @param config 配置句柄
+ * @param config Config handle
  */
 void airy_config_free(airy_config_t *config);
 

@@ -3,13 +3,12 @@
 
 /**
  * @file budget.c
- * @brief Token预算管理实现（跨平台）
+ * @brief Token budget management implementation (cross-platform).
  *
- * @details
- * 本模块实现Token预算管理功能：
- * - 支持输入/输出Token分离统计
- * - 提供预算重置和查询接口
- * - 线程安全的预算操作
+ * Implements token budget management:
+ * - Separate input/output token tracking
+ * - Budget reset and query interfaces
+ * - Thread-safe budget operations
  */
 
 #include "error.h"
@@ -30,7 +29,7 @@
 #endif
 
 /**
- * @brief 跨平台互斥锁类型
+ * @brief Cross-platform mutex type.
  */
 #ifdef _WIN32
 typedef airy_mtx_t budget_mutex_t;
@@ -39,7 +38,7 @@ typedef airy_mtx_t budget_mutex_t;
 #endif
 
 /**
- * @brief 初始化互斥锁
+ * @brief Initialize a mutex.
  */
 static int budget_mutex_init(budget_mutex_t *mutex)
 {

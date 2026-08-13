@@ -3,9 +3,10 @@
 
 /**
  * @file memory_debug_validate.c
- * @brief 统一内存管理模块 - 内存校验域
+ * @brief Unified memory management module - memory validation domain.
  *
- * 本文件实现调试块完整性校验（魔数/红区）、单指针校验与全量遍历校验。
+ * Implements debug block integrity validation (magic/redzone), single
+ * pointer validation and full traversal validation.
  */
 
 #include "memory_debug.h"

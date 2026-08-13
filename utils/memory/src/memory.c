@@ -3,15 +3,18 @@
 
 /**
  * @file memory.c
- * @brief 统一内存管理模块 - 核心层实现
+ * @brief Unified memory management module - core layer implementation.
  *
- * 实现安全、高效、统一的内存管理功能，支持内存分配、释放、调试和统计功能
+ * Provides safe, efficient, unified memory management with allocation,
+ * free, debug and stats support.
  *
  * @note AIRY_COMPLIANCE_IMPL: memory subsystem
- * 本文件是内存管理子系统的核心实现，直接使用 C 标准库 malloc/free/realloc
- * 是设计要求（AIRY_MALLOC/AIRY_FREE 宏最终调用本文件的 memory_alloc/memory_free，
- * 使用宏会形成循环依赖）。fprintf(stderr) 用于内存泄漏报告和调试转储，
- * 在程序退出阶段输出，此时日志系统可能已关闭，直接写 stderr 是最安全的选择。
+ * Using libc malloc/free/realloc directly is by design: the AIRY_MALLOC/
+ * AIRY_FREE macros ultimately call memory_alloc/memory_free from this
+ * file, so using the macros here would create a circular dependency.
+ * fprintf(stderr) is used for leak reports and debug dumps because it
+ * runs during program shutdown when the logging system may already be
+ * torn down; writing directly to stderr is the safest choice.
  */
 
 #include "../include/airy_memory.h"
@@ -32,7 +35,7 @@
 #endif
 
 /**
- * @brief 模块内部状态
+ * @brief Module internal state.
  */
 typedef struct {
     bool initialized;
@@ -41,7 +44,7 @@ typedef struct {
 
     memory_stats_t stats;
 
-    // 线程同步
+    /* Thread synchronization */
     airy_mtx_t lock;
 
     struct memory_debug_info *debug_list_head;
@@ -207,10 +210,12 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
     void *ptr = NULL;
 
     /*
-     * Windows 上统一使用 _aligned_malloc：alignment=0 时采用 sizeof(void*) 默认对齐，
-     * 确保所有分配都走 _aligned_free/_aligned_realloc 释放路径，消除 free() 释放
-     * _aligned_malloc 内存的不匹配缺陷（C-5）。POSIX 上 posix_memalign 分配的内存
-     * 可用 free() 释放，保持原逻辑。
+     * On Windows use _aligned_malloc uniformly: alignment=0 falls back to
+     * sizeof(void*) default alignment, so every allocation goes through
+     * the _aligned_free/_aligned_realloc path, eliminating the mismatch
+     * where free() releases _aligned_malloc memory (C-5). On POSIX,
+     * posix_memalign-allocated memory can be freed with free(), keeping
+     * the original logic.
      */
 #ifdef _WIN32
     size_t effective_alignment = (alignment > 0) ? alignment : sizeof(void *);
@@ -527,15 +532,16 @@ void memory_free(void *ptr)
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t size = debug_info ? debug_info->size : 0;
 
-    // 先移除调试信息（必须在 free 之前，否则 use-after-free）
+    /* Remove debug info first (must happen before free, else use-after-free) */
     if (g_state.debug_enabled) {
         memory_remove_debug_info(ptr);
     }
 
     /*
-     * 释放内存：Windows 上所有分配（包括 alignment=0 的常规分配）都通过
-     * _aligned_malloc 完成，因此统一使用 _aligned_free 释放（C-5）。
-     * POSIX 上 posix_memalign/malloc 分配的内存均可用 free() 释放。
+     * Free: on Windows every allocation (including alignment=0 regular
+     * ones) goes through _aligned_malloc, so always use _aligned_free
+     * (C-5). On POSIX, memory from posix_memalign/malloc can be freed
+     * with free().
      */
 #ifdef _WIN32
     _aligned_free(ptr);

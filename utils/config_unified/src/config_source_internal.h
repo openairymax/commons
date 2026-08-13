@@ -3,15 +3,16 @@
 
 /**
  * @file config_source_internal.h
- * @brief 统一配置模块 - 源适配层内部共享定义（模块内私有，勿对外导出）
+ * @brief Unified config module - source adapter internal shared defs.
  *
- * config_source.c 按功能域拆分后，本头承载它们之间的共享契约：
- *   - config_source.c          基类与通用 API
- *   - config_source_file.c     文件配置源
- *   - config_source_env.c      环境变量配置源
- *   - config_source_args.c     命令行配置源
- *   - config_source_memory.c   内存/默认值/远程配置源
- *   - config_source_manager.c  配置源管理器与变化监控
+ * After config_source.c was split by functional domain, this header
+ * carries the shared contract between the pieces:
+ *   - config_source.c          base class and common API
+ *   - config_source_file.c     file config source
+ *   - config_source_env.c      environment config source
+ *   - config_source_args.c     command line config source
+ *   - config_source_memory.c   memory/default/remote config source
+ *   - config_source_manager.c  source manager and change monitoring
  */
 
 #ifndef AIRY_RT_CONFIG_SOURCE_INTERNAL_H
@@ -31,7 +32,7 @@
 extern "C" {
 #endif
 
-/* 格式解析层（config_parse.c）：JSON/INI/YAML 纯字符串解析 */
+/* Format parsing layer (config_parse.c): pure string parsing of JSON/INI/YAML */
 config_error_t config_parse_json(const char *data, size_t data_len, config_context_t *ctx);
 config_error_t config_parse_ini(const char *data, size_t data_len, config_context_t *ctx);
 config_error_t config_parse_yaml(const char *data, size_t data_len, config_context_t *ctx);

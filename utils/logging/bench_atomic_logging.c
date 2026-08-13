@@ -3,22 +3,22 @@
 
 /**
  * @file bench_atomic_logging.c
- * @brief 原子层日志系统性能基准测试
+ * @brief Atomic layer logging system performance benchmark.
  *
- * @details
- * 本测试用于评估原子层日志系统的性能，包括：
- * 1. 单线程日志写入吞吐量
- * 2. 多线程并发写入吞吐量
- * 3. 日志缓冲队列性能
- * 4. 内存分配和释放性能
+ * Benchmarks the atomic layer logging system, covering:
+ * 1. Single-thread log write throughput
+ * 2. Multi-thread concurrent write throughput
+ * 3. Log buffer queue performance
+ * 4. Memory allocation and free performance
  *
- * 测试方法：
- * - 使用高精度计时器测量操作耗时
- * - 模拟真实场景的日志写入模式
- * - 统计每秒日志记录数（Records Per Second）
- * - 测量平均延迟和尾部延迟
+ * Method:
+ * - High-precision timers measure operation latency
+ * - Realistic log write patterns are simulated
+ * - Records Per Second are counted
+ * - Average and tail latencies are measured
  *
- * 注意：本测试需要支持C11标准和线程库的环境。 */
+ * Note: requires a C11 environment with a thread library.
+ */
 
 #include "atomic_logging.h"
 #include "logging.h"

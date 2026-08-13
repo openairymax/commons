@@ -3,9 +3,10 @@
 
 /**
  * @file memory_debug_stats.c
- * @brief 统一内存管理模块 - 统计与信息转储域
+ * @brief Unified memory management module - stats and info dump domain.
  *
- * 本文件实现内存调试信息转储（dump）与分配/释放/错误计数统计接口。
+ * Implements memory debug info dump and allocation/free/error count
+ * statistics interfaces.
  */
 
 #include "memory_debug.h"

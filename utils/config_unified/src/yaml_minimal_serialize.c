@@ -3,10 +3,10 @@
 
 /**
  * @file yaml_minimal_serialize.c
- * @brief YAML 1.1 解析器 - 序列化输出
+ * @brief YAML 1.1 parser - serialization output.
  *
- * 本文件实现 YAML 节点树序列化：递归转储与整文档序列化，
- * 单一职责。
+ * Implements YAML node tree serialization: recursive dumping and whole
+ * document serialization, single responsibility.
  */
 
 #include "yaml_minimal.h"

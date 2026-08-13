@@ -3,10 +3,11 @@
 
 /**
  * @file yaml_minimal_scalar.c
- * @brief YAML 1.1 解析器 - 标量类型转换
+ * @brief YAML 1.1 parser - scalar type conversion.
  *
- * 本文件实现 YAML 标量节点的类型转换：字符串、整数、
- * 浮点数与布尔值（含 YAML 1.1 布尔同义词），单一职责。
+ * Implements YAML scalar node type conversion: string, integer, float
+ * and boolean (including YAML 1.1 boolean synonyms), single
+ * responsibility.
  */
 
 #include "yaml_minimal.h"

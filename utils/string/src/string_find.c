@@ -3,7 +3,8 @@
 
 /**
  * @file string_find.c
- * @brief 查找与修剪域：子串/字符查找、空白修剪、大小写转换与替换
+ * @brief Find and trim domain: substring/char search, whitespace trim,
+ * case conversion and replacement.
  */
 
 #include "airy_string.h"

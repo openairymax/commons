@@ -3,22 +3,23 @@
 
 /**
  * @file refcounted.h
- * @brief P1.21: 所有权模型 + 引用计数规范
+ * @brief P1.21: ownership model + reference counting spec.
  *
- * 提供线程安全的引用计数基础结构 refcounted_t，
- * 配合 refcount_alloc/retain/release API 管理共享对象的生命周期。
+ * Provides the thread-safe reference counting base structure
+ * refcounted_t, paired with the refcount_alloc/retain/release API to
+ * manage the lifetime of shared objects.
  *
- * 设计：
- *   - _Atomic uint32_t refcount 用于线程安全的引用计数
- *   - deleter 回调函数在引用计数归零时自动调用
- *   - 基于 CAS 的无锁递增/递减操作
+ * Design:
+ *   - _Atomic uint32_t refcount for thread-safe refcounting
+ *   - deleter callback invoked automatically when the count hits zero
+ *   - CAS-based lock-free increment/decrement
  *
- * 所有权模型：
- *   @ownership alloc   — refcount_alloc() 返回持有 1 个引用的对象
- *   @ownership retain  — refcount_retain() 增加 1 个引用，调用者获得所有权
- *   @ownership release — refcount_release() 释放 1 个引用，归零时自动销毁
- *   @ownership borrow  — 裸指针访问不修改引用计数，调用者不能持有跨 scope
- *
+ * Ownership model:
+ *   @ownership alloc   - refcount_alloc() returns an object holding 1 ref
+ *   @ownership retain  - refcount_retain() adds 1 ref, caller gains ownership
+ *   @ownership release - refcount_release() drops 1 ref, destroys at zero
+ *   @ownership borrow  - bare pointer access does not touch the refcount;
+ *                        the caller must not hold it across scopes
  */
 
 #ifndef AIRY_RT_REFCOUNTED_H
@@ -37,9 +38,9 @@ extern "C" {
 
 
 /**
- * @brief P1.21.1: 引用计数基础结构（嵌入到目标对象的首部）
+ * @brief P1.21.1: refcount base structure (embedded at the object head).
  *
- * 使用方式：
+ * Usage:
  *   typedef struct {
  *       refcounted_t rc;
  *       char data[];
@@ -52,9 +53,9 @@ typedef struct {
 
 
 /**
- * @brief 获取当前引用计数值（仅供调试）
- * @param rc refcounted_t 指针
- * @return 当前引用计数
+ * @brief Get the current refcount (debug only).
+ * @param rc refcounted_t pointer
+ * @return Current refcount
  */
 static inline uint32_t refcount_get(const refcounted_t *rc)
 {
@@ -65,13 +66,13 @@ static inline uint32_t refcount_get(const refcounted_t *rc)
 
 
 /**
- * @brief P1.21.2: 分配带引用计数的对象
+ * @brief P1.21.2: Allocate a refcounted object.
  *
- * @ownership alloc — 返回对象持有 1 个引用
+ * @ownership alloc - the returned object holds 1 reference
  *
- * @param obj_size    对象总大小（含 refcounted_t 和数据）
- * @param deleter     归零时的销毁回调（可为 NULL 使用默认 free）
- * @return 分配的对象指针，失败返回 NULL
+ * @param obj_size    Total object size (refcounted_t + data)
+ * @param deleter     Destroy callback at zero (NULL uses default free)
+ * @return Allocated object pointer, NULL on failure
  */
 static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
 {
@@ -91,14 +92,14 @@ static inline void *refcount_alloc(size_t obj_size, void (*deleter)(void *obj))
 
 
 /**
- * @brief P1.21.2: 增加引用计数（retain）
+ * @brief P1.21.2: Increment the refcount (retain).
  *
- * @ownership retain — 调用者获得 1 个新引用
+ * @ownership retain - the caller obtains 1 new reference
  *
- * @param obj  对象指针（必须是 refcounted_t 首部开始的指针）
- * @return obj 本身（方便链式调用），NULL 如果 obj 为 NULL
+ * @param obj  Object pointer (must point at the refcounted_t head)
+ * @return obj itself (for chaining), NULL if obj is NULL
  *
- * 使用示例：
+ * Usage example:
  *   my_buf_t *buf2 = (my_buf_t *)refcount_retain((refcounted_t *)buf1);
  */
 static inline void *refcount_retain(void *obj)
@@ -107,15 +108,22 @@ static inline void *refcount_retain(void *obj)
         return NULL;
 
     refcounted_t *rc = (refcounted_t *)obj;
-    /* V4.0 修复：使用 CAS 循环替代 fetch_add(relaxed) + 事后 old==0 检查。
+    /* V4.0 fix: use a CAS loop instead of fetch_add(relaxed) followed by
+     * an old==0 check.
      *
-     * 原实现在 refcount 已归零（对象已销毁）后仍执行 fetch_add 写入已释放内存，
-     * 造成 use-after-free；relaxed 序更无法保证与 release 线程 deleter 调用同步。
+     * The old implementation still performed fetch_add on already-freed
+     * memory after the refcount hit zero (object destroyed), causing
+     * use-after-free; the relaxed order also failed to synchronize with
+     * the releasing thread's deleter call.
      *
-     * 修正：以 acquire 载入当前值，仅当 > 0 时通过 CAS 递增。
-     * - 若 refcount==0（对象已销毁或正在销毁），CAS 不执行，直接返回 NULL。
-     * - acq_rel 序确保递增与 release 线程的 fetch_sub 正确同步。
-     * - compare_exchange_weak 在循环中可用（spurious failure 仅导致重载重试）。 */
+     * Fix: load the current value with acquire and only increment via CAS
+     * while it is > 0.
+     * - If refcount==0 (object destroyed or being destroyed), the CAS is
+     *   not executed and NULL is returned directly.
+     * - acq_rel ordering ensures the increment synchronizes with the
+     *   releasing thread's fetch_sub.
+     * - compare_exchange_weak is usable in a loop (spurious failures only
+     *   cause a reload and retry). */
     uint32_t cur = atomic_load_explicit(&rc->refcount, memory_order_acquire);
     while (cur != 0) {
         if (atomic_compare_exchange_weak_explicit(&rc->refcount, &cur, cur + 1,
@@ -127,15 +135,17 @@ static inline void *refcount_retain(void *obj)
 }
 
 /**
- * @brief P1.21.2: 释放引用计数（release）
+ * @brief P1.21.2: Release a reference (release).
  *
- * @ownership release — 调用者释放 1 个引用
+ * @ownership release - the caller releases 1 reference
  *
- * 当引用计数归零时，自动调用 deleter 销毁对象。
- * 调用后 obj 指针失效，调用者不应再访问。
+ * When the refcount hits zero, deleter is invoked automatically to
+ * destroy the object. obj becomes invalid after the call; the caller
+ * must not access it.
  *
- * @param obj  对象指针（必须是 refcounted_t 首部开始的指针）
- * @return true 表示对象已被销毁（引用计数归零），false 表示仍有其他引用
+ * @param obj  Object pointer (must point at the refcounted_t head)
+ * @return true if the object was destroyed (refcount hit zero),
+ *         false if other references remain
  */
 static inline bool refcount_release(void *obj)
 {
@@ -165,9 +175,9 @@ static inline bool refcount_release(void *obj)
 
 
 /**
- * @brief 嵌入 refcounted_t 到结构体首部的便捷宏
+ * @brief Convenience macro to embed refcounted_t at the struct head.
  *
- * 使用方式：
+ * Usage:
  *   typedef struct {
  *       AIRY_REFCOUNTED_HEADER;
  *       char buffer[4096];
@@ -179,25 +189,25 @@ static inline bool refcount_release(void *obj)
 #define AIRY_REFCOUNTED_HEADER refcounted_t _rc
 
 /**
- * @brief 获取包含 refcounted_t 的结构体指针
- * @param ptr   refcounted_t 首部地址
- * @param type  包含结构体类型
- * @param member refcounted_t 字段名
+ * @brief Get the containing struct from a refcounted_t pointer.
+ * @param ptr    refcounted_t head address
+ * @param type   Containing struct type
+ * @param member refcounted_t member name
  */
 #define REFCOUNTED_CONTAINER_OF(ptr, type, member) \
     ((type *)((char *)(ptr) - offsetof(type, member)))
 
 /**
- * @brief 便捷 retain 宏（自动类型转换）
- * @param obj  对象指针
- * @return 同类型指针
+ * @brief Convenience retain macro (auto type conversion).
+ * @param obj  Object pointer
+ * @return Pointer of the same type
  */
 #define REFCOUNT_RETAIN(obj) ((typeof(obj))refcount_retain((void *)(obj)))
 
 /**
- * @brief 便捷 release 宏
- * @param obj  对象指针
- * @return true 已销毁
+ * @brief Convenience release macro.
+ * @param obj  Object pointer
+ * @return true if destroyed
  */
 #define REFCOUNT_RELEASE(obj) refcount_release((void *)(obj))
 

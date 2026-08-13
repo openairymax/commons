@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_rwlock.c
- * @brief 读写锁实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Read-write lock implementation.
  */
 
 #include "sync_internal.h"

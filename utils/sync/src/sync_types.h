@@ -4,13 +4,11 @@
 /*
  *
  * @file sync_types.h
- * @brief 同步原语内部类型定义
+ * @brief Sync primitive internal type definitions.
  *
- * 本文件定义所有同步原语的内部结构体，供各平台实现文件使用。
- * 不对外暴露，仅供sync模块内部使用。
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * Defines the internal structs of all sync primitives for use by each
+ * platform implementation file. Not exposed externally; sync-module
+ * internal only.
  */
 
 #ifndef AIRY_RT_SYNC_TYPES_H

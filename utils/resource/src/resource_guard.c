@@ -3,7 +3,7 @@
 
 /**
  * @file resource_guard.c
- * @brief 资源作用域守卫实现 - RAII 模式
+ * @brief Resource scope guard implementation - RAII pattern.
  */
 
 #include "resource_guard.h"
@@ -164,10 +164,11 @@ int airy_resource_track_report(char **out_report)
             int n;
 
             /*
-             * snprintf 返回"将要写入"的字符数（不含 NUL），可能 >= 剩余空间。
-             * size_t 是无符号类型：offset >= buf_size 时 buf_size - offset 会下溢为
-             * 巨大值，使 snprintf 写入越界。每次写入前必须检查剩余空间，并正确处理
-             * 截断情况。
+             * snprintf returns the number of chars "that would have been
+             * written" (excluding NUL), possibly >= remaining space.
+             * size_t is unsigned: when offset >= buf_size, buf_size - offset
+             * underflows to a huge value and snprintf writes out of bounds.
+             * Check remaining space before every write and handle truncation.
              */
 #define AIRY_REPORT_APPEND(fmt, ...)                                       \
     do {                                                                   \

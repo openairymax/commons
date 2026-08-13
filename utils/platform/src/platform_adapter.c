@@ -3,10 +3,10 @@
 
 /**
  * @file platform_adapter.c
- * @brief 平台适配器 - 实现
+ * @brief Platform adapter - implementation.
  *
- * 实现跨平台抽象层，消除平台相关代码重复。
- *
+ * Implements the cross-platform abstraction layer, eliminating
+ * platform-specific code duplication.
  */
 
 /* _POSIX_C_SOURCE: defined via CMakeLists.txt target_compile_definitions (BAN-182) */
@@ -75,10 +75,12 @@ const char *platform_get_name(void)
     }
 }
 
-/* platform_exec() / platform_free_exec_result() 已移除（BAN-211/235 安全合规）。
- * 这两个函数通过 /bin/sh -c 执行命令字符串，存在命令注入风险，且全仓库零调用者。
- * 统一使用 airy_process_run_capture()（fork+execvp，不经 shell）作为规范子进程 API。
- * 见 platform.h 的 airy_process_run_capture 声明。 */
+/* platform_exec() / platform_free_exec_result() removed (BAN-211/235
+ * security compliance). They executed command strings via /bin/sh -c,
+ * creating a command-injection risk, and had zero callers in the repo.
+ * Use airy_process_run_capture() (fork+execvp, no shell) as the canonical
+ * subprocess API instead. See the airy_process_run_capture declaration
+ * in platform.h. */
 
 platform_file_info_t platform_get_file_info(const char *path)
 {

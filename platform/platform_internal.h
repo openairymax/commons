@@ -3,7 +3,8 @@
 
 /**
  * @file platform_internal.h
- * @brief 平台兼容层内部共享定义：跨文件公共头文件聚合与内部声明
+ * @brief Platform compat layer internal shared definitions: cross-file
+ * common header aggregation and internal declarations.
  */
 
 #ifndef AIRY_PLATFORM_INTERNAL_H

@@ -3,21 +3,25 @@
 
 /**
  * @file checkpoint.c
- * @brief AgentRT 任务检查点实现（生产级 v0.1.0）- 生命周期与核心状态机域
+ * @brief AgentRT task checkpoint implementation (production v0.1.0) -
+ * lifecycle and core state machine domain.
  *
- * 本文件保留检查点模块的入口与核心状态机：初始化/关闭/创建/统计/销毁，
- * 以及跨文件共享的内部辅助函数与全局状态定义。
+ * Keeps the checkpoint module entry and core state machine: init/shutdown/
+ * create/stats/destroy, plus cross-file shared internal helpers and
+ * global state definitions.
  *
- * v0.1.0 变更：
- * - CROSS-01: airy_mtx_t → airy_mtx_t
- * - CROSS-03: time(NULL) → airy_time_ns()
- * - 新增 auto-checkpoint hook 机制（CoreLoopThree 集成）
- * - 增强 JSON restore 解析健壮性
+ * v0.1.0 changes:
+ * - CROSS-01: airy_mtx_t -> airy_mtx_t
+ * - CROSS-03: time(NULL) -> airy_time_ns()
+ * - New auto-checkpoint hook mechanism (CoreLoopThree integration)
+ * - Stronger JSON restore parsing robustness
  *
- * SP02 解耦：本文件从 daemons/common/src/ 迁移至 commons/utils/execution/src/，
- * 消除 atoms/coreloopthree 对 daemons 层的物理依赖（ACC-SP02 解耦点 #1）。
- * 迁移时将 SVC_LOG_* 宏替换为 commons 层 LOG_* 宏（两者均调用 log_write()），
- * 移除 daemons 层的 svc_logger.h 和 daemon_errors.h 依赖。
+ * SP02 decoupling: migrated from daemons/common/src/ to
+ * commons/utils/execution/src/, removing atoms/coreloopthree's physical
+ * dependency on the daemons layer (ACC-SP02 decoupling point #1).
+ * During the move SVC_LOG_* macros were replaced with the commons-layer
+ * LOG_* macros (both call log_write()), and the daemons-layer
+ * svc_logger.h and daemon_errors.h dependencies were removed.
  */
 
 #include "checkpoint.h"

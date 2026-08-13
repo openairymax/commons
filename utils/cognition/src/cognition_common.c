@@ -3,11 +3,10 @@
 
 /**
  * @file cognition_common.c
- * @brief 认知模块通用功能实现
+ * @brief Shared helpers for the cognition module.
  *
- * 提供认知模块共享的功能，包括计划、调度、协调等
- * 减少认知模块之间的代码重复
- *
+ * Provides common functionality for planning, scheduling and
+ * coordination across cognition components.
  */
 
 #include "cognition_common.h"
@@ -21,10 +20,10 @@
 #include <string.h>
 
 /**
- * @brief 初始化Agent信息
- * @param agent Agent信息指针
+ * @brief Initialize an agent info record.
+ * @param agent Agent info pointer
  * @param agent_id Agent ID
- * @return 0 成功，非0 失败
+ * @return 0 on success, nonzero on failure
  */
 int agent_info_init(agent_info_t *agent, const char *agent_id)
 {

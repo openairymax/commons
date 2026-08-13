@@ -3,22 +3,23 @@
 
 /**
  * @file arena.h
- * @brief P1.19: Arena 短生命周期线性分配器
+ * @brief P1.19: short-lifetime linear arena allocator.
  *
- * Arena 分配器提供 O(1) 分配和 O(1) 整体释放（reset），
- * 适用于请求处理路径中的短生命周期内存分配。
+ * The arena allocator provides O(1) allocation and O(1) bulk release
+ * (reset), suitable for short-lifetime allocations on request handling
+ * paths.
  *
- * 架构：
- *   arena_create() -> 创建 Arena（初始 64KB 块）
- *   arena_alloc()  -> O(1) 线性 bump 分配
- *   arena_reset()  -> O(1) 整体释放（回退 bump 指针）
- *   arena_destroy() -> 销毁 Arena
+ * Architecture:
+ *   arena_create()  -> create an arena (initial 64KB chunk)
+ *   arena_alloc()   -> O(1) linear bump allocation
+ *   arena_reset()   -> O(1) bulk release (rewind the bump pointers)
+ *   arena_destroy() -> destroy the arena
  *
- * 特性：
- *   - 链式扩展：大块分配自动分配新 chunk（链表串联）
- *   - 线程局部存储：Per-thread Arena 减少锁竞争
- *   - mark/release：支持临时回退点（bump 指针快照）
- *
+ * Features:
+ *   - Chained growth: large allocations automatically add new chunks
+ *     (linked list)
+ *   - Thread-local storage: per-thread arenas reduce lock contention
+ *   - mark/release: temporary rollback points (bump pointer snapshots)
  */
 
 #ifndef AIRY_RT_ARENA_H
@@ -59,110 +60,118 @@ typedef struct {
 
 
 /**
- * @brief P1.19.2: 创建 Arena 分配器
+ * @brief P1.19.2: Create an arena allocator.
  *
- * @ownership alloc — 返回的 Arena 句柄由调用者持有，需通过 arena_destroy 释放
+ * @ownership alloc - the returned arena handle is owned by the caller
+ * and must be released with arena_destroy
  *
- * @param chunk_size  初始 chunk 大小（0 使用默认 64KB）
- * @param max_chunks  最大 chunk 数量（0 无限制）
- * @return Arena 句柄，失败返回 NULL
+ * @param chunk_size  Initial chunk size (0 uses the 64KB default)
+ * @param max_chunks  Maximum number of chunks (0 means unlimited)
+ * @return Arena handle, NULL on failure
  */
 airy_arena_t *arena_create(size_t chunk_size, size_t max_chunks);
 
 /**
- * @brief P1.19.2: 销毁 Arena 并释放所有内存
+ * @brief P1.19.2: Destroy an arena and free all memory.
  *
- * @ownership release — 释放 arena 句柄所有权，销毁后所有通过此 Arena 分配的指针失效
+ * @ownership release - releases ownership of the arena handle; all
+ * pointers allocated from the arena become invalid
  *
- * @param arena Arena 句柄
+ * @param arena Arena handle
  */
 void arena_destroy(airy_arena_t *arena);
 
 
 /**
- * @brief P1.19.2: 从 Arena 线性分配内存（bump 指针前进）
+ * @brief P1.19.2: Allocate memory linearly from the arena (bump forward).
  *
- * @ownership borrow — 返回的指针生命周期受 Arena 管理，arena_reset/destroy 后即失效
+ * @ownership borrow - the returned pointer's lifetime is managed by the
+ * arena; invalid after arena_reset/destroy
  *
- * 分配速度 O(1)，无碎片。当当前 chunk 不足时自动分配新 chunk。
- * 超大分配（> chunk_size / 2）直接回退到 malloc，不占用 Arena 空间。
+ * Allocation is O(1) and fragmentation-free. When the current chunk is
+ * insufficient a new chunk is allocated automatically. Oversized
+ * allocations (> chunk_size / 2) fall back to malloc directly and do not
+ * consume arena space.
  *
- * @param arena Arena 句柄
- * @param size  分配大小（字节）
- * @return 分配的内存指针（16 字节对齐），失败返回 NULL
+ * @param arena Arena handle
+ * @param size  Allocation size (bytes)
+ * @return Allocated memory pointer (16-byte aligned), NULL on failure
  */
 void *arena_alloc(airy_arena_t *arena, size_t size);
 
 /**
- * @brief P1.19.2: 从 Arena 分配并清零内存
+ * @brief P1.19.2: Allocate and zero memory from the arena.
  *
- * @ownership borrow — 返回的指针生命周期受 Arena 管理，arena_reset/destroy 后即失效
+ * @ownership borrow - the returned pointer's lifetime is managed by the
+ * arena; invalid after arena_reset/destroy
  *
- * @param arena Arena 句柄
- * @param size  分配大小（字节）
- * @return 清零的内存指针，失败返回 NULL
+ * @param arena Arena handle
+ * @param size  Allocation size (bytes)
+ * @return Zeroed memory pointer, NULL on failure
  */
 void *arena_calloc(airy_arena_t *arena, size_t size);
 
 
 /**
- * @brief P1.19.2: 整体重置 Arena（O(1)）
+ * @brief P1.19.2: Reset the whole arena (O(1)).
  *
- * 将所有 chunk 的 bump 指针回退到起始位置，所有先前分配的内存失效。
- * 调用者必须确保所有通过 Arena 分配的指针不再使用。
+ * Rewinds every chunk's bump pointer to the start; all previously
+ * allocated memory becomes invalid. The caller must ensure no pointers
+ * allocated from the arena are used anymore.
  *
- * @param arena Arena 句柄
+ * @param arena Arena handle
  */
 void arena_reset(airy_arena_t *arena);
 
 
 /**
- * @brief P1.19.2: 创建回退标记（保存当前 bump 指针位置）
+ * @brief P1.19.2: Create a rollback mark (snapshot of the bump pointer).
  *
- * 用于请求处理中间阶段需要临时分配后回退的场景。
+ * Used for request-processing stages that allocate temporarily and then
+ * roll back.
  *
- * @param arena Arena 句柄
- * @param mark  输出标记（调用者分配）
+ * @param arena Arena handle
+ * @param mark  Output mark (caller-allocated)
  */
 void arena_mark(airy_arena_t *arena, arena_mark_t *mark);
 
 /**
- * @brief P1.19.2: 回退到标记位置
+ * @brief P1.19.2: Roll back to a mark position.
  *
- * 所有在 mark 之后通过 arena_alloc 分配的内存失效。
+ * All memory allocated via arena_alloc after the mark becomes invalid.
  *
- * @param mark 之前通过 arena_mark 创建的标记
+ * @param mark Mark previously created via arena_mark
  */
 void arena_release(arena_mark_t *mark);
 
 
 /**
- * @brief 获取 Arena 统计信息
- * @param arena Arena 句柄
- * @param stats 输出统计信息
- * @return true 成功
+ * @brief Get arena stats.
+ * @param arena Arena handle
+ * @param stats Output stats
+ * @return true on success
  */
 bool arena_get_stats(airy_arena_t *arena, arena_stats_t *stats);
 
 /**
- * @brief 检查指针是否在当前 Arena 的某个 chunk 范围内
- * @param arena Arena 句柄
- * @param ptr   待检查指针
- * @return true 属于此 Arena
+ * @brief Check whether a pointer lies within one of the arena's chunks.
+ * @param arena Arena handle
+ * @param ptr   Pointer to check
+ * @return true if it belongs to this arena
  */
 bool arena_contains(airy_arena_t *arena, const void *ptr);
 
 /**
- * @brief 获取 Arena 当前总容量
- * @param arena Arena 句柄
- * @return 总容量（字节）
+ * @brief Get the arena's current total capacity.
+ * @param arena Arena handle
+ * @return Total capacity (bytes)
  */
 size_t arena_capacity(airy_arena_t *arena);
 
 /**
- * @brief 获取 Arena 当前已使用量
- * @param arena Arena 句柄
- * @return 已使用字节数
+ * @brief Get the arena's current usage.
+ * @param arena Arena handle
+ * @return Used bytes
  */
 size_t arena_used(airy_arena_t *arena);
 

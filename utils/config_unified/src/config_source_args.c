@@ -3,10 +3,11 @@
 
 /**
  * @file config_source_args.c
- * @brief 统一配置模块 - 命令行配置源实现
+ * @brief Unified config module - command line argument source.
  *
- * 本文件实现命令行参数配置源：前缀过滤、赋值符解析
- * 与只读语义，单一职责。
+ * Implements the command line argument config source: prefix filtering,
+ * assignment character parsing and read-only semantics, single
+ * responsibility.
  */
 
 #include "config_source.h"
@@ -86,7 +87,7 @@ static void args_source_destroy(config_source_t *source)
             AIRY_FREE(priv->prefix);
         if (priv->assign_char)
             AIRY_FREE(priv->assign_char);
-        // 注意：不释放argv，因为通常不拥有所有权
+        /* Note: do not free argv; ownership is not taken. */
         AIRY_FREE(priv);
     }
 

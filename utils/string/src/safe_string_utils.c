@@ -3,13 +3,14 @@
 
 /**
  * @file safe_string_utils.c
- * @brief 安全字符串处理工具实现
+ * @brief Safe string handling utilities implementation.
  *
- * @details
- * SP05 解耦：本文件从 daemons/common/src/ 迁移至 commons/utils/string/src/，
- * 消除 protocols 对 daemons 层的物理依赖（ACC-SP03 解耦点 #4）。
- * 迁移时删除了多余的 #include "svc_logger.h"（本文件未使用 SVC_LOG_* 宏，
- * 实际日志通过 AIRY_ERROR/AIRY_ERROR_NULL 来自 commons/utils/error）。
+ * SP05 decoupling: migrated from daemons/common/src/ to
+ * commons/utils/string/src/, removing protocols' physical dependency on
+ * the daemons layer (ACC-SP03 decoupling point #4). The redundant
+ * #include "svc_logger.h" was dropped during migration (this file does
+ * not use SVC_LOG_* macros; logging comes via AIRY_ERROR/AIRY_ERROR_NULL
+ * from commons/utils/error).
  */
 
 #include "safe_string_utils.h"
@@ -46,8 +47,9 @@ int safe_strcat(char *dest, const char *src, size_t dest_size)
     size_t dest_len = strlen(dest);
     size_t src_len = strlen(src);
 
-    /* dest_len + src_len 可能溢出 size_t；且 dest_len >= dest_size 时
-     * dest_size - dest_len - 1 会无符号下溢，须在加法前分别检查。 */
+    /* dest_len + src_len may overflow size_t; and when dest_len >=
+     * dest_size, dest_size - dest_len - 1 underflows. Check each before
+     * the additions. */
     if (dest_len >= dest_size) {
         dest[dest_size - 1] = '\0';
         AIRY_ERROR(AIRY_ERR_OVERFLOW, "safe_strcat: buffer overflow");
@@ -196,8 +198,10 @@ bool is_valid_ascii(const char *str, size_t len)
 
 void *safe_malloc(size_t size, const char *purpose)
 {
-    /* purpose 保留用于调试追踪（非桩）：当前实现未消费该参数，显式标记避免
-     * 未使用参数告警，同时保留调用点语义（后续追踪模块可消费）。 */
+    /* purpose is kept for debug tracing (not a stub): the current
+     * implementation does not consume it; mark it explicitly to avoid an
+     * unused-parameter warning while preserving call-site semantics
+     * (a future tracing module can consume it). */
     (void)purpose;
     if (size == 0) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");

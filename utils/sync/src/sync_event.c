@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_event.c
- * @brief 事件实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Event implementation.
  */
 
 #include "sync_internal.h"

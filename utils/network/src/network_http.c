@@ -4,18 +4,14 @@
 /*
  *
  * @file network_http.c
- * @brief 网络通信模块 - HTTP 请求域
+ * @brief Network module - HTTP request domain.
  *
- * @details
- * 本文件实现 network_common.h 中声明的 HTTP 请求构造/发送/响应解析与释放功能。
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：支持 Windows/Linux/macOS
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-03
- * @version 0.1.0
+ * Implements the HTTP request construction/send/response parsing and
+ * release functions declared in network_common.h, following the design
+ * principles of ARCHITECTURAL_PRINCIPLES.md:
+ * - E-4 Cross-platform consistency: Windows/Linux/macOS
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  */
 
 #ifdef _WIN32
@@ -68,9 +64,11 @@ airy_err_t network_http_request(network_connection_t *connection,
     char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
     int offset = 0;
 
-    /* 每步 snprintf 后检查截断：返回值是"应写入"长度，path/host/自定义头超长时
-     * 可能 >= 剩余容量，若直接累加会让 offset 超出缓冲、后续 size 参数无符号下溢，
-     * 必须终止并返回错误，保证 offset 始终在缓冲范围内。 */
+    /* Check truncation after every snprintf step: the return value is the
+     * "would-be-written" length, which may be >= remaining capacity when
+     * path/host/custom headers are too long. Naively accumulating would
+     * push offset past the buffer and underflow the subsequent size
+     * argument; abort with an error to keep offset always in range. */
 #define NETWORK_REQ_APPEND(fmt, ...)                                                         \
     do {                                                                                     \
         int wlen = snprintf(request_buf + offset, sizeof(request_buf) - (size_t)offset, fmt, \

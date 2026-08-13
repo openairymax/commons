@@ -3,19 +3,19 @@
 
 /**
  * @file resource_guard.h
- * @brief 资源作用域守卫 - RAII模式实现
+ * @brief Resource scope guard - RAII pattern implementation.
  *
- * @details
- * 本模块提供资源自动释放机制，确保资源在作用域结束时正确释放。
- * 支持自定义释放函数，适用于文件句柄、内存、锁、网络连接等资源。
+ * Provides automatic resource release so resources are correctly freed
+ * when a scope ends. Custom cleanup functions are supported; suitable
+ * for file handles, memory, locks, network connections, etc.
  *
- * 使用示例：
+ * Usage example:
  * @code
  * FILE* file = fopen("test.txt", "r");
- * AIRY_SCOPE_EXIT(fclose(file));  // 作用域结束时自动关闭
+ * AIRY_SCOPE_EXIT(file, fclose);  // auto-closed at scope end
  *
  * void* buffer = malloc(1024);
- * AIRY_SCOPE_EXIT(free(buffer));  // 作用域结束时自动释放
+ * AIRY_SCOPE_EXIT(buffer, free);  // auto-freed at scope end
  * @endcode
  */
 
@@ -33,13 +33,13 @@ extern "C" {
 
 
 /**
- * @brief 资源释放函数类型
- * @param resource 资源指针
+ * @brief Resource cleanup function type.
+ * @param resource Resource pointer
  */
 typedef void (*airy_resource_cleanup_t)(void *resource);
 
 /**
- * @brief 资源守卫结构
+ * @brief Resource guard structure.
  */
 typedef struct airy_resource_guard {
     void *resource;
@@ -52,27 +52,27 @@ typedef struct airy_resource_guard {
 
 
 /**
- * @brief 初始化资源守卫
- * @param guard [out] 守卫结构指针
- * @param resource [in] 资源指针
- * @param cleanup [in] 清理函数
- * @param file [in] 文件名
- * @param line [in] 行号
- * @param name [in] 资源名称
+ * @brief Initialize a resource guard.
+ * @param guard [out] Guard structure pointer
+ * @param resource [in] Resource pointer
+ * @param cleanup [in] Cleanup function
+ * @param file [in] File name
+ * @param line [in] Line number
+ * @param name [in] Resource name
  */
 void airy_resource_guard_init(airy_resource_guard_t *guard, void *resource,
                               airy_resource_cleanup_t cleanup, const char *file, int line,
                               const char *name);
 
 /**
- * @brief 执行资源清理
- * @param guard [in] 守卫结构指针
+ * @brief Run the resource cleanup.
+ * @param guard [in] Guard structure pointer
  */
 void airy_resource_guard_cleanup(airy_resource_guard_t *guard);
 
 /**
- * @brief 取消资源清理（转移所有权）
- * @param guard [in] 守卫结构指针
+ * @brief Cancel the resource cleanup (transfer ownership).
+ * @param guard [in] Guard structure pointer
  */
 void airy_resource_guard_dismiss(airy_resource_guard_t *guard);
 
@@ -80,7 +80,7 @@ void airy_resource_guard_dismiss(airy_resource_guard_t *guard);
 #ifdef AIRY_RESOURCE_TRACKING
 
 /**
- * @brief 资源追踪记录
+ * @brief Resource tracking record.
  */
 typedef struct airy_resource_record {
     void *resource;
@@ -92,38 +92,38 @@ typedef struct airy_resource_record {
 } airy_resource_record_t;
 
 /**
- * @brief 注册资源分配
- * @param resource 资源指针
- * @param type 资源类型
- * @param file 文件名
- * @param line 行号
+ * @brief Register a resource allocation.
+ * @param resource Resource pointer
+ * @param type Resource type
+ * @param file File name
+ * @param line Line number
  */
 void airy_resource_track_alloc(void *resource, const char *type, const char *file, int line);
 
 /**
- * @brief 注销资源分配
- * @param resource 资源指针
+ * @brief Unregister a resource allocation.
+ * @param resource Resource pointer
  */
 void airy_resource_track_free(void *resource);
 
 /**
- * @brief 获取资源追踪报告
- * @param out_report [out] 输出报告字符串（调用者负责释放）
- * @return 未释放资源数量
+ * @brief Get the resource tracking report.
+ * @param out_report [out] Output report string (caller must free)
+ * @return Number of unreleased resources
  */
 int airy_resource_track_report(char **out_report);
 
 /**
- * @brief 清空资源追踪记录
+ * @brief Clear the resource tracking records.
  */
 void airy_resource_track_clear(void);
 
 #endif /* AIRY_RESOURCE_TRACKING */
 
 /**
- * @brief 创建作用域守卫（自动生成变量名）
- * @param resource 资源指针
- * @param cleanup 清理函数
+ * @brief Create a scope guard (auto-generated variable name).
+ * @param resource Resource pointer
+ * @param cleanup Cleanup function
  */
 #define AIRY_SCOPE_GUARD(resource, cleanup)                                               \
     airy_resource_guard_t AIRY_UNIQUE_NAME(_guard)                                        \
@@ -135,9 +135,9 @@ void airy_resource_track_clear(void);
                                                                   .active = 1}
 
 /**
- * @brief 创建作用域守卫（带自定义清理）
- * @param resource 资源指针
- * @param cleanup 清理函数
+ * @brief Create a scope guard (with custom cleanup).
+ * @param resource Resource pointer
+ * @param cleanup Cleanup function
  */
 #define AIRY_SCOPE_EXIT(resource, cleanup)                                                \
     airy_resource_guard_t AIRY_UNIQUE_NAME(_scope_exit)                                   \
@@ -149,8 +149,8 @@ void airy_resource_track_clear(void);
                                                                   .active = 1}
 
 /**
- * @brief 取消作用域守卫（转移所有权）
- * @param resource 资源指针
+ * @brief Dismiss a scope guard (transfer ownership).
+ * @param resource Resource pointer
  */
 #define AIRY_SCOPE_DISMISS(resource)                                 \
     do {                                                             \
@@ -158,13 +158,14 @@ void airy_resource_track_clear(void);
     } while (0)
 
 /**
- * @brief 生成唯一变量名
+ * @brief Generate a unique variable name.
  */
 #define AIRY_UNIQUE_NAME(prefix) AIRY_CONCAT(prefix, __LINE__)
 
-/* AIRY_CONCAT 需要两层展开确保 __LINE__ 先展开再拼接。
- * 某些头文件（types.h, compat.h）定义了单层版本 a##b，会导致 __LINE__ 不展开。
- * 这里强制使用两层版本以避免重定义警告并确保正确展开。 */
+/* AIRY_CONCAT needs two expansion layers so __LINE__ expands before
+ * concatenation. Some headers (types.h, compat.h) define a single-layer
+ * a##b version, which leaves __LINE__ unexpanded. Force the two-layer
+ * version here to avoid redefinition warnings and expand correctly. */
 #ifdef AIRY_CONCAT
 #undef AIRY_CONCAT
 #endif
@@ -176,17 +177,17 @@ void airy_resource_track_clear(void);
 #ifdef AIRY_RESOURCE_TRACKING
 
 /**
- * @brief 追踪内存分配
+ * @brief Track a memory allocation.
  */
 #define AIRY_TRACK_ALLOC(ptr, type) airy_resource_track_alloc(ptr, type, __FILE__, __LINE__)
 
 /**
- * @brief 追踪内存释放
+ * @brief Track a memory free.
  */
 #define AIRY_TRACK_FREE(ptr) airy_resource_track_free(ptr)
 
 /**
- * @brief 追踪的内存分配
+ * @brief Tracked memory allocation.
  */
 #define AIRY_TRACKED_MALLOC(size)             \
     ({                                        \
@@ -197,7 +198,7 @@ void airy_resource_track_clear(void);
     })
 
 /**
- * @brief 追踪的内存释放
+ * @brief Tracked memory free.
  */
 #define AIRY_TRACKED_FREE(ptr)    \
     do {                          \

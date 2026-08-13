@@ -3,7 +3,8 @@
 
 /**
  * @file string_view.c
- * @brief 视图与列表容器域：字符串视图比较/查找与字符串列表管理
+ * @brief View and list container domain: string view compare/search and
+ * string list management.
  */
 
 #include "airy_string.h"

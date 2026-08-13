@@ -3,33 +3,34 @@
 
 /**
  * @file daemon_bootstrap_sd.h
- * @brief P1.7 C-L08: daemon ServiceDiscovery 一键引导模块（commons 权威版本）
+ * @brief P1.7 C-L08: one-shot daemon ServiceDiscovery bootstrap module.
  *
- * P0.17 阶段 4：从 daemons/common/include/ 迁移至 commons，
- * 消除 atoms→daemons 编译期反向依赖（IRON-6）。daemons 版保留为重导出兼容头。
+ * P0.17 phase 4: migrated from daemons/common/include/ to commons,
+ * removing the compile-time reverse dependency atoms->daemons (IRON-6).
+ * The daemons version is kept as a re-export compat header.
  *
- * 每个 daemon 启动时调用此模块即可自动完成：
- * 1. ServiceDiscovery 初始化
- * 2. 服务注册（name/type/host/port/tags/ttl）
- * 3. 心跳线程启动
- * 4. 关闭时自动注销
+ * A daemon calls this module at startup and it automatically performs:
+ * 1. ServiceDiscovery initialization
+ * 2. Service registration (name/type/host/port/tags/ttl)
+ * 3. Heartbeat thread startup
+ * 4. Automatic unregistration on shutdown
  *
- * 使用方式（典型 daemon main()）：
+ * Typical usage (daemon main()):
  * @code
  *   #include "daemon_bootstrap_sd.h"
  *
- *   // 1. 引导服务发现
+ *   // 1. Bootstrap service discovery
  *   daemon_bootstrap_sd_t *bsd = daemon_bootstrap_sd_start(
  *       "llm_d", "llm", "127.0.0.1", 8080, "ai,core", 0);
  *
- *   // ... daemon 主循环 ...
+ *   // ... daemon main loop ...
  *
- *   // 2. 关闭时自动注销
+ *   // 2. Auto-unregister on shutdown
  *   daemon_bootstrap_sd_stop(bsd);
  * @endcode
  *
  * @see service_discovery_helper.h
- * @see P1.7 C-L08 连接线
+ * @see P1.7 C-L08 wiring
  */
 
 #ifndef AIRY_RT_DAEMON_BOOTSTRAP_SD_H
@@ -49,55 +50,57 @@ typedef struct daemon_bootstrap_sd_s daemon_bootstrap_sd_t;
 
 
 /**
- * @brief 一键引导：初始化 SD + 注册服务 + 启动心跳
+ * @brief One-shot bootstrap: init SD + register service + start heartbeat.
  *
- * @param name        服务名称（如 "llm_d"）
- * @param type        服务类型（如 "llm"）
- * @param host        监听地址（如 "127.0.0.1"），NULL 使用 Unix socket
- * @param port        监听端口，0 表示使用 Unix socket
- * @param tags        标签（逗号分隔，如 "ai,core"，NULL 表示无）
- * @param ttl_ms      心跳 TTL（毫秒），0 使用默认 30000
- * @return 引导句柄，失败返回 NULL
+ * @param name        Service name (e.g. "llm_d")
+ * @param type        Service type (e.g. "llm")
+ * @param host        Listen address (e.g. "127.0.0.1"), NULL uses Unix socket
+ * @param port        Listen port, 0 uses Unix socket
+ * @param tags        Tags (comma-separated, e.g. "ai,core", NULL means none)
+ * @param ttl_ms      Heartbeat TTL (ms), 0 uses the 30000 default
+ * @return Bootstrap handle, NULL on failure
  */
 daemon_bootstrap_sd_t *daemon_bootstrap_sd_start(const char *name, const char *type,
                                                  const char *host, uint16_t port, const char *tags,
                                                  uint32_t ttl_ms);
 
 /**
- * @brief 一键引导（Unix Socket 版本）
+ * @brief One-shot bootstrap (Unix socket variant).
  *
- * @param name        服务名称
- * @param type        服务类型
- * @param socket_path Unix socket 路径
- * @param tags        标签
- * @param ttl_ms      心跳 TTL
- * @return 引导句柄，失败返回 NULL
+ * @param name        Service name
+ * @param type        Service type
+ * @param socket_path Unix socket path
+ * @param tags        Tags
+ * @param ttl_ms      Heartbeat TTL
+ * @return Bootstrap handle, NULL on failure
  */
 daemon_bootstrap_sd_t *daemon_bootstrap_sd_start_unix(const char *name, const char *type,
                                                       const char *socket_path, const char *tags,
                                                       uint32_t ttl_ms);
 
 /**
- * @brief 停止服务发现引导（注销服务 + 停止心跳 + 释放资源）
+ * @brief Stop the service discovery bootstrap (unregister + stop heartbeat
+ * + release resources).
  *
- * @param bsd 引导句柄
+ * @param bsd Bootstrap handle
  */
 void daemon_bootstrap_sd_stop(daemon_bootstrap_sd_t *bsd);
 
 
 /**
- * @brief 获取底层 sd_helper 句柄（用于高级操作如 sd_helper_find/select）
+ * @brief Get the underlying sd_helper handle (for advanced ops such as
+ * sd_helper_find/select).
  *
- * @param bsd 引导句柄
- * @return sd_helper 句柄，NULL 如果未引导
+ * @param bsd Bootstrap handle
+ * @return sd_helper handle, NULL if not bootstrapped
  */
 sd_helper_t *daemon_bootstrap_sd_get_helper(daemon_bootstrap_sd_t *bsd);
 
 /**
- * @brief 检查引导是否成功运行中
+ * @brief Check whether the bootstrap is running.
  *
- * @param bsd 引导句柄
- * @return true 运行中
+ * @param bsd Bootstrap handle
+ * @return true if running
  */
 bool daemon_bootstrap_sd_is_running(daemon_bootstrap_sd_t *bsd);
 

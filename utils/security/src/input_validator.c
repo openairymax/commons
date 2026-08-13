@@ -3,7 +3,7 @@
 
 /**
  * @file input_validator.c
- * @brief 输入验证工具库实现
+ * @brief Input validation utility library implementation.
  */
 
 #include "input_validator.h"
@@ -48,7 +48,7 @@ static const char *PRIVATE_IP_PREFIXES[] = {"10.",      "172.16.", "172.17.",  "
                                             "ff",       NULL};
 
 /**
- * @brief 跨平台不区分大小写字符串比较（前n个字符）
+ * @brief Cross-platform case-insensitive string compare (first n chars).
  */
 #ifdef _WIN32
 #define strncasecmp_ci _strnicmp

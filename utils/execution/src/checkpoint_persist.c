@@ -3,10 +3,10 @@
 
 /**
  * @file checkpoint_persist.c
- * @brief AgentRT 任务检查点 - 持久化与恢复域
+ * @brief AgentRT task checkpoint - persistence and restore domain.
  *
- * 本文件负责检查点的落盘/加载：文件路径与序列号解析、目录扫描、
- * JSON 序列化写出与读取恢复。
+ * Handles checkpoint save/load: file path and sequence number parsing,
+ * directory scanning, JSON serialization write and read-back restore.
  */
 
 #include "checkpoint.h"
@@ -32,12 +32,13 @@
 #include "atomic_compat.h"
 #include "airy_memory.h"
 
-/* 构建包含 sequence_num 的检查点文件路径。
+/* Build the checkpoint file path including the sequence number.
  *
- * v0.1.1 变更：文件名从 checkpoint_{task_id}.json 改为
- * checkpoint_{task_id}_{seq}.json，使每个序列号的检查点独立落盘，
- * 不再相互覆盖。这是 list/restore_seq 的正确性基础 —— 旧格式每次
- * save 覆盖同一文件，导致 per-task 只能保留 1 个检查点。 */
+ * v0.1.1 change: file name went from checkpoint_{task_id}.json to
+ * checkpoint_{task_id}_{seq}.json so each sequence number is persisted
+ * independently instead of overwriting the same file. This is the
+ * correctness basis for list/restore_seq - the old format overwrote the
+ * file on every save, keeping only 1 checkpoint per task. */
 int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t size)
 {
     if (!task_id || !buf || size == 0)
@@ -47,8 +48,8 @@ int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t
     return (n > 0 && (size_t)n < size) ? 0 : AIRY_ERR_OVERFLOW;
 }
 
-/* 文件名格式 checkpoint_{task_id}_{seq}.json：middle 必须全数字，避免
- * task_id 含 '_' 时前缀重叠误匹配。 */
+/* File name format checkpoint_{task_id}_{seq}.json: the middle part must
+ * be all digits, avoiding prefix overlap when task_id contains '_'. */
 static bool parse_seq_from_filename(const char *filename, const char *task_id, uint64_t *out_seq)
 {
     if (!filename || !task_id || !out_seq)
@@ -88,10 +89,11 @@ static bool parse_seq_from_filename(const char *filename, const char *task_id, u
     return true;
 }
 
-/* 扫描存储目录，收集 task_id 的全部 sequence_num。
- * 返回 AIRY_MALLOC 分配的数组（调用者 AIRY_FREE），*out_count 为数量；
- * 无匹配时返回 NULL 且 *out_count=0。
- * 不加锁：仅读目录，stats 由调用方在加锁区更新。 */
+/* Scan the storage directory, collecting all sequence numbers for a task.
+ * Returns an AIRY_MALLOC-allocated array (caller must AIRY_FREE) with
+ * *out_count set; returns NULL and *out_count=0 when nothing matches.
+ * Not locked: only reads the directory; stats are updated by the caller
+ * under lock. */
 uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
 {
     *out_count = 0;
@@ -161,9 +163,9 @@ uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
     return seqs;
 }
 
-/* 查找 task_id 的最高 sequence_num。返回 0 表示无检查点。
- * 注：生产代码（adapter/loop/engine）保存时 sequence_num 恒 > 0，
- * 故 0 可安全作为"未找到"哨兵。 */
+/* Find the highest sequence number for a task; 0 means no checkpoint.
+ * Note: production code (adapter/loop/engine) always saves with
+ * sequence_num > 0, so 0 is a safe "not found" sentinel. */
 static uint64_t find_latest_seq(const char *task_id)
 {
     size_t cnt = 0;
@@ -443,8 +445,9 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     if (!task_id || !out_cp)
         return AIRY_EINVAL;
 
-    /* sequence_num == 0 表示恢复最新检查点：扫描目录取最高 seq。
-     * sequence_num > 0 表示恢复指定序列号的检查点。 */
+    /* sequence_num == 0 means restore the latest checkpoint: scan the
+     * directory for the highest seq. sequence_num > 0 restores the
+     * checkpoint with that specific sequence number. */
     uint64_t actual_seq = sequence_num;
     if (sequence_num == 0) {
         actual_seq = find_latest_seq(task_id);

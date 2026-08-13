@@ -4,10 +4,7 @@
 /*
  *
  * @file sync_barrier.c
- * @brief 屏障实现
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-05
+ * @brief Barrier implementation.
  */
 
 #include "sync_internal.h"

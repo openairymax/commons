@@ -4,18 +4,14 @@
 /*
  *
  * @file network_pool.c
- * @brief 网络通信模块 - 连接池域
+ * @brief Network module - connection pool domain.
  *
- * @details
- * 本文件实现 network_common.h 中声明的连接池创建/销毁/获取/释放/健康检查功能。
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：支持 Windows/Linux/macOS
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
- *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-03
- * @version 0.1.0
+ * Implements the connection pool create/destroy/get/release/health-check
+ * functions declared in network_common.h.
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-4 Cross-platform consistency: Windows/Linux/macOS
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
  */
 
 #ifdef _WIN32

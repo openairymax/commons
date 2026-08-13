@@ -3,7 +3,7 @@
 
 /**
  * @file file_utils.c
- * @brief 文件操作实现（跨平台）
+ * @brief File operations implementation (cross-platform).
  */
 
 #include "../memory/include/airy_memory.h"
@@ -29,7 +29,7 @@
 #endif
 
 /**
- * @brief 读取文件内容
+ * @brief Read the full contents of a file.
  */
 char *airy_io_read_file(const char *path, size_t *out_len)
 {

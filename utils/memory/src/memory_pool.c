@@ -3,10 +3,11 @@
 
 /**
  * @file memory_pool.c
- * @brief 统一内存管理模块 - 内存池管理实现
+ * @brief Unified memory management module - memory pool implementation.
  *
- * 实现高效的内存池管理功能，减少内存碎片和分配开销。
- * 使用链表管理空闲块，支持线程安全和动态扩展。
+ * Implements an efficient memory pool that reduces fragmentation and
+ * allocation overhead. Free blocks are managed via a linked list, with
+ * thread safety and dynamic growth support.
  */
 
 #include "memory_pool.h"
@@ -26,8 +27,9 @@
 #include <stdint.h>
 
 /**
- * @brief 内存池块结构
- * @note 性能优化：块头嵌入 pool 指针用于 O(1) 所有权验证，避免 O(n) 线性扫描
+ * @brief Memory pool block structure.
+ * @note Performance optimization: the block header embeds the pool pointer
+ * for O(1) ownership validation, avoiding O(n) linear scans.
  */
 typedef struct memory_pool_block {
     struct memory_pool_block *next;
@@ -37,7 +39,8 @@ typedef struct memory_pool_block {
 } memory_pool_block_t;
 
 /**
- * @brief 旧内存区域链表节点（用于追踪扩展时产生的旧区域，销毁时统一释放）
+ * @brief Old region list node (tracks old regions produced by growth;
+ * released together at destruction).
  */
 typedef struct memory_region_node {
     void *region;
@@ -129,14 +132,14 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
         return false;
     }
 
-    // 分配内存区域（新增块使用独立内存区域，避免 realloc 导致旧指针失效）
+    /* Allocate a separate memory region for new blocks; never realloc to
+     * merge old regions because realloc may move memory, invalidating all
+     * previously handed-out block pointers. */
     void *new_memory = memory_aligned_alloc(sizeof(void *), total_size, "memory_pool");
     if (new_memory == NULL) {
         return false;
     }
 
-    // 注意：不使用 realloc 合并旧内存区域，因为旧块指针指向旧区域，
-    // realloc 移动内存后会导致所有已分配块的指针失效。
     if (pool->memory_area != NULL) {
         memory_region_node_t *node =
             (memory_region_node_t *)memory_calloc(sizeof(memory_region_node_t), "old_region_node");
@@ -497,7 +500,8 @@ void memory_pool_free(memory_pool_t *pool, void *ptr)
 
     memory_pool_lock(pool);
 
-    // O(1) 验证：通过嵌入的池指针确认所有权（替代原来的 O(n) 线性扫描）
+    /* O(1) ownership validation via the embedded pool pointer
+     * (replaces the former O(n) linear scan) */
     if (block->pool != pool || !block->allocated) {
         LOG_ERROR("错误：尝试释放无效的内存池块");
         memory_pool_unlock(pool);

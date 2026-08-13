@@ -4,35 +4,34 @@
 /*
  *
  * @file ipc_common.c
- * @brief 进程间通信模块 - 通道基础与消息收发实现
+ * @brief IPC module - channel basics and message send/receive.
  *
- * @details
- * 本文件实现了 ipc_common.h 中声明的 IPC 核心功能：
- * - 初始化/清理与默认配置
- * - 通道生命周期管理（创建/销毁/打开/关闭/状态/类型/超时/回调/统计）
- * - 消息收发（发送/发送数据/请求-响应/广播/通知/接收/回调）
- * - 消息辅助（创建/释放/克隆/校验和/验证/序列化/反序列化）
- * - 工具函数（错误消息/有效性检查/刷新）
+ * Implements the IPC core functionality declared in ipc_common.h:
+ * - Init/cleanup and default config
+ * - Channel lifecycle management (create/destroy/open/close/state/type/
+ *   timeout/callback/stats)
+ * - Message send/receive (send/send-data/request-response/broadcast/
+ *   notify/receive/callback)
+ * - Message helpers (create/free/clone/checksum/validate/serialize/
+ *   deserialize)
+ * - Utilities (error message/validity check/flush)
  *
- * 服务端/客户端、共享内存、消息队列与 RPC 框架已分别拆分至：
- * - ipc_server_client.c / ipc_shm.c / ipc_mq.c / ipc_rpc.c
- * 模块内共享定义与辅助函数声明见 ipc_common_internal.h。
+ * Server/client, shared memory, message queue and RPC frameworks are
+ * split into ipc_server_client.c / ipc_shm.c / ipc_mq.c / ipc_rpc.c;
+ * module-internal shared definitions and helpers are declared in
+ * ipc_common_internal.h.
  *
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：支持 Windows/Linux/macOS
- * - E-5 命名语义化：所有函数名精确表达用途
- * - E-6 错误可追溯：统一的错误码体系
- * - E-8 可测试性：所有公共接口可独立测试
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-4 Cross-platform consistency: Windows/Linux/macOS
+ * - E-5 Semantic naming: every function name states its purpose
+ * - E-6 Traceable errors: unified error code system
+ * - E-8 Testability: all public interfaces independently testable
  *
- * 实现策略：
- * - 核心功能完整实现（初始化、通道管理、消息收发）
- * - 平台特定功能使用条件编译（#ifdef _WIN32）
+ * Implementation strategy:
+ * - Core functionality fully implemented (init, channel mgmt, messages)
+ * - Platform-specific functionality behind #ifdef _WIN32
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-02
- * @version 1.0
- *
- * @see ARCHITECTURAL_PRINCIPLES.md E-4/E-5/E-6/E-8 原则
+ * @see ARCHITECTURAL_PRINCIPLES.md E-4/E-5/E-6/E-8
  */
 
 #include "ipc_common.h"
@@ -46,7 +45,7 @@
 #include <poll.h>
 #endif
 
-/* ---- 内部共享辅助函数（声明见 ipc_common_internal.h） ---- */
+/* ---- Internal shared helpers (declared in ipc_common_internal.h) ---- */
 
 uint64_t ipc_get_timestamp_ns(void)
 {

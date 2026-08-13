@@ -3,10 +3,11 @@
 
 /**
  * @file config_service_crypto.c
- * @brief 统一配置模块 - 配置加密与安全存储实现
+ * @brief Unified config module - encryption and secure storage.
  *
- * 本文件实现配置值的 AES-256-GCM 加解密、hex 编解码
- * 与加密配置源包装，单一职责。
+ * Implements AES-256-GCM encrypt/decrypt of config values, hex
+ * encode/decode and the encrypted config source wrapper, single
+ * responsibility.
  */
 
 #include "config_service.h"

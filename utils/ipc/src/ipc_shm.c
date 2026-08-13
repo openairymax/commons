@@ -3,27 +3,23 @@
 
 /*
  * @file ipc_shm.c
- * @brief 进程间通信模块 - 共享内存实现
+ * @brief IPC module - shared memory implementation.
  *
- * @details
- * 本文件实现了 ipc_common.h 中声明的共享内存 API：
- * - 创建/销毁共享内存对象
- * - 映射/取消映射共享内存到进程地址空间
- * - 获取共享内存大小、同步共享内存
+ * Implements the shared memory API declared in ipc_common.h:
+ * - Create/destroy shared memory objects
+ * - Map/unmap shared memory into the process address space
+ * - Get shared memory size, sync shared memory
  *
- * 平台差异：
- * - Windows：基于 CreateFileMappingA/MapViewOfFile
- * - Linux/macOS：基于 shm_open/mmap
+ * Platform differences:
+ * - Windows: based on CreateFileMappingA/MapViewOfFile
+ * - Linux/macOS: based on shm_open/mmap
  *
- * 遵循 ARCHITECTURAL_PRINCIPLES.md 的设计原则：
- * - E-4 跨平台一致性：统一 API 语义，屏蔽平台差异
- * - E-6 错误可追溯：统一的错误码体系
+ * Following ARCHITECTURAL_PRINCIPLES.md design principles:
+ * - E-4 Cross-platform consistency: unified API semantics, hiding
+ *   platform differences
+ * - E-6 Traceable errors: unified error code system
  *
- * @author SPHARX Ltd. - Airymax Team
- * @date 2026-08-11
- * @version 1.0
- *
- * @see ipc_common_internal.h 内部共享定义
+ * @see ipc_common_internal.h internal shared definitions
  */
 
 #include "ipc_common_internal.h"
