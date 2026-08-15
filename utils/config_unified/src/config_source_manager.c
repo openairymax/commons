@@ -22,6 +22,7 @@
 #include "airy_memory.h"
 #include "string_compat.h"
 #include "error.h"
+#include "platform.h" /* airy_time_ms 跨平台单调时钟 */
 
 config_source_manager_t *config_source_manager_create(void)
 {
@@ -181,15 +182,7 @@ int config_source_manager_poll_changes(config_source_manager_t *manager)
         return 0;
     }
 
-    uint64_t now_ms;
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-        now_ms = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
-    } else {
-        now_ms = (uint64_t)time(NULL) * 1000;
-        airy_mtx_unlock(&manager->internal_mutex);
-        return 0;
-    }
+    uint64_t now_ms = airy_time_ms();
 
     if (manager->last_notify_time_ms > 0 &&
         now_ms - manager->last_notify_time_ms < manager->debounce_ms) {

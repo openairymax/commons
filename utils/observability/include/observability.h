@@ -13,15 +13,25 @@
 #include <stdint.h>
 #include <time.h>
 
+/* A-ULP SSoT (S-2 收敛, 2026-08-14): 5 级日志枚举与 AIRY_LOG_LEVEL_* 常量、
+ * AIRY_LOG_* 宏的唯一入口为同目录 logger.h（数值与 [SC] airymax/log_types.h
+ * enum airy_log_level 严格一致）。此处不再重复定义。 */
+#include "logger.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-/* Note: AIRY_LOG_LEVEL_* constants defined as enum in types.h (airy_log_level_t) */
-#ifndef AIRY_LOG_LEVEL
-#define AIRY_LOG_LEVEL AIRY_LOG_LEVEL_INFO
-#endif
 
 /**
  * @brief Set the current trace ID.
@@ -45,23 +55,6 @@ const char *airy_log_get_trace_id(void);
  * @param ... Arguments
  */
 void airy_log_write(int level, const char *file, int line, const char *fmt, ...);
-
-#ifndef AIRY_LOG_ERROR
-#define AIRY_LOG_ERROR(fmt, ...) \
-    airy_log_write(AIRY_LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_WARN
-#define AIRY_LOG_WARN(fmt, ...) \
-    airy_log_write(AIRY_LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_INFO
-#define AIRY_LOG_INFO(fmt, ...) \
-    airy_log_write(AIRY_LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_DEBUG
-#define AIRY_LOG_DEBUG(fmt, ...) \
-    airy_log_write(AIRY_LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#endif
 
 
 /**
@@ -153,9 +146,18 @@ char *airy_trace_export(void);
  */
 static inline uint64_t airy_get_monotonic_time_ns(void)
 {
+#if defined(_WIN32) || defined(_WIN64)
+    /* Windows 无 clock_gettime/CLOCK_MONOTONIC，用 QPC（与
+     * platform.h 的 airy_time_ns 同源实现）。 */
+    LARGE_INTEGER freq, counter;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&counter);
+    return (uint64_t)((counter.QuadPart * 1000000000ULL) / freq.QuadPart);
+#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+#endif
 }
 
 #ifdef __cplusplus

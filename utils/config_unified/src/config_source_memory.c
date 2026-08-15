@@ -23,6 +23,7 @@
 #include "airy_memory.h"
 #include "string_compat.h"
 #include "error.h"
+#include "platform.h" /* airy_time_ms 跨平台单调时钟 */
 
 static config_error_t memory_source_load(config_source_t *source, config_context_t *ctx)
 {
@@ -205,13 +206,7 @@ static bool remote_source_has_changed(config_source_t *source)
     if (!priv || !priv->url)
         return false;
 
-    uint64_t now_ms;
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-        now_ms = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
-    } else {
-        now_ms = (uint64_t)time(NULL) * 1000;
-    }
+    uint64_t now_ms = airy_time_ms();
 
     if (priv->last_poll_time_ms == 0) {
         priv->last_poll_time_ms = now_ms;

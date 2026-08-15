@@ -111,14 +111,14 @@ static char **safe_str_array_dup(char **src, size_t count)
     }
     char **dst = (char **)AIRY_CALLOC(count, sizeof(char *));
     if (!dst) {
-        LOG_ERROR("C-L07: Checkpoint: ARRAY-DUP-FAIL — OOM for count=%zu", count);
+        AIRY_LOG_ERROR("C-L07: Checkpoint: ARRAY-DUP-FAIL — OOM for count=%zu", count);
         return NULL;
     }
     __builtin_memset(dst, 0, sizeof(char *) * count);
     for (size_t i = 0; i < count; i++) {
         dst[i] = safe_strdup(src[i]);
         if (!dst[i] && src[i]) {
-            LOG_ERROR("C-L07: Checkpoint: ARRAY-DUP-FAIL — OOM at index=%zu", i);
+            AIRY_LOG_ERROR("C-L07: Checkpoint: ARRAY-DUP-FAIL — OOM at index=%zu", i);
             for (size_t j = 0; j < i; j++)
                 AIRY_FREE(dst[j]);
             AIRY_FREE(dst);
@@ -179,7 +179,7 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
     const char *path = storage_path ? storage_path : "./" CHECKPOINT_DIRECTORY;
     size_t len = strlen(path);
     if (len == 0 || len >= sizeof(g_checkpoint_storage_path)) {
-        LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — invalid storage path "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — invalid storage path "
                   "len=%zu max=%zu",
                   len, sizeof(g_checkpoint_storage_path));
         return AIRY_EINVAL;
@@ -193,7 +193,7 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
                                                     memory_order_seq_cst, memory_order_seq_cst)) {
             if (airy_mtx_init(&g_checkpoint_mutex) != 0) {
                 atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_seq_cst);
-                LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — mutex init failed "
+                AIRY_LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — mutex init failed "
                           "path=%s",
                           g_checkpoint_storage_path);
                 return AIRY_ERR_STATE_ERROR;
@@ -203,7 +203,7 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
 
     __builtin_memset(&g_checkpoint_stats, 0, sizeof(g_checkpoint_stats));
     atomic_store_explicit(&g_checkpoint_initialized, 1, memory_order_seq_cst);
-    LOG_INFO("C-L07: Checkpoint: INIT-OK path=%s", g_checkpoint_storage_path);
+    AIRY_LOG_INFO("C-L07: Checkpoint: INIT-OK path=%s", g_checkpoint_storage_path);
     return AIRY_SUCCESS;
 }
 
@@ -218,7 +218,7 @@ airy_err_t airy_checkpoint_shutdown(void)
     g_auto_hook = NULL;
     g_auto_hook_user_data = NULL;
     atomic_store_explicit(&g_checkpoint_initialized, 0, memory_order_seq_cst);
-    LOG_INFO("C-L07: Checkpoint: SHUTDOWN-OK "
+    AIRY_LOG_INFO("C-L07: Checkpoint: SHUTDOWN-OK "
              "total=%llu success=%llu failed=%llu",
              (unsigned long long)g_checkpoint_stats.total_checkpoints,
              (unsigned long long)g_checkpoint_stats.successful_checkpoints,
@@ -241,7 +241,7 @@ airy_err_t airy_checkpoint_create(const char *task_id, const char *session_id,
     airy_task_checkpoint_t *cp =
         (airy_task_checkpoint_t *)AIRY_CALLOC(1, sizeof(airy_task_checkpoint_t));
     if (!cp) {
-        LOG_ERROR("C-L07: Checkpoint: CREATE-FAIL — OOM for task_id=%s", task_id);
+        AIRY_LOG_ERROR("C-L07: Checkpoint: CREATE-FAIL — OOM for task_id=%s", task_id);
         return AIRY_ENOMEM;
     }
 

@@ -6,38 +6,19 @@
 
 /**
  * @file logging_compat.h
- * @brief Unified AIRY_LOG_* macros - forwarded to the LOG_* macros of logging.h.
+ * @brief AIRY_LOG_* 宏转发头 - 转发到 observability/logger.h 的权威定义。
  *
- * Unified logging entry: all modules use AIRY_LOG_ERROR / AIRY_LOG_WARN /
- * AIRY_LOG_INFO / AIRY_LOG_DEBUG, forwarded by this header to the
- * log_write() implementation in logging.h.
+ * S-2 收敛 (2026-08-14, 用户决策: 与 [SC] log_types.h 枚举名对齐):
+ * AIRY_LOG_* 的唯一权威定义在 commons/utils/observability/include/logger.h
+ * （基于 airy_log_write → log_write_va → log_write）。本头文件仅作为
+ * 兼容入口，把旧 include 路径（logging_compat.h）转发到权威源。
  *
- * When logging.h is unavailable (log library not linked), falls back to
- * direct stderr output.
+ * When observability/logger.h is unavailable (log library not linked),
+ * falls back to direct stderr output.
  */
 
-
-#if __has_include("logging.h")
-#include "logging.h"
-/* #ifndef guard: if observability/include/logger.h was included before
- * this header and already defined AIRY_LOG_* (based on airy_log_write),
- * skip the definitions here to avoid redefinition warnings. Both paths
- * eventually call log_write(), so the semantics are equivalent. */
-#ifndef AIRY_LOG_ERROR
-#define AIRY_LOG_ERROR(fmt, ...) LOG_ERROR(fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_WARN
-#define AIRY_LOG_WARN(fmt, ...) LOG_WARN(fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_INFO
-#define AIRY_LOG_INFO(fmt, ...) LOG_INFO(fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_DEBUG
-#define AIRY_LOG_DEBUG(fmt, ...) LOG_DEBUG(fmt, ##__VA_ARGS__)
-#endif
-#ifndef AIRY_LOG_FATAL
-#define AIRY_LOG_FATAL(fmt, ...) LOG_FATAL(fmt, ##__VA_ARGS__)
-#endif
+#if __has_include("../observability/include/logger.h")
+#include "../observability/include/logger.h"
 #else
 
 #include <stdio.h>

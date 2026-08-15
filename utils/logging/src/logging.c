@@ -20,7 +20,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h> /* GetSystemTimeAsFileTime / GetCurrentProcessId */
+#else
 #include <unistd.h>
+#endif
 
 /* Unified base library compatibility layer */
 #include "atomic_compat.h"
@@ -218,9 +228,20 @@ static logging_state_t g_logging_state = {.initialized = false, .module_level_co
 
 static uint64_t get_current_timestamp(void)
 {
+#if defined(_WIN32)
+    /* Windows 无 clock_gettime：GetSystemTimeAsFileTime 返回 1601-01-01
+     * 起的 100ns 间隔，换算到 Unix 毫秒（偏移 11644473600000 ms）。 */
+    FILETIME ft;
+    ULARGE_INTEGER u;
+    GetSystemTimeAsFileTime(&ft);
+    u.LowPart = ft.dwLowDateTime;
+    u.HighPart = ft.dwHighDateTime;
+    return (uint64_t)((u.QuadPart / 10000ULL) - 11644473600000ULL);
+#else
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
+#endif
 }
 
 static uint64_t get_current_thread_id(void)
@@ -230,7 +251,11 @@ static uint64_t get_current_thread_id(void)
 
 static uint32_t get_current_process_id(void)
 {
+#if defined(_WIN32)
+    return (uint32_t)GetCurrentProcessId();
+#else
     return (uint32_t)getpid();
+#endif
 }
 
 static size_t format_log_message(const log_record_t *record, char *buffer, size_t buffer_size)

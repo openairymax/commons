@@ -93,7 +93,9 @@ extern "C" {
 #define AIRY_USED __attribute__((used))
 #define AIRY_WEAK __attribute__((weak))
 #define AIRY_PACKED __attribute__((packed))
+#ifndef AIRY_ALIGNED
 #define AIRY_ALIGNED(x) __attribute__((aligned(x)))
+#endif
 #define AIRY_DEPRECATED __attribute__((deprecated))
 #define AIRY_FALLTHROUGH __attribute__((fallthrough))
 #define AIRY_PRINTF_FORMAT(fmt, args) __attribute__((format(__printf__, fmt, args)))

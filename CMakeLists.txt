@@ -97,6 +97,13 @@ set(SOURCES
     utils/execution/src/checkpoint_snapshot.c
     utils/execution/src/checkpoint_session.c
     utils/task/src/task_desc.c
+    # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
+    utils/effect/src/airy_effect.c
+    # 阶段 2: 统一扩展注册表 + 四域 provider 注册辅助（memory/llm/tool/storage/sandbox）
+    utils/ext/src/airy_ext.c
+    utils/ext/src/airy_providers.c
+    # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名，类型层不可互赋）
+    utils/id/src/airy_id.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
@@ -155,6 +162,9 @@ set(_inc_dirs
     utils/uuid/include
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson/include
+    utils/effect/include
+    # 阶段 2: 统一扩展注册表头
+    utils/ext/include
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
     include
 )
@@ -225,6 +235,10 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print/include
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson/include
+    # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/effect/include
+    # 阶段 2: 统一扩展注册表头
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext/include
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2，6 核心 + 1 补充 + uapi_compat）
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -283,6 +297,9 @@ install(DIRECTORY utils/cognition/include/ DESTINATION include/agentrt/utils/cog
 install(DIRECTORY utils/strategy/include/ DESTINATION include/agentrt/utils/strategy)
 # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
 install(DIRECTORY utils/cjson/include/ DESTINATION include/agentrt/utils/cjson)
+install(DIRECTORY utils/effect/include/ DESTINATION include/agentrt/utils/effect)
+# 阶段 2: 统一扩展注册表头安装
+install(DIRECTORY utils/ext/include/ DESTINATION include/agentrt/utils/ext)
 # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
 install(DIRECTORY include/airymax/ DESTINATION include/airymax)
 

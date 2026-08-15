@@ -48,8 +48,14 @@ extern "C" {
 
 
 /**
- * @brief Log level enumeration (compatibility layer)
- * @note Maps to commons log_level_t
+ * @brief Log level type — 用户态唯一别名 (S-2 收敛, 2026-08-14)
+ *
+ * 5 级日志枚举的唯一权威源为 [SC] 共享契约头 airymax/log_types.h 的
+ * enum airy_log_level（AIRY_LOG_DEBUG=0 .. AIRY_LOG_FATAL=4）。
+ * 用户态统一以 log_level_t（utils/logging/logging.h）为内部实现类型，
+ * 本 typedef 是跨模块兼容别名，数值与 [SC] 严格一致（0-4）。
+ * 旧的 _E 后缀枚举（types.h）已删除——它与此 typedef 以互斥保护
+ * 双定义同一类型名，导致类型随 include 顺序漂移。
  */
 #ifndef AIRY_LOG_LEVEL_T_DEFINED
 #define AIRY_LOG_LEVEL_T_DEFINED
@@ -384,84 +390,64 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
     } while (0)
 
 
-/**
- * @brief Trace-level log
+/*
+ * S-2 收敛 (2026-08-14, 用户决策): 5 级 LOG_* 宏已全量迁移为 AIRY_LOG_*
+ * （权威定义在 observability/logger.h）。此处删除 LOG_TRACE/LOG_DEBUG/
+ * LOG_INFO/LOG_WARN/LOG_ERROR/LOG_FATAL 旧宏，防止 LOG_* 轨复活；
+ * 保留带 trace 上下文的 *_T 变体（服务层扩展，改名 AIRY_LOG_*_T 对齐
+ * AIRY_LOG_* 前缀）；SVC_LOG_* 服务层宏保留，映射到 AIRY_LOG_*。
  */
-#ifndef LOG_TRACE
-#define LOG_TRACE(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
-#endif
-
-#ifndef LOG_DEBUG
-#define LOG_DEBUG(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, __VA_ARGS__)
-#endif
-
-#ifndef LOG_INFO
-#define LOG_INFO(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_INFO, __VA_ARGS__)
-#endif
-
-#ifndef LOG_WARN
-#define LOG_WARN(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_WARN, __VA_ARGS__)
-#endif
-
-#ifndef LOG_ERROR
-#define LOG_ERROR(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_ERROR, __VA_ARGS__)
-#endif
-
-#ifndef LOG_FATAL
-#define LOG_FATAL(...) AIRY_LOG_IMPL(airy_logger_default(), LOG_LEVEL_FATAL, __VA_ARGS__)
-#endif
-
 
 /**
  * @brief Trace-level log with trace context
  */
-#define LOG_TRACE_T(ctx, ...) \
+#define AIRY_LOG_TRACE_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
  * @brief Debug-level log with trace context
  */
-#define LOG_DEBUG_T(ctx, ...) \
+#define AIRY_LOG_DEBUG_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_DEBUG, (ctx), __VA_ARGS__)
 
 /**
  * @brief Info-level log with trace context
  */
-#define LOG_INFO_T(ctx, ...) \
+#define AIRY_LOG_INFO_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_INFO, (ctx), __VA_ARGS__)
 
 /**
  * @brief Warning-level log with trace context
  */
-#define LOG_WARN_T(ctx, ...) \
+#define AIRY_LOG_WARN_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_WARN, (ctx), __VA_ARGS__)
 
 /**
  * @brief Error-level log with trace context
  */
-#define LOG_ERROR_T(ctx, ...) \
+#define AIRY_LOG_ERROR_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_ERROR, (ctx), __VA_ARGS__)
 
 /**
  * @brief Fatal-level log with trace context
  */
-#define LOG_FATAL_T(ctx, ...) \
+#define AIRY_LOG_FATAL_T(ctx, ...) \
     AIRY_LOG_TRACE_IMPL(airy_logger_default(), LOG_LEVEL_FATAL, (ctx), __VA_ARGS__)
 
 
 /**
  * @brief Log an error and return the error code
  */
-#define LOG_ERROR_RETURN(code, ...) \
-    do {                            \
-        LOG_ERROR(__VA_ARGS__);     \
-        return (code);              \
+#define AIRY_LOG_ERROR_RETURN(code, ...) \
+    do {                                 \
+        AIRY_LOG_ERROR(__VA_ARGS__);     \
+        return (code);                   \
     } while (0)
 
 /**
  * @brief Conditional-check log
  */
-#define LOG_CHECK(cond, level, ...)                                     \
+#define AIRY_LOG_CHECK(cond, level, ...)                                \
     do {                                                                \
         if (!(cond)) {                                                  \
             AIRY_LOG_IMPL(airy_logger_default(), (level), __VA_ARGS__); \
@@ -470,29 +456,29 @@ static inline void airy_logger_log_with_trace(airy_logger_t logger, airy_log_lev
 
 
 /**
- * @brief SVC_-prefixed log macros - fully equivalent to LOG_*
+ * @brief SVC_-prefixed log macros - fully equivalent to AIRY_LOG_*
  * @note The daemon service layer uniformly uses the SVC_ prefix to avoid
  *       name conflicts with other modules. These macros map directly to
- *       commons log_write().
+ *       the AIRY_LOG_* 权威宏 (observability/logger.h) → commons log_write().
  */
 
 
-#define SVC_LOG_TRACE(...) LOG_DEBUG(__VA_ARGS__)
+#define SVC_LOG_TRACE(...) AIRY_LOG_DEBUG(__VA_ARGS__)
 
 
-#define SVC_LOG_DEBUG(...) LOG_DEBUG(__VA_ARGS__)
+#define SVC_LOG_DEBUG(...) AIRY_LOG_DEBUG(__VA_ARGS__)
 
 
-#define SVC_LOG_INFO(...) LOG_INFO(__VA_ARGS__)
+#define SVC_LOG_INFO(...) AIRY_LOG_INFO(__VA_ARGS__)
 
 
-#define SVC_LOG_WARN(...) LOG_WARN(__VA_ARGS__)
+#define SVC_LOG_WARN(...) AIRY_LOG_WARN(__VA_ARGS__)
 
 
-#define SVC_LOG_ERROR(...) LOG_ERROR(__VA_ARGS__)
+#define SVC_LOG_ERROR(...) AIRY_LOG_ERROR(__VA_ARGS__)
 
 
-#define SVC_LOG_FATAL(...) LOG_FATAL(__VA_ARGS__)
+#define SVC_LOG_FATAL(...) AIRY_LOG_FATAL(__VA_ARGS__)
 
 
 /**

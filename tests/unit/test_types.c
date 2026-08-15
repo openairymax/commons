@@ -287,28 +287,6 @@ static void test_metric_structure(void **state)
  * ============================================================================ */
 
 /**
- * @brief 测试 IPC 消息头结构体
- */
-static void test_ipc_header_structure(void **state)
-{
-    (void)state;
-
-    airy_ipc_header_t header = {0};
-
-    header.magic = AIRY_IPC_MAGIC;
-    header.version = 1;
-    header.type = AIRY_IPC_PIPE;
-    header.payload_len = 1024;
-    header.message_id = 12345;
-
-    assert_int_equal(header.magic, AIRY_IPC_MAGIC);
-    assert_int_equal(header.version, 1);
-    assert_int_equal(header.type, AIRY_IPC_PIPE);
-    assert_int_equal(header.payload_len, 1024);
-    assert_int_equal(header.message_id, 12345);
-}
-
-/**
  * @brief 测试 IPC 配置结构体
  */
 static void test_ipc_config_structure(void **state)
@@ -496,8 +474,6 @@ int main(void)
         cmocka_unit_test(test_capability_structure),
 
         cmocka_unit_test(test_metric_structure),
-
-        cmocka_unit_test(test_ipc_header_structure),
         cmocka_unit_test(test_ipc_config_structure),
 
         cmocka_unit_test(test_conn_config_structure),

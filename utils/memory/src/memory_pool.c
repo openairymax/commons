@@ -149,7 +149,7 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
             node->next = pool->old_regions;
             pool->old_regions = node;
         }
-        LOG_DEBUG(
+        AIRY_LOG_DEBUG(
             "memory_pool: expanding with new region (old=%p, new=%p, old_size=%zu, new_size=%zu)",
             pool->memory_area, new_memory, pool->memory_area_size, total_size);
     }
@@ -240,7 +240,7 @@ memory_pool_t *memory_pool_create(const memory_pool_options_t *options)
     if (options == NULL || options->block_size == 0)
         return NULL;
 
-    LOG_INFO("memory_pool: memory_pool_create (block_size=%zu, initial_blocks=%zu, max_blocks=%zu, "
+    AIRY_LOG_INFO("memory_pool: memory_pool_create (block_size=%zu, initial_blocks=%zu, max_blocks=%zu, "
              "thread_safe=%s, name=%s)",
              options->block_size, options->initial_blocks, options->max_blocks,
              options->thread_safe ? "true" : "false", options->name ? options->name : "(unnamed)");
@@ -289,7 +289,7 @@ memory_pool_t *memory_pool_create(const memory_pool_options_t *options)
 
     memory_pool_unlock(pool);
 
-    LOG_INFO("memory_pool: memory_pool_create ok (pool=%p, block_size=%zu, total_blocks=%zu)",
+    AIRY_LOG_INFO("memory_pool: memory_pool_create ok (pool=%p, block_size=%zu, total_blocks=%zu)",
              (void *)pool, pool->options.block_size, pool->stats.total_blocks);
 
     return pool;
@@ -302,7 +302,7 @@ void memory_pool_destroy(memory_pool_t *pool)
     }
 
     const char *pool_name = pool->name ? pool->name : "(unnamed)";
-    LOG_INFO("memory_pool: memory_pool_destroy (pool=%p, name=%s, total_blocks=%zu, "
+    AIRY_LOG_INFO("memory_pool: memory_pool_destroy (pool=%p, name=%s, total_blocks=%zu, "
              "allocated=%zu, free=%zu, allocs=%" PRIu64 ", frees=%" PRIu64 ", hits=%" PRIu64
              ", miss=%" PRIu64 ")",
              (void *)pool, pool_name, pool->stats.total_blocks, pool->stats.allocated_blocks,
@@ -324,9 +324,9 @@ void memory_pool_destroy(memory_pool_t *pool)
     memory_pool_unlock(pool);
 
     if (leaked_blocks > 0) {
-        LOG_WARN("警告：销毁内存池时发现未释放的块");
-        LOG_WARN("内存池：%s", pool_name_for_log ? pool_name_for_log : "(unnamed)");
-        LOG_WARN("未释放块数：%zu", leaked_blocks);
+        AIRY_LOG_WARN("警告：销毁内存池时发现未释放的块");
+        AIRY_LOG_WARN("内存池：%s", pool_name_for_log ? pool_name_for_log : "(unnamed)");
+        AIRY_LOG_WARN("未释放块数：%zu", leaked_blocks);
     }
 
     memory_pool_lock_destroy(pool);
@@ -348,12 +348,12 @@ void *memory_pool_alloc(memory_pool_t *pool)
 
     if (pool->free_list == NULL) {
         pool->stats.miss_count++;
-        LOG_DEBUG("memory_pool: memory_pool_alloc MISS (pool=%p, free_blocks=0, miss#=%" PRIu64 ")",
+        AIRY_LOG_DEBUG("memory_pool: memory_pool_alloc MISS (pool=%p, free_blocks=0, miss#=%" PRIu64 ")",
                   (void *)pool, pool->stats.miss_count);
 
         if (!memory_pool_allocate_blocks(pool, pool->options.expansion_size)) {
             memory_pool_unlock(pool);
-            LOG_WARN("memory_pool: memory_pool_alloc EXPAND_FAILED (pool=%p)", (void *)pool);
+            AIRY_LOG_WARN("memory_pool: memory_pool_alloc EXPAND_FAILED (pool=%p)", (void *)pool);
             return NULL;
         }
     } else {
@@ -375,7 +375,7 @@ void *memory_pool_alloc(memory_pool_t *pool)
 
     memory_pool_unlock(pool);
 
-    LOG_DEBUG("memory_pool: memory_pool_alloc ok (pool=%p, ptr=%p, block_index=%zu, "
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_alloc ok (pool=%p, ptr=%p, block_index=%zu, "
               "free=%zu/%zu, alloc#=%" PRIu64 ")",
               (void *)pool, data_ptr, block->index, pool->stats.free_blocks,
               pool->stats.total_blocks, pool->stats.allocation_count);
@@ -398,7 +398,7 @@ size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blo
         return 0;
     }
 
-    LOG_DEBUG("memory_pool: memory_pool_batch_alloc START (pool=%p, count=%zu, free=%zu)",
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc START (pool=%p, count=%zu, free=%zu)",
               (void *)pool, count, pool->stats.free_blocks);
 
     memory_pool_lock(pool);
@@ -435,7 +435,7 @@ size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blo
 
     memory_pool_unlock(pool);
 
-    LOG_DEBUG("memory_pool: memory_pool_batch_alloc DONE (pool=%p, requested=%zu, allocated=%zu, "
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc DONE (pool=%p, requested=%zu, allocated=%zu, "
               "free=%zu/%zu, alloc_total=%" PRIu64 ")",
               (void *)pool, count, allocated, pool->stats.free_blocks, pool->stats.total_blocks,
               pool->stats.allocation_count);
@@ -449,7 +449,7 @@ size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count)
         return 0;
     }
 
-    LOG_DEBUG("memory_pool: memory_pool_batch_free START (pool=%p, count=%zu, allocated=%zu)",
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free START (pool=%p, count=%zu, allocated=%zu)",
               (void *)pool, count, pool->stats.allocated_blocks);
 
     memory_pool_lock(pool);
@@ -463,7 +463,7 @@ size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count)
             (memory_pool_block_t *)((uint8_t *)blocks[i] - sizeof(memory_pool_block_t));
 
         if (block->pool != pool || !block->allocated) {
-            LOG_WARN("memory_pool: memory_pool_batch_free skip invalid block (pool=%p, ptr=%p)",
+            AIRY_LOG_WARN("memory_pool: memory_pool_batch_free skip invalid block (pool=%p, ptr=%p)",
                      (void *)pool, blocks[i]);
             continue;
         }
@@ -481,7 +481,7 @@ size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count)
 
     memory_pool_unlock(pool);
 
-    LOG_DEBUG("memory_pool: memory_pool_batch_free DONE (pool=%p, count=%zu, freed=%zu, "
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free DONE (pool=%p, count=%zu, freed=%zu, "
               "free=%zu/%zu, free_total=%" PRIu64 ")",
               (void *)pool, count, freed, pool->stats.free_blocks, pool->stats.total_blocks,
               pool->stats.free_count);
@@ -503,7 +503,7 @@ void memory_pool_free(memory_pool_t *pool, void *ptr)
     /* O(1) ownership validation via the embedded pool pointer
      * (replaces the former O(n) linear scan) */
     if (block->pool != pool || !block->allocated) {
-        LOG_ERROR("错误：尝试释放无效的内存池块");
+        AIRY_LOG_ERROR("错误：尝试释放无效的内存池块");
         memory_pool_unlock(pool);
         return;
     }
@@ -520,7 +520,7 @@ void memory_pool_free(memory_pool_t *pool, void *ptr)
 
     memory_pool_unlock(pool);
 
-    LOG_DEBUG("memory_pool: memory_pool_free ok (pool=%p, ptr=%p, block_index=%zu, "
+    AIRY_LOG_DEBUG("memory_pool: memory_pool_free ok (pool=%p, ptr=%p, block_index=%zu, "
               "free=%zu/%zu, free#=%" PRIu64 ")",
               (void *)pool, ptr, block->index, pool->stats.free_blocks, pool->stats.total_blocks,
               pool->stats.free_count);
@@ -561,7 +561,7 @@ bool memory_pool_prealloc(memory_pool_t *pool, size_t count)
         return false;
     }
 
-    LOG_INFO("memory_pool: memory_pool_prealloc (pool=%p, count=%zu)", (void *)pool, count);
+    AIRY_LOG_INFO("memory_pool: memory_pool_prealloc (pool=%p, count=%zu)", (void *)pool, count);
 
     memory_pool_lock(pool);
     bool result = memory_pool_allocate_blocks(pool, count);
@@ -576,7 +576,7 @@ void memory_pool_clear(memory_pool_t *pool)
         return;
     }
 
-    LOG_INFO("memory_pool: memory_pool_clear (pool=%p, allocated=%zu, total=%zu)", (void *)pool,
+    AIRY_LOG_INFO("memory_pool: memory_pool_clear (pool=%p, allocated=%zu, total=%zu)", (void *)pool,
              pool->stats.allocated_blocks, pool->stats.total_blocks);
 
     memory_pool_lock(pool);
@@ -631,7 +631,7 @@ bool memory_pool_expand(memory_pool_t *pool, size_t additional_blocks)
         return false;
     }
 
-    LOG_INFO("memory_pool: memory_pool_expand (pool=%p, additional=%zu, total=%zu→%zu)",
+    AIRY_LOG_INFO("memory_pool: memory_pool_expand (pool=%p, additional=%zu, total=%zu→%zu)",
              (void *)pool, additional_blocks, pool->stats.total_blocks,
              pool->stats.total_blocks + additional_blocks);
 
@@ -648,7 +648,7 @@ size_t memory_pool_shrink(memory_pool_t *pool, size_t blocks_to_keep)
         return 0;
     }
 
-    LOG_INFO("memory_pool: memory_pool_shrink (pool=%p, keep=%zu, total=%zu)", (void *)pool,
+    AIRY_LOG_INFO("memory_pool: memory_pool_shrink (pool=%p, keep=%zu, total=%zu)", (void *)pool,
              blocks_to_keep, pool->stats.total_blocks);
 
     memory_pool_lock(pool);

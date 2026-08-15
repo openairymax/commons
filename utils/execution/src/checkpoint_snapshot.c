@@ -63,7 +63,7 @@ airy_err_t airy_snapshot_create(const char *task_id, const char *snap_path)
     FILE *fp = fopen(snap_path, "wb");
     if (!fp) {
         airy_checkpoint_destroy(cp);
-        LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-CREATE-FAIL — cannot open file "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-CREATE-FAIL — cannot open file "
                   "path=%s task_id=%s errno=%d",
                   snap_path, task_id, errno);
         return AIRY_EIO;
@@ -98,7 +98,7 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
 
     FILE *fp = fopen(snap_path, "rb");
     if (!fp) {
-        LOG_WARN("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — file not found "
+        AIRY_LOG_WARN("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — file not found "
                  "path=%s errno=%d",
                  snap_path, errno);
         return AIRY_ENOENT;
@@ -107,7 +107,7 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
     char header[64];
     if (!fgets(header, sizeof(header), fp) || strncmp(header, "SNAPSHOT_V1", 11) != 0) {
         fclose(fp);
-        LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — bad header "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: SNAPSHOT-RESTORE-FAIL — bad header "
                   "path=%s header=%.20s",
                   snap_path, header);
         return AIRY_EIO;

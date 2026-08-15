@@ -53,10 +53,10 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
         if (result == 0) {
             if (g_checkpoint_stats.total_checkpoints > 0)
                 g_checkpoint_stats.total_checkpoints--;
-            LOG_INFO("C-L07: Checkpoint: DELETE-OK task_id=%s seq=%llu", task_id,
+            AIRY_LOG_INFO("C-L07: Checkpoint: DELETE-OK task_id=%s seq=%llu", task_id,
                      (unsigned long long)seq_num);
         } else {
-            LOG_WARN("C-L07: Checkpoint: DELETE-FAIL — unlink failed "
+            AIRY_LOG_WARN("C-L07: Checkpoint: DELETE-FAIL — unlink failed "
                      "task_id=%s seq=%llu errno=%d",
                      task_id, (unsigned long long)seq_num, errno);
         }
@@ -68,7 +68,7 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
     size_t cnt = 0;
     uint64_t *seqs = collect_task_seqs(task_id, &cnt);
     if (!seqs) {
-        LOG_INFO("C-L07: Checkpoint: DELETE-ALL — no checkpoints for task_id=%s", task_id);
+        AIRY_LOG_INFO("C-L07: Checkpoint: DELETE-ALL — no checkpoints for task_id=%s", task_id);
         return AIRY_ENOENT;
     }
 
@@ -87,7 +87,7 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
     airy_mtx_unlock(&g_checkpoint_mutex);
     AIRY_FREE(seqs);
 
-    LOG_INFO("C-L07: Checkpoint: DELETE-ALL task_id=%s deleted=%zu/%zu", task_id, deleted, cnt);
+    AIRY_LOG_INFO("C-L07: Checkpoint: DELETE-ALL task_id=%s deleted=%zu/%zu", task_id, deleted, cnt);
     return (deleted > 0) ? AIRY_SUCCESS : AIRY_ENOENT;
 }
 
