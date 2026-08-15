@@ -242,7 +242,7 @@ static char *json_extract_string(const char *json, const char *key)
     size_t cap = 512;
     char *val = (char *)AIRY_MALLOC(cap);
     if (!val) {
-        LOG_ERROR("C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (malloc) for key=%s", key);
+        AIRY_LOG_ERROR("C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (malloc) for key=%s", key);
         return NULL;
     }
     size_t len = 0;
@@ -271,7 +271,7 @@ static char *json_extract_string(const char *json, const char *key)
                 cap *= 2;
                 val = (char *)AIRY_REALLOC(val, cap);
                 if (!val) {
-                    LOG_ERROR(
+                    AIRY_LOG_ERROR(
                         "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc escape) for key=%s",
                         key);
                     return NULL;
@@ -284,7 +284,7 @@ static char *json_extract_string(const char *json, const char *key)
                 cap *= 2;
                 val = (char *)AIRY_REALLOC(val, cap);
                 if (!val) {
-                    LOG_ERROR(
+                    AIRY_LOG_ERROR(
                         "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc char) for key=%s",
                         key);
                     return NULL;
@@ -335,7 +335,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
         airy_mtx_lock(&g_checkpoint_mutex);
         g_checkpoint_stats.failed_checkpoints++;
         airy_mtx_unlock(&g_checkpoint_mutex);
-        LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — cannot open file "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — cannot open file "
                   "path=%s task_id=%s errno=%d",
                   tmppath, cp->task_id, errno);
         return AIRY_EIO;
@@ -409,7 +409,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
         airy_mtx_lock(&g_checkpoint_mutex);
         g_checkpoint_stats.failed_checkpoints++;
         airy_mtx_unlock(&g_checkpoint_mutex);
-        LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — rename failed "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: SAVE-FAIL — rename failed "
                   "tmp=%s dst=%s task_id=%s errno=%d",
                   tmppath, filepath, cp->task_id, errno);
         return AIRY_EIO;
@@ -431,7 +431,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     }
     airy_mtx_unlock(&g_checkpoint_mutex);
 
-    LOG_DEBUG("C-L07: Checkpoint: SAVE-OK task_id=%s seq=%llu size=%zu", cp->task_id,
+    AIRY_LOG_DEBUG("C-L07: Checkpoint: SAVE-OK task_id=%s seq=%llu size=%zu", cp->task_id,
               (unsigned long long)cp->sequence_num, cp->state_size);
     return AIRY_SUCCESS;
 }
@@ -452,7 +452,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     if (sequence_num == 0) {
         actual_seq = find_latest_seq(task_id);
         if (actual_seq == 0) {
-            LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
+            AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
                      "task_id=%s",
                      task_id);
             return AIRY_ENOENT;
@@ -465,7 +465,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
 
     FILE *fp = fopen(filepath, "r");
     if (!fp) {
-        LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — file not found "
+        AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — file not found "
                  "path=%s task_id=%s seq=%llu errno=%d",
                  filepath, task_id, (unsigned long long)actual_seq, errno);
         return AIRY_ENOENT;
@@ -476,7 +476,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     fseek(fp, 0, SEEK_SET);
     if (file_size <= 0 || file_size > 10 * 1024 * 1024) {
         fclose(fp);
-        LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — invalid file size "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — invalid file size "
                   "path=%s size=%ld task_id=%s",
                   filepath, file_size, task_id);
         return AIRY_EIO;
@@ -485,7 +485,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     char *json_buf = (char *)AIRY_MALLOC((size_t)(file_size + 1));
     if (!json_buf) {
         fclose(fp);
-        LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — OOM "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — OOM "
                   "path=%s size=%ld task_id=%s",
                   filepath, file_size, task_id);
         return AIRY_ENOMEM;
@@ -495,7 +495,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     if (read_len != (size_t)file_size) {
         AIRY_FREE(json_buf);
         fclose(fp);
-        LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — read error "
+        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — read error "
                   "path=%s expected=%ld actual=%zu task_id=%s",
                   filepath, file_size, read_len, task_id);
         return AIRY_EIO;
@@ -540,7 +540,7 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     g_checkpoint_stats.total_restore_ops++;
     airy_mtx_unlock(&g_checkpoint_mutex);
     *out_cp = cp;
-    LOG_DEBUG("C-L07: Checkpoint: RESTORE-OK task_id=%s seq=%llu state=%s", task_id,
+    AIRY_LOG_DEBUG("C-L07: Checkpoint: RESTORE-OK task_id=%s seq=%llu state=%s", task_id,
               (unsigned long long)cp->sequence_num, state_to_string(cp->state));
     return AIRY_SUCCESS;
 }

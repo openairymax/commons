@@ -167,8 +167,12 @@
 #ifndef AIRY_ERR_NOT_IMPLEMENTED
 #define AIRY_ERR_NOT_IMPLEMENTED (-30)
 #endif
-#ifndef AIRY_ERR_FAIL
-#define AIRY_ERR_FAIL (-31)
+/* S-1 收敛 (2026-08-14)：AIRY_ERR_FAIL 错误码改名 AIRY_ERR_GENERIC_FAIL——
+ * [SC] airymax/error.h 定义了同名函数式辅助宏 AIRY_ERR_FAIL(err)（失败检测，
+ * 展开为 ((err) < 0)），错误码若同名则 include [SC] 后 #ifndef 恒不触发，
+ * 错误码丢失且调用点会误触发函数式宏。改名消除命名冲突（A-UEF 对齐）。 */
+#ifndef AIRY_ERR_GENERIC_FAIL
+#define AIRY_ERR_GENERIC_FAIL (-31)
 #endif
 
 /* 系统与平台错误 (-100 到 -199)
@@ -514,123 +518,25 @@
 #endif
 
 /* ============================================================================
- * Capability Folding v1.1 — IPC / Capability / Fault 错误码空间
+ * AIRY_EIPC_* / AIRY_ECAP_* / AIRY_FAULT_* —— 统一引用 A-UEF [SC] 唯一权威
  *
- * SSoT: docs-closed/agentrt-linux/00-reviews/_review_v2.2/37-capability-folding-
- *       decision-and-roadmap.md §6.5
+ * S-1 收敛 (2026-08-14)：此前本文件以负值镜像重复定义 [SC] 同名码
+ * （如 AIRY_EIPC_MAGIC=-41 对应 [SC] AIRY_EIPC_MAGIC=41），属双权威漂移源
+ * （同一编译单元 include 顺序不同将得到不同值），且全仓 0 调用，已删除。
+ *
  * 命名规范：与 AirymaxOS [SC] error.h (kernel/include/airymax/error.h) 对齐，
  *     使用 AIRY_EIPC_* / AIRY_ECAP_* / AIRY_FAULT_* 前缀（无下划线分隔符）。
+ * 权威定义：commons/include/airymax/error.h（正幅值 10 子空间 + Fault 码空间，
+ *     返回 -AIRY_E*），经 airy_types.h → types.h 引入。
  *
- * 码空间分配：
- *   IPC 码空间 [-41, -70]    — IPC 协议层错误（fastpath C-S0~C-S11）
- *   Capability 码空间 [-71, -100] — Capability Folding Badge 校验错误（C-S9）
+ * 码空间分配（[SC]）：
+ *   IPC 码空间 [41, 70]         — IPC 协议层错误（fastpath C-S0~C-S11）
+ *   Capability 码空间 [71, 100] — Capability Folding Badge 校验错误（C-S9）
  *   Fault 码空间 [0x1000, 0x1FFF] — 非可恢复故障（触发 USV Fault Handler）
- *
- * 注意：v4.3 已将 AIRY_ERR_* 扩展码从 -40~-50 区间迁移至
- * -36~-40（5 个）和 -55~-60（6 个）两个子区间，与 IPC 码空间 [-41, -70]
- * 彻底分离，无值碰撞。
- * 调用方应始终使用语义宏（AIRY_EIPC_*），严禁与字面量直接比较。
  *
  * H3 约束：agentrt 用户态 capability_badge 始终为 0，理论上不会触发
  *     AIRY_ECAP_* 错误（这些错误由 agentrt-linux 内核态 fastpath 抛出）。
- *     此处定义仅为 [SC] 契约对齐与单元测试断言使用。
+ *     用户态如需引用，用 -AIRY_ECAP_* 等（[SC] 正幅值取负）。
  * ============================================================================ */
-
-
-#ifndef AIRY_EIPC_MAGIC
-#define AIRY_EIPC_MAGIC (-41)
-#endif
-#ifndef AIRY_EIPC_OPCODE
-#define AIRY_EIPC_OPCODE (-42)
-#endif
-#ifndef AIRY_EIPC_PAYLOAD
-#define AIRY_EIPC_PAYLOAD (-43)
-#endif
-#ifndef AIRY_EIPC_HDRSIZE
-#define AIRY_EIPC_HDRSIZE (-44)
-#endif
-#ifndef AIRY_EIPC_RESERVED
-#define AIRY_EIPC_RESERVED (-45)
-#endif
-#ifndef AIRY_EIPC_FLAGS
-#define AIRY_EIPC_FLAGS (-46)
-#endif
-#ifndef AIRY_EIPC_NOTSUPP
-#define AIRY_EIPC_NOTSUPP (-47)
-#endif
-#ifndef AIRY_EIPC_KFIFO
-#define AIRY_EIPC_KFIFO (-48)
-#endif
-#ifndef AIRY_EIPC_RECLAIM
-#define AIRY_EIPC_RECLAIM (-49)
-#endif
-#ifndef AIRY_EIPC_CONTEXT
-#define AIRY_EIPC_CONTEXT (-50)
-#endif
-#ifndef AIRY_EIPC_CRC32
-#define AIRY_EIPC_CRC32 (-51)
-#endif
-#ifndef AIRY_EIPC_TIMEOUT
-#define AIRY_EIPC_TIMEOUT (-52)
-#endif
-
-/* ---- Capability / Badge 错误码 (-71..-100, v1.1) ----
- *
- * H3 约束：agentrt 用户态不感知 Badge，capability_badge 始终为 0。
- * 这些错误码主要由 agentrt-linux 内核态 fastpath C-S9 抛出。
- * agentrt 侧定义仅为 [SC] 契约对齐与跨端错误码翻译使用。
- */
-#ifndef AIRY_ECAP_MISSING
-#define AIRY_ECAP_MISSING (-71)
-#endif
-#ifndef AIRY_ECAP_REVOKED
-#define AIRY_ECAP_REVOKED (-72)
-#endif
-#ifndef AIRY_ECAP_EXPIRED
-#define AIRY_ECAP_EXPIRED (-73)
-#endif
-#ifndef AIRY_ECAP_MISMATCH
-#define AIRY_ECAP_MISMATCH (-74)
-#endif
-#ifndef AIRY_ECAP_LSM_DENIED
-#define AIRY_ECAP_LSM_DENIED (-75)
-#endif
-#ifndef AIRY_ECAP_RADIX_MISS
-#define AIRY_ECAP_RADIX_MISS (-76)
-#endif
-#ifndef AIRY_ECAP_STATIC_KEY
-#define AIRY_ECAP_STATIC_KEY (-77)
-#endif
-#ifndef AIRY_ECAP_BADGE
-#define AIRY_ECAP_BADGE (-78)
-#endif
-#ifndef AIRY_ECAP_EPOCH
-#define AIRY_ECAP_EPOCH (-79)
-#endif
-#ifndef AIRY_ECAP_FORGED
-#define AIRY_ECAP_FORGED (-80)
-#endif
-#ifndef AIRY_ECAP_PERM
-#define AIRY_ECAP_PERM (-81)
-#endif
-#ifndef AIRY_ECAP_FROZEN
-#define AIRY_ECAP_FROZEN (-82)
-#endif
-
-/* ---- Fault 故障码 (0x1000+, v1.1, 非可恢复) ----
- *
- * Fault 码不是函数返回值，而是通过 fault 通知通道（eventfd / die_notifier）
- * 传递给 USV Fault Handler。agentrt 用户态无 fault 机制，这些定义仅为
- * [SC] 契约对齐与文档引用使用。
- */
-#ifndef AIRY_FAULT_CAP_FORGED
-#define AIRY_FAULT_CAP_FORGED (0x1001u)
-#endif
-#ifndef AIRY_FAULT_CAP_LEAK
-#define AIRY_FAULT_CAP_LEAK (0x1002u)
-#endif
-#ifndef AIRY_FAULT_RING_CORRUPT
-#define AIRY_FAULT_RING_CORRUPT (0x1003u)
-#endif
 
 #endif /* AIRY_RT_UTILS_ERROR_CODES_H */

@@ -39,8 +39,8 @@
  * log_init(&manager);
  *
  *
- * LOG_INFO("system started successfully, version: %s", version);
- * LOG_ERROR("connection failed, errno: %d", errno);
+ * AIRY_LOG_INFO("system started successfully, version: %s", version);
+ * AIRY_LOG_ERROR("connection failed, errno: %d", errno);
  *
  *
  * log_set_trace_id("req-123456");
@@ -63,12 +63,30 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+/*
+ * S-2 收敛 (2026-08-14, 用户决策): 引入 AIRY_LOG_* 权威宏源
+ * （commons/utils/observability/include/logger.h，基于 airy_log_write →
+ * log_write_va）。logging.h 作为统一日志入口头：任何 include 本头的文件
+ * 自动获得 AIRY_LOG_* 宏（5 级）与 log_write 函数层。observability/logger.h
+ * 不依赖本头（无循环），airy_log_write 实现位于 observability/src/logger.c。
+ *
+ * 注意：必须使用相对路径而非 <logger.h>，否则会被外部仓
+ * products/memoryrovol/include/logger.h（同名头，含 LOG_*→AIRY_LOG_* 兼容
+ * 映射）在 -I 顺序中遮蔽，导致 AIRY_LOG_* 宏不可见（S-2 收敛回归验证发现）。
+ */
+#include "../../observability/include/logger.h"
+
 
 /**
  * @brief Log level enumeration
  *
  * Defines 5 log levels following the Syslog standard, supporting
  * fine-grained log control.
+ *
+ * A-ULP SSoT (S-2 收敛, 2026-08-14): 本枚举与 [SC] 共享契约头
+ * airymax/log_types.h 的 enum airy_log_level 数值严格一致
+ * （DEBUG=0/INFO=1/WARN=2/ERROR=3/FATAL=4），作为用户态内部实现类型；
+ * 跨态契约（Ring Buffer/printk）以 airy_log_record 128B 固定格式为准。
  */
 typedef enum {
 
@@ -413,62 +431,14 @@ void log_flush(void);
 void log_cleanup(void);
 
 
-/**
- * @brief Debug-level log macro
- *
- * Writes a DEBUG-level log, typically used during development/debugging.
+/*
+ * S-2 收敛 (2026-08-14, 用户决策: 与 [SC] log_types.h 枚举名对齐):
+ * LOG_* 宏已全量迁移为 AIRY_LOG_*（权威宏定义在
+ * commons/utils/observability/include/logger.h，调用 airy_log_write →
+ * log_write_va）。本头文件仅保留函数层 API（log_write/log_write_va/
+ * log_init 等）与 log_level_t 内部类型，不再定义 LOG_* 宏。
+ * SVC_LOG_*（服务层专用）仍由 svc_logger.h 提供，映射到 AIRY_LOG_*。
  */
-#define LOG_DEBUG(fmt, ...) log_write(LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-/**
- * @brief Info-level log macro
- *
- * Writes an INFO-level log, used to record normal system operation.
- */
-#define LOG_INFO(fmt, ...) log_write(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-/**
- * @brief Warning-level log macro
- *
- * Writes a WARN-level log, indicating a possible problem that does not
- * affect system operation.
- */
-#define LOG_WARN(fmt, ...) log_write(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-/**
- * @brief Error-level log macro
- *
- * Writes an ERROR-level log, indicating a functional error that does not
- * crash the system.
- */
-#define LOG_ERROR(fmt, ...) log_write(LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-
-/**
- * @brief Fatal-error-level log macro
- *
- * Writes a FATAL-level log, indicating the system cannot continue. After
- * logging it usually calls abort() to terminate the program.
- */
-#define LOG_FATAL(fmt, ...)                                                 \
-    do {                                                                    \
-        log_write(LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
-        log_flush();                                                        \
-        abort();                                                            \
-    } while (0)
-
-/**
- * @brief Conditional log macro
- *
- * Writes a log only when the condition holds, avoiding unnecessary string
- * formatting overhead.
- */
-#define LOG_IF(condition, level, fmt, ...)                            \
-    do {                                                              \
-        if (condition) {                                              \
-            log_write(level, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
-        }                                                             \
-    } while (0)
-
 
 /**
  * @brief Enable log throttling
@@ -478,23 +448,6 @@ void log_cleanup(void);
  *                    default of 100)
  */
 void log_set_throttle(bool enable, uint32_t max_per_sec);
-
-/**
- * @brief Sampled log macro
- *
- * Probabilistically writes a log according to the level's sampling rate
- * (ERROR=100%, WARN=10%, INFO=1%, DEBUG=0.1%).
- *
- * @param level Log level (LOG_LEVEL_*)
- * @param fmt Format string
- * @param ... Format arguments
- */
-#define LOG_SAMPLE(level, fmt, ...)                                   \
-    do {                                                              \
-        if (log_should_sample(level)) {                               \
-            log_write(level, __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
-        }                                                             \
-    } while (0)
 
 /**
  * @brief Check whether the current log should be sampled

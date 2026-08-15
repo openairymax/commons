@@ -195,10 +195,10 @@ unsigned int memory_debug_checkpoint(const char *name)
     g_checkpoint_count++;
 
     if (g_debug_state.options.verbosity_level >= 1) {
-        LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu", id, cp->name,
+        AIRY_LOG_INFO("[内存检查点] ID=%u, 名称=%s, 块数=%zu, 分配=%zu, 释放=%zu", id, cp->name,
                  cp->block_count, cp->total_allocations, cp->total_frees);
     } else if (g_debug_state.options.verbosity_level >= 2) {
-        LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
+        AIRY_LOG_DEBUG("[检查点] ID=%u, 名称=%s, 块数=%zu", id, cp->name, cp->block_count);
     }
 
     memory_debug_unlock();
@@ -281,11 +281,11 @@ size_t memory_debug_compare_checkpoints(unsigned int checkpoint1, unsigned int c
     }
 
     if (g_debug_state.options.verbosity_level >= 2) {
-        LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
-        LOG_DEBUG("  新分配: %zu次", new_allocations);
-        LOG_DEBUG("  新释放: %zu次", new_frees);
-        LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
-        LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
+        AIRY_LOG_DEBUG("[检查点比较] CP1(#%u) vs CP2(#%u)", checkpoint1, checkpoint2);
+        AIRY_LOG_DEBUG("  新分配: %zu次", new_allocations);
+        AIRY_LOG_DEBUG("  新释放: %zu次", new_frees);
+        AIRY_LOG_DEBUG("  泄漏块: %zu个", diff_report ? diff_report->leak_count : 0);
+        AIRY_LOG_DEBUG("  泄漏字节: %zu", leaked_bytes);
     }
 
     memory_debug_unlock();

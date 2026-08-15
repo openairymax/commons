@@ -3,7 +3,12 @@
 
 /**
  * @file logger.h
- * @brief AgentRT unified logging interface.
+ * @brief AgentRT unified logging interface — AIRY_LOG_* 权威宏源 (S-2 收敛)。
+ *
+ * S-2 收敛 (2026-08-14, 用户决策): AIRY_LOG_* 为全仓唯一日志宏（与 [SC]
+ * airymax/log_types.h 的 enum airy_log_level 枚举名对齐），本头文件是
+ * AIRY_LOG_* 宏的唯一权威定义源。5 级 LOG_* 旧宏已全量迁移（logging.h
+ * 不再定义 LOG_*；logging_compat.h 转发到本头）。
  *
  * Log level values (unified with logging.h):
  *   DEBUG=0, INFO=1, WARN=2, ERROR=3, FATAL=4

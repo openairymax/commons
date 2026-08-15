@@ -87,11 +87,11 @@ static int test_basic_logging(void)
     // 设置日志级别为DEBUG，以便看到所有消息
     logging_set_level(LOG_LEVEL_DEBUG);
 
-    LOG_ERROR("测试错误消息");
-    LOG_WARN("测试警告消息");
-    LOG_INFO("测试信息消息");
-    LOG_DEBUG("测试调试消息");
-    LOG_TRACE("测试跟踪消息");
+    AIRY_LOG_ERROR("测试错误消息");
+    AIRY_LOG_WARN("测试警告消息");
+    AIRY_LOG_INFO("测试信息消息");
+    AIRY_LOG_DEBUG("测试调试消息");
+    AIRY_LOG_DEBUG("测试跟踪消息");
 
     LOG_INFO_FMT("格式化消息: %d + %d = %d", 1, 2, 3);
     LOG_ERROR_FMT("错误代码: %d, 消息: %s", 404, "未找到");
@@ -183,15 +183,15 @@ static int test_log_filtering(void)
 
     logging_set_level(LOG_LEVEL_WARN);
 
-    LOG_ERROR("错误消息 - 应显示");
-    LOG_WARN("警告消息 - 应显示");
+    AIRY_LOG_ERROR("错误消息 - 应显示");
+    AIRY_LOG_WARN("警告消息 - 应显示");
 
-    LOG_INFO("信息消息 - 应被过滤");
-    LOG_DEBUG("调试消息 - 应被过滤");
-    LOG_TRACE("跟踪消息 - 应被过滤");
+    AIRY_LOG_INFO("信息消息 - 应被过滤");
+    AIRY_LOG_DEBUG("调试消息 - 应被过滤");
+    AIRY_LOG_DEBUG("跟踪消息 - 应被过滤");
 
     logging_set_level(LOG_LEVEL_TRACE);
-    LOG_TRACE("跟踪消息 - 现在应显示");
+    AIRY_LOG_DEBUG("跟踪消息 - 现在应显示");
 
     // 测试原子日志过滤
     atomic_logger_t *logger = atomic_logger_create("filter_test");

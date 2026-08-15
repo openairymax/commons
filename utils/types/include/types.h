@@ -55,93 +55,21 @@ extern "C" {
 
 /**
  * @brief Error code type
- * @details All error codes are negative; success is 0. Follows the
- *          syscall_api_contract.md specification.
- */
-typedef int32_t airy_err_t;
-
-/**
- * @brief Success return value
+ * @details S-1 收敛 (2026-08-14): airy_err_t 唯一权威为 [SC] airymax/error.h
+ *          （typedef __s32 airy_err_t，经 airy_types.h 引入），此处不再重复定义。
+ *          A-UEF 语义：宏为正幅值，函数返回 -AIRY_E* 产生负值错误。
  */
 #define AIRY_SUCCESS 0
 
 /**
  * @brief Generic error code definitions
  *
- * v4.0 SSoT fix: every macro duplicated in airy_types.h is guarded with
- * #ifndef so the POSIX authoritative values from airy_types.h (included
- * first at line 36) take effect. types.h's former unconditional #define
- * overrode airy_types.h's POSIX values (e.g. turning AIRY_EINVAL from -22
- * into -1), breaking the v3.0 SSoT convergence. The #ifndef guards let
- * the authoritative source win; only AIRY_ENOTFOUND is a supplemental
- * macro not defined in airy_types.h.
+ * S-1 收敛 (2026-08-14): AIRY_E* 错误码不再本地定义（原 #ifndef 守卫版本
+ * 依赖 airy_types.h 的 POSIX 负值优先，且值域与 [SC] 正幅值空间不一致）。
+ * 唯一权威为 [SC] airymax/error.h（正幅值 10 子空间 + AIRY_FAULT_* Fault 码，
+ * 返回 -AIRY_E*），经 airy_types.h 引入。用户态扩展码 AIRY_ERR_* 权威源为
+ * commons/utils/error/include/error_codes.h。
  */
-#ifndef AIRY_EINVAL
-#define AIRY_EINVAL (-1)
-#endif
-#ifndef AIRY_ENOMEM
-#define AIRY_ENOMEM (-2)
-#endif
-#ifndef AIRY_EBUSY
-#define AIRY_EBUSY (-3)
-#endif
-#ifndef AIRY_ENOENT
-#define AIRY_ENOENT (-4)
-#endif
-#ifndef AIRY_EPERM
-#define AIRY_EPERM (-5)
-#endif
-#ifndef AIRY_ETIMEDOUT
-#define AIRY_ETIMEDOUT (-6)
-#endif
-#ifndef AIRY_EIO
-#define AIRY_EIO (-7)
-#endif
-#ifndef AIRY_EEXIST
-#define AIRY_EEXIST (-8)
-#endif
-#ifndef AIRY_ENOTINIT
-#define AIRY_ENOTINIT (-9)
-#endif
-#ifndef AIRY_ECANCELLED
-#define AIRY_ECANCELLED (-10)
-#endif
-#ifndef AIRY_ENOTSUP
-#define AIRY_ENOTSUP (-11)
-#endif
-#ifndef AIRY_EOVERFLOW
-#define AIRY_EOVERFLOW (-12)
-#endif
-#ifndef AIRY_EPROTO
-#define AIRY_EPROTO (-13)
-#endif
-#ifndef AIRY_ENOTCONN
-#define AIRY_ENOTCONN (-14)
-#endif
-#ifndef AIRY_ECONNRESET
-#define AIRY_ECONNRESET (-15)
-#endif
-#ifndef AIRY_ENOSYS
-#define AIRY_ENOSYS (-16)
-#endif
-#ifndef AIRY_EFAIL
-#define AIRY_EFAIL (-17)
-#endif
-#ifndef AIRY_ENOTFOUND
-#define AIRY_ENOTFOUND (-18)
-#endif
-#ifndef AIRY_EPLATFORM
-#define AIRY_EPLATFORM (-27)
-#endif
-#ifndef AIRY_EPROTONOSUPPORT
-#define AIRY_EPROTONOSUPPORT (-28)
-#endif
-#ifndef AIRY_ESERVICE
-#define AIRY_ESERVICE (-29)
-#endif
-#ifndef AIRY_EUNKNOWN
-#define AIRY_EUNKNOWN (-99)
-#endif
 
 /**
  * @brief Timestamp type (nanoseconds)
@@ -521,17 +449,13 @@ typedef struct {
 
 /**
  * @brief Log level enumeration
+ *
+ * A-ULP SSoT (S-2 收敛, 2026-08-14): 5 级日志枚举的唯一权威源为
+ * [SC] 共享契约头 airymax/log_types.h 的 enum airy_log_level
+ * （AIRY_LOG_DEBUG=0 .. AIRY_LOG_FATAL=4）。用户态类型别名由
+ * utils/logging/include/svc_logger.h 提供（typedef log_level_t
+ * airy_log_level_t），数值与 [SC] 严格一致，此处不再重复定义。
  */
-#ifndef AIRY_LOG_LEVEL_T_DEFINED
-#define AIRY_LOG_LEVEL_T_DEFINED
-typedef enum {
-    AIRY_LOG_LEVEL_DEBUG_E = 0,
-    AIRY_LOG_LEVEL_INFO_E = 1,
-    AIRY_LOG_LEVEL_WARN_E = 2,
-    AIRY_LOG_LEVEL_ERROR_E = 3,
-    AIRY_LOG_LEVEL_FATAL_E = 4
-} airy_log_level_t;
-#endif
 
 /**
  * @brief Metric type enumeration

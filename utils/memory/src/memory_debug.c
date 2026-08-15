@@ -112,12 +112,12 @@ static void __attribute__((unused)) memory_debug_record_error(memory_error_type_
     g_debug_state.error_count++;
 
     if (g_debug_state.options.verbosity_level >= 1) {
-        LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
+        AIRY_LOG_ERROR("[内存错误] 类型%d, 地址%p, 大小%zu", type, addr, size);
         if (description != NULL) {
-            LOG_ERROR("描述%s", description);
+            AIRY_LOG_ERROR("描述%s", description);
         }
         if (file != NULL && function != NULL) {
-            LOG_ERROR("位置%s:%d (%s)", file, line, function);
+            AIRY_LOG_ERROR("位置%s:%d (%s)", file, line, function);
         }
     }
 
@@ -132,7 +132,7 @@ bool memory_debug_init(const memory_debug_options_t *options)
         return true;
     }
 
-    LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, "
+    AIRY_LOG_INFO("memory_debug: memory_debug_init (redzone=%zu, track_alloc=%s, leak_check=%s, "
              "boundary_check=%s)",
              options ? options->redzone_size : 0,
              options && options->track_allocations ? "true" : "false",

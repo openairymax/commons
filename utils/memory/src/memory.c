@@ -97,7 +97,7 @@ static void memory_handle_fail(size_t size, const char *tag)
 
     switch (g_state.options.fail_strategy) {
     case MEMORY_FAIL_STRATEGY_ABORT:
-        LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
+        AIRY_LOG_ERROR("内存分配失败：size=%zu, tag=%s", size, tag ? tag : "(null)");
         abort();
         break;
 
@@ -258,7 +258,7 @@ bool memory_init(const memory_options_t *options)
         return true;
     }
 
-    LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
+    AIRY_LOG_INFO("memory: memory_init (zero_memory=%s, alignment=%zu)",
              options && options->zero_memory ? "true" : "false", options ? options->alignment : 0);
 
     if (!memory_lock_init()) {
@@ -288,7 +288,7 @@ void memory_cleanup(void)
         return;
     }
 
-    LOG_INFO(
+    AIRY_LOG_INFO(
         "memory: memory_cleanup (total_alloc=%zu, current=%zu, peak=%zu, allocs=%zu, frees=%zu)",
         g_state.stats.total_allocated, g_state.stats.current_allocated,
         g_state.stats.peak_allocated, g_state.stats.allocation_count, g_state.stats.free_count);
@@ -296,7 +296,7 @@ void memory_cleanup(void)
     memory_lock();
 
     if (g_state.debug_enabled && g_state.debug_list_head != NULL) {
-        LOG_WARN("警告：内存清理时发现未释放的内存块");
+        AIRY_LOG_WARN("警告：内存清理时发现未释放的内存块");
 
         struct memory_debug_info *current = g_state.debug_list_head;
         size_t leak_count = 0;
@@ -305,7 +305,7 @@ void memory_cleanup(void)
         while (current != NULL) {
             leak_count++;
             leak_size += current->size;
-            LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
+            AIRY_LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
                      current->tag ? current->tag : "(null)");
 
             // AIRY_FREE(current->address);
@@ -323,7 +323,7 @@ void memory_cleanup(void)
             current = next;
         }
 
-        LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
+        AIRY_LOG_WARN("Total leaks: %zu blocks, %zu bytes", leak_count, leak_size);
         g_state.debug_list_head = NULL;
     }
 
@@ -602,7 +602,7 @@ bool memory_debug_enable(bool enable)
         return false;
     }
 
-    LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)", enable ? "true" : "false",
+    AIRY_LOG_INFO("memory: memory_debug_enable (enable=%s, prev=%s)", enable ? "true" : "false",
              g_state.debug_enabled ? "true" : "false");
 
     memory_lock();

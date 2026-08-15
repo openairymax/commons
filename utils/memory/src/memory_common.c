@@ -11,6 +11,11 @@
 
 #ifdef _WIN32
 #define malloc_usable_size(ptr) _msize(ptr)
+#elif defined(__APPLE__)
+/* macOS 无 <malloc.h>/malloc_usable_size()，对应 API 是 malloc_size()
+ * （<malloc/malloc.h>）。 */
+#include <malloc/malloc.h>
+#define malloc_usable_size(ptr) malloc_size(ptr)
 #else
 #include <malloc.h>
 #endif

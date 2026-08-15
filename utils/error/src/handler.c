@@ -137,6 +137,43 @@ static const error_info_t g_error_info[] = {
 
     {AIRY_OK, "OK", "Success", "成功", AIRY_ERR_SEVERITY_INFO},
 
+    /* S-1 收敛定稿（2026-08-14）：用户态 POSIX errno 负值码（AIRY_EINVAL=-22
+     * 等，airy_types.h 权威定义）的描述/严重度映射。错误链压栈与返回值
+     * 均为负值，此处直接引用宏（负值）建立映射；[SC] 正幅值宏经
+     * AIRY_ERR_NEG 取负后亦可命中（airymax/error.h 子空间码）。 */
+    {AIRY_EACCES, "ERR_EACCES", "Operation not permitted", "操作不允许",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EEXIST, "ERR_EEXIST", "File exists", "文件已存在", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EFAULT, "ERR_EFAULT", "Bad address", "地址错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EINTR, "ERR_EINTR", "Interrupted system call", "系统调用被中断",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_EINVAL, "ERR_EINVAL", "Invalid argument", "无效参数", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EIO, "ERR_EIO", "I/O error", "I/O 错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EISDIR, "ERR_EISDIR", "Is a directory", "是目录", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ENOENT, "ERR_ENOENT", "No such file or directory", "文件或目录不存在",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ENOMEM, "ERR_ENOMEM", "Out of memory", "内存不足", AIRY_ERR_SEVERITY_CRITICAL},
+    {AIRY_ENOSPC, "ERR_ENOSPC", "No space left on device", "设备空间不足",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ENOTSUP, "ERR_ENOTSUP", "Operation not supported", "操作不支持",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EPERM, "ERR_EPERM", "Operation not permitted", "操作不允许",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERANGE, "ERR_ERANGE", "Result too large", "结果过大", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EBUSY, "ERR_EBUSY", "Device or resource busy", "设备或资源忙",
+     AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ECANCELED, "ERR_ECANCELED", "Operation canceled", "操作已取消",
+     AIRY_ERR_SEVERITY_INFO},
+    {AIRY_EAGAIN, "ERR_EAGAIN", "Try again", "请重试", AIRY_ERR_SEVERITY_WARNING},
+    {-AIRY_EIPC_MAGIC, "ERR_EIPC_MAGIC", "Invalid IPC magic", "IPC magic 无效",
+     AIRY_ERR_SEVERITY_ERROR},
+    {-AIRY_EIPC_OPCODE, "ERR_EIPC_OPCODE", "Unknown IPC opcode", "未知 IPC opcode",
+     AIRY_ERR_SEVERITY_ERROR},
+    {-AIRY_EIPC_PAYLOAD, "ERR_EIPC_PAYLOAD", "IPC payload out of bounds", "IPC payload 越界",
+     AIRY_ERR_SEVERITY_ERROR},
+    {-AIRY_EIPC_TIMEOUT, "ERR_EIPC_TIMEOUT", "IPC timeout", "IPC 超时",
+     AIRY_ERR_SEVERITY_WARNING},
+
     {AIRY_ERR_UNKNOWN, "ERR_UNKNOWN", "Unknown error", "未知错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_INVALID_PARAM, "ERR_INVALID_PARAM", "Invalid parameter", "无效参数",
      AIRY_ERR_SEVERITY_ERROR},
@@ -302,8 +339,12 @@ static const size_t g_error_info_count = sizeof(g_error_info) / sizeof(g_error_i
 
 const char *airy_err_str(airy_err_t code)
 {
+    /* S-1 收敛（2026-08-14）：输入码经 AIRY_ERR_NEG 归一（正幅值宏取负、
+     * 负值原样），使 airy_err_str(AIRY_ENOMEM)（=9）与 airy_err_str(-9)
+     * 均解析为同一描述（A-UEF 宏/返回值双视角一致）。 */
+    airy_err_t norm = AIRY_ERR_NEG(code);
     for (size_t i = 0; i < g_error_info_count; i++) {
-        if (g_error_info[i].code == code) {
+        if (g_error_info[i].code == norm) {
             return g_error_info[i].description_en;
         }
     }
@@ -312,8 +353,9 @@ const char *airy_err_str(airy_err_t code)
 
 airy_err_severity_t airy_err_get_severity(airy_err_t code)
 {
+    airy_err_t norm = AIRY_ERR_NEG(code);
     for (size_t i = 0; i < g_error_info_count; i++) {
-        if (g_error_info[i].code == code) {
+        if (g_error_info[i].code == norm) {
             return g_error_info[i].severity;
         }
     }
@@ -443,15 +485,15 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
 void airy_err_print_chain(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
-        LOG_DEBUG("Error chain is NULL");
+        AIRY_LOG_DEBUG("Error chain is NULL");
         return;
     }
 
-    LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
+    AIRY_LOG_DEBUG("Error chain (depth: %d, latest error: %d)", chain->depth, chain->code);
     for (int i = 0; i < chain->depth; i++) {
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
         (void)ctx;
-        LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
+        AIRY_LOG_DEBUG("  [%d] %s:%d in %s() - %d: %s", i + 1, ctx->file ? ctx->file : "(unknown)",
                   ctx->line, ctx->function ? ctx->function : "(unknown)", ctx->error_code,
                   ctx->message ? ctx->message : "");
     }
@@ -520,8 +562,12 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
         use_lang = AIRY_LANG_EN_US;
     }
 
+    /* S-1 收敛（2026-08-14）：与 airy_err_str 一致，输入码经 AIRY_ERR_NEG
+     * 归一（正幅值宏取负），保证宏/返回值双视角均命中同一描述。 */
+    airy_err_t norm = AIRY_ERR_NEG(code);
+
     for (size_t i = 0; i < g_i18n_entry_count; i++) {
-        if (g_i18n_entries[i].error_code == code) {
+        if (g_i18n_entries[i].error_code == norm) {
             const char *desc = g_i18n_entries[i].descriptions[use_lang];
             if (desc != NULL) {
                 return desc;
@@ -530,7 +576,7 @@ const char *airy_err_str_i18n(airy_err_t code, airy_language_t lang)
     }
 
     for (size_t i = 0; i < g_error_info_count; i++) {
-        if (g_error_info[i].code == code) {
+        if (g_error_info[i].code == norm) {
             switch (use_lang) {
             case AIRY_LANG_ZH_CN:
                 return g_error_info[i].description_zh_cn ? g_error_info[i].description_zh_cn :
@@ -743,7 +789,7 @@ void airy_err_stats_shutdown(void)
     if (g_error_stats_initialized) {
         airy_mtx_destroy(&g_error_stats_mutex);
         g_error_stats_initialized = 0;
-        LOG_INFO("Error stats: mutex destroyed");
+        AIRY_LOG_INFO("Error stats: mutex destroyed");
     }
 #endif
 }

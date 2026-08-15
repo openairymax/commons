@@ -7,7 +7,8 @@
  * @brief 统一错误处理框架
  *
  * 设计原则：
- * 1. 所有错误码为负值，成功为0
+ * 1. 错误返回值恒为「0 或负」（AIRY_EOK=0；A-UEF [SC] 正幅值宏经
+ *    AIRY_ERR_NEG 取负返回，用户态扩展码 AIRY_ERR_* 负值直接返回）
  * 2. 错误码分段管理，避免冲突
  * 3. 支持错误链追踪
  * 4. 线程安全的错误信息存储
@@ -132,33 +133,59 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
 
 
 /**
+ * @brief 统一错误返回值：正幅值错误码取负，负值/零原样。
+ *
+ * S-1 收敛（2026-08-14）：A-UEF [SC] airymax/error.h 的错误码宏为正幅值
+ * （AIRY_EINVAL=5 等），调用方须返回 -AIRY_E* 产生负值；用户态扩展码
+ * （AIRY_ERR_* 及 airy_types.h 的 AIRY_ETIMEDOUT=-110 等）为负值直接返回。
+ * AIRY_ERR_NEG 统一两者：正幅值取负、负值原样、0 不变，保证所有错误返回
+ * 路径的返回值恒为「0 或负」，与 A-UEF 错误空间（负 int32_t）及
+ * [SC] 辅助宏 AIRY_ERR_FAIL(err)=((err)<0) 语义一致。
+ * 仅限传入无副作用的错误码宏。
+ */
+#define AIRY_ERR_NEG(code) ((code) > 0 ? -(code) : (code))
+
+/**
+ * @brief 错误码相等判断：err == -code（正幅值宏）或 err == code（负值码）。
+ *
+ * S-1 收敛（2026-08-14）：调用方拿到的返回值恒为 AIRY_ERR_NEG(code)
+ * （0 或负），而 [SC] 错误码宏为正幅值（AIRY_EINVAL=5）。存量代码
+ * 若直接写 err == AIRY_EINVAL 将永不成立（返回值 -5）。AIRY_ERR_EQ
+ * 统一比较语义：AIRY_ERR_EQ(err, AIRY_EINVAL) 等价 err == -AIRY_EINVAL。
+ */
+#define AIRY_ERR_EQ(err, code) ((err) == AIRY_ERR_NEG(code))
+
+/**
  * @brief 设置错误并返回（自动使用错误码字符串）
  *
  * 统一替代各模块自定义的 *_RET_ERR 宏（ATM_RET_ERR / CUP_RET_ERR / RQ_RET_ERR 等）。
  * 等价于 AIRY_ERROR(code, airy_err_str(code))。
+ * 返回与压栈值均为 AIRY_ERR_NEG(code)（正幅值取负），保证错误链
+ * 与实际返回值一致，airy_err_str 可解析。
  */
 #define AIRY_RET_ERR(code)                                                                \
     do {                                                                                  \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", airy_err_str(code)); \
-        return (code);                                                                    \
+        airy_err_push_ex(AIRY_ERR_NEG(code), __FILE__, __LINE__, __func__, "%s",          \
+                         airy_err_str(AIRY_ERR_NEG(code)));                               \
+        return AIRY_ERR_NEG(code);                                                        \
     } while (0)
 
 /**
  * @brief 设置错误并返回
  */
-#define AIRY_ERROR(code, msg)                                                \
-    do {                                                                     \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        return (code);                                                       \
+#define AIRY_ERROR(code, msg)                                                            \
+    do {                                                                                 \
+        airy_err_push_ex(AIRY_ERR_NEG(code), __FILE__, __LINE__, __func__, "%s", (msg)); \
+        return AIRY_ERR_NEG(code);                                                       \
     } while (0)
 
 /**
  * @brief 设置格式化错误并返回
  */
-#define AIRY_ERROR_FMT(code, fmt, ...)                                              \
-    do {                                                                            \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, (fmt), __VA_ARGS__); \
-        return (code);                                                              \
+#define AIRY_ERROR_FMT(code, fmt, ...)                                                          \
+    do {                                                                                        \
+        airy_err_push_ex(AIRY_ERR_NEG(code), __FILE__, __LINE__, __func__, (fmt), __VA_ARGS__); \
+        return AIRY_ERR_NEG(code);                                                              \
     } while (0)
 
 /**
@@ -167,10 +194,10 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
  * 与 AIRY_ERROR 的区别：返回 NULL 而非错误码，适用于函数返回类型为指针的场景。
  * 错误码通过 error stack 传递，调用者可通过 airy_err_last() 获取。
  */
-#define AIRY_ERROR_NULL(code, msg)                                           \
-    do {                                                                     \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        return NULL;                                                         \
+#define AIRY_ERROR_NULL(code, msg)                                                       \
+    do {                                                                                 \
+        airy_err_push_ex(AIRY_ERR_NEG(code), __FILE__, __LINE__, __func__, "%s", (msg)); \
+        return NULL;                                                                     \
     } while (0)
 
 /**

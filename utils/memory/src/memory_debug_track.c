@@ -214,5 +214,5 @@ void memory_debug_log_operation(const char *operation, void *ptr, size_t size, c
         offset += snprintf(log_buf + offset, sizeof(log_buf) - offset, " at %s:%d (%s)", file, line,
                            function);
     }
-    LOG_DEBUG("%s", log_buf);
+    AIRY_LOG_DEBUG("%s", log_buf);
 }

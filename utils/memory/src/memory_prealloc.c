@@ -167,7 +167,7 @@ int airy_prealloc_init(void)
 
     airy_mtx_unlock(&g_prealloc_lock);
 
-    LOG_INFO("[PREALLOC] Emergency buffer pool initialized: "
+    AIRY_LOG_INFO("[PREALLOC] Emergency buffer pool initialized: "
              "signal=%d, oom=%d, audit=%d, shutdown=%d bytes",
              AIRY_PREALLOC_SIGNAL_BUF_SIZE, AIRY_PREALLOC_OOM_BUF_SIZE,
              AIRY_PREALLOC_AUDIT_BUF_SIZE, AIRY_PREALLOC_SHUTDOWN_BUF_SIZE);
@@ -213,7 +213,7 @@ void airy_prealloc_shutdown(void)
     airy_mtx_unlock(&g_prealloc_lock);
     airy_mtx_destroy(&g_prealloc_lock);
 
-    LOG_INFO("[PREALLOC] Emergency buffer pool shut down");
+    AIRY_LOG_INFO("[PREALLOC] Emergency buffer pool shut down");
 }
 
 void *airy_prealloc_acquire(int category)
@@ -230,7 +230,7 @@ void *airy_prealloc_acquire(int category)
 
     int *in_use = prealloc_get_in_use(category);
     if (!in_use || *in_use) {
-        LOG_WARN("[PREALLOC] Buffer already in use for category %s, "
+        AIRY_LOG_WARN("[PREALLOC] Buffer already in use for category %s, "
                  "cannot acquire",
                  prealloc_category_name(category));
         airy_mtx_unlock(&g_prealloc_lock);
