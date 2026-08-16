@@ -64,6 +64,10 @@ set(SOURCES
     utils/cache/src/cache_common.c
     utils/compat/src/compat.c
     utils/compat/src/compat2.c
+    # POSIX ERE engine for Windows (no <regex.h>); compiled everywhere so
+    # the engine itself is unit-tested on Linux too. POSIX callers use the
+    # system <regex.h> via airy_regex.h and never call airy_re_* symbols.
+    utils/compat/src/airy_regex.c
     utils/cognition/src/cognition_common.c
     utils/strategy/src/strategy_common.c
     # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
