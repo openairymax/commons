@@ -29,6 +29,8 @@ set(UNIT_TEST_SOURCES
     unit/test_airy_ext.c
     # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名）
     unit/test_airy_id.c
+    # Windows POSIX ERE 引擎（Linux 上直测 airy_re_* API）
+    unit/test_airy_regex.c
 )
 
 set(INTEGRATION_TEST_SOURCES
