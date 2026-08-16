@@ -252,6 +252,17 @@ if(NOT AIRY_HAS_CJSON)
     target_compile_definitions(airy_common PRIVATE AIRY_NO_CJSON)
 endif()
 
+# 版本宏注入：airy_version_string()/airy_build_info() 随顶层
+# project(VERSION) 走，避免 compat.c 内硬编码版本与发行版漂移
+# （SSoT：顶层 CMakeLists 的 project(AgentRT VERSION x.y.z)）。
+if(PROJECT_VERSION_MAJOR)
+    target_compile_definitions(airy_common PRIVATE
+        AIRY_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        AIRY_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        AIRY_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        AIRY_VERSION_STRING="${PROJECT_VERSION}")
+endif()
+
 target_link_libraries(airy_common
     PUBLIC Threads::Threads
     PUBLIC airy_compile_defs
