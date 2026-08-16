@@ -24,6 +24,7 @@
 #include <direct.h>
 #include <io.h>
 #include <process.h>
+#include <windows.h>
 #include <sys/stat.h>
 #define strdup _strdup
 #define access _access /* flawfinder: ignore */
@@ -31,6 +32,17 @@
 #define EEXIST 17
 #endif
 #pragma comment(lib, "bcrypt.lib")
+#elif defined(__APPLE__)
+#include <errno.h>
+#include <fcntl.h>
+#include <mach-o/dyld.h>
+#include <pthread.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -90,6 +102,138 @@ static void paths_resolve_all(void)
     paths_resolve_one(AIRY_HOME_SUBDIR_CACHE, g_cache_dir, sizeof(g_cache_dir));
 }
 
+/* 当前可执行文件所在目录（用于定位安装根 install.env：安装布局为
+ * $AIRY_HOME/bin/<bin> 与 $AIRY_HOME/config/install.env 同级上溯）。
+ * 返回 1=成功（out 填充目录，不含尾斜杠），0=失败。 */
+static int paths_self_dir(char *out, size_t out_size)
+{
+#if defined(_WIN32) || defined(_WIN64)
+    char exe[AIRY_PATH_MAX];
+    DWORD n = GetModuleFileNameA(NULL, exe, (DWORD)sizeof(exe));
+    if (n == 0 || n >= sizeof(exe))
+        return 0;
+    char *slash = strrchr(exe, '\\');
+    if (!slash)
+        slash = strrchr(exe, '/');
+    if (!slash)
+        return 0;
+    size_t dlen = (size_t)(slash - exe);
+    if (dlen == 0 || dlen >= out_size)
+        return 0;
+    __builtin_memcpy(out, exe, dlen);
+    out[dlen] = '\0';
+    return 1;
+#elif defined(__APPLE__)
+    uint32_t size = (uint32_t)out_size;
+    if (_NSGetExecutablePath(out, &size) != 0)
+        return 0;
+    char *slash = strrchr(out, '/');
+    if (!slash)
+        return 0;
+    *slash = '\0';
+    return 1;
+#else
+    char link[AIRY_PATH_MAX];
+    ssize_t n = readlink("/proc/self/exe", link, sizeof(link) - 1);
+    if (n <= 0)
+        return 0;
+    link[n] = '\0';
+    char *slash = strrchr(link, '/');
+    if (!slash)
+        return 0;
+    *slash = '\0';
+    if (link[0] == '\0' || strlen(link) >= out_size)
+        return 0;
+    snprintf(out, out_size, "%s", link);
+    return 1;
+#endif
+}
+
+/* 读取单个 install.env 文件的 AIRY_HOME= 行（去引号/换行）。 */
+static int paths_read_install_home(const char *path, char *out, size_t out_size);
+
+/* 从可执行文件位置逐级上溯查找 config/install.env。覆盖两种布局：
+ *   安装布局  $AIRY_HOME/bin/<bin>                → $AIRY_HOME/config/install.env
+ *   dev 布局  <runtime_root>/build/<sub>/<bin>    → <runtime_root>/config/install.env
+ * 上溯上限 6 级防误伤；仅匹配含 AIRY_HOME= 的 install.env（文件内容特异性高）。 */
+static int paths_walkup_install_home(char *out, size_t out_size)
+{
+    char dir[AIRY_PATH_MAX];
+    if (!paths_self_dir(dir, sizeof(dir)))
+        return 0;
+    for (int depth = 0; depth < 6; depth++) {
+        char cand[AIRY_PATH_MAX * 2];
+        snprintf(cand, sizeof(cand), "%s/config/install.env", dir);
+        if (paths_read_install_home(cand, out, out_size))
+            return 1;
+        char *slash = strrchr(dir, '/');
+        if (!slash || slash == dir)
+            break;
+        *slash = '\0';
+    }
+    return 0;
+}
+
+/* 从 install.env（build.sh/install.sh 生成的安装信息文件）发现固化安装根。
+ * 候选顺序与 airymaxrt 启动器一致：可执行文件逐级上溯（安装根/dev 布局）
+ * → $HOME/.airymaxrt → $HOME/.local/share/airymaxrt。仅当环境变量
+ * AIRY_HOME 未设置时兜底：直接运行二进制（无 AIRY_HOME 的独立调用）时
+ * 定位到真实运行时根，避免解析到 $HOME/.airymaxrt 默认值导致 llm.sock
+ * 等路径 404（2026-08-16 实测 airy_cli 直接运行失败）。
+ * 返回 1 表示发现（out 填充 home 路径），0 表示未发现。 */
+static int paths_discover_install_home(char *out, size_t out_size)
+{
+    if (paths_walkup_install_home(out, out_size))
+        return 1;
+
+    const char *uhome = getenv("HOME");
+    if (!uhome || uhome[0] == '\0')
+        return 0;
+
+    char cand[AIRY_PATH_MAX * 2];
+    static const char *const rels[] = {
+        ".airymaxrt/config/install.env",
+        ".local/share/airymaxrt/config/install.env",
+    };
+    for (size_t i = 0; i < sizeof(rels) / sizeof(rels[0]); i++) {
+        snprintf(cand, sizeof(cand), "%s/%s", uhome, rels[i]);
+        if (paths_read_install_home(cand, out, out_size))
+            return 1;
+    }
+    return 0;
+}
+
+/* 读取单个 install.env 文件的 AIRY_HOME= 行（去引号/换行）。 */
+static int paths_read_install_home(const char *path, char *out, size_t out_size)
+{
+    FILE *f = fopen(path, "r");
+    if (!f)
+        return 0;
+    char line[512];
+    while (fgets(line, sizeof(line), f) != NULL) {
+        if (strncmp(line, "AIRY_HOME=", 10) != 0)
+            continue;
+        size_t n = strlen(line);
+        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r'))
+            line[--n] = '\0';
+        const char *v = line + 10;
+        size_t vl = strlen(v);
+        /* 去掉可能存在的引号（install.env 生成时可能带引号） */
+        if (vl >= 2 && v[0] == '"' && v[vl - 1] == '"') {
+            v++;
+            vl -= 2;
+        }
+        if (vl > 0 && vl < out_size) {
+            __builtin_memcpy(out, v, vl);
+            out[vl] = '\0';
+        }
+        fclose(f);
+        return 1;
+    }
+    fclose(f);
+    return 0;
+}
+
 static void paths_ensure_resolved(void)
 {
     if (g_paths_initialized)
@@ -99,6 +243,8 @@ static void paths_ensure_resolved(void)
         const char *home_env = getenv("AIRY_HOME");
         if (home_env && home_env[0] != '\0') {
             snprintf(g_home_dir, sizeof(g_home_dir), "%s", home_env);
+        } else if (paths_discover_install_home(g_home_dir, sizeof(g_home_dir))) {
+            /* 安装根发现（install.env）：解析完成，跳过默认值分支 */
         } else {
             const char *user_home = getenv("HOME");
             if (user_home && user_home[0] != '\0') {
