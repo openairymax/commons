@@ -162,7 +162,20 @@ void airy_debug_break(void)
 #endif
 }
 
-static const char *g_version_string = "0.1.1";
+#ifndef AIRY_VERSION_STRING
+#define AIRY_VERSION_STRING "0.1.1"
+#endif
+#ifndef AIRY_VERSION_MAJOR
+#define AIRY_VERSION_MAJOR 0
+#endif
+#ifndef AIRY_VERSION_MINOR
+#define AIRY_VERSION_MINOR 0
+#endif
+#ifndef AIRY_VERSION_PATCH
+#define AIRY_VERSION_PATCH 5
+#endif
+
+static const char *g_version_string = AIRY_VERSION_STRING;
 
 const char *airy_version_string(void)
 {
@@ -175,8 +188,8 @@ const char *airy_build_info(void)
 
     if (build_info[0] == '\0') {
         snprintf(build_info, sizeof(build_info),
-                 "AgentRT v%s | Compiler: %s | Platform: %s | Build: %s %s", "0.1.1", "gcc",
-                 "linux", __DATE__, __TIME__);
+                 "AgentRT v%s | Compiler: %s | Platform: %s | Build: %s %s", AIRY_VERSION_STRING,
+                 AIRY_COMPILER_NAME, AIRY_PLATFORM_NAME, __DATE__, __TIME__);
     }
 
     return build_info;

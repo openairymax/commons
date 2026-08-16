@@ -152,6 +152,17 @@ static int paths_self_dir(char *out, size_t out_size)
 /* 读取单个 install.env 文件的 AIRY_HOME= 行（去引号/换行）。 */
 static int paths_read_install_home(const char *path, char *out, size_t out_size);
 
+/* 最后一个路径分隔符（Windows 兼容 '\\' 与 '/'，POSIX 仅 '/'）。 */
+static char *paths_last_sep(char *s)
+{
+    char *last = NULL;
+    for (; *s; s++) {
+        if (*s == '/' || *s == '\\')
+            last = s;
+    }
+    return last;
+}
+
 /* 从可执行文件位置逐级上溯查找 config/install.env。覆盖两种布局：
  *   安装布局  $AIRY_HOME/bin/<bin>                → $AIRY_HOME/config/install.env
  *   dev 布局  <runtime_root>/build/<sub>/<bin>    → <runtime_root>/config/install.env
@@ -166,12 +177,23 @@ static int paths_walkup_install_home(char *out, size_t out_size)
         snprintf(cand, sizeof(cand), "%s/config/install.env", dir);
         if (paths_read_install_home(cand, out, out_size))
             return 1;
-        char *slash = strrchr(dir, '/');
-        if (!slash || slash == dir)
+        char *sep = paths_last_sep(dir);
+        if (!sep || sep == dir)
             break;
-        *slash = '\0';
+        *sep = '\0';
     }
     return 0;
+}
+
+/* 用户主目录：Windows 用 USERPROFILE（HOME 通常未设置），POSIX 用 HOME。 */
+static const char *paths_user_home(void)
+{
+#if AIRY_PLATFORM_WINDOWS
+    const char *h = getenv("USERPROFILE");
+    if (h && h[0] != '\0')
+        return h;
+#endif
+    return getenv("HOME");
 }
 
 /* 从 install.env（build.sh/install.sh 生成的安装信息文件）发现固化安装根。
@@ -186,7 +208,7 @@ static int paths_discover_install_home(char *out, size_t out_size)
     if (paths_walkup_install_home(out, out_size))
         return 1;
 
-    const char *uhome = getenv("HOME");
+    const char *uhome = paths_user_home();
     if (!uhome || uhome[0] == '\0')
         return 0;
 
@@ -246,7 +268,7 @@ static void paths_ensure_resolved(void)
         } else if (paths_discover_install_home(g_home_dir, sizeof(g_home_dir))) {
             /* 安装根发现（install.env）：解析完成，跳过默认值分支 */
         } else {
-            const char *user_home = getenv("HOME");
+            const char *user_home = paths_user_home();
             if (user_home && user_home[0] != '\0') {
                 snprintf(g_home_dir, sizeof(g_home_dir), "%s/%s", user_home, AIRY_DEFAULT_HOME_DIR);
             } else {
@@ -333,11 +355,12 @@ static int paths_mkdir_p(const char *path)
     if (len == 0)
         return AIRY_ERR_INVALID_PARAM;
 
-    while (len > 1 && tmp[len - 1] == '/')
+    while (len > 1 && (tmp[len - 1] == '/' || tmp[len - 1] == '\\'))
         tmp[--len] = '\0';
 
+    /* 同时识别 '/' 与 '\\'，兼容 Windows 风格 AIRY_HOME 路径 */
     for (char *p = tmp + 1; *p; p++) {
-        if (*p != '/')
+        if (*p != '/' && *p != '\\')
             continue;
         *p = '\0';
 #if AIRY_PLATFORM_WINDOWS
