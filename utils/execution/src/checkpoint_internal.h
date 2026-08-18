@@ -27,6 +27,10 @@
 #define MAX_LINE_LENGTH 8192
 #define MAX_VALUE_LENGTH 4096
 
+/* 默认 checkpoint 存储目录：收敛到 AIRY_HOME 数据目录（airy_data_dir() →
+ * $AIRY_HOME/data/checkpoints），避免落盘到进程 CWD。返回静态缓冲。 */
+const char *airy_checkpoint_default_dir(void);
+
 extern char g_checkpoint_storage_path[MAX_CHECKPOINT_PATH];
 extern atomic_int g_checkpoint_initialized;
 extern airy_mtx_t g_checkpoint_mutex;

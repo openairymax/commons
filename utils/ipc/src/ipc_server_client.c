@@ -287,7 +287,9 @@ airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
         struct sockaddr_un addr;
         AIRY_MEMSET(&addr, 0, sizeof(addr));
         addr.sun_family = AF_UNIX;
-        const char *path = client->config.name ? client->config.name : AIRY_TMP_DIR "/ipc";
+        /* 默认 socket 收敛到 AIRY_HOME/run（airy_runtime_dir() 权威路径），
+         * 避免落盘到进程 CWD 或编译期 FHS 宏路径 */
+        const char *path = client->config.name ? client->config.name : airy_runtime_dir_socket("ipc");
         AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
         if (timeout_ms > 0 && client->config.nonblocking) {

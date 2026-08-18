@@ -29,7 +29,7 @@
 
 #include <logging.h> /* LOG_ERROR/LOG_INFO/LOG_WARN/LOG_DEBUG → log_write() */
 #include <types.h> /* AIRY_SUCCESS */
-#include "platform.h" /* airy_time_ns/airy_mtx_* */
+#include <platform.h> /* AIRY_HOME 权威路径：airy_data_dir() 收敛 checkpoint 落盘；airy_time_ns/airy_mtx_* */
 #include "error.h" /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
 #include <ctype.h>
 #include <stdio.h>
@@ -172,11 +172,18 @@ static airy_err_t copy_nodes(airy_task_checkpoint_t *cp, char **completed, size_
 }
 
 /* ==================== Public API ==================== */
+const char *airy_checkpoint_default_dir(void)
+{
+    static char g_cp_dir[MAX_CHECKPOINT_PATH];
+    snprintf(g_cp_dir, sizeof(g_cp_dir), "%s/" CHECKPOINT_DIRECTORY, airy_data_dir());
+    return g_cp_dir;
+}
+
 airy_err_t airy_checkpoint_init(const char *storage_path)
 {
     if (g_checkpoint_initialized)
         return AIRY_SUCCESS;
-    const char *path = storage_path ? storage_path : "./" CHECKPOINT_DIRECTORY;
+    const char *path = storage_path ? storage_path : airy_checkpoint_default_dir();
     size_t len = strlen(path);
     if (len == 0 || len >= sizeof(g_checkpoint_storage_path)) {
         AIRY_LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — invalid storage path "
