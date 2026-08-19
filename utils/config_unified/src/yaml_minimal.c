@@ -183,6 +183,9 @@ void yaml_destroy_chain(yaml_document_t *doc)
 {
     if (!doc)
         return;
+    /* 多文档解析（yaml_parse_multi）中所有文档共享同一 source 缓冲区：
+     * 置 NULL 避免双重释放，因此必须由链首在销毁全部文档后释放一次。 */
+    char *shared_source = doc->source;
     yaml_document_t *current = doc;
     while (current) {
         yaml_document_t *next = current->next;
@@ -191,6 +194,7 @@ void yaml_destroy_chain(yaml_document_t *doc)
         yaml_destroy(current);
         current = next;
     }
+    AIRY_FREE(shared_source);
 }
 
 int yaml_parse_file(yaml_document_t *doc, const char *filepath)
