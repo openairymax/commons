@@ -192,7 +192,10 @@ static inline void airy_log_shutdown(void)
  */
 static inline void airy_log_set_level(airy_log_level_t level)
 {
-    (void)level;
+    /* Forward to the real module-level filter ("*" matches every module),
+     * instead of a no-op: callers (devtools tests, docs) expect the level
+     * change to take effect. */
+    (void)log_set_module_level("*", (log_level_t)level);
 }
 
 /**
@@ -201,6 +204,14 @@ static inline void airy_log_set_level(airy_log_level_t level)
  */
 static inline airy_log_level_t airy_log_get_level(void)
 {
+    /* Read back the "*" filter installed by airy_log_set_level; fall back
+     * to the default level when none is configured. */
+    log_module_info_t info[1];
+    size_t n = log_get_module_info(info, 1);
+    for (size_t i = 0; i < n; i++) {
+        if (info[i].pattern[0] == '*' && info[i].pattern[1] == '\0')
+            return (airy_log_level_t)info[i].level;
+    }
     return (airy_log_level_t)LOG_LEVEL_INFO;
 }
 
