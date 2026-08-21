@@ -16,6 +16,12 @@
  * Integrity check: airy_task_desc_validate() checks magic/version/reserved/
  * CRC32 in order, consistent with the agentrt-linux cooperation contract
  * (see CHANGELOG "task descriptor integrity check").
+ *
+ * 命名说明（2026-08-21）：struct 命名为 airy_task_desc_hdr，与
+ * airymax/sched.h 的 64B struct airy_task_desc（调度运行时描述符，
+ * AIRY_TASK_MAGIC）区分——两结构 magic 值相同（'AGTS'）但布局不同
+ * （本头 128B 任务提交/分发描述符 vs sched.h 64B 调度描述符），
+ * 属不同契约域，不得混用。
  */
 
 #ifndef _UAPI_AIRYMAX_TASK_DESC_H
@@ -40,7 +46,7 @@
 #define AIRY_TASK_FLAG_DETACHED 0x0002
 #define AIRY_TASK_FLAG_RESERVED 0xFFFC
 
-struct airy_task_desc {
+struct airy_task_desc_hdr {
     __u32 magic; /* offset  0:  AIRY_TASK_DESC_MAGIC ('AGTS') */
     __u16 version;
     __u16 opcode;
@@ -57,22 +63,22 @@ struct airy_task_desc {
     __u8 reserved[56];
 } __attribute__((aligned(64)));
 
-_Static_assert(sizeof(struct airy_task_desc) == AIRY_TASK_DESC_HDR_SIZE,
+_Static_assert(sizeof(struct airy_task_desc_hdr) == AIRY_TASK_DESC_HDR_SIZE,
                "airy_task_desc must be exactly 128 bytes");
 
-_Static_assert(offsetof(struct airy_task_desc, magic) == 0,
+_Static_assert(offsetof(struct airy_task_desc_hdr, magic) == 0,
                "airy_task_desc.magic must be at offset 0");
-_Static_assert(offsetof(struct airy_task_desc, version) == 4,
+_Static_assert(offsetof(struct airy_task_desc_hdr, version) == 4,
                "airy_task_desc.version must be at offset 4");
-_Static_assert(offsetof(struct airy_task_desc, opcode) == 6,
+_Static_assert(offsetof(struct airy_task_desc_hdr, opcode) == 6,
                "airy_task_desc.opcode must be at offset 6");
-_Static_assert(offsetof(struct airy_task_desc, task_id) == 8,
+_Static_assert(offsetof(struct airy_task_desc_hdr, task_id) == 8,
                "airy_task_desc.task_id must be at offset 8");
-_Static_assert(offsetof(struct airy_task_desc, payload_len) == 56,
+_Static_assert(offsetof(struct airy_task_desc_hdr, payload_len) == 56,
                "airy_task_desc.payload_len must be at offset 56");
-_Static_assert(offsetof(struct airy_task_desc, crc32) == 68,
+_Static_assert(offsetof(struct airy_task_desc_hdr, crc32) == 68,
                "airy_task_desc.crc32 must be at offset 68");
-_Static_assert(offsetof(struct airy_task_desc, reserved) == 72,
+_Static_assert(offsetof(struct airy_task_desc_hdr, reserved) == 72,
                "airy_task_desc.reserved must be at offset 72");
 
 /* ─── API ────────────────────────────────────────────────────────────── */
@@ -108,7 +114,7 @@ __u32 airy_task_desc_crc32(const void *data, size_t len);
  * @param priority        scheduling priority
  * @return AIRY_EOK on success; AIRY_EINVAL on invalid arguments
  */
-airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u64 task_id,
+airy_err_t airy_task_desc_create(struct airy_task_desc_hdr *desc, __u16 opcode, __u64 task_id,
                                  __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,
                                  __u64 dst_task, const void *payload, __u32 payload_len,
                                  __u32 flags, __u32 priority);
@@ -131,7 +137,7 @@ airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u6
  * @param payload_len provided payload length (must be >= desc->payload_len)
  * @return AIRY_EOK on success; otherwise the corresponding error code
  */
-airy_err_t airy_task_desc_validate(const struct airy_task_desc *desc, const void *payload,
+airy_err_t airy_task_desc_validate(const struct airy_task_desc_hdr *desc, const void *payload,
                                    __u32 payload_len);
 
 #endif /* _UAPI_AIRYMAX_TASK_DESC_H */
