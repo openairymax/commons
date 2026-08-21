@@ -171,6 +171,7 @@ extern "C" {
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <time.h> /* time_t / struct tm（airy_localtime_r） */
 #pragma comment(lib, "ws2_32.lib")
 #else
 #include <arpa/inet.h>
@@ -512,6 +513,14 @@ uint64_t airy_time_ms(void);
  * @param ms milliseconds
  */
 void airy_sleep_ms(uint32_t ms);
+
+/**
+ * @brief Thread-safe local time conversion (localtime_r/localtime_s unified)
+ * @param timep pointer to the time to convert
+ * @param result buffer for the broken-down time
+ * @return 0 on success, -1 on failure
+ */
+int airy_localtime_r(const time_t *timep, struct tm *result);
 
 
 /**
