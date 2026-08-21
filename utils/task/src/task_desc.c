@@ -55,13 +55,13 @@ __u32 airy_task_desc_crc32(const void *data, size_t len)
  * The crc32 field itself (offset 68) is excluded, consistent with the
  * IPC header checksum convention (header[0:52)+payload).
  */
-static __u32 task_desc_compute_crc(const struct airy_task_desc *desc, const void *payload,
+static __u32 task_desc_compute_crc(const struct airy_task_desc_hdr *desc, const void *payload,
                                    __u32 payload_len)
 {
     __u32 crc = 0xFFFFFFFFu;
     const __u8 *p = (const __u8 *)desc;
 
-    for (size_t i = 0; i < offsetof(struct airy_task_desc, crc32); i++) {
+    for (size_t i = 0; i < offsetof(struct airy_task_desc_hdr, crc32); i++) {
         crc ^= p[i];
         for (int j = 0; j < 8; j++) {
             if (crc & 1)
@@ -105,7 +105,7 @@ static __u64 task_desc_monotonic_ns(void)
 }
 
 
-airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u64 task_id,
+airy_err_t airy_task_desc_create(struct airy_task_desc_hdr *desc, __u16 opcode, __u64 task_id,
                                  __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,
                                  __u64 dst_task, const void *payload, __u32 payload_len,
                                  __u32 flags, __u32 priority)
@@ -135,7 +135,7 @@ airy_err_t airy_task_desc_create(struct airy_task_desc *desc, __u16 opcode, __u6
     return AIRY_EOK;
 }
 
-airy_err_t airy_task_desc_validate(const struct airy_task_desc *desc, const void *payload,
+airy_err_t airy_task_desc_validate(const struct airy_task_desc_hdr *desc, const void *payload,
                                    __u32 payload_len)
 {
     if (!desc)
