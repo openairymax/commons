@@ -52,7 +52,10 @@ extern "C" {
 #elif defined(__linux__)
 #define AIRY_PLATFORM_LINUX 1
 #define AIRY_PLATFORM_NAME "Linux"
-#if defined(__x86_64__) || defined(__aarch64__)
+/* 位宽判定用标准宏而非架构枚举：UINTPTR_MAX==UINT64_MAX 覆盖
+ * x86_64/aarch64/riscv64/ppc64 等全部 64 位架构（此前 riscv64 未列入
+ * x86_64/aarch64 枚举，被判为 32 位，导致指针/原子/地址类型错配）。 */
+#if UINTPTR_MAX == UINT64_MAX
 #define AIRY_PLATFORM_BITS 64
 #else
 #define AIRY_PLATFORM_BITS 32
