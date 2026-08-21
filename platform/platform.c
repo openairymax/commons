@@ -201,6 +201,17 @@ void airy_sleep_ms(uint32_t ms)
 #endif
 }
 
+int airy_localtime_r(const time_t *timep, struct tm *result)
+{
+#ifdef _WIN32
+    if (localtime_s(result, timep) != 0)
+        return -1;
+    return 0;
+#else
+    return localtime_r(timep, result) ? 0 : -1;
+#endif
+}
+
 static AIRY_THREAD_LOCAL unsigned int g_random_seed = 0;
 static AIRY_THREAD_LOCAL int g_random_initialized = 0;
 
