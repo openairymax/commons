@@ -284,6 +284,25 @@ int platform_semaphore_timedwait(platform_semaphore_t *semaphore, uint32_t timeo
 #ifdef _WIN32
     DWORD ret = WaitForSingleObject(*semaphore, timeout_ms);
     return (ret == WAIT_OBJECT_0) ? 0 : -1;
+#elif defined(__APPLE__) && defined(__MACH__)
+    /* macOS 无 sem_timedwait：sem_trywait 轮询 + 短眠近似超时，
+     * 返回语义与 Linux 分支一致（0=获得信号量，-1=超时/失败） */
+    const uint32_t step_ms = 2;
+    uint32_t waited = 0;
+    while (waited < timeout_ms) {
+        if (sem_trywait(semaphore) == 0) {
+            return 0;
+        }
+        if (errno != EAGAIN) {
+            return -1;
+        }
+        struct timespec ts;
+        ts.tv_sec = 0;
+        ts.tv_nsec = step_ms * 1000000L;
+        nanosleep(&ts, NULL);
+        waited += step_ms;
+    }
+    return -1;
 #else
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
