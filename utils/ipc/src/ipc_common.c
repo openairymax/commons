@@ -42,6 +42,7 @@
 #include "ipc_common_internal.h"
 
 #ifndef _WIN32
+#include <errno.h>
 #include <poll.h>
 #endif
 
@@ -75,6 +76,30 @@ uint32_t ipc_calc_crc32(const void *data, size_t len)
     }
 
     return ~crc;
+}
+
+/* 循环接收直到收满 len 字节（0=成功，-1=失败/对端关闭）。
+ * macOS 无 MSG_WAITALL，且可移植实现能处理 recv 被 EINTR 打断。 */
+static int ipc_recv_full(int fd, void *buf, size_t len)
+{
+    uint8_t *p = (uint8_t *)buf;
+    size_t got = 0;
+
+    while (got < len) {
+        ssize_t n = recv(fd, p + got, len - got, 0);
+        if (n > 0) {
+            got += (size_t)n;
+            continue;
+        }
+        if (n == 0) {
+            return -1; /* 对端关闭 */
+        }
+        if (errno == EINTR) {
+            continue;
+        }
+        return -1;
+    }
+    return 0;
 }
 
 bool g_ipc_initialized = false;
@@ -561,8 +586,7 @@ airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_
         }
 
         uint32_t net_len = 0;
-        ssize_t n = recv(channel->socket_fd, &net_len, sizeof(net_len), MSG_WAITALL);
-        if (n != (ssize_t)sizeof(net_len)) {
+        if (ipc_recv_full(channel->socket_fd, &net_len, sizeof(net_len)) != 0) {
             return AIRY_EIO;
         }
         uint32_t payload_len = ntohl(net_len);
@@ -571,17 +595,16 @@ airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_
                 channel->internal_buffer = AIRY_MALLOC(channel->config.buffer_size);
             }
             if (channel->internal_buffer) {
-                n = recv(channel->socket_fd, channel->internal_buffer,
-                         payload_len > channel->config.buffer_size ? channel->config.buffer_size :
-                                                                     payload_len,
-                         MSG_WAITALL);
-                if (n > 0) {
+                size_t want = payload_len > channel->config.buffer_size
+                                  ? (size_t)channel->config.buffer_size
+                                  : (size_t)payload_len;
+                if (ipc_recv_full(channel->socket_fd, channel->internal_buffer, want) == 0) {
                     AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
                     response->header.type = IPC_MSG_RESPONSE;
                     response->header.correlation_id = request->header.msg_id;
-                    response->header.payload_len = (uint64_t)n;
+                    response->header.payload_len = (uint64_t)want;
                     response->payload = channel->internal_buffer;
-                    response->payload_size = (uint64_t)n;
+                    response->payload_size = (uint64_t)want;
                     channel->stats.messages_received++;
                     return AIRY_SUCCESS;
                 }

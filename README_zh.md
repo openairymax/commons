@@ -21,7 +21,7 @@
 
 作为项目类型定义（`airy_types.h`）和统一错误码契约（`airy_err_t`）的权威来源，commons 保证跨模块类型一致性，消除跨模块类型冲突。其设计目标是：零依赖抽象（平台无关的类型系统和接口定义使内核与外围代码解耦）、统一错误契约、高性能基础设施（内存池、无锁队列、零拷贝流水线）、内置可观测性（标准化的日志/指标/追踪捕获接口）、默认安全的 I/O 路径（参数校验、边界检查、资源限制）。
 
-commons 构建单一静态库 `airy_common`，聚合 24+ 工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
+commons 构建单一静态库 `airy_common`，聚合 32 个工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
 
 ## 模块分类
 
@@ -46,7 +46,7 @@ commons/
 │   └── platform.c               # 平台抽象实现
 ├── include/                     # 全局公共头文件
 │   └── airy_types.h          # 统一类型与错误码定义（权威来源）
-├── utils/                       # 工具模块集合（24+ 模块）
+├── utils/                       # 工具模块集合（32 个模块）
 │   ├── include/                 # 跨模块共享头文件
 │   │   ├── atomic_compat.h      # 跨平台原子操作兼容层
 │   │   └── check.h              # 通用检查宏
@@ -62,7 +62,7 @@ commons/
 │   ├── error/                   # 错误处理框架
 │   ├── types/                   # 通用类型定义与转换
 │   ├── config_unified/          # 统一配置（三级：Core → Source → Service；yaml_minimal）
-│   ├── execution/               # 命令执行引擎（校验、跨平台、检查点）
+│   ├── execution/               # 任务检查点（checkpoint：持久化/会话/快照）
 │   ├── io/                      # 文件 I/O 工具
 │   ├── cache/                   # 缓存管理（LRU / TTL）
 │   ├── compat/                  # 跨版本 / 跨平台兼容
@@ -72,10 +72,16 @@ commons/
 │   ├── security/                # 输入校验与安全过滤
 │   ├── resource/                # 资源保护与配额（guard、quota）
 │   ├── uuid/                    # UUID 生成与解析
-│   ├── print/                   # 打印 / 格式化助手
+│   ├── print/                   # 打印 / 格式化助手（统一打印宏）
 │   ├── compliance/              # 合规校验与策略执行
 │   ├── quality/                 # 代码质量检查
-│   └── sd/                      # 安全删除 / 安全处置助手
+│   ├── sd/                      # 安全删除 / 服务发现（共享内存跨进程注册表）
+│   ├── effect/                  # 回卷机制（airy_effect：注册即副作用、逆序回滚）
+│   ├── ext/                     # 统一扩展注册表（LLM/tool/storage/sandbox/memory 五域）
+│   ├── id/                      # 品牌化 ID 生成（trace_id / msg_id）
+│   ├── task/                    # A-TD 任务描述符（创建 + CRC32 完整性校验）
+│   ├── cjson/                   # cJSON 三步宏辅助层（CJSON_PARSE_GUARD 等）
+│   └── ime/                     # 轻量内置输入法（全拼词典，纯 C）
 └── tests/                       # 测试套件
     ├── utils/                   # 测试工具框架
     ├── unit/                    # 单元测试
@@ -98,7 +104,7 @@ commons/
 
 统一错误码系统（`AIRY_E*`）覆盖 29 个标准错误，包括无效参数、内存不足、权限拒绝、超时、I/O 错误、协议错误、配额超限等。
 
-### 工具模块（24+）
+### 工具模块（32 个）
 
 | 模块 | 路径 | 职责 |
 |------|------|------|
@@ -114,7 +120,7 @@ commons/
 | error | `utils/error/` | 错误处理框架（handler） |
 | types | `utils/types/` | 通用类型定义与转换 |
 | config_unified | `utils/config_unified/` | 三级配置（Core → Source → Service）；yaml_minimal 回退 |
-| execution | `utils/execution/` | 命令执行引擎（校验、跨平台、检查点） |
+| execution | `utils/execution/` | 任务检查点（checkpoint：持久化/会话/快照/统计） |
 | io | `utils/io/` | 文件 I/O 工具（file_utils） |
 | cache | `utils/cache/` | 缓存管理（LRU / TTL）；cache_common |
 | compat | `utils/compat/` | 跨版本 / 跨平台兼容（compat、compat2） |
@@ -124,10 +130,16 @@ commons/
 | security | `utils/security/` | 输入校验与安全过滤（input_validator） |
 | resource | `utils/resource/` | 资源保护与配额（resource_guard、resource_quota） |
 | uuid | `utils/uuid/` | UUID 生成与解析（uuid_generator） |
-| print | `utils/print/` | 打印 / 格式化助手 |
+| print | `utils/print/` | 运行时统一打印宏（airy_print_*，委托 log_write） |
 | compliance | `utils/compliance/` | 合规校验与策略执行 |
 | quality | `utils/quality/` | 代码质量检查 |
-| sd | `utils/sd/` | 安全删除 / 安全处置助手 |
+| sd | `utils/sd/` | 跨进程服务发现（共享内存注册表、心跳/过期/负载均衡） |
+| effect | `utils/effect/` | 回卷机制（airy_effect：注册即副作用、逆序回滚） |
+| ext | `utils/ext/` | 统一扩展注册表（LLM/tool/storage/sandbox/memory 五域） |
+| id | `utils/id/` | 品牌化 ID 生成（trace_id / msg_id） |
+| task | `utils/task/` | A-TD 任务描述符（创建 + CRC32 完整性校验） |
+| cjson | `utils/cjson/` | cJSON 三步宏辅助层（CJSON_PARSE_GUARD 等） |
+| ime | `utils/ime/` | 轻量内置输入法（全拼词典，纯 C，随安装分发） |
 
 ### 平台抽象层（`platform/`）
 
@@ -178,12 +190,13 @@ commons/
   ┌────────────────────────────────────────────┐
   │  airy_types.h  （权威类型）              │
   │  platform/        （OS 抽象）               │
-  │  utils/           （24+ 工具模块）           │
+  │  utils/           （32 个工具模块）          │
   │   logging sync memory string ipc token     │
   │   cost observability platform error types  │
   │   config_unified execution io cache compat │
   │   cognition strategy network security      │
   │   resource uuid print compliance quality sd│
+  │   effect ext id task cjson ime             │
   └────────────────────────────────────────────┘
         ▲     ▲     ▲     ▲     ▲     ▲
         │     │     │     │     │     │
@@ -257,7 +270,7 @@ commons 通过统一类型头和各模块公共头暴露接口。权威入口：
 - `platform/include/platform.h` —— 平台检测与基础定义
 - `utils/include/atomic_compat.h` —— 跨平台原子操作（11 种类型，3 种后端）
 - `utils/include/check.h` —— 通用检查宏
-- 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/memory.h`、`utils/string/include/string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network.h`、`utils/security/include/security.h`、`utils/resource/include/resource.h`、`utils/uuid/include/uuid.h`、`utils/cache/include/cache.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc.h`、`utils/execution/include/execution.h`、`utils/cognition/include/cognition.h`、`utils/strategy/include/strategy.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/print.h`、`utils/compliance/include/compliance.h`、`utils/quality/include/quality.h`、`utils/sd/include/sd.h`
+- 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/memory.h`、`utils/string/include/string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network.h`、`utils/security/include/security.h`、`utils/resource/include/resource.h`、`utils/uuid/include/uuid.h`、`utils/cache/include/cache.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc.h`、`utils/execution/include/checkpoint.h`、`utils/cognition/include/cognition.h`、`utils/strategy/include/strategy.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/airy_print.h`、`utils/compliance/include/compliance.h`、`utils/quality/include/quality.h`、`utils/sd/include/service_discovery.h`、`utils/effect/include/airy_effect.h`、`utils/ext/include/airy_ext.h`、`utils/cjson/include/cjson_helpers.h`、`utils/ime/include/airy_ime.h`
 
 内存宏（`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`）和严格合规的不安全函数投毒（如通过 `utils/string` 替换 `strcpy`）是项目级的。
 

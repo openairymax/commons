@@ -9,11 +9,13 @@
 #include "../memory/include/airy_memory.h"
 #include "io.h"
 #include "airy_memory.h"
+#include "airy_dirent.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "error.h"
 
 #ifdef _WIN32
@@ -23,8 +25,6 @@
 #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #else
-#include "airy_dirent.h"
-
 #include <unistd.h>
 #endif
 
@@ -262,4 +262,84 @@ int airy_io_mkdir_p(const char *path, int mode)
 #else
     return mkdir(path_copy, mode) == 0 ? 0 : -1;
 #endif
+}
+
+/**
+ * @brief Recursively delete a directory tree (cross-platform).
+ *
+ * Used by tests and runtime cleanup to remove temporary workspaces under
+ * $AIRY_HOME/tmp without leaving stale artifacts. Deleting a non-existent
+ * path is a no-op success (idempotent).
+ *
+ * @param path Directory path
+ * @return 0 on success (including not-exists), AIRY_EINVAL on failure
+ */
+int airy_io_remove_dir_recursive(const char *path)
+{
+    if (!path || !path[0])
+        return AIRY_EINVAL;
+
+    struct stat st = {0};
+    if (stat(path, &st) != 0)
+        return 0; /* not exists → idempotent success */
+
+    if (!S_ISDIR(st.st_mode))
+        return (remove(path) == 0) ? 0 : AIRY_EINVAL;
+
+    DIR *dir = opendir(path);
+    if (!dir)
+        return AIRY_EINVAL;
+
+    struct dirent *entry;
+    char child[1024];
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+        snprintf(child, sizeof(child), "%s/%s", path, entry->d_name);
+        struct stat cst = {0};
+        if (stat(child, &cst) != 0)
+            continue;
+        if (S_ISDIR(cst.st_mode)) {
+            if (airy_io_remove_dir_recursive(child) != 0) {
+                closedir(dir);
+                return AIRY_EINVAL;
+            }
+        } else {
+            if (remove(child) != 0) {
+                closedir(dir);
+                return AIRY_EINVAL;
+            }
+        }
+    }
+    closedir(dir);
+#ifdef _WIN32
+    if (_rmdir(path) != 0)
+        return AIRY_EINVAL;
+#else
+    if (rmdir(path) != 0)
+        return AIRY_EINVAL;
+#endif
+    return 0;
+}
+
+/**
+ * @brief Delete a single file (cross-platform).
+ *
+ * Deleting a non-existent file is a no-op success (idempotent), matching
+ * the semantics of airy_io_remove_dir_recursive.
+ *
+ * @param path File path
+ * @return 0 on success (including not-exists), AIRY_EINVAL on failure
+ */
+int airy_io_remove_file(const char *path)
+{
+    if (!path || !path[0])
+        return AIRY_EINVAL;
+
+    if (remove(path) != 0) {
+        if (errno == ENOENT)
+            return 0; /* not exists → idempotent success */
+        return AIRY_EINVAL;
+    }
+    return 0;
 }

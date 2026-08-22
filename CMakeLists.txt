@@ -107,6 +107,8 @@ set(SOURCES
     utils/ext/src/airy_providers.c
     # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名，类型层不可互赋）
     utils/id/src/airy_id.c
+    # 阶段 4: 轻量内置拼音输入法词典（全拼，本地只读，无 IME 设备中文输入）
+    utils/ime/src/airy_ime.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
@@ -168,6 +170,8 @@ set(_inc_dirs
     utils/effect/include
     # 阶段 2: 统一扩展注册表头
     utils/ext/include
+    # 阶段 4: 内置拼音输入法头
+    utils/ime/include
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
     include
 )
@@ -242,6 +246,8 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/effect/include
     # 阶段 2: 统一扩展注册表头
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext/include
+    # 阶段 4: 内置拼音输入法头
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ime/include
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2，6 核心 + 1 补充 + uapi_compat）
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -314,6 +320,9 @@ install(DIRECTORY utils/cjson/include/ DESTINATION include/agentrt/utils/cjson)
 install(DIRECTORY utils/effect/include/ DESTINATION include/agentrt/utils/effect)
 # 阶段 2: 统一扩展注册表头安装
 install(DIRECTORY utils/ext/include/ DESTINATION include/agentrt/utils/ext)
+# 阶段 4: 内置拼音输入法头与词典安装（词典随安装分发，本地只读）
+install(DIRECTORY utils/ime/include/ DESTINATION include/agentrt/ime)
+install(FILES utils/ime/data/airy_ime.dat DESTINATION share/agentrt/ime)
 # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
 install(DIRECTORY include/airymax/ DESTINATION include/airymax)
 

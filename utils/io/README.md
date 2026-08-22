@@ -43,6 +43,15 @@ io/
 | `airy_io_list_files(path, out_files, out_count)` | 列出目录下所有文件（不包含子目录），返回 0 成功 |
 | `airy_io_free_list(files, count)` | 释放 `airy_io_list_files` 返回的文件列表 |
 
+### 删除操作
+
+| 函数 | 说明 |
+|------|------|
+| `airy_io_remove_file(path)` | 删除单个文件，返回 0 成功（文件不存在按成功处理） |
+| `airy_io_remove_dir_recursive(path)` | 递归删除目录及其内容（跨平台），返回 0 成功 |
+
+> 删除 API 支撑 coding 场景的文件文档增删改查闭环（CRUD 端到端测试覆盖）。
+
 ## 使用示例
 
 ```c
@@ -81,6 +90,10 @@ if (airy_io_list_files("/tmp/agentrt/logs/", &files, &count) == 0) {
     }
     airy_io_free_list(files, count);
 }
+
+// 删除文件与递归删除目录
+airy_io_remove_file("/tmp/output.txt");
+airy_io_remove_dir_recursive("/tmp/agentrt/data");
 ```
 
 ## 依赖关系
