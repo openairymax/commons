@@ -77,6 +77,10 @@ __pycache__/
 
 # ---------- 运行时数据（daemon socket / 日志 / 数据库 / PID） ----------
 data/
+# 内置拼音输入法词典（utils/ime/data/）是随源分发的运行时资源：
+# 编译期生成、运行时加载、安装时分发，须入库保证开箱即用与版本可复现
+!utils/ime/data/
+!utils/ime/data/*
 *.log
 *.sock
 *.pid

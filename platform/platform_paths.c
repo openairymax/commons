@@ -31,6 +31,8 @@
 #ifndef EEXIST
 #define EEXIST 17
 #endif
+/* MSVC 未提供 S_ISDIR；以 _S_IFMT 宏补齐（对齐 utils/io file_utils.c）。 */
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #pragma comment(lib, "bcrypt.lib")
 #elif defined(__APPLE__)
 #include <errno.h>
@@ -58,6 +60,7 @@
 #include "error.h"
 #include "platform.h"
 #include "cancel_token.h"
+#include "airy_dirent.h"
 
 #include "airy_memory.h"
 
@@ -380,6 +383,90 @@ static int paths_mkdir_p(const char *path)
     return AIRY_SUCCESS;
 }
 
+/* ==================== stale tmp cleanup ====================
+ *
+ * 2.1.2.4：$AIRY_HOME/tmp 陈旧条目自动维护。工作大厅取消执行、测试残留
+ * 等会在 tmp 下留下临时目录；长期运行后累积污染运行时根。每次路径初始化
+ * 时清理 mtime 超过阈值（7 天）的条目，并设单次扫描上限，避免大目录
+ * 拖慢任何进程的启动（platform 是所有进程的公共底座）。 */
+
+#define AIRY_TMP_STALE_DAYS 7
+#define AIRY_TMP_CLEAN_CAP 256
+
+/* 递归删除目录树（内联实现，避免 platform→utils/io 的层次倒置）。 */
+static int paths_rm_rf(const char *path)
+{
+    if (!path || !path[0])
+        return -1;
+    struct stat st;
+    if (stat(path, &st) != 0)
+        return 0; /* not exists → idempotent */
+    if (!S_ISDIR(st.st_mode))
+        return (remove(path) == 0) ? 0 : -1;
+
+    DIR *dir = opendir(path);
+    if (!dir)
+        return -1;
+    struct dirent *entry;
+    char child[AIRY_PATH_MAX];
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.' &&
+            (entry->d_name[1] == '\0' ||
+             (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
+            continue;
+        snprintf(child, sizeof(child), "%s/%s", path, entry->d_name);
+        struct stat cst;
+        if (stat(child, &cst) != 0)
+            continue;
+        if (S_ISDIR(cst.st_mode)) {
+            if (paths_rm_rf(child) != 0) {
+                closedir(dir);
+                return -1;
+            }
+        } else if (remove(child) != 0) {
+            closedir(dir);
+            return -1;
+        }
+    }
+    closedir(dir);
+#ifdef _WIN32
+    if (_rmdir(path) != 0)
+        return -1;
+#else
+    if (rmdir(path) != 0)
+        return -1;
+#endif
+    return 0;
+}
+
+static void paths_cleanup_stale_tmp(void)
+{
+    const time_t cutoff = time(NULL) - (time_t)AIRY_TMP_STALE_DAYS * 24 * 3600;
+    DIR *dir = opendir(g_tmp_dir);
+    if (!dir)
+        return;
+    struct dirent *entry;
+    char full[AIRY_PATH_MAX];
+    int cleaned = 0;
+    while (cleaned < AIRY_TMP_CLEAN_CAP && (entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.')
+            continue;
+        snprintf(full, sizeof(full), "%s/%s", g_tmp_dir, entry->d_name);
+        struct stat st;
+        if (stat(full, &st) != 0)
+            continue;
+        if (st.st_mtime >= cutoff)
+            continue;
+        if (S_ISDIR(st.st_mode)) {
+            if (paths_rm_rf(full) == 0)
+                cleaned++;
+        } else if (remove(full) == 0) {
+            cleaned++;
+        }
+    }
+    closedir(dir);
+}
+
 int airy_paths_init(void)
 {
     paths_ensure_resolved();
@@ -415,6 +502,10 @@ int airy_paths_init(void)
     AIRY_SETENV("AIRY_TMP_DIR", g_tmp_dir);
     AIRY_SETENV("AIRY_CACHE_DIR", g_cache_dir);
 #undef AIRY_SETENV
+
+    /* 2.1.2.4：tmp 目录就绪后自动清理陈旧条目（7 天以上），
+     * 保持运行时根干净（幂等，失败不影响初始化）。 */
+    paths_cleanup_stale_tmp();
 
     return AIRY_SUCCESS;
 }

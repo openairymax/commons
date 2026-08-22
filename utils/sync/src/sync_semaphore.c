@@ -100,6 +100,32 @@ sync_result_t sync_semaphore_wait_ex(sync_semaphore_t semaphore, const sync_time
     if (timeout == NULL || timeout->timeout_ms == 0) {
         rc = sem_wait(&semaphore->semaphore);
     } else {
+#if defined(__APPLE__) && defined(__MACH__)
+        /* macOS 无 sem_timedwait：sem_trywait 轮询 + 2ms 短眠近似超时，
+         * 返回语义与 Linux 分支一致（与 sync_platform.c 同方案）。 */
+        const unsigned int step_ms = 2;
+        unsigned int waited = 0;
+        const unsigned int total_ms = timeout->timeout_ms;
+        rc = -1;
+        while (waited < total_ms) {
+            rc = sem_trywait(&semaphore->semaphore);
+            if (rc == 0) {
+                break;
+            }
+            if (errno != EAGAIN) {
+                break;
+            }
+            struct timespec sleep_ts;
+            sleep_ts.tv_sec = 0;
+            sleep_ts.tv_nsec = (long)step_ms * 1000000L;
+            nanosleep(&sleep_ts, NULL);
+            waited += step_ms;
+        }
+        if (rc != 0) {
+            sync_internal_update_stats_timeout(&semaphore->stats);
+            return SYNC_ERROR_TIMEOUT;
+        }
+#else
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout->timeout_ms / 1000;
@@ -116,6 +142,7 @@ sync_result_t sync_semaphore_wait_ex(sync_semaphore_t semaphore, const sync_time
         if (rc != 0) {
             return sync_internal_posix_error_to_result(errno);
         }
+#endif
     }
 #endif
 

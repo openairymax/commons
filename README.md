@@ -21,7 +21,7 @@
 
 As the project's authoritative source for type definitions (`airy_types.h`) and the unified error-code contract (`airy_err_t`), commons guarantees type consistency across modules and eliminates cross-module type conflicts. Its design goals are: zero-dependency abstraction (platform-agnostic type system and interface definitions keep the kernel decoupled from peripheral code), a unified error contract, high-performance infrastructure (memory pools, lock-free queues, zero-copy pipelines), built-in observability (standardized capture interfaces for logs/metrics/traces), and safe-by-default I/O paths (parameter validation, boundary checks, resource limits).
 
-commons builds a single static library `airy_common` aggregating 24+ utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
+commons builds a single static library `airy_common` aggregating 32 utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
 
 ## Module Classification
 
@@ -46,7 +46,7 @@ commons/
 │   └── platform.c               # Platform abstraction implementation
 ├── include/                     # Global public headers
 │   └── airy_types.h          # Unified type and error-code definitions (authoritative)
-├── utils/                       # Tooling module collection (24+ modules)
+├── utils/                       # Tooling module collection (32 modules)
 │   ├── include/                 # Cross-module shared headers
 │   │   ├── atomic_compat.h      # Cross-platform atomic operation compat layer
 │   │   └── check.h              # Generic check macros
@@ -62,7 +62,7 @@ commons/
 │   ├── error/                   # Error handling framework
 │   ├── types/                   # Generic type definitions and conversions
 │   ├── config_unified/          # Unified config (3-tier: Core → Source → Service; yaml_minimal)
-│   ├── execution/               # Command execution engine (validation, cross-platform, checkpoint)
+│   ├── execution/               # Task checkpoint (persistence / session / snapshot)
 │   ├── io/                      # File I/O utilities
 │   ├── cache/                   # Cache management (LRU / TTL)
 │   ├── compat/                  # Cross-version / cross-platform compatibility
@@ -72,10 +72,16 @@ commons/
 │   ├── security/                # Input validation and security filtering
 │   ├── resource/                # Resource protection and quotas (guard, quota)
 │   ├── uuid/                    # UUID generation and parsing
-│   ├── print/                   # Printing / formatting helpers
+│   ├── print/                   # Unified runtime print macros (airy_print_*)
 │   ├── compliance/              # Compliance validation and policy enforcement
 │   ├── quality/                 # Code quality checks
-│   └── sd/                      # Secure-delete / safe-disposal helpers
+│   ├── sd/                      # Cross-process service discovery (shm registry)
+│   ├── effect/                  # Rollback effect (airy_effect: register-now, undo-in-reverse)
+│   ├── ext/                     # Unified extension registry (LLM/tool/storage/sandbox/memory)
+│   ├── id/                      # Branded ID generation (trace_id / msg_id)
+│   ├── task/                    # A-TD task descriptor (create + CRC32 integrity)
+│   ├── cjson/                   # cJSON macro helper layer (CJSON_PARSE_GUARD etc.)
+│   └── ime/                     # Lightweight built-in IME (pinyin dict, pure C)
 └── tests/                       # Test suite
     ├── utils/                   # Test utility framework
     ├── unit/                    # Unit tests
@@ -98,7 +104,7 @@ The single authoritative source of type definitions for the entire project:
 
 The unified error code system (`AIRY_E*`) covers 29 standard errors including invalid argument, out of memory, permission denied, timeout, I/O error, protocol error, quota exceeded, etc.
 
-### Utility modules (24+)
+### Utility modules (32)
 
 | Module | Path | Responsibility |
 |--------|------|----------------|
@@ -114,7 +120,7 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 | error | `utils/error/` | Error handling framework (handler) |
 | types | `utils/types/` | Generic type definitions and conversions |
 | config_unified | `utils/config_unified/` | 3-tier config (Core → Source → Service); yaml_minimal fallback |
-| execution | `utils/execution/` | Command execution engine (validation, cross-platform, checkpoint) |
+| execution | `utils/execution/` | Task checkpoint (persistence / session / snapshot / stats) |
 | io | `utils/io/` | File I/O utilities (file_utils) |
 | cache | `utils/cache/` | Cache management (LRU / TTL); cache_common |
 | compat | `utils/compat/` | Cross-version / cross-platform compatibility (compat, compat2) |
@@ -124,10 +130,16 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 | security | `utils/security/` | Input validation and security filtering (input_validator) |
 | resource | `utils/resource/` | Resource protection and quotas (resource_guard, resource_quota) |
 | uuid | `utils/uuid/` | UUID generation and parsing (uuid_generator) |
-| print | `utils/print/` | Printing / formatting helpers |
+| print | `utils/print/` | Unified runtime print macros (airy_print_*, delegating to log_write) |
 | compliance | `utils/compliance/` | Compliance validation and policy enforcement |
 | quality | `utils/quality/` | Code quality checks |
-| sd | `utils/sd/` | Secure-delete / safe-disposal helpers |
+| sd | `utils/sd/` | Cross-process service discovery (shm registry, heartbeat/expiry/load-balancing) |
+| effect | `utils/effect/` | Rollback effect (airy_effect: register-now, undo-in-reverse) |
+| ext | `utils/ext/` | Unified extension registry (LLM/tool/storage/sandbox/memory domains) |
+| id | `utils/id/` | Branded ID generation (trace_id / msg_id) |
+| task | `utils/task/` | A-TD task descriptor (create + CRC32 integrity validation) |
+| cjson | `utils/cjson/` | cJSON macro helper layer (CJSON_PARSE_GUARD etc.) |
+| ime | `utils/ime/` | Lightweight built-in IME (pinyin dictionary, pure C, shipped with install) |
 
 ### Platform abstraction layer (`platform/`)
 
@@ -178,12 +190,13 @@ Covers 11 types including `atomic_bool`, `atomic_int`, `atomic_uint`, `atomic_in
   ┌────────────────────────────────────────────┐
   │  airy_types.h  (authoritative types)    │
   │  platform/        (OS abstraction)         │
-  │  utils/           (24+ util modules)       │
+  │  utils/           (32 util modules)        │
   │   logging sync memory string ipc token     │
   │   cost observability platform error types  │
   │   config_unified execution io cache compat │
   │   cognition strategy network security      │
   │   resource uuid print compliance quality sd│
+  │   effect ext id task cjson ime             │
   └────────────────────────────────────────────┘
         ▲     ▲     ▲     ▲     ▲     ▲
         │     │     │     │     │     │
@@ -257,7 +270,7 @@ commons exposes its surface through the unified type header and per-module publi
 - `platform/include/platform.h` — platform detection and base definitions
 - `utils/include/atomic_compat.h` — cross-platform atomic operations (11 types, 3 backends)
 - `utils/include/check.h` — generic check macros
-- Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/memory.h`, `utils/string/include/string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network.h`, `utils/security/include/security.h`, `utils/resource/include/resource.h`, `utils/uuid/include/uuid.h`, `utils/cache/include/cache.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc.h`, `utils/execution/include/execution.h`, `utils/cognition/include/cognition.h`, `utils/strategy/include/strategy.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/print.h`, `utils/compliance/include/compliance.h`, `utils/quality/include/quality.h`, `utils/sd/include/sd.h`
+- Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/memory.h`, `utils/string/include/string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network.h`, `utils/security/include/security.h`, `utils/resource/include/resource.h`, `utils/uuid/include/uuid.h`, `utils/cache/include/cache.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc.h`, `utils/execution/include/checkpoint.h`, `utils/cognition/include/cognition.h`, `utils/strategy/include/strategy.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/airy_print.h`, `utils/compliance/include/compliance.h`, `utils/quality/include/quality.h`, `utils/sd/include/service_discovery.h`, `utils/effect/include/airy_effect.h`, `utils/ext/include/airy_ext.h`, `utils/cjson/include/cjson_helpers.h`, `utils/ime/include/airy_ime.h`
 
 Memory macros (`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`) and the strict-compliance unsafe-function poisoning (e.g. `strcpy` replacement via `utils/string`) are project-wide.
 

@@ -402,6 +402,13 @@ int platform_barrier_init(platform_barrier_t *barrier, unsigned int count)
     barrier->current = 0;
     barrier->generation = 0;
     return 0;
+#elif defined(__APPLE__) && defined(__MACH__)
+    pthread_mutex_init(&barrier->mutex, NULL);
+    pthread_cond_init(&barrier->cond, NULL);
+    barrier->count = count;
+    barrier->current = 0;
+    barrier->generation = 0;
+    return 0;
 #else
     return pthread_barrier_init(barrier, NULL, count);
 #endif
@@ -411,6 +418,10 @@ int platform_barrier_destroy(platform_barrier_t *barrier)
 {
 #ifdef _WIN32
     DeleteCriticalSection(&barrier->cs);
+    return 0;
+#elif defined(__APPLE__) && defined(__MACH__)
+    pthread_mutex_destroy(&barrier->mutex);
+    pthread_cond_destroy(&barrier->cond);
     return 0;
 #else
     return pthread_barrier_destroy(barrier);
@@ -434,6 +445,23 @@ int platform_barrier_wait(platform_barrier_t *barrier)
         SleepConditionVariableCS(&barrier->cond, &barrier->cs, INFINITE);
     }
     LeaveCriticalSection(&barrier->cs);
+    return 0;
+#elif defined(__APPLE__) && defined(__MACH__)
+    /* 语义与 _WIN32 分支一致：1 = 最后一个到达线程（serial thread）。 */
+    pthread_mutex_lock(&barrier->mutex);
+    unsigned int gen = barrier->generation;
+    barrier->current++;
+    if (barrier->current >= barrier->count) {
+        barrier->current = 0;
+        barrier->generation++;
+        pthread_cond_broadcast(&barrier->cond);
+        pthread_mutex_unlock(&barrier->mutex);
+        return 1;
+    }
+    while (gen == barrier->generation) {
+        pthread_cond_wait(&barrier->cond, &barrier->mutex);
+    }
+    pthread_mutex_unlock(&barrier->mutex);
     return 0;
 #else
     int ret = pthread_barrier_wait(barrier);

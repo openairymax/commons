@@ -31,6 +31,10 @@ set(UNIT_TEST_SOURCES
     unit/test_airy_id.c
     # Windows POSIX ERE 引擎（Linux 上直测 airy_re_* API）
     unit/test_airy_regex.c
+    # 阶段 4: 内置拼音输入法词典（全拼前缀查询 + 候选排序 + 损坏拒载）
+    unit/test_ime.c
+    # 文件增删改查（CRUD）跨平台往返（coding 场景基础能力）
+    unit/test_io.c
 )
 
 set(INTEGRATION_TEST_SOURCES
@@ -55,6 +59,12 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         )
     endif()
 
+    # 内置拼音输入法词典路径（源码树 data/，构建树分发）
+    if(test_source STREQUAL "unit/test_ime.c")
+        target_compile_definitions(${test_name} PRIVATE
+            AIRY_IME_TEST_DICT="${CMAKE_CURRENT_SOURCE_DIR}/../utils/ime/data/airy_ime.dat")
+    endif()
+
     target_include_directories(${test_name} PRIVATE
         ${COMMONS_ROOT}/include
         ${COMMONS_ROOT}/platform/include
@@ -72,6 +82,8 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/sync/include
         ${COMMONS_ROOT}/utils/effect/include
         ${COMMONS_ROOT}/utils/ext/include
+        ${COMMONS_ROOT}/utils/ime/include
+        ${COMMONS_ROOT}/utils/io/include
         ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}
     )

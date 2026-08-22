@@ -38,7 +38,7 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
     b->current = 0;
     b->generation = 0;
 #else
-    int result = pthread_barrier_init(&b->barrier, NULL, count);
+    int result = platform_barrier_init(&b->barrier, count);
     if (result != 0) {
         AIRY_FREE(b->name);
         AIRY_FREE(b);
@@ -66,7 +66,7 @@ sync_result_t sync_barrier_free(sync_barrier_t barrier)
 #ifdef _WIN32
     DeleteCriticalSection(&barrier->barrier.cs);
 #else
-    pthread_barrier_destroy(&barrier->barrier);
+    platform_barrier_destroy(&barrier->barrier);
 #endif
 
     AIRY_FREE(barrier->name);
@@ -106,10 +106,12 @@ sync_result_t sync_barrier_wait_ex(sync_barrier_t barrier, const sync_timeout_t 
     LeaveCriticalSection(&barrier->barrier.cs);
     return SYNC_SUCCESS;
 #else
-    int rc = pthread_barrier_wait(&barrier->barrier);
-    if (rc == PTHREAD_BARRIER_SERIAL_THREAD) {
-        return SYNC_SUCCESS;
-    } else if (rc != 0) {
+    /* POSIX barrier 无超时语义，与 Windows 分支的 timeout 参数对齐 */
+    (void)timeout;
+    /* 统一走 platform 抽象层：serial thread（1）与普通到达（0）均视为成功，
+     * 与 Windows 分支语义一致；负值为失败。 */
+    int rc = platform_barrier_wait(&barrier->barrier);
+    if (rc < 0) {
         return sync_internal_posix_error_to_result(rc);
     }
     return SYNC_SUCCESS;

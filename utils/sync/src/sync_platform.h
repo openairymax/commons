@@ -89,7 +89,19 @@ typedef sem_t platform_semaphore_t;
 typedef pthread_cond_t platform_condition_t;
 
 
+#if defined(__APPLE__) && defined(__MACH__)
+/* macOS 无 pthread_barrier_t：pthread_mutex + pthread_cond 自实现，
+ * 字段语义与 _WIN32 分支的 platform_barrier_t 对齐（count/current/generation）。 */
+typedef struct {
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    unsigned int count;
+    unsigned int current;
+    unsigned int generation;
+} platform_barrier_t;
+#else
 typedef pthread_barrier_t platform_barrier_t;
+#endif
 
 
 typedef struct {
