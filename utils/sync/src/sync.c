@@ -717,8 +717,15 @@ uint64_t sync_get_thread_id(void)
 bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
 {
 #ifdef _WIN32
+    /* 按指针位宽选择 Interlocked 变体：32 位 Windows 下 uintptr_t 为 32 位，
+     * 硬编码 _Interlocked*64 会按 8 字节读写造成越界与语义错误 */
+#if defined(_WIN64)
     return _InterlockedCompareExchange64((volatile LONG64 *)ptr, (LONG64)desired,
                                          (LONG64)expected) == (LONG64)expected;
+#else
+    return _InterlockedCompareExchange((volatile LONG *)ptr, (LONG)desired,
+                                       (LONG)expected) == (LONG)expected;
+#endif
 #else
     return __sync_bool_compare_and_swap((volatile uintptr_t *)ptr, expected, desired);
 #endif
@@ -727,7 +734,11 @@ bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
 uintptr_t sync_atomic_add(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
+#if defined(_WIN64)
     return (uintptr_t)_InterlockedExchangeAdd64((volatile LONG64 *)ptr, (LONG64)value);
+#else
+    return (uintptr_t)_InterlockedExchangeAdd((volatile LONG *)ptr, (LONG)value);
+#endif
 #else
     return __sync_fetch_and_add((volatile uintptr_t *)ptr, value);
 #endif
@@ -736,7 +747,11 @@ uintptr_t sync_atomic_add(volatile void *ptr, uintptr_t value)
 uintptr_t sync_atomic_sub(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
+#if defined(_WIN64)
     return (uintptr_t)_InterlockedExchangeAdd64((volatile LONG64 *)ptr, -(LONG64)value);
+#else
+    return (uintptr_t)_InterlockedExchangeAdd((volatile LONG *)ptr, -(LONG)value);
+#endif
 #else
     return __sync_fetch_and_sub((volatile uintptr_t *)ptr, value);
 #endif
@@ -745,7 +760,11 @@ uintptr_t sync_atomic_sub(volatile void *ptr, uintptr_t value)
 uintptr_t sync_atomic_load(volatile void *ptr)
 {
 #ifdef _WIN32
+#if defined(_WIN64)
     return (uintptr_t)_InterlockedExchangeAdd64((volatile LONG64 *)ptr, 0);
+#else
+    return (uintptr_t)_InterlockedExchangeAdd((volatile LONG *)ptr, 0);
+#endif
 #else
     return __sync_fetch_and_add((volatile uintptr_t *)ptr, 0);
 #endif
@@ -754,7 +773,11 @@ uintptr_t sync_atomic_load(volatile void *ptr)
 void sync_atomic_store(volatile void *ptr, uintptr_t value)
 {
 #ifdef _WIN32
+#if defined(_WIN64)
     _InterlockedExchange64((volatile LONG64 *)ptr, (LONG64)value);
+#else
+    _InterlockedExchange((volatile LONG *)ptr, (LONG)value);
+#endif
 #else
     __sync_lock_test_and_set((volatile uintptr_t *)ptr, value);
 #endif

@@ -63,7 +63,6 @@ set(SOURCES
     utils/sync/src/cancel_token.c
     utils/cache/src/cache_common.c
     utils/compat/src/compat.c
-    utils/compat/src/compat2.c
     # POSIX ERE engine for Windows (no <regex.h>); compiled everywhere so
     # the engine itself is unit-tested on Linux too. POSIX callers use the
     # system <regex.h> via airy_regex.h and never call airy_re_* symbols.
