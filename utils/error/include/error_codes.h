@@ -535,7 +535,7 @@
  *   Fault 码空间 [0x1000, 0x1FFF] — 非可恢复故障（触发 USV Fault Handler）
  *
  * H3 约束：agentrt 用户态 capability_badge 始终为 0，理论上不会触发
- *     AIRY_ECAP_* 错误（这些错误由 agentrt-linux 内核态 fastpath 抛出）。
+ *     AIRY_ECAP_* 错误（这些错误由 agent-linux 内核态 fastpath 抛出）。
  *     用户态如需引用，用 -AIRY_ECAP_* 等（[SC] 正幅值取负）。
  * ============================================================================ */
 

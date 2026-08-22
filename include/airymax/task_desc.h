@@ -14,7 +14,7 @@
  *   (CRC-32 IEEE 802.3, polynomial 0xEDB88320).
  *
  * Integrity check: airy_task_desc_validate() checks magic/version/reserved/
- * CRC32 in order, consistent with the agentrt-linux cooperation contract
+ * CRC32 in order, consistent with the agent-linux cooperation contract
  * (see CHANGELOG "task descriptor integrity check").
  *
  * 命名说明（2026-08-21）：struct 命名为 airy_task_desc_hdr，与
