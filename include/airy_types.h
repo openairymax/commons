@@ -24,7 +24,7 @@
 
 /* S-1 收敛 (2026-08-14, 用户决策): 错误码统一收敛至 A-UEF [SC] 唯一权威
  * commons/include/airymax/error.h。按 [SC] 契约自身声明（error.h 顶部注释）：
- *   - [SC] 共享契约头（agentrt-linux 内核态 UAPI）：错误码为正幅值，
+ *   - [SC] 共享契约头（agent-linux 内核态 UAPI）：错误码为正幅值，
  *     调用方返回 -AIRY_E*，供跨态契约/内核态编译单元使用；
  *   - agentrt 用户态通用错误码权威源为本文件（POSIX errno 负值，
  *     直接返回），遵循 Linux errno 哲学——两体系物理隔离，
@@ -255,7 +255,7 @@ airy_msg_id_t airy_msg_id_from_string(const char *str);
  * - Features:
  *   ✓ 128B 定长头 + magic ARE1 + trace_id + capability_badge + crc32
  *   ✓ _Static_assert 逐字段偏移校验
- *   ✓ 与 agentrt-linux (AirymaxOS) 内核态字节级一致（IRON-9 [SC] 契约）
+ *   ✓ 与 agent-linux (AirymaxOS) 内核态字节级一致（IRON-9 [SC] 契约）
  *
  * **Level 3: IPC module internal types (implementation detail)**
  * - Type: ipc_message_t + ipc_message_header_t
