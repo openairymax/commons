@@ -223,19 +223,37 @@ void airy_random_init(void)
     }
 }
 
+/* /dev/urandom 不可用（极罕见）时的回退：线程局部 xorshift，非密码学用途 */
+static uint32_t airy_random_fallback(void)
+{
+    g_random_seed ^= g_random_seed << 13;
+    g_random_seed ^= g_random_seed >> 17;
+    g_random_seed ^= g_random_seed << 5;
+    return g_random_seed;
+}
+
 uint32_t airy_random_uint32(uint32_t min, uint32_t max)
 {
     if (!g_random_initialized) {
         airy_random_init();
     }
 
+    uint32_t range = (max >= min) ? (max - min + 1) : 0;
+    if (range == 0) {
+        return min;
+    }
+
+    uint32_t rnd = 0;
 #if AIRY_PLATFORM_WINDOWS
-    uint32_t rnd;
     BCryptGenRandom(NULL, (PUCHAR)&rnd, sizeof(rnd), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-    return min + (uint32_t)((rnd / 4294967296.0) * (max - min + 1));
 #else
-    return min + (uint32_t)((double)rand_r(&g_random_seed) / (RAND_MAX + 1.0) * (max - min + 1));
+    /* POSIX 统一走 /dev/urandom（airy_random_bytes）：macOS 无 rand_r，
+     * 且 urandom 随机质量远优于 rand_r + 时间种子 */
+    if (airy_random_bytes(&rnd, sizeof(rnd)) != 0) {
+        rnd = airy_random_fallback();
+    }
 #endif
+    return min + rnd % range;
 }
 
 float airy_random_float(void)
@@ -244,13 +262,15 @@ float airy_random_float(void)
         airy_random_init();
     }
 
+    uint32_t rnd = 0;
 #if AIRY_PLATFORM_WINDOWS
-    uint32_t rnd;
     BCryptGenRandom(NULL, (PUCHAR)&rnd, sizeof(rnd), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-    return rnd / 4294967296.0f;
 #else
-    return (float)rand_r(&g_random_seed) / (float)RAND_MAX;
+    if (airy_random_bytes(&rnd, sizeof(rnd)) != 0) {
+        rnd = airy_random_fallback();
+    }
 #endif
+    return rnd / 4294967296.0f;
 }
 
 int airy_random_bytes(void *buf, size_t len)
