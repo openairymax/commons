@@ -835,7 +835,7 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  *   $AIRY_HOME/workspace - persistent GRAD decision-chain / task workspaces
  *
  * Persistent data split (2.1.2.5): durable module data lives under
- * $AIRY_HOME/data/agentrt/* (heapstore/memory/hall/state/roadmap/workspaces),
+ * $AIRY_HOME/data/agentrt (heapstore/memory/hall/state/roadmap/workspaces),
  * GRAD decision-chain traces under $AIRY_HOME/workspace/<plan_id>/; both are
  * kept out of the volatile run/ directory. Plugin capability bundles are
  * distributed with the ecosystem repository, not under AIRY_HOME.
