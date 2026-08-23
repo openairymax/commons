@@ -843,6 +843,10 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
 #define AIRY_HOME_SUBDIR_DATA "data"
 #define AIRY_HOME_SUBDIR_TMP "tmp"
 #define AIRY_HOME_SUBDIR_CACHE "cache"
+/* 2.1.2.5：持久化工作区（GRAD 决策链 trace / 任务工作区）。历史实现把
+ * workspace 挂在 run/ 下（airy_runtime_dir_socket("workspace")），与
+ * socket 同目录——run 是运行时易失目录，决策链属持久化数据，语义错位。 */
+#define AIRY_HOME_SUBDIR_WORKSPACE "workspace"
 
 
 const char *airy_home_dir(void);
@@ -878,6 +882,20 @@ const char *airy_data_dir(void);
 const char *airy_tmp_dir(void);
 
 const char *airy_cache_dir(void);
+
+/**
+ * @brief Resolve the persistent workspace root directory: $AIRY_HOME/workspace
+ *        (2.1.2.5 path-system normalization).
+ *
+ * Holds durable task artifacts: GRAD decision-chain workspaces
+ * (<plan_id>/t2|c_verify|b_arbiter|trace), task execution scratch and
+ * future work-hall artifacts. Kept separate from airy_runtime_dir()
+ * ($AIRY_HOME/run), which is reserved for volatile runtime sockets/pids.
+ *
+ * Named *root* to avoid clashing with the coreloopthree workspace object
+ * accessor airy_workspace_dir(const airy_workspace_t *).
+ */
+const char *airy_workspace_root_dir(void);
 
 /**
  * @brief Initialize the AIRY_HOME path system
