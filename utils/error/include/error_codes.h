@@ -317,6 +317,17 @@
 #define AIRY_ERR_LLM_COST_EXCEED (-410)
 #endif
 
+/* GCCP 目标完备确认（-411）：控制流信号，非真实错误。
+ *
+ * 认知引擎 Phase 0 在 airy_gccp_probe 判定 need_interaction=1 且产品层
+ * 交互回调返回 AIRY_GCCP_INTERACT_PENDING 哨兵时返回本码，表示"本轮处理
+ * 挂起，等待用户补充答案"：引擎中止后续 Phase（1~4）避免在降级目标上
+ * 浪费 token；调用方（think_d 等）捕获后把问题集回给客户端，待答案就绪
+ * 携带 gccp_answers 重新发起处理（两段式交互协议）。 */
+#ifndef AIRY_ERR_GCCP_INTERACTION
+#define AIRY_ERR_GCCP_INTERACTION (-411)
+#endif
+
 
 #ifndef AIRY_ERR_EXEC_BASE
 #define AIRY_ERR_EXEC_BASE (-500)
