@@ -84,6 +84,7 @@ static char g_cfg_dir[AIRY_PATH_MAX];
 static char g_data_dir[AIRY_PATH_MAX];
 static char g_tmp_dir[AIRY_PATH_MAX];
 static char g_cache_dir[AIRY_PATH_MAX];
+static char g_workspace_dir[AIRY_PATH_MAX];
 
 static void paths_resolve_one(const char *subdir, char *out, size_t out_size)
 {
@@ -103,6 +104,7 @@ static void paths_resolve_all(void)
     paths_resolve_one(AIRY_HOME_SUBDIR_DATA, g_data_dir, sizeof(g_data_dir));
     paths_resolve_one(AIRY_HOME_SUBDIR_TMP, g_tmp_dir, sizeof(g_tmp_dir));
     paths_resolve_one(AIRY_HOME_SUBDIR_CACHE, g_cache_dir, sizeof(g_cache_dir));
+    paths_resolve_one(AIRY_HOME_SUBDIR_WORKSPACE, g_workspace_dir, sizeof(g_workspace_dir));
 }
 
 /* 当前可执行文件所在目录（用于定位安装根 install.env：安装布局为
@@ -347,6 +349,12 @@ const char *airy_cache_dir(void)
     return g_cache_dir;
 }
 
+const char *airy_workspace_root_dir(void)
+{
+    paths_ensure_resolved();
+    return g_workspace_dir;
+}
+
 static int paths_mkdir_p(const char *path)
 {
     if (!path || path[0] == '\0')
@@ -477,6 +485,7 @@ int airy_paths_init(void)
 
     const char *dirs[] = {
         g_bin_dir, g_lib_dir, g_run_dir, g_log_dir, g_cfg_dir, g_data_dir, g_tmp_dir, g_cache_dir,
+        g_workspace_dir,
     };
     for (size_t i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++) {
         rc = paths_mkdir_p(dirs[i]);
@@ -501,6 +510,7 @@ int airy_paths_init(void)
     AIRY_SETENV("AIRY_DATA_DIR", g_data_dir);
     AIRY_SETENV("AIRY_TMP_DIR", g_tmp_dir);
     AIRY_SETENV("AIRY_CACHE_DIR", g_cache_dir);
+    AIRY_SETENV("AIRY_WORKSPACE_DIR", g_workspace_dir);
 #undef AIRY_SETENV
 
     /* 2.1.2.4：tmp 目录就绪后自动清理陈旧条目（7 天以上），
