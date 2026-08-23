@@ -826,12 +826,19 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  * Directory layout:
  *   $AIRY_HOME/bin      - executables (agentrt, agent_d, llm_d, mem_d, airy_cli)
  *   $AIRY_HOME/lib      - runtime dependencies (airymax_agents, openlab, sdk-python)
- *   $AIRY_HOME/run      - Unix sockets, PID files
+ *   $AIRY_HOME/run      - Unix sockets, PID files (volatile)
  *   $AIRY_HOME/logs     - daemon logs, audit logs, agent subprocess logs
  *   $AIRY_HOME/config   - agentrt.yaml, model.yaml, secrets.env
- *   $AIRY_HOME/data     - persistent data (memory, etc.)
- *   $AIRY_HOME/tmp      - temporary files
- *   $AIRY_HOME/cache    - caches
+ *   $AIRY_HOME/data     - persistent data (memory, hall/state, roadmap, workspaces)
+ *   $AIRY_HOME/tmp      - temporary files (stale entries auto-cleaned)
+ *   $AIRY_HOME/cache    - caches (incl. PYTHONPYCACHEPREFIX bytecode cache)
+ *   $AIRY_HOME/workspace - persistent GRAD decision-chain / task workspaces
+ *
+ * Persistent data split (2.1.2.5): durable module data lives under
+ * $AIRY_HOME/data/agentrt/* (heapstore/memory/hall/state/roadmap/workspaces),
+ * GRAD decision-chain traces under $AIRY_HOME/workspace/<plan_id>/; both are
+ * kept out of the volatile run/ directory. Plugin capability bundles are
+ * distributed with the ecosystem repository, not under AIRY_HOME.
  */
 
 #define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
