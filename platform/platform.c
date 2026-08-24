@@ -46,6 +46,7 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -58,6 +59,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #endif
 
@@ -427,6 +429,157 @@ const char *airy_strerror(int error)
 #else
     return strerror(error);
 #endif
+}
+
+int airy_file_lock(int fd, int exclusive, int block)
+{
+#if AIRY_PLATFORM_WINDOWS
+    HANDLE h = (HANDLE)(intptr_t)fd;
+    OVERLAPPED ovl;
+    AIRY_MEMSET(&ovl, 0, sizeof(ovl));
+    DWORD flags = exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
+    if (!block)
+        flags |= LOCKFILE_FAIL_IMMEDIATELY;
+    return LockFileEx(h, flags, 0, 1, 0, &ovl) ? 0 : (int)GetLastError();
+#else
+    struct flock fl;
+    AIRY_MEMSET(&fl, 0, sizeof(fl));
+    fl.l_type = exclusive ? F_WRLCK : F_RDLCK;
+    fl.l_whence = SEEK_SET;
+    int cmd = block ? F_SETLKW : F_SETLK;
+    if (fcntl(fd, cmd, &fl) == 0)
+        return 0;
+    if (errno == EACCES || errno == EAGAIN)
+        return AIRY_EBUSY;
+    return AIRY_EINVAL;
+#endif
+}
+
+int airy_file_unlock(int fd)
+{
+#if AIRY_PLATFORM_WINDOWS
+    HANDLE h = (HANDLE)(intptr_t)fd;
+    OVERLAPPED ovl;
+    AIRY_MEMSET(&ovl, 0, sizeof(ovl));
+    return UnlockFileEx(h, 0, 1, 0, &ovl) ? 0 : (int)GetLastError();
+#else
+    struct flock fl;
+    AIRY_MEMSET(&fl, 0, sizeof(fl));
+    fl.l_type = F_UNLCK;
+    fl.l_whence = SEEK_SET;
+    return fcntl(fd, F_SETLK, &fl) == 0 ? 0 : AIRY_EINVAL;
+#endif
+}
+
+int airy_get_sysinfo(airy_sysinfo_t *info)
+{
+    if (!info)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(info, 0, sizeof(*info));
+
+#if AIRY_PLATFORM_WINDOWS
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    info->cpu_count = si.dwNumberOfProcessors;
+    AIRY_STRNCPY_TERM(info->os_name, "Windows", sizeof(info->os_name));
+    AIRY_STRNCPY_TERM(info->os_version, "10.0", sizeof(info->os_version));
+    DWORD hn = (DWORD)sizeof(info->hostname);
+    if (GetComputerNameA(info->hostname, &hn) == 0)
+        AIRY_STRNCPY_TERM(info->hostname, "unknown", sizeof(info->hostname));
+    MEMORYSTATUSEX ms;
+    AIRY_MEMSET(&ms, 0, sizeof(ms));
+    ms.dwLength = sizeof(ms);
+    if (GlobalMemoryStatusEx(&ms)) {
+        info->memory_total = ms.ullTotalPhys;
+        info->memory_free = ms.ullAvailPhys;
+    }
+    HKEY hk = NULL;
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+                      "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ,
+                      &hk) == ERROR_SUCCESS) {
+        DWORD type = REG_SZ;
+        DWORD sz = (DWORD)sizeof(info->cpu_model);
+        RegQueryValueExA(hk, "ProcessorNameString", NULL, &type, (LPBYTE)info->cpu_model, &sz);
+        RegCloseKey(hk);
+    }
+#elif defined(__APPLE__) && defined(__MACH__)
+    AIRY_STRNCPY_TERM(info->os_name, "Darwin", sizeof(info->os_name));
+    char ver[64];
+    size_t ver_len = sizeof(ver);
+    if (sysctlbyname("kern.osrelease", ver, &ver_len, NULL, 0) == 0)
+        AIRY_STRNCPY_TERM(info->os_version, ver, sizeof(info->os_version));
+    if (gethostname(info->hostname, sizeof(info->hostname)) != 0)
+        AIRY_STRNCPY_TERM(info->hostname, "unknown", sizeof(info->hostname));
+    int ncpu = 0;
+    size_t ncpu_len = sizeof(ncpu);
+    if (sysctlbyname("hw.ncpu", &ncpu, &ncpu_len, NULL, 0) == 0)
+        info->cpu_count = (uint32_t)ncpu;
+    uint64_t mem = 0;
+    size_t mem_len = sizeof(mem);
+    if (sysctlbyname("hw.memsize", &mem, &mem_len, NULL, 0) == 0)
+        info->memory_total = mem;
+    uint32_t pages = 0;
+    size_t pages_len = sizeof(pages);
+    if (sysctlbyname("vm.page_free_count", &pages, &pages_len, NULL, 0) == 0)
+        info->memory_free = (uint64_t)pages * 4096;
+    char brand[128];
+    size_t brand_len = sizeof(brand);
+    if (sysctlbyname("machdep.cpu.brand_string", brand, &brand_len, NULL, 0) == 0)
+        AIRY_STRNCPY_TERM(info->cpu_model, brand, sizeof(info->cpu_model));
+#else
+    /* Linux/POSIX：uname + sysconf + /proc 单源 */
+    struct utsname un;
+    if (uname(&un) == 0) {
+        AIRY_STRNCPY_TERM(info->os_name, un.sysname, sizeof(info->os_name));
+        AIRY_STRNCPY_TERM(info->os_version, un.release, sizeof(info->os_version));
+    }
+    if (gethostname(info->hostname, sizeof(info->hostname)) != 0)
+        AIRY_STRNCPY_TERM(info->hostname, "unknown", sizeof(info->hostname));
+    long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+    if (ncpu > 0)
+        info->cpu_count = (uint32_t)ncpu;
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGESIZE);
+    if (pages > 0 && page_size > 0)
+        info->memory_total = (uint64_t)pages * (uint64_t)page_size;
+    FILE *f = fopen("/proc/meminfo", "r");
+    if (f) {
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            if (strncmp(line, "MemAvailable:", 13) == 0) {
+                unsigned long kb = strtoul(line + 13, NULL, 10);
+                info->memory_free = (uint64_t)kb * 1024;
+                break;
+            }
+        }
+        fclose(f);
+    }
+    FILE *cf = fopen("/proc/cpuinfo", "r");
+    if (cf) {
+        char line[256];
+        while (fgets(line, sizeof(line), cf)) {
+            if (strncmp(line, "model name", 10) == 0) {
+                const char *colon = strchr(line, ':');
+                if (colon) {
+                    const char *p = colon + 1;
+                    while (*p == ' ' || *p == '\t')
+                        p++;
+                    size_t n = strlen(p);
+                    while (n > 0 && (p[n - 1] == '\n' || p[n - 1] == '\r'))
+                        n--;
+                    size_t cap = sizeof(info->cpu_model) - 1;
+                    if (n > cap)
+                        n = cap;
+                    __builtin_memcpy(info->cpu_model, p, n);
+                    info->cpu_model[n] = '\0';
+                }
+                break;
+            }
+        }
+        fclose(cf);
+    }
+#endif
+    return AIRY_SUCCESS;
 }
 
 
