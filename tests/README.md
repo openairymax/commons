@@ -113,38 +113,34 @@ cd build/agentrt/commons/tests
 
 ## 当前状态
 
-### 活跃测试（已接线 CMake）
+### 活跃测试（已接线 CMake，15 个）
 
 | 测试 | 状态 | 覆盖模块 |
 |------|------|----------|
-| `test_platform` | 活跃 | 平台抽象层 |
+| `test_platform` | 活跃 | 平台抽象层（含 sysinfo / 文件锁 / 线程命名） |
 | `test_error` | 活跃 | 错误处理框架 |
 | `test_logger` | 活跃 | 日志系统 |
 | `test_token` | 活跃 | 令牌管理 |
 | `test_cost` | 活跃 | 成本估算与控制 |
+| `test_ipc` | 活跃 | IPC 抽象层（按功能域拆分 6 个文件，cmocka_stub 适配） |
 | `test_arena_tcache` | 活跃 | 内存池/竞技场 |
 | `test_print` | 活跃 | 打印工具 |
+| `test_cancel_token` | 活跃 | 取消令牌（异步可中断） |
+| `test_airy_effect` | 活跃 | 统一作用域 effect 原语 |
+| `test_airy_ext` | 活跃 | 统一扩展注册表 + 四域 provider 契约 |
+| `test_airy_id` | 活跃 | 品牌化 ID（trace_id/msg_id） |
+| `test_airy_regex` | 活跃 | POSIX ERE 引擎（airy_re_*） |
+| `test_ime` | 活跃 | 内置拼音输入法词典 |
+| `test_io` | 活跃 | 文件 CRUD 跨平台往返 |
 
-### 未接线测试（源码保留，未纳入 CMake 构建）
-
-| 测试 | 状态 |
-|------|------|
-| `test_string_utils` | 未接线 |
-| `test_observability` | 未接线 |
-| `test_resource_guard` | 未接线 |
-| `test_input_validator` | 未接线 |
-
-### 待启用测试
-
-以下测试当前因依赖未就绪或框架迁移而被禁用：
+### 禁用测试（源码保留，未纳入 CMake 构建）
 
 | 测试 | 禁用原因 |
 |------|----------|
 | `test_config` | config_unified 模块实现与头文件不匹配 |
 | `test_types` | 需要 cmocka 测试框架 |
-| `test_ipc` | 需要 cmocka 测试框架 |
 | `test_network` | 需要 cmocka 测试框架 |
-| `test_common_integration` | 缺少 manager.h 头文件 |
+| `test_common_integration` | 依赖 manager.h（utils/manager.h 已存在，待重新接线 include 路径） |
 | `test_unified_modules` | 依赖 test_common_integration |
 
 ## 依赖关系

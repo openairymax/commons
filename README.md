@@ -43,9 +43,16 @@ commons/
 │   │   ├── platform.h           # Platform detection and base definitions
 │   │   └── export.h             # Symbol export control
 │   ├── compat/                  # Platform compatibility headers (stdbool.h, stdint.h)
-│   └── platform.c               # Platform abstraction implementation
+│   ├── platform.c               # Base tools: network/atomic/time/random/fs/string/sysinfo/file lock
+│   ├── platform_paths.c         # AIRY_HOME path system (bin/lib/run/logs/config/data/tmp/cache/workspace)
+│   ├── platform_process.c       # Process domain (start/wait/kill/run_capture)
+│   ├── platform_sync.c          # Sync domain (threads, mutex, cond, thread naming)
+│   └── platform_internal.h      # Cross-domain shared header (domain split)
 ├── include/                     # Global public headers
-│   └── airy_types.h          # Unified type and error-code definitions (authoritative)
+│   ├── airy_types.h          # Unified type and error-code definitions (authoritative)
+│   ├── airy_defaults.h       # Project-wide defaults (paths, limits, tuning knobs)
+│   └── airymax/              # Unified Airymax type contracts (task_desc/uapi/syscalls/ipc/sched/…)
+├── third_party/                 # Vendored third-party headers (e.g. nghttp2)
 ├── utils/                       # Tooling module collection (32 modules)
 │   ├── include/                 # Cross-module shared headers
 │   │   ├── atomic_compat.h      # Cross-platform atomic operation compat layer
@@ -123,7 +130,7 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 | execution | `utils/execution/` | Task checkpoint (persistence / session / snapshot / stats) |
 | io | `utils/io/` | File I/O utilities (file_utils) |
 | cache | `utils/cache/` | Cache management (LRU / TTL); cache_common |
-| compat | `utils/compat/` | Cross-version / cross-platform compatibility (compat, compat2) |
+| compat | `utils/compat/` | Cross-version / cross-platform compatibility (compat, airy_regex) |
 | cognition | `utils/cognition/` | Cognition management (agent info, scheduling, planning) |
 | strategy | `utils/strategy/` | Weighted scoring strategy engine |
 | network | `utils/network/` | Network utilities (HTTP / URI / DNS) |
@@ -143,11 +150,27 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 
 ### Platform abstraction layer (`platform/`)
 
-- **Platform detection** — auto-detects Linux / Windows / macOS.
-- **Filesystem** — path normalization and file-operation abstraction.
-- **Threads & sync** — `airy_thread_t`, `airy_mtx_t`, `airy_cond_t`.
+The foundation of the whole runtime — every cross-platform capability
+goes through this layer. Domain-split into base tools / paths / process /
+sync (shared via `platform_internal.h`, public API in `platform.h`):
+
+- **Platform detection** — auto-detects Linux / Windows / macOS and the
+  architecture (`AIRY_PLATFORM_BITS` via `UINTPTR_MAX`, covering x86_64,
+  aarch64, armv7l and riscv64).
+- **System info** — `airy_get_sysinfo()` returns CPU core count, total
+  memory, CPU model and process ID from `/proc` (Linux), `sysctl`
+  (macOS) or the registry (Windows); `cpu_model` feeds installer
+  hardware auto-configuration and capability trimming.
+- **File locking** — `airy_file_lock()` / `airy_file_unlock()` via
+  `fcntl` (POSIX) / `LockFileEx` (Windows) for install-time and daemon
+  mutual exclusion.
+- **Threads & sync** — `airy_thread_t`, `airy_mtx_t`, `airy_cond_t`,
+  plus `airy_thread_set_name()` / `airy_thread_get_name()` for
+  debuggable worker threads.
+- **Filesystem** — AIRY_HOME path system (`airy_home_dir()`,
+  `airy_runtime_dir()`, `airy_log_dir()`, …) plus path normalization and
+  file-operation abstraction.
 - **Dynamic library loading** — cross-platform FFI support.
-- **System info** — CPU core count, memory size, process ID.
 
 ### Atomic operation compat layer (`atomic_compat.h`)
 
@@ -270,7 +293,7 @@ commons exposes its surface through the unified type header and per-module publi
 - `platform/include/platform.h` — platform detection and base definitions
 - `utils/include/atomic_compat.h` — cross-platform atomic operations (11 types, 3 backends)
 - `utils/include/check.h` — generic check macros
-- Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/memory.h`, `utils/string/include/string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network.h`, `utils/security/include/security.h`, `utils/resource/include/resource.h`, `utils/uuid/include/uuid.h`, `utils/cache/include/cache.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc.h`, `utils/execution/include/checkpoint.h`, `utils/cognition/include/cognition.h`, `utils/strategy/include/strategy.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/airy_print.h`, `utils/compliance/include/compliance.h`, `utils/quality/include/quality.h`, `utils/sd/include/service_discovery.h`, `utils/effect/include/airy_effect.h`, `utils/ext/include/airy_ext.h`, `utils/cjson/include/cjson_helpers.h`, `utils/ime/include/airy_ime.h`
+- Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/airy_memory.h`, `utils/string/include/airy_string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network_common.h`, `utils/security/src/input_validator.h`, `utils/resource/src/resource_guard.h`, `utils/uuid/include/uuid_generator.h`, `utils/cache/include/cache_common.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc_common.h`, `utils/execution/include/checkpoint.h`, `utils/cognition/include/cognition_common.h`, `utils/strategy/include/strategy_common.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/airy_print.h`, `utils/compliance/include/compliance_exempt.h`, `utils/quality/airy_quality.h`, `utils/sd/include/service_discovery.h`, `utils/effect/include/airy_effect.h`, `utils/ext/include/airy_ext.h`, `utils/cjson/include/cjson_helpers.h`, `utils/ime/include/airy_ime.h`
 
 Memory macros (`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`) and the strict-compliance unsafe-function poisoning (e.g. `strcpy` replacement via `utils/string`) are project-wide.
 

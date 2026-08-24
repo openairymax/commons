@@ -43,9 +43,16 @@ commons/
 │   │   ├── platform.h           # 平台检测与基础定义
 │   │   └── export.h             # 符号导出控制
 │   ├── compat/                  # 平台兼容头文件（stdbool.h、stdint.h）
-│   └── platform.c               # 平台抽象实现
+│   ├── platform.c               # 基础工具域：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
+│   ├── platform_paths.c         # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
+│   ├── platform_process.c       # 进程域（start/wait/kill/run_capture）
+│   ├── platform_sync.c          # 同步域（线程、互斥锁、条件变量、线程命名）
+│   └── platform_internal.h      # 域间共享头（域拆分）
 ├── include/                     # 全局公共头文件
-│   └── airy_types.h          # 统一类型与错误码定义（权威来源）
+│   ├── airy_types.h          # 统一类型与错误码定义（权威来源）
+│   ├── airy_defaults.h       # 项目级默认值（路径、限额、调优开关）
+│   └── airymax/              # Airymax 统一类型契约（task_desc/uapi/syscalls/ipc/sched/…）
+├── third_party/                 # 内置第三方头文件（如 nghttp2）
 ├── utils/                       # 工具模块集合（32 个模块）
 │   ├── include/                 # 跨模块共享头文件
 │   │   ├── atomic_compat.h      # 跨平台原子操作兼容层
@@ -123,7 +130,7 @@ commons/
 | execution | `utils/execution/` | 任务检查点（checkpoint：持久化/会话/快照/统计） |
 | io | `utils/io/` | 文件 I/O 工具（file_utils） |
 | cache | `utils/cache/` | 缓存管理（LRU / TTL）；cache_common |
-| compat | `utils/compat/` | 跨版本 / 跨平台兼容（compat、compat2） |
+| compat | `utils/compat/` | 跨版本 / 跨平台兼容（compat、airy_regex） |
 | cognition | `utils/cognition/` | 认知管理（智能体信息、调度、规划） |
 | strategy | `utils/strategy/` | 加权评分策略引擎 |
 | network | `utils/network/` | 网络工具（HTTP / URI / DNS） |
@@ -143,11 +150,14 @@ commons/
 
 ### 平台抽象层（`platform/`）
 
-- **平台检测** —— 自动检测 Linux / Windows / macOS。
-- **文件系统** —— 路径规范化与文件操作抽象。
-- **线程与同步** —— `airy_thread_t`、`airy_mtx_t`、`airy_cond_t`。
+整个运行时的基础——所有跨平台能力都经此层。按域拆分为基础工具 / 路径 / 进程 / 同步（共享 `platform_internal.h`，公共 API 在 `platform.h`）：
+
+- **平台检测** —— 自动检测 Linux / Windows / macOS 与架构（`AIRY_PLATFORM_BITS` 按 `UINTPTR_MAX` 判定，覆盖 x86_64、aarch64、armv7l 与 riscv64）。
+- **系统信息** —— `airy_get_sysinfo()` 返回 CPU 核数、总内存、CPU 型号与进程 ID（Linux `/proc`、macOS `sysctl`、Windows 注册表）；`cpu_model` 支撑安装器硬件自动配置与能力裁剪。
+- **文件锁** —— `airy_file_lock()` / `airy_file_unlock()`（POSIX `fcntl` / Windows `LockFileEx`），供安装期与守护进程互斥。
+- **线程与同步** —— `airy_thread_t`、`airy_mtx_t`、`airy_cond_t`，另有 `airy_thread_set_name()` / `airy_thread_get_name()` 便于可调试的工作线程。
+- **文件系统** —— AIRY_HOME 路径体系（`airy_home_dir()`、`airy_runtime_dir()`、`airy_log_dir()` 等）+ 路径规范化与文件操作抽象。
 - **动态库加载** —— 跨平台 FFI 支持。
-- **系统信息** —— CPU 核数、内存大小、进程 ID。
 
 ### 原子操作兼容层（`atomic_compat.h`）
 
@@ -270,7 +280,7 @@ commons 通过统一类型头和各模块公共头暴露接口。权威入口：
 - `platform/include/platform.h` —— 平台检测与基础定义
 - `utils/include/atomic_compat.h` —— 跨平台原子操作（11 种类型，3 种后端）
 - `utils/include/check.h` —— 通用检查宏
-- 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/memory.h`、`utils/string/include/string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network.h`、`utils/security/include/security.h`、`utils/resource/include/resource.h`、`utils/uuid/include/uuid.h`、`utils/cache/include/cache.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc.h`、`utils/execution/include/checkpoint.h`、`utils/cognition/include/cognition.h`、`utils/strategy/include/strategy.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/airy_print.h`、`utils/compliance/include/compliance.h`、`utils/quality/include/quality.h`、`utils/sd/include/service_discovery.h`、`utils/effect/include/airy_effect.h`、`utils/ext/include/airy_ext.h`、`utils/cjson/include/cjson_helpers.h`、`utils/ime/include/airy_ime.h`
+- 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/airy_memory.h`、`utils/string/include/airy_string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network_common.h`、`utils/security/src/input_validator.h`、`utils/resource/src/resource_guard.h`、`utils/uuid/include/uuid_generator.h`、`utils/cache/include/cache_common.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc_common.h`、`utils/execution/include/checkpoint.h`、`utils/cognition/include/cognition_common.h`、`utils/strategy/include/strategy_common.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/airy_print.h`、`utils/compliance/include/compliance_exempt.h`、`utils/quality/airy_quality.h`、`utils/sd/include/service_discovery.h`、`utils/effect/include/airy_effect.h`、`utils/ext/include/airy_ext.h`、`utils/cjson/include/cjson_helpers.h`、`utils/ime/include/airy_ime.h`
 
 内存宏（`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`）和严格合规的不安全函数投毒（如通过 `utils/string` 替换 `strcpy`）是项目级的。
 

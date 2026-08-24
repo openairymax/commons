@@ -25,9 +25,9 @@ string/
 ├── src/
 │   ├── string.c               # 核心层字符串处理实现
 │   └── string_common.c        # 公共层字符串操作实现
-├── test/
-│   └── test_string.c          # 单元测试
 └── README.md                  # 本文档
+
+注：字符串单测在 commons/tests/unit/test_string_utils.c。
 ```
 
 ## 核心数据结构
