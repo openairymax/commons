@@ -93,11 +93,15 @@ extern "C" {
 #if AIRY_PLATFORM_WINDOWS
 #define AIRY_PATH_SEP '\\'
 #define AIRY_PATH_SEP_STR "\\"
+#ifndef AIRY_PATH_MAX
 #define AIRY_PATH_MAX 260
+#endif
 #else
 #define AIRY_PATH_SEP '/'
 #define AIRY_PATH_SEP_STR "/"
+#ifndef AIRY_PATH_MAX
 #define AIRY_PATH_MAX 4096
+#endif
 #endif
 
 

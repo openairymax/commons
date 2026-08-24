@@ -56,10 +56,33 @@
 
 #if AIRY_PLATFORM_WINDOWS
 
+/* CreateThread 回调必须是 __stdcall（LPTHREAD_START_ROUTINE），而
+ * airy_thread_func_t 为默认 __cdecl；x86 上直接强转会调用约定不匹配
+ * 导致栈不平衡。经参数块转发：param 指向 {func, arg}，线程启动后释放。 */
+typedef struct {
+    airy_thread_func_t func;
+    void *arg;
+} airy_thread_start_ctx_t;
+
+static DWORD WINAPI airy_thread_start_routine(LPVOID param)
+{
+    airy_thread_start_ctx_t *ctx = (airy_thread_start_ctx_t *)param;
+    ctx->func(ctx->arg);
+    AIRY_FREE(ctx);
+    return 0;
+}
+
 int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg)
 {
-    HANDLE h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, arg, 0, NULL);
+    airy_thread_start_ctx_t *ctx =
+        (airy_thread_start_ctx_t *)AIRY_MALLOC(sizeof(airy_thread_start_ctx_t));
+    if (!ctx)
+        return AIRY_ENOMEM;
+    ctx->func = func;
+    ctx->arg = arg;
+    HANDLE h = CreateThread(NULL, 0, airy_thread_start_routine, ctx, 0, NULL);
     if (h == NULL) {
+        AIRY_FREE(ctx);
         return (int)GetLastError();
     }
     *thread = h;
@@ -217,6 +240,9 @@ airy_mtx_t *airy_mtx_create(void)
 {
     airy_mtx_t *mutex = (airy_mtx_t *)AIRY_MALLOC(sizeof(airy_mtx_t));
     if (mutex) {
+        /* 非递归互斥量（与 airy_mtx_init 的递归属性为有意差异）：
+         * corekern 同步测试契约依赖 create 路径的非递归语义
+         * （已持有锁时 trylock 必须失败）。 */
         pthread_mutex_init(mutex, NULL);
     }
     return mutex;

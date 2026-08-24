@@ -27,14 +27,15 @@
 #include <string.h>
 
 #if defined(_WIN32) || defined(_WIN64)
+/* WIN32_LEAN_AND_MEAN 先行定义：避免 windows.h 默认拉入 winsock.h 与
+ * platform.h 引入的 winsock2.h 冲突（MSVC C2011 结构体重定义）。 */
+#define WIN32_LEAN_AND_MEAN
 #include <bcrypt.h>
 #include <direct.h>
 #include <io.h>
 #include <process.h>
 #include <sys/stat.h>
 #include <windows.h>
-#define strdup _strdup
-#define access _access /* flawfinder: ignore */
 #ifndef EEXIST
 #define EEXIST 17
 #endif
@@ -124,11 +125,7 @@ uint64_t airy_thread_id(void)
 
 airy_sock_t airy_sock_tcp(void)
 {
-#if AIRY_PLATFORM_WINDOWS
     return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#else
-    return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#endif
 }
 
 airy_sock_t airy_sock_unix(void)
@@ -175,8 +172,15 @@ void airy_sock_close(airy_sock_t sock)
 uint64_t airy_time_ns(void)
 {
 #if AIRY_PLATFORM_WINDOWS
-    LARGE_INTEGER frequency, counter;
-    QueryPerformanceFrequency(&frequency);
+    /* QPC 频率在系统生命周期内不变：缓存避免每次调用查询
+     * QueryPerformanceFrequency（该 API 相对昂贵）。 */
+    static LARGE_INTEGER frequency;
+    static int frequency_inited = 0;
+    if (!frequency_inited) {
+        QueryPerformanceFrequency(&frequency);
+        frequency_inited = 1;
+    }
+    LARGE_INTEGER counter;
     QueryPerformanceCounter(&counter);
     return (uint64_t)((counter.QuadPart * 1000000000ULL) / frequency.QuadPart);
 #else

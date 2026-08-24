@@ -20,14 +20,15 @@
 #include <string.h>
 
 #if defined(_WIN32) || defined(_WIN64)
+/* WIN32_LEAN_AND_MEAN 先行定义：避免 windows.h 默认拉入 winsock.h 与
+ * platform.h 引入的 winsock2.h 冲突（MSVC C2011 结构体重定义）。 */
+#define WIN32_LEAN_AND_MEAN
 #include <bcrypt.h>
 #include <direct.h>
 #include <io.h>
 #include <process.h>
 #include <windows.h>
 #include <sys/stat.h>
-#define strdup _strdup
-#define access _access /* flawfinder: ignore */
 #ifndef EEXIST
 #define EEXIST 17
 #endif
@@ -55,6 +56,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#endif
+
+/* stat 类型/调用按平台封装（文件级，所有平台可见）：
+ * Windows 用 struct _stat + _stat()（MSVC 无 POSIX struct stat），
+ * POSIX 用 struct stat + stat()。 */
+#if defined(_WIN32)
+#define PLATFORM_STAT_STRUCT struct _stat
+#define PLATFORM_STAT(p, st) _stat((p), (st))
+#else
+#define PLATFORM_STAT_STRUCT struct stat
+#define PLATFORM_STAT(p, st) stat((p), (st))
 #endif
 
 #include "error.h"
@@ -406,8 +418,8 @@ static int paths_rm_rf(const char *path)
 {
     if (!path || !path[0])
         return -1;
-    struct stat st;
-    if (stat(path, &st) != 0)
+    PLATFORM_STAT_STRUCT st;
+    if (PLATFORM_STAT(path, &st) != 0)
         return 0; /* not exists → idempotent */
     if (!S_ISDIR(st.st_mode))
         return (remove(path) == 0) ? 0 : -1;
@@ -423,8 +435,8 @@ static int paths_rm_rf(const char *path)
              (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
             continue;
         snprintf(child, sizeof(child), "%s/%s", path, entry->d_name);
-        struct stat cst;
-        if (stat(child, &cst) != 0)
+        PLATFORM_STAT_STRUCT cst;
+        if (PLATFORM_STAT(child, &cst) != 0)
             continue;
         if (S_ISDIR(cst.st_mode)) {
             if (paths_rm_rf(child) != 0) {
@@ -460,8 +472,8 @@ static void paths_cleanup_stale_tmp(void)
         if (entry->d_name[0] == '.')
             continue;
         snprintf(full, sizeof(full), "%s/%s", g_tmp_dir, entry->d_name);
-        struct stat st;
-        if (stat(full, &st) != 0)
+        PLATFORM_STAT_STRUCT st;
+        if (PLATFORM_STAT(full, &st) != 0)
             continue;
         if (st.st_mtime >= cutoff)
             continue;
