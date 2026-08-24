@@ -26,16 +26,16 @@ config_unified/
 │   ├── core_config.h            # Core 层：配置数据模型与基础接口
 │   ├── config_source.h          # Source 层：配置源适配接口
 │   ├── config_service.h         # Service 层：高级功能接口
-│   └── config_compat.h          # 兼容层：向后兼容旧 API
+│   └── yaml_minimal.h           # 最小 YAML 子集解析器（libyaml 缺失时回退）
 ├── src/
 │   ├── core_config.c            # Core 层实现
 │   ├── config_source.c          # Source 层实现
 │   ├── config_service.c         # Service 层实现
-│   └── config_compat.c          # 兼容层实现
-├── test/
-│   ├── test_config_unified.c    # 统一配置测试
-│   └── test_config_source_manager.c  # 源管理器测试
+│   └── yaml_minimal*.c          # YAML 最小解析器实现（9 个拆分文件）
 └── README.md                    # 本文档
+
+注：配置单测在 commons/tests/unit/ 下（test_config 当前因模块实现与
+头文件不匹配暂禁用）。
 ```
 
 ## 架构

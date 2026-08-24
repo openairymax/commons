@@ -18,12 +18,13 @@ UUID 模块提供符合 RFC 4122 标准的 UUID 生成功能，为 AgentRT 系�
 
 ```
 uuid/
-├── CMakeLists.txt               # 构建配置
 ├── include/
 │   └── uuid_generator.h       # UUID 生成器 API 声明
 ├── src/
 │   └── uuid_generator.c       # UUID 生成器实现
 └── README.md                  # 本文档
+
+注：构建并入顶层 airy_common（BAN-12，模块内无独立 CMakeLists）。
 ```
 
 ## 核心数据结构

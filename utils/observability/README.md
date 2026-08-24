@@ -21,7 +21,6 @@ Observability 模块提供 AgentRT 系统的三大可观测性支柱：日志（
 observability/
 ├── include/
 │   ├── observability.h          # 可观测性统一接口（日志、指标、追踪）
-│   ├── observability_compat.h   # 向后兼容层（类型别名和函数映射）
 │   ├── logger.h                 # 日志接口定义（含日志级别常量）
 │   ├── metrics.h                # 指标收集接口定义
 │   └── trace.h                  # 链路追踪接口定义

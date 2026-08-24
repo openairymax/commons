@@ -27,7 +27,7 @@ compat/
 │   └── netdb.h                  # POSIX netdb 兼容（网络数据库）
 ├── src/
 │   ├── compat.c                 # 兼容性实现
-│   └── compat2.c                # 扩展兼容性实现
+│   └── airy_regex.c             # POSIX ERE 正则引擎（Windows 上替代 regcomp 族）
 └── README.md                    # 本文档
 ```
 

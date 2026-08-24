@@ -22,18 +22,17 @@ Logging 模块是 AgentRT 的统一分层日志系统，采用三层架构设计
 logging/
 ├── include/
 │   ├── logging.h                # Core 层：日志核心 API（含文件输出与轮转）
-│   ├── logging_compat.h         # 日志兼容层（SVC_LOG_* / AIRY_LOG_* 宏）
 │   ├── atomic_logging.h         # Atomic 层：无锁队列与批量写入
 │   └── service_logging.h        # Service 层：轮转/过滤/传输/监控
 ├── src/
 │   ├── logging.c                # Core 层实现（含文件输出、色彩、时间戳、节流）
-│   ├── logging_compat.c         # 兼容层实现
 │   ├── atomic_logging.c         # Atomic 层实现
 │   └── service_logging.c        # Service 层实现（console_outputter 路由到 log_write）
 ├── bench_atomic_logging.c       # Atomic 层性能基准测试
-├── test/
-│   └── test_logging_unified.c   # 统一日志测试
 └── README.md                    # 本文档
+
+注：SVC_LOG_* / AIRY_LOG_* 兼容宏（logging_compat.h）位于 utils/include/；
+日志单测在 commons/tests/unit/test_logger.c。
 ```
 
 ## 三层架构

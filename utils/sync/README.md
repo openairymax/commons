@@ -21,7 +21,8 @@ sync/
 ├── include/
 │   ├── sync.h              # 核心层同步原语 API（不透明句柄、统计、死锁检测）
 │   ├── sync_common.h       # 公共层同步原语 API（简化接口）
-│   └── sync_compat.h       # POSIX 兼容层（宏和 inline 包装函数）
+│   ├── cancel_token.h      # 取消令牌（异步可中断）
+│   └── thread_pool.h       # 线程池
 ├── src/
 │   ├── sync.c              # 核心同步模块初始化与清理
 │   ├── sync_mutex.c        # 互斥锁实现
@@ -38,9 +39,9 @@ sync/
 │   ├── sync_internal.h     # 内部头文件
 │   ├── sync_types.h        # 内部类型定义
 │   └── sync_platform.h     # 平台适配头文件
-├── test/
-│   └── test_sync.c         # 单元测试
 └── README.md               # 本文档
+
+注：同步原语单测在 commons/tests/unit/（test_cancel_token 等）。
 ```
 
 ## 核心数据结构
@@ -275,9 +276,9 @@ sync/
 | `sync_rwlock_trywrlock(rwlock)` | 尝试写加锁 |
 | `sync_rwlock_unlock(rwlock)` | 解锁读写锁 |
 
-### POSIX 兼容层（sync_compat.h）
+### POSIX 兼容层
 
-兼容层提供 `AIRY_MUTEX_*`、`AIRY_COND_*`、`AIRY_RWLOCK_*`、`AIRY_SEM_*` 系列宏，可直接替换 `pthread_mutex_*`、`pthread_cond_*`、`sem_*` 等标准 API。
+`sync.h` 提供 `AIRY_MUTEX_*`、`AIRY_COND_*`、`AIRY_RWLOCK_*`、`AIRY_SEM_*` 系列宏与包装函数，可直接替换 `pthread_mutex_*`、`pthread_cond_*`、`sem_*` 等标准 API（兼容头已并入 `sync.h`）。
 
 ## 使用示例
 

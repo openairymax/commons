@@ -31,12 +31,12 @@ atoms → daemons 的编译期反向依赖（IRON-6）；daemons 侧保留再导
 
 ## 相关模块
 
-- `svc_common.h` — 服务管理框架（状态机 `airy_svc_state_t`）
+- `svc_common.h` — 服务管理框架（状态机 `airy_svc_state_t`，位于 utils/ipc/include/）
 - `ipc_service_bus.h` — IPC 服务总线
 - `daemon_bootstrap_sd.h` — daemon 引导期服务发现接入
 
 ## 状态
 
-- **实现**：`src/` 服务注册表（注册/发现/心跳/过期/负载均衡/依赖跟踪），
-  跨平台共享内存抽象。
+- **实现**：当前仅提供接口头（service_discovery.h / service_discovery_helper.h /
+  daemon_bootstrap_sd.h），尚无 `src/` 实现，未纳入 airy_common 构建。
 - **测试**：commons 单元测试覆盖注册发现、过期清理、负载均衡选择。
