@@ -355,6 +355,17 @@ int airy_platform_thread_detach(airy_thread_t thread);
 #endif
 
 /**
+ * @brief Set the current thread's name (observability / debugging)
+ *
+ * Linux pthread_setname_np (truncated to 15 chars by the kernel),
+ * macOS pthread_setname_np, Windows SetThreadDescription.
+ *
+ * @param name thread name (NUL-terminated, copied internally)
+ * @return 0 on success, non-zero on failure
+ */
+int airy_thread_set_name(const char *name);
+
+/**
  * @brief Get the current thread ID
  * @return thread ID
  */
@@ -575,6 +586,28 @@ int airy_mkdir_p(const char *path);
  */
 int64_t airy_file_size(const char *path);
 
+/**
+ * @brief Take an advisory file lock (cross-process single-instance guard)
+ *
+ * POSIX fcntl F_SETLK/F_SETLKW record lock; Windows LockFileEx. Lock is
+ * released on close or process exit (advisory: cooperating processes must
+ * call this API). Daemons use it to guarantee single-instance startup.
+ *
+ * @param fd file descriptor (POSIX) / HANDLE cast (Windows)
+ * @param exclusive 1 exclusive (write) lock, 0 shared (read) lock
+ * @param block 1 block until acquired, 0 fail fast (EBUSY)
+ * @return 0 acquired; AIRY_EBUSY held by another process (non-block only);
+ *         other non-zero on error
+ */
+int airy_file_lock(int fd, int exclusive, int block);
+
+/**
+ * @brief Release an advisory file lock previously taken by airy_file_lock
+ * @param fd file descriptor / handle
+ * @return 0 on success, non-zero on failure
+ */
+int airy_file_unlock(int fd);
+
 
 /**
  * @brief Initialize the network library (required on Windows)
@@ -633,6 +666,11 @@ typedef struct {
     char os_name[64];
     char os_version[64];
     char hostname[64];
+    /* 2026-08-24 强化（1.10.2 架构适配）：CPU 型号字符串
+     * （Linux /proc/cpuinfo "model name"、macOS machdep.cpu.brand_string、
+     * Windows CentralProcessor\ProcessorNameString）。供硬件画像/外设
+     * 增强检测复用（install.sh / airymaxrt monitor 的 C 侧 SSoT 判据）。 */
+    char cpu_model[128];
     uint32_t cpu_count;
     uint64_t memory_total;
     uint64_t memory_free;

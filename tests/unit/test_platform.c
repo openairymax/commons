@@ -245,6 +245,47 @@ static int test_run_capture_cancel(void)
 }
 #endif /* !_WIN32 */
 
+/* 2026-08-24 强化测试：airy_get_sysinfo（含 CPU 型号）、线程命名、文件锁 */
+static int test_sysinfo(void)
+{
+    airy_sysinfo_t info;
+    TEST_ASSERT(airy_get_sysinfo(&info) == 0, "sysinfo should succeed");
+    TEST_ASSERT(info.os_name[0] != '\0', "os_name should be populated");
+    TEST_ASSERT(info.hostname[0] != '\0', "hostname should be populated");
+    TEST_ASSERT(info.cpu_count > 0, "cpu_count should be positive");
+    TEST_ASSERT(info.memory_total > 0, "memory_total should be positive");
+    printf("  sysinfo: %s %s | %s | cpu=%u | mem=%lluB free=%lluB | model=%s\n",
+           info.os_name, info.os_version, info.hostname, info.cpu_count,
+           (unsigned long long)info.memory_total, (unsigned long long)info.memory_free,
+           info.cpu_model[0] ? info.cpu_model : "(unknown)");
+    return 0;
+}
+
+static int test_thread_set_name(void)
+{
+    TEST_ASSERT(airy_thread_set_name("airy-test-thread") == 0,
+                "thread set name should succeed");
+    TEST_ASSERT(airy_thread_set_name(NULL) != 0, "thread set name NULL should fail");
+    return 0;
+}
+
+static int test_file_lock(void)
+{
+    const char *path = "platform-lock-test.tmp";
+    FILE *f = fopen(path, "w");
+    TEST_ASSERT(f != NULL, "lock file create should succeed");
+#ifdef _WIN32
+    int fd = _fileno(f);
+#else
+    int fd = fileno(f);
+#endif
+    TEST_ASSERT(airy_file_lock(fd, 1, 0) == 0, "exclusive lock should be acquired");
+    TEST_ASSERT(airy_file_unlock(fd) == 0, "unlock should succeed");
+    fclose(f);
+    remove(path);
+    return 0;
+}
+
 int main(void)
 {
     printf("===========================================\n");
@@ -258,6 +299,9 @@ int main(void)
     TEST_RUN(test_file_operations);
     TEST_RUN(test_thread_primitives);
     TEST_RUN(test_network_functions);
+    TEST_RUN(test_sysinfo);
+    TEST_RUN(test_thread_set_name);
+    TEST_RUN(test_file_lock);
 #if !defined(_WIN32)
 
     TEST_RUN(test_run_capture_exit);

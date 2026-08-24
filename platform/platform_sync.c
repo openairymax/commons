@@ -7,6 +7,11 @@
  * mutex and condition variable implementations.
  */
 
+/* pthread_setname_np（Linux）需 _GNU_SOURCE；必须在任何系统头之前定义 */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <time.h>
 #ifndef _WIN32
 #include <unistd.h>
@@ -102,6 +107,32 @@ int airy_platform_thread_detach(airy_thread_t thread)
 }
 
 #endif
+
+int airy_thread_set_name(const char *name)
+{
+    if (!name)
+        return AIRY_EINVAL;
+#if AIRY_PLATFORM_WINDOWS
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
+    if (wlen <= 0)
+        return AIRY_EINVAL;
+    wchar_t *wname = (wchar_t *)AIRY_MALLOC((size_t)wlen * sizeof(wchar_t));
+    if (!wname)
+        return AIRY_ENOMEM;
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, wlen);
+    HRESULT hr = SetThreadDescription(GetCurrentThread(), wname);
+    AIRY_FREE(wname);
+    return SUCCEEDED(hr) ? 0 : AIRY_EINVAL;
+#elif defined(__linux__)
+    /* Linux 内核线程名上限 15 字节（含 NUL），超长截断 */
+    char tmp[16];
+    AIRY_STRNCPY_TERM(tmp, name, sizeof(tmp));
+    return pthread_setname_np(pthread_self(), tmp) == 0 ? 0 : AIRY_EINVAL;
+#else
+    /* macOS */
+    return pthread_setname_np(name) == 0 ? 0 : AIRY_EINVAL;
+#endif
+}
 
 #if AIRY_PLATFORM_WINDOWS
 

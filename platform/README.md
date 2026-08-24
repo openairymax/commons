@@ -24,7 +24,11 @@ platform/
 ├── compat/
 │   ├── stdbool.h                # C99 stdbool 兼容头文件（旧编译器）
 │   └── stdint.h                 # C99 stdint 兼容头文件（旧编译器）
-├── platform.c                   # 平台抽象实现（线程、文件系统、网络、随机数）
+├── platform.c                   # 基础工具域：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
+├── platform_paths.c             # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
+├── platform_process.c           # 进程域（start/wait/kill/run_capture/事件源驱动取消执行）
+├── platform_sync.c              # 同步原语域（线程 create/join/detach/set_name、互斥锁、条件变量）
+├── platform_internal.h          # 域间共享头
 └── README.md                    # 本文档
 ```
 
@@ -59,15 +63,19 @@ platform/
 - **互斥锁**：`airy_mtx_init` / `airy_mtx_lock` / `airy_mtx_trylock` / `airy_mtx_unlock` / `airy_mtx_destroy`
 - **条件变量**：`airy_cond_init` / `airy_cond_wait` / `airy_cond_timedwait` / `airy_cond_signal` / `airy_cond_broadcast` / `airy_cond_destroy`
 - **Socket 网络**：`airy_sock_tcp` / `airy_sock_unix` / `airy_sock_close` / `airy_sock_set_nonblock` / `airy_sock_set_reuseaddr` / `airy_network_init` / `airy_network_cleanup`
-- **进程管理**：`airy_process_start` / `airy_process_wait` / `airy_process_kill` / `airy_process_close_pipes` / `airy_process_run_capture`
-- **时间与休眠**：`airy_sleep_ms` / `airy_time_ms`
+- **进程管理**：`airy_process_start` / `airy_process_wait` / `airy_process_kill` / `airy_process_close_pipes` / `airy_process_run_capture` / `airy_process_run_capture_ex`（事件源驱动 + 取消令牌）
+- **线程命名**：`airy_thread_set_name`（Linux pthread_setname_np / macOS / Windows SetThreadDescription）
+- **时间与休眠**：`airy_sleep_ms` / `airy_time_ms` / `airy_time_ns` / `airy_localtime_r`
 - **文件系统**：`airy_file_exists` / `airy_mkdir_p` / `airy_file_size`
+- **文件锁**：`airy_file_lock` / `airy_file_unlock`（跨进程 advisory 锁，daemon 单实例保障）
 - **随机数**：`airy_random_init` / `airy_random_uint32` / `airy_random_float` / `airy_random_bytes`（Windows 使用 `BCryptGenRandom`，POSIX 使用 `/dev/urandom`）
 - **信号处理**：`airy_ignore_sigpipe`
 - **安全字符串**：`airy_strlcpy` / `airy_strlcat`
 - **错误诊断**：`airy_get_last_error`
-- **系统信息**：`airy_get_sysinfo`
+- **系统信息**：`airy_get_sysinfo`（含 CPU 型号识别：Linux /proc/cpuinfo、macOS machdep.cpu.brand_string、Windows ProcessorNameString）
 - **原子操作**：`airy_atomic_load` / `airy_atomic_store` / `airy_atomic_fetch_add` / `airy_atomic_fetch_sub`
+- **RAII 互斥守卫**：`AIRY_MUTEX_LOCK_GUARD`（GCC/Clang cleanup 属性自动解锁）
+- **AIRY_HOME 路径体系**：`airy_paths_init` / `airy_home_dir` / `airy_runtime_dir_socket` / `airy_workspace_root_dir` 等（全部运行时产物收敛于 `$AIRY_HOME`）
 
 ### 4. 符号导出控制 (`export.h`)
 
