@@ -152,8 +152,15 @@ void airy_process_close_pipes(airy_process_info_t *proc)
 int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
                              uint32_t timeout_ms, char *output, size_t output_size)
 {
+    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms, output, output_size,
+                                       NULL);
+}
+
+int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
+                                uint32_t timeout_ms, char *output, size_t output_size,
+                                airy_cancel_token_t *cancel_token)
+{
     (void)envp;
-    (void)timeout_ms;
     /* BAN-211/235: use CreateProcess + anonymous pipes instead of _popen
      * (eliminates cmd.exe injection risk). CreateProcess parses the command
      * line directly without a shell, aligning behavior with POSIX
@@ -175,7 +182,6 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
     if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0)) {
         return AIRY_ERR_IO;
     }
-
     SetHandleInformation(pipe_read, HANDLE_FLAG_INHERIT, 0);
 
     STARTUPINFOA si;
@@ -188,7 +194,8 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
     si.hStdInput = NULL;
     ZeroMemory(&pi, sizeof(pi));
 
-    BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    /* 与 airy_process_start 对齐：CREATE_NO_WINDOW 避免拉起控制台程序时闪现窗口 */
+    BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
     CloseHandle(pipe_write);
     if (!ok) {
         CloseHandle(pipe_read);
@@ -196,7 +203,48 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
     }
 
     size_t offset = 0;
-    if (output && output_size > 0) {
+    if (output && output_size > 0)
+        output[0] = '\0';
+
+    /* 超时/取消失效修复（对齐 POSIX 分支语义）：50ms 粒度轮询等待 +
+     * 定期排空管道，deadline/cancel 均生效，进程超时/取消后终止。 */
+    uint64_t deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
+    int timed_out = 0;
+    int canceled = 0;
+
+    for (;;) {
+        if (cancel_token && airy_cancel_token_is_canceled(cancel_token)) {
+            canceled = 1;
+            TerminateProcess(pi.hProcess, 1);
+            break;
+        }
+        if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
+            timed_out = 1;
+            TerminateProcess(pi.hProcess, 1);
+            break;
+        }
+        if (output && output_size > 0) {
+            char buf[4096];
+            DWORD avail = 0;
+            if (PeekNamedPipe(pipe_read, NULL, 0, NULL, &avail, NULL) && avail > 0) {
+                DWORD bytes_read = 0;
+                if (ReadFile(pipe_read, buf, sizeof(buf) - 1, &bytes_read, NULL) &&
+                    bytes_read > 0) {
+                    size_t len = (size_t)bytes_read;
+                    if (offset + len >= output_size)
+                        len = output_size - 1 - offset;
+                    __builtin_memcpy(output + offset, buf, len);
+                    offset += len;
+                    output[offset] = '\0';
+                }
+            }
+        }
+        if (WaitForSingleObject(pi.hProcess, 50) == WAIT_OBJECT_0)
+            break;
+    }
+
+    /* 进程已终止后排空残留输出 */
+    if (output && output_size > 0 && !canceled && !timed_out) {
         char buf[4096];
         DWORD bytes_read;
         while (ReadFile(pipe_read, buf, sizeof(buf) - 1, &bytes_read, NULL) && bytes_read > 0) {
@@ -211,22 +259,16 @@ int airy_process_run_capture(const char *executable, char *const argv[], char *c
         output[offset] = '\0';
     }
 
-    WaitForSingleObject(pi.hProcess, INFINITE);
     DWORD exit_code = 1;
     GetExitCodeProcess(pi.hProcess, &exit_code);
 
     CloseHandle(pipe_read);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    return (int)exit_code;
-}
 
-int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
-                                uint32_t timeout_ms, char *output, size_t output_size,
-                                airy_cancel_token_t *cancel_token)
-{
-    (void)cancel_token;
-    return airy_process_run_capture(executable, argv, envp, timeout_ms, output, output_size);
+    if (canceled)
+        return AIRY_PROCESS_RC_CANCELED;
+    return timed_out ? -2 : (int)exit_code;
 }
 
 #else
@@ -296,21 +338,31 @@ int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_
     if (timeout_ms == 0) {
         result = waitpid(proc->pid, &status, 0);
     } else {
-        struct timespec ts;
-        ts.tv_sec = timeout_ms / 1000;
-        ts.tv_nsec = (timeout_ms % 1000) * 1000000;
+        /* 单调时钟 deadline 轮询：修复 <1s 超时误报与 ts 不递减导致
+         * 超时预算不准（子进程在睡眠期间退出时误报 AIRY_ERR_TIMEOUT，
+         * 且子进程未被收割成僵尸）。 */
+        uint64_t deadline_ms = airy_time_ms() + (uint64_t)timeout_ms;
 
         sigset_t mask, old_mask;
         sigemptyset(&mask);
         sigaddset(&mask, SIGCHLD);
         sigprocmask(SIG_BLOCK, &mask, &old_mask);
 
-        do {
+        for (;;) {
             result = waitpid(proc->pid, &status, WNOHANG);
-            if (result == 0) {
-                nanosleep(&ts, NULL);
+            if (result != 0)
+                break;
+            uint64_t now_ms = airy_time_ms();
+            if (now_ms >= deadline_ms) {
+                result = 0;
+                break;
             }
-        } while (result == 0 && ts.tv_sec > 0);
+            uint64_t remain_ms = deadline_ms - now_ms;
+            struct timespec ts;
+            ts.tv_sec = (time_t)(remain_ms / 1000);
+            ts.tv_nsec = (long)((remain_ms % 1000) * 1000000);
+            nanosleep(&ts, NULL);
+        }
 
         sigprocmask(SIG_SETMASK, &old_mask, NULL);
 
