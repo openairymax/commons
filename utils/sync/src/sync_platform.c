@@ -21,6 +21,7 @@
 #else
 #include <errno.h>
 #include <pthread.h>
+#include <sched.h>
 #include <semaphore.h>
 #include <sys/time.h>
 #include <time.h>
@@ -28,6 +29,15 @@
 #endif
 
 #include "error.h"
+
+/* macOS 无 pthread_spinlock_t，与 Windows 一样使用 C11 原子 CAS 自旋。 */
+#if defined(__APPLE__) && defined(__MACH__)
+#define AIRY_SPINLOCK_CAS 1
+#elif defined(_WIN32)
+#define AIRY_SPINLOCK_CAS 1
+#else
+#define AIRY_SPINLOCK_CAS 0
+#endif
 
 int platform_mutex_init(platform_mutex_t *mutex)
 {
@@ -198,8 +208,8 @@ int platform_rwlock_unlock(platform_rwlock_t *rwlock)
 
 int platform_spinlock_init(platform_spinlock_t *spinlock)
 {
-#ifdef _WIN32
-    *spinlock = 0;
+#if AIRY_SPINLOCK_CAS
+    atomic_init(spinlock, 0);
     return 0;
 #else
     return pthread_spin_init(spinlock, PTHREAD_PROCESS_PRIVATE);
@@ -208,8 +218,8 @@ int platform_spinlock_init(platform_spinlock_t *spinlock)
 
 int platform_spinlock_destroy(platform_spinlock_t *spinlock)
 {
-#ifdef _WIN32
-    *spinlock = 0;
+#if AIRY_SPINLOCK_CAS
+    atomic_store(spinlock, 0);
     return 0;
 #else
     return pthread_spin_destroy(spinlock);
@@ -218,12 +228,20 @@ int platform_spinlock_destroy(platform_spinlock_t *spinlock)
 
 int platform_spinlock_lock(platform_spinlock_t *spinlock)
 {
-#ifdef _WIN32
+#if AIRY_SPINLOCK_CAS && defined(_WIN32)
     int expected = 0;
     while (!atomic_compare_exchange_strong_explicit(spinlock, &expected, 1, memory_order_acquire,
                                                     memory_order_relaxed)) {
         expected = 0;
         SwitchToThread();
+    }
+    return 0;
+#elif AIRY_SPINLOCK_CAS
+    int expected = 0;
+    while (!atomic_compare_exchange_strong_explicit(spinlock, &expected, 1, memory_order_acquire,
+                                                    memory_order_relaxed)) {
+        expected = 0;
+        sched_yield();
     }
     return 0;
 #else
@@ -233,7 +251,7 @@ int platform_spinlock_lock(platform_spinlock_t *spinlock)
 
 int platform_spinlock_unlock(platform_spinlock_t *spinlock)
 {
-#ifdef _WIN32
+#if AIRY_SPINLOCK_CAS
     atomic_store_explicit(spinlock, 0, memory_order_release);
     return 0;
 #else

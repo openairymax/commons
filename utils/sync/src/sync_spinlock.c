@@ -13,6 +13,15 @@
 
 #include <string.h>
 
+/* macOS 无 pthread_spinlock_t，与 Windows 一样使用 C11 原子 CAS 自旋。 */
+#if defined(__APPLE__) && defined(__MACH__)
+#define AIRY_SPINLOCK_CAS 1
+#elif defined(_WIN32)
+#define AIRY_SPINLOCK_CAS 1
+#else
+#define AIRY_SPINLOCK_CAS 0
+#endif
+
 sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t *attr)
 {
     CHECK_NULL_RET(spinlock, SYNC_ERROR_INVALID);
@@ -26,8 +35,8 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
     }
     AIRY_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
 
-#ifdef _WIN32
-    s->lock = 0;
+#if AIRY_SPINLOCK_CAS
+    atomic_init(&s->lock, 0);
 #else
     int result = pthread_spin_init(&s->lock, PTHREAD_PROCESS_PRIVATE);
     if (result != 0) {
@@ -52,7 +61,7 @@ sync_result_t sync_spinlock_free(sync_spinlock_t spinlock)
         return SYNC_SUCCESS;
     }
 
-#ifndef _WIN32
+#if !AIRY_SPINLOCK_CAS
     pthread_spin_destroy(&spinlock->lock);
 #endif
 
@@ -67,7 +76,7 @@ sync_result_t sync_spinlock_lock_ex(sync_spinlock_t spinlock)
         return SYNC_ERROR_INVALID;
     }
 
-#ifdef _WIN32
+#if AIRY_SPINLOCK_CAS
     int expected = 0;
     while (!atomic_compare_exchange_strong_explicit(&spinlock->lock, &expected, 1,
                                                     memory_order_acquire, memory_order_relaxed)) {
@@ -90,7 +99,7 @@ sync_result_t sync_spinlock_try_lock(sync_spinlock_t spinlock)
         return SYNC_ERROR_INVALID;
     }
 
-#ifdef _WIN32
+#if AIRY_SPINLOCK_CAS
     int expected = 0;
     if (!atomic_compare_exchange_strong_explicit(&spinlock->lock, &expected, 1,
                                                  memory_order_acquire, memory_order_relaxed)) {
@@ -116,7 +125,7 @@ sync_result_t sync_spinlock_unlock_ex(sync_spinlock_t spinlock)
         return SYNC_ERROR_INVALID;
     }
 
-#ifdef _WIN32
+#if AIRY_SPINLOCK_CAS
     atomic_store_explicit(&spinlock->lock, 0, memory_order_release);
 #else
     int rc = pthread_spin_unlock(&spinlock->lock);

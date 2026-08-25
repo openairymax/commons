@@ -70,6 +70,10 @@ typedef HANDLE platform_event_t;
 #include <sys/time.h>
 #include <unistd.h>
 
+#if defined(__APPLE__) && defined(__MACH__)
+#include "atomic_compat.h"
+#endif
+
 
 typedef pthread_mutex_t platform_mutex_t;
 
@@ -80,7 +84,13 @@ typedef pthread_mutex_t platform_recursive_mutex_t;
 typedef pthread_rwlock_t platform_rwlock_t;
 
 
+/* macOS 无 pthread_spinlock_t：使用 C11 atomic_int CAS 自旋，
+ * 与 Windows 分支实现策略对齐。 */
+#if defined(__APPLE__) && defined(__MACH__)
+typedef atomic_int platform_spinlock_t;
+#else
 typedef pthread_spinlock_t platform_spinlock_t;
+#endif
 
 
 typedef sem_t platform_semaphore_t;
