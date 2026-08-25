@@ -145,25 +145,45 @@ extern "C" {
 #ifndef AIRY_CACHE_DIR
 #define AIRY_CACHE_DIR "/var/cache/agentrt"
 #endif
+#elif AIRY_PLATFORM_MACOS
+
+#ifndef AIRY_RUNTIME_DIR
+#define AIRY_RUNTIME_DIR "/tmp/agentrt"
+#endif
+#ifndef AIRY_LOG_DIR
+#define AIRY_LOG_DIR "/var/log/agentrt"
+#endif
+#ifndef AIRY_CONFIG_DIR
+#define AIRY_CONFIG_DIR "/etc/agentrt"
+#endif
+#ifndef AIRY_DATA_DIR
+#define AIRY_DATA_DIR "/var/lib/agentrt"
+#endif
+#ifndef AIRY_TMP_DIR
+#define AIRY_TMP_DIR "/var/tmp/agentrt"
+#endif
+#ifndef AIRY_CACHE_DIR
+#define AIRY_CACHE_DIR "/var/cache/agentrt"
+#endif
 #else
 
 #ifndef AIRY_RUNTIME_DIR
-#define AIRY_RUNTIME_DIR "./agentrt/run"
+#define AIRY_RUNTIME_DIR "/tmp/agentrt"
 #endif
 #ifndef AIRY_LOG_DIR
-#define AIRY_LOG_DIR "./agentrt/logs"
+#define AIRY_LOG_DIR "/tmp/agentrt/logs"
 #endif
 #ifndef AIRY_CONFIG_DIR
-#define AIRY_CONFIG_DIR "./agentrt/config"
+#define AIRY_CONFIG_DIR "/etc/agentrt"
 #endif
 #ifndef AIRY_DATA_DIR
-#define AIRY_DATA_DIR "./agentrt/data"
+#define AIRY_DATA_DIR "/var/lib/agentrt"
 #endif
 #ifndef AIRY_TMP_DIR
-#define AIRY_TMP_DIR "./agentrt/tmp"
+#define AIRY_TMP_DIR "/var/tmp/agentrt"
 #endif
 #ifndef AIRY_CACHE_DIR
-#define AIRY_CACHE_DIR "./agentrt/cache"
+#define AIRY_CACHE_DIR "/var/cache/agentrt"
 #endif
 #endif
 
