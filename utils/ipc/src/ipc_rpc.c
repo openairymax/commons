@@ -154,7 +154,7 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     if (err != AIRY_SUCCESS)
         return err;
 
-    if (msg.header.magic != IPC_MAGIC) {
+    if (msg.header.aipc.magic != IPC_MAGIC) {
         ipc_message_free(&msg);
         return AIRY_EINVAL;
     }
@@ -188,7 +188,7 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
         ipc_message_t rsp_msg = {0};
         rsp_msg.header = msg.header;
         rsp_msg.header.type = IPC_MSG_RESPONSE;
-        rsp_msg.header.payload_len = sizeof(rsp_hdr);
+        rsp_msg.header.aipc.payload_len = sizeof(rsp_hdr);
         rsp_msg.payload = &rsp_hdr;
         rsp_msg.payload_size = sizeof(rsp_hdr);
 
@@ -220,7 +220,7 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     ipc_message_t rsp_msg = {0};
     rsp_msg.header = msg.header;
     rsp_msg.header.type = IPC_MSG_RESPONSE;
-    rsp_msg.header.payload_len = sizeof(rsp_hdr) + response_len;
+    rsp_msg.header.aipc.payload_len = sizeof(rsp_hdr) + response_len;
 
     size_t total_payload = sizeof(rsp_hdr) + response_len;
     void *combined_payload = AIRY_MALLOC(total_payload);
@@ -291,11 +291,11 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, 
     }
 
     ipc_message_t req_msg = {0};
-    req_msg.header.magic = IPC_MAGIC;
+    req_msg.header.aipc.magic = IPC_MAGIC;
     req_msg.header.version = 1;
     req_msg.header.type = IPC_MSG_REQUEST;
     req_msg.header.msg_id = ++client->request_id_counter;
-    req_msg.header.payload_len = total_payload;
+    req_msg.header.aipc.payload_len = total_payload;
     req_msg.header.timestamp = 0;
     req_msg.payload = request_buf;
     req_msg.payload_size = total_payload;

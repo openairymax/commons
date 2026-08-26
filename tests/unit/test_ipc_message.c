@@ -82,7 +82,7 @@ void test_message_clone(void **state)
     ipc_message_t *clone = ipc_message_clone(original);
 
     assert_non_null(clone);
-    assert_int_equal(clone->header.magic, original->header.magic);
+    assert_int_equal(clone->header.aipc.magic, original->header.aipc.magic);
     assert_int_equal(clone->header.type, original->header.type);
     assert_int_equal(clone->payload_size, original->payload_size);
 
@@ -166,7 +166,7 @@ void test_message_serialize_deserialize(void **state)
     ipc_message_t deserialized;
     err = ipc_message_deserialize(buffer, written, &deserialized);
     assert_int_equal(err, AIRY_SUCCESS);
-    assert_int_equal(deserialized.header.magic, original->header.magic);
+    assert_int_equal(deserialized.header.aipc.magic, original->header.aipc.magic);
     assert_int_equal(deserialized.header.type, original->header.type);
     assert_int_equal(deserialized.payload_size, original->payload_size);
 
