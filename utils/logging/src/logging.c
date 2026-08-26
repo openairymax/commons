@@ -28,8 +28,11 @@
 #define NOMINMAX
 #endif
 #include <windows.h> /* GetSystemTimeAsFileTime / GetCurrentProcessId */
+#include <io.h>
+#include <errno.h>
 #else
 #include <unistd.h>
+#include <errno.h>
 #endif
 
 /* Unified base library compatibility layer */
@@ -390,11 +393,21 @@ static void log_file_rotate_if_needed(void)
     if (!path)
         return;
 
+    /* P2-1：轮转前 fsync 旧文件，避免轮转窗口崩溃丢日志 */
+    if (g_log_file) {
+        fflush(g_log_file);
+#ifdef _WIN32
+        _commit(_fileno(g_log_file));
+#else
+        fsync(fileno(g_log_file));
+#endif
+    }
     fclose(g_log_file);
     g_log_file = NULL;
 
     char old_path[512];
     char new_path[512];
+    int rename_failed = 0;
     for (int i = max_backup - 1; i >= 0; i--) {
         if (i == 0) {
             snprintf(old_path, sizeof(old_path), "%s", path);
@@ -402,12 +415,21 @@ static void log_file_rotate_if_needed(void)
             snprintf(old_path, sizeof(old_path), "%s.%d", path, i);
         }
         snprintf(new_path, sizeof(new_path), "%s.%d", path, i + 1);
-        rename(old_path, new_path);
+        /* P2-1：rename 失败（目标为目录/跨设备）不再静默吞掉 */
+        if (rename(old_path, new_path) != 0 && errno != ENOENT)
+            rename_failed = 1;
     }
 
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
     g_log_file = fopen(path, "a");
-    g_log_file_current_size = 0;
+    if (g_log_file) {
+        fseek(g_log_file, 0, SEEK_END);
+        g_log_file_current_size = (size_t)ftell(g_log_file);
+    } else {
+        g_log_file_current_size = 0;
+    }
+    if (rename_failed)
+        AIRY_LOG_WARN("log rotation: some backup renames failed (path=%s)", path);
 }
 
 static void log_file_write(const log_record_t *record, const char *formatted_message,

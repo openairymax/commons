@@ -158,36 +158,6 @@ static void level_filter_destroy(filter_t *self)
     AIRY_FREE(self);
 }
 
-void service_log_output_record(const log_record_t *record)
-{
-    if (!record || !g_service_state.initialized)
-        return;
-
-    airy_mtx_lock(&g_service_state.mutex);
-
-    bool passed = true;
-    for (int i = 0; i < g_service_state.filter_count; i++) {
-        filter_t *f = g_service_state.filters[i];
-        if (f && f->filter && !f->filter(f, record)) {
-            passed = false;
-            break;
-        }
-    }
-
-    if (passed) {
-        for (int i = 0; i < g_service_state.outputter_count; i++) {
-            outputter_t *o = g_service_state.outputters[i];
-            if (o && o->output) {
-                o->output(o, record);
-            }
-        }
-        g_service_state.stats.throughput.total_records++;
-    }
-
-    g_service_state.stats.throughput.total_records++;
-    airy_mtx_unlock(&g_service_state.mutex);
-}
-
 int service_logging_init(const service_logging_config_t *manager)
 {
     if (g_service_state.initialized) {

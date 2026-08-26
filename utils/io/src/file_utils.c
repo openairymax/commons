@@ -68,14 +68,60 @@ int airy_io_write_file(const char *path, const void *data, size_t len)
 {
     if (!path || !data)
         return AIRY_EINVAL;
-    FILE *f = fopen(path, "wb");
-    if (!f)
-        return AIRY_EINVAL;
     if (len == (size_t)-1)
         len = strlen((const char *)data);
+
+    /* P2: atomic write - write to a temp file in the same directory, fsync,
+     * then rename over the target, so a crash mid-write never leaves a
+     * truncated/partial file at the destination. */
+    char tmppath[1024];
+    if (snprintf(tmppath, sizeof(tmppath), "%s.tmp", path) >= (int)sizeof(tmppath))
+        return -1;
+
+    FILE *f = fopen(tmppath, "wb");
+    if (!f)
+        return -1;
+
+    int failed = 0;
     size_t written = fwrite(data, 1, len, f);
-    fclose(f);
-    return (written == len) ? 0 : -1;
+    if (written != len)
+        failed = 1;
+    if (!failed && fflush(f) != 0)
+        failed = 1;
+#ifndef _WIN32
+    if (!failed) {
+        int fd = fileno(f);
+        if (fd >= 0 && fsync(fd) != 0)
+            failed = 1;
+    }
+#else
+    if (!failed) {
+        int fd = _fileno(f);
+        if (fd >= 0 && _commit(fd) != 0)
+            failed = 1;
+    }
+#endif
+    if (fclose(f) != 0)
+        failed = 1;
+
+    if (failed) {
+        remove(tmppath);
+        return -1;
+    }
+
+#ifndef _WIN32
+    if (rename(tmppath, path) != 0) {
+        remove(tmppath);
+        return -1;
+    }
+#else
+    /* MoveFileExA 可原子替换已存在的目标（C 标准 rename 在目标存在时会失败） */
+    if (!MoveFileExA(tmppath, path, MOVEFILE_REPLACE_EXISTING)) {
+        remove(tmppath);
+        return -1;
+    }
+#endif
+    return 0;
 }
 
 int airy_io_ensure_dir(const char *path)

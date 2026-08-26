@@ -293,8 +293,10 @@ airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
         AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
         if (timeout_ms > 0 && client->config.nonblocking) {
+            /* P2-2：F_GETFL 失败时 flags=-1，F_SETFL 会破坏 fd 标志位 */
             int flags = fcntl(sock_fd, F_GETFL, 0);
-            fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
+            if (flags >= 0)
+                fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
         }
 
         int ret = connect(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
