@@ -26,7 +26,7 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    msg->header.magic = IPC_MAGIC;
+    msg->header.aipc.magic = IPC_MAGIC; /* [SC] 128B 头 magic */
     msg->header.version = 1;
     msg->header.type = (uint32_t)type;
     msg->header.flags = 0;
@@ -34,7 +34,7 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
     msg->header.correlation_id = 0;
     AIRY_MEMSET(msg->header.source, 0, sizeof(msg->header.source));
     AIRY_MEMSET(msg->header.target, 0, sizeof(msg->header.target));
-    msg->header.payload_len = payload_len;
+    msg->header.aipc.payload_len = (uint32_t)payload_len;
     msg->header.checksum = 0;
     msg->header.timestamp = ipc_get_timestamp_ns();
     AIRY_MEMSET(msg->header.reserved, 0, sizeof(msg->header.reserved));
@@ -115,7 +115,7 @@ bool ipc_message_verify(const ipc_message_t *message)
         return false;
     }
 
-    if (message->header.magic != IPC_MAGIC) {
+    if (message->header.aipc.magic != IPC_MAGIC) {
         return false;
     }
 
@@ -163,19 +163,19 @@ airy_err_t ipc_message_deserialize(const void *buffer, size_t len, ipc_message_t
 
     __builtin_memcpy(&message->header, buffer, sizeof(ipc_message_header_t));
 
-    if (message->header.payload_len > 0) {
-        if (len < sizeof(ipc_message_header_t) + message->header.payload_len) {
+    if (message->header.aipc.payload_len > 0) {
+        if (len < sizeof(ipc_message_header_t) + message->header.aipc.payload_len) {
             return AIRY_EINVAL;
         }
 
-        message->payload = AIRY_MALLOC(message->header.payload_len);
+        message->payload = AIRY_MALLOC(message->header.aipc.payload_len);
         if (!message->payload) {
             return AIRY_ENOMEM;
         }
 
         __builtin_memcpy(message->payload, (const char *)buffer + sizeof(ipc_message_header_t),
-                         message->header.payload_len);
-        message->payload_size = message->header.payload_len;
+                         message->header.aipc.payload_len);
+        message->payload_size = message->header.aipc.payload_len;
     } else {
         message->payload = NULL;
         message->payload_size = 0;

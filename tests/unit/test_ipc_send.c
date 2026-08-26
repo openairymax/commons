@@ -34,11 +34,11 @@ void test_send_message_success(void **state)
     ipc_channel_open(channel);
 
     ipc_message_t msg = {0};
-    msg.header.magic = IPC_MAGIC;
+    msg.header.aipc.magic = IPC_MAGIC;
     msg.header.version = 1;
     msg.header.type = IPC_MSG_DATA;
     msg.header.msg_id = 1;
-    msg.header.payload_len = 10;
+    msg.header.aipc.payload_len = 10;
     msg.payload = AIRY_MALLOC(10);
     msg.payload_size = 10;
 
@@ -84,7 +84,7 @@ void test_send_request_response(void **state)
     ipc_channel_open(channel);
 
     ipc_message_t request = {0};
-    request.header.magic = IPC_MAGIC;
+    request.header.aipc.magic = IPC_MAGIC;
     request.header.version = 1;
     request.header.type = IPC_MSG_DATA;
     request.header.msg_id = 100;
@@ -111,7 +111,7 @@ void test_broadcast_message(void **state)
     ipc_channel_open(channel);
 
     ipc_message_t msg = {0};
-    msg.header.magic = IPC_MAGIC;
+    msg.header.aipc.magic = IPC_MAGIC;
     msg.header.version = 1;
     msg.header.type = IPC_MSG_DATA;
     msg.header.msg_id = 200;
@@ -178,11 +178,11 @@ void test_receive_message(void **state)
     ipc_channel_open(channel);
 
     ipc_message_t msg = {0};
-    msg.header.magic = IPC_MAGIC;
+    msg.header.aipc.magic = IPC_MAGIC;
     msg.header.version = 1;
     msg.header.type = IPC_MSG_DATA;
     msg.header.msg_id = 1;
-    msg.header.payload_len = 0;
+    msg.header.aipc.payload_len = 0;
     assert_int_equal(ipc_send(channel, &msg), AIRY_SUCCESS);
 
     ipc_message_t received_msg;

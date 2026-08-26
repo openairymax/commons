@@ -142,21 +142,32 @@ typedef enum {
 
 /**
  * @brief IPC message header structure
+ *
+ * A-IPC 对齐（Unify Design SSoT，P0-05 收敛）：wire 格式前 128B 为 [SC]
+ * airy_ipc_msg_hdr（Layout C v4），与 agent-linux / AirymaxOS 内核态
+ * fastpath 逐字节兼容；IPC 模块内部语义字段（version/type/flags/msg_id/
+ * correlation_id/source/target/checksum/timestamp 等）位于标准头之后的
+ * 扩展段。magic/payload_len/crc32 复用 [SC] 头字段。
  */
 typedef struct {
-    uint32_t magic;
-    uint32_t version;
-    uint32_t type;
-    uint32_t flags;
-    uint64_t msg_id;
-    uint64_t correlation_id;
-    char source[64];
-    char target[64];
-    uint64_t payload_len;
-    uint32_t checksum;
-    airy_timestamp_t timestamp;
-    uint8_t reserved[32];
+    struct airy_ipc_msg_hdr aipc; /* [SC] A-IPC 128B 标准头（offset 0） */
+    /* —— IPC 模块内部扩展段（128B 标准头之后）—— */
+    uint32_t version;             /* IPC 版本 */
+    uint32_t type;                /* IPC 消息类型（IPC_MSG_*） */
+    uint32_t flags;               /* IPC 消息标志（IPC_FLAG_*） */
+    uint64_t msg_id;              /* 消息 ID */
+    uint64_t correlation_id;      /* 关联 ID（请求/响应配对） */
+    char source[64];              /* 源标识 */
+    char target[64];              /* 目标标识 */
+    uint32_t checksum;            /* 消息校验和（header_crc ^ payload_crc） */
+    airy_timestamp_t timestamp;   /* 时间戳（ns） */
+    uint8_t reserved[32];         /* 保留 */
 } ipc_message_header_t;
+
+/* 兼容访问宏：magic/payload_len/crc32 复用 [SC] 头字段 */
+#define IPC_HDR_MAGIC(h)        ((h)->aipc.magic)
+#define IPC_HDR_PAYLOAD_LEN(h)  ((h)->aipc.payload_len)
+#define IPC_HDR_CRC32(h)        ((h)->aipc.crc32)
 
 /**
  * @brief IPC message structure

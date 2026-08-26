@@ -463,9 +463,9 @@ airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
         return AIRY_ENOTCONN;
     }
 
-    if (message->header.payload_len > channel->config.max_message_size) {
+    if (message->header.aipc.payload_len > channel->config.max_message_size) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Message too large: %u > %u",
-                 (unsigned int)message->header.payload_len,
+                 (unsigned int)message->header.aipc.payload_len,
                  (unsigned int)channel->config.max_message_size);
         return AIRY_EOVERFLOW;
     }
@@ -547,12 +547,12 @@ airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, s
     }
 
     ipc_message_t msg = {0};
-    msg.header.magic = IPC_MAGIC;
+    msg.header.aipc.magic = IPC_MAGIC; /* [SC] 128B 头 magic */
     msg.header.version = 1;
     msg.header.type = IPC_MSG_DATA;
     msg.header.flags = 0;
     msg.header.msg_id = ++channel->msg_id_counter;
-    msg.header.payload_len = len;
+    msg.header.aipc.payload_len = (uint32_t)len;
     msg.header.timestamp = ipc_get_timestamp_ns();
     msg.payload = (void *)data;
     msg.payload_size = len;
@@ -608,7 +608,7 @@ airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_
                     AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
                     response->header.type = IPC_MSG_RESPONSE;
                     response->header.correlation_id = request->header.msg_id;
-                    response->header.payload_len = (uint64_t)want;
+                    response->header.aipc.payload_len = (uint32_t)want;
                     response->payload = channel->internal_buffer;
                     response->payload_size = (uint64_t)want;
                     channel->stats.messages_received++;
@@ -647,7 +647,7 @@ airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t l
     }
 
     ipc_message_t msg = {0};
-    msg.header.magic = IPC_MAGIC;
+    msg.header.aipc.magic = IPC_MAGIC; /* [SC] 128B 头 magic */
     msg.header.version = 1;
     msg.header.type = IPC_MSG_NOTIFICATION;
     msg.header.flags = 0;
@@ -735,17 +735,17 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
     }
 #endif
 
-    if (message->header.magic != IPC_MAGIC) {
+    if (message->header.aipc.magic != IPC_MAGIC) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Invalid magic: 0x%08X",
-                 message->header.magic);
+                 message->header.aipc.magic);
         channel->stats.errors++;
         return AIRY_EINVAL;
     }
 
-    if (message->header.payload_len > 0 &&
-        message->header.payload_len <= channel->config.max_message_size) {
+    if (message->header.aipc.payload_len > 0 &&
+        message->header.aipc.payload_len <= channel->config.max_message_size) {
 
-        message->payload = AIRY_MALLOC(message->header.payload_len);
+        message->payload = AIRY_MALLOC(message->header.aipc.payload_len);
         if (!message->payload) {
             return AIRY_ENOMEM;
         }
@@ -753,10 +753,10 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
 #ifdef _WIN32
         DWORD payload_read = 0;
         if (channel->hPipe != INVALID_HANDLE_VALUE) {
-            success = ReadFile(channel->hPipe, message->payload, message->header.payload_len,
-                               &payload_read, NULL);
+            success = ReadFile(channel->hPipe, message->payload,
+                               (DWORD)message->header.aipc.payload_len, &payload_read, NULL);
 
-            if (!success || payload_read < message->header.payload_len) {
+            if (!success || payload_read < message->header.aipc.payload_len) {
                 AIRY_FREE(message->payload);
                 message->payload = NULL;
                 channel->stats.errors++;
@@ -766,9 +766,9 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
 #else
         ssize_t payload_read = 0;
         if (fd >= 0) {
-            payload_read = read(fd, message->payload, message->header.payload_len);
+            payload_read = read(fd, message->payload, message->header.aipc.payload_len);
 
-            if (payload_read <= 0 || (size_t)payload_read < message->header.payload_len) {
+            if (payload_read <= 0 || (size_t)payload_read < message->header.aipc.payload_len) {
                 AIRY_FREE(message->payload);
                 message->payload = NULL;
                 channel->stats.errors++;
@@ -777,7 +777,7 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         }
 #endif
 
-        message->payload_size = message->header.payload_len;
+        message->payload_size = message->header.aipc.payload_len;
     }
 
     if (channel->msg_cb) {
