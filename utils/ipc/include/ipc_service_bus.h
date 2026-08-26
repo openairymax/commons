@@ -71,16 +71,22 @@ typedef enum {
 } ipc_bus_proto_t;
 
 
+/*
+ * A-IPC 对齐（Unify Design SSoT，P0-05 收敛）：
+ * wire 格式前 128B 为 [SC] airy_ipc_msg_hdr（Layout C v4），与
+ * agentrt-linux / AirymaxOS 内核态 fastpath 逐字节兼容；service bus
+ * 语义字段（msg_type/protocol/msg_id/correlation_id/source/target 等）
+ * 位于标准头之后的扩展段。payload_len/crc32 复用 [SC] 头字段。
+ */
 typedef struct {
-    uint32_t magic;
-    uint32_t version;
+    struct airy_ipc_msg_hdr aipc;   /* [SC] A-IPC 128B 标准头（offset 0） */
+    /* —— A-IPC 扩展段（128B 标准头之后）—— */
     ipc_bus_msg_type_t msg_type;
     ipc_bus_proto_t protocol;
     uint64_t msg_id;
     uint64_t correlation_id;
     char source[IPC_BUS_SERVICE_ID_LEN];
     char target[IPC_BUS_SERVICE_ID_LEN];
-    uint32_t payload_len;
     uint32_t flags;
     uint64_t timestamp;
     uint32_t checksum;
@@ -88,8 +94,8 @@ typedef struct {
 } ipc_bus_message_header_t;
 
 
-#define IPC_BUS_MESSAGE_MAGIC AIRY_IPC_MAGIC
-#define IPC_BUS_MESSAGE_VERSION 1
+#define IPC_BUS_MESSAGE_MAGIC   AIRY_IPC_MAGIC
+#define IPC_BUS_MESSAGE_OPCODE  AIRY_IPC_OP_SEND  /* 数据面消息统一 SEND opcode */
 
 
 typedef struct {
