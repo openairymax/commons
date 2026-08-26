@@ -586,4 +586,87 @@ int airy_get_sysinfo(airy_sysinfo_t *info)
     return AIRY_SUCCESS;
 }
 
+/* GPU 探测（q8f）：F2 硬件面板与硬件自动裁剪共用。best-effort——
+ * 未探测到 GPU 写空串返回 SUCCESS（"无 GPU"是合法结果，非错误）。
+ * 探测顺序：nvidia-smi → /proc/driver/nvidia/version → lspci。 */
+int airy_get_gpu_info(char *out, size_t cap)
+{
+    if (!out || cap < 2)
+        return AIRY_EINVAL;
+    out[0] = '\0';
+
+#if defined(_WIN32)
+    (void)cap;
+    /* Windows：nvidia-smi 常驻 NVIDIA 驱动目录；用 `where` 探测不可靠，
+     * 保持空串（后续可接入 WMI 视频控制器查询）。 */
+    return AIRY_SUCCESS;
+#elif defined(__APPLE__) && defined(__MACH__)
+    (void)cap;
+    /* macOS：无 nvidia-smi；system_profiler 慢（数秒），不在此路径执行，
+     * 保持空串（F2 面板显示"未报告 GPU"）。 */
+    return AIRY_SUCCESS;
+#else
+    char line[256];
+    /* 1) nvidia-smi -L：输出形如 "GPU 0: NVIDIA GeForce RTX 4090 (UUID: ...)"，
+     * 截取 "GPU 0: " 之后、" (UUID" 之前为型号。 */
+    FILE *fp = popen("nvidia-smi -L 2>/dev/null | head -1", "r");
+    if (fp) {
+        if (fgets(line, sizeof(line), fp)) {
+            const char *p = strstr(line, "GPU 0: ");
+            const char *start = p ? p + 7 : line;
+            const char *uuid = strstr(start, " (UUID");
+            size_t len = uuid ? (size_t)(uuid - start) : strlen(start);
+            while (len > 0 && (start[len - 1] == '\n' || start[len - 1] == '\r'))
+                len--;
+            if (len > 0) {
+                if (len >= cap)
+                    len = cap - 1;
+                __builtin_memcpy(out, start, len);
+                out[len] = '\0';
+            }
+        }
+        pclose(fp);
+        if (out[0])
+            return AIRY_SUCCESS;
+    }
+    /* 2) NVIDIA 驱动存在但无 nvidia-smi：/proc/driver/nvidia/version 首行
+     * 含驱动版本，型号不可得，仅标注 NVIDIA 驱动。 */
+    fp = fopen("/proc/driver/nvidia/version", "r");
+    if (fp) {
+        if (fgets(line, sizeof(line), fp)) {
+            const char *p = strstr(line, "NVIDIA");
+            if (p)
+                AIRY_STRNCPY_TERM(out, p, cap);
+        }
+        fclose(fp);
+        if (out[0])
+            return AIRY_SUCCESS;
+    }
+    /* 3) 通用 PCI 探测：VGA/3D/Display 控制器（AMD/Intel/虚拟 GPU）。
+     * lspci 输出如 "01:00.0 VGA compatible controller: NVIDIA ..."。 */
+    fp = popen("lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1", "r");
+    if (fp) {
+        if (fgets(line, sizeof(line), fp)) {
+            const char *colon = strchr(line, ':');
+            if (colon) {
+                const char *start = colon + 1;
+                if (strncmp(start, " ", 1) == 0)
+                    start++;
+                size_t len = strlen(start);
+                while (len > 0 && (start[len - 1] == '\n' || start[len - 1] == '\r'))
+                    len--;
+                if (len > 0) {
+                    if (len >= cap)
+                        len = cap - 1;
+                    __builtin_memcpy(out, start, len);
+                    out[len] = '\0';
+                }
+            }
+        }
+        pclose(fp);
+    }
+    return AIRY_SUCCESS;
+#endif
+}
+
 
