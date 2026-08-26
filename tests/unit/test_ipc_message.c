@@ -33,7 +33,7 @@ void test_message_create(void **state)
     ipc_message_t *msg = ipc_message_create(IPC_MSG_DATA, payload, strlen(payload));
 
     assert_non_null(msg);
-    assert_int_equal(msg->header.magic, IPC_MAGIC);
+    assert_int_equal(msg->header.aipc.magic, IPC_MAGIC);
     assert_int_equal(msg->header.version, 1);
     assert_int_equal(msg->header.type, IPC_MSG_DATA);
     assert_non_null(msg->payload);

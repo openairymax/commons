@@ -56,7 +56,8 @@ void test_shm_get_size(void **state)
     assert_non_null(shm);
 
     size_t size = ipc_shm_get_size(shm);
-    assert_true(size >= 0);
+    /* shm 以只读方式打开时可能不存在（size==0）；成功打开则为 config.size */
+    assert_true(size == 0 || size == config.size);
 
     ipc_shm_destroy(shm);
 }
