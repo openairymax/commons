@@ -889,33 +889,33 @@ static inline void airy_mtx_guard_cleanup(airy_mtx_guard_t *g)
  *   $AIRY_HOME/bin      - executables (agentrt, agent_d, llm_d, mem_d, airy_cli)
  *   $AIRY_HOME/lib      - runtime dependencies (airymax_agents, openlab, sdk-python)
  *   $AIRY_HOME/run      - Unix sockets, PID files (volatile)
- *   $AIRY_HOME/logs     - daemon logs, audit logs, agent subprocess logs
- *   $AIRY_HOME/config   - agentrt.yaml, model.yaml, secrets.env
- *   $AIRY_HOME/data     - persistent data (memory, hall/state, roadmap, workspaces)
- *   $AIRY_HOME/tmp      - temporary files (stale entries auto-cleaned)
- *   $AIRY_HOME/cache    - caches (incl. PYTHONPYCACHEPREFIX bytecode cache)
- *   $AIRY_HOME/workspace - persistent GRAD decision-chain / task workspaces
+ *   $AIRY_HOME/config   - agentrt.yaml, model.yaml, secrets.env (user config)
+ *   $AIRY_HOME/agents   - user agent definitions
+ *   $AIRY_HOME/data/agentrt - ★ runtime data unified root (2026-08-25):
+ *                        logs / cache / tmp / workspaces / heapstore / memory /
+ *                        hall / state / roadmap / cli, all consolidated here.
  *
- * Persistent data split (2.1.2.5): durable module data lives under
- * $AIRY_HOME/data/agentrt (heapstore/memory/hall/state/roadmap/workspaces),
- * GRAD decision-chain traces under $AIRY_HOME/workspace/<plan_id>/; both are
- * kept out of the volatile run/ directory. Plugin capability bundles are
- * distributed with the ecosystem repository, not under AIRY_HOME.
+ * Runtime data unification (2.1.2.5, 2026-08-25): ALL runtime data lives
+ * under $AIRY_HOME/data/agentrt (single root). Top level keeps only
+ * read-only distribution artifacts (bin/lib/include/share/modules/scripts),
+ * user config/agents, and the volatile run/ directory (sockets/pids).
+ * Durable module data (heapstore/memory/hall/state/roadmap/workspaces),
+ * logs (daemon + agent subprocess), caches (incl. PYTHONPYCACHEPREFIX) and
+ * temp files all live under the unified data root.
  */
 
 #define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
 #define AIRY_HOME_SUBDIR_BIN "bin"
 #define AIRY_HOME_SUBDIR_LIB "lib"
 #define AIRY_HOME_SUBDIR_RUN "run"
-#define AIRY_HOME_SUBDIR_LOG "logs"
+#define AIRY_HOME_SUBDIR_LOG "data/agentrt/logs"
 #define AIRY_HOME_SUBDIR_CONFIG "config"
 #define AIRY_HOME_SUBDIR_DATA "data"
-#define AIRY_HOME_SUBDIR_TMP "tmp"
-#define AIRY_HOME_SUBDIR_CACHE "cache"
-/* 2.1.2.5：持久化工作区（GRAD 决策链 trace / 任务工作区）。历史实现把
- * workspace 挂在 run/ 下（airy_runtime_dir_socket("workspace")），与
- * socket 同目录——run 是运行时易失目录，决策链属持久化数据，语义错位。 */
-#define AIRY_HOME_SUBDIR_WORKSPACE "workspace"
+#define AIRY_HOME_SUBDIR_TMP "data/agentrt/tmp"
+#define AIRY_HOME_SUBDIR_CACHE "data/agentrt/cache"
+/* 2.1.2.5：持久化工作区（GRAD 决策链 trace / 任务工作区）随统一数据根
+ * 归入 $AIRY_HOME/data/agentrt/workspaces（2026-08-25 从顶层 workspace 迁入）。 */
+#define AIRY_HOME_SUBDIR_WORKSPACE "data/agentrt/workspaces"
 
 
 const char *airy_home_dir(void);

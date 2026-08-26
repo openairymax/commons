@@ -86,7 +86,8 @@
  * (AIRY_RUNTIME_DIR etc.) take effect immediately. */
 
 static airy_mtx_t g_paths_lock;
-static int g_paths_initialized = 0;
+/* P3-4：double-checked locking 外层读必须原子，C11 下非原子读是数据竞争 */
+static atomic_int g_paths_initialized = 0;
 static char g_home_dir[AIRY_PATH_MAX];
 static char g_bin_dir[AIRY_PATH_MAX];
 static char g_lib_dir[AIRY_PATH_MAX];
@@ -275,10 +276,10 @@ static int paths_read_install_home(const char *path, char *out, size_t out_size)
 
 static void paths_ensure_resolved(void)
 {
-    if (g_paths_initialized)
+    if (atomic_load_explicit(&g_paths_initialized, memory_order_acquire))
         return;
     airy_mtx_lock(&g_paths_lock);
-    if (!g_paths_initialized) {
+    if (!atomic_load_explicit(&g_paths_initialized, memory_order_acquire)) {
         const char *home_env = getenv("AIRY_HOME");
         if (home_env && home_env[0] != '\0') {
             snprintf(g_home_dir, sizeof(g_home_dir), "%s", home_env);
@@ -293,7 +294,7 @@ static void paths_ensure_resolved(void)
             }
         }
         paths_resolve_all();
-        g_paths_initialized = 1;
+        atomic_store_explicit(&g_paths_initialized, 1, memory_order_release);
     }
     airy_mtx_unlock(&g_paths_lock);
 }
@@ -324,7 +325,9 @@ const char *airy_runtime_dir(void)
 
 const char *airy_runtime_dir_socket(const char *name)
 {
-    static char g_sock_buf[AIRY_PATH_MAX];
+    /* 线程局部缓冲：daemon 多线程并发构造 socket 路径时互不覆盖
+     * （P1-1：原 static 共享可变缓冲存在数据竞争）。 */
+    static AIRY_THREAD_LOCAL char g_sock_buf[AIRY_PATH_MAX];
     if (!name || name[0] == '\0')
         return airy_runtime_dir();
     snprintf(g_sock_buf, sizeof(g_sock_buf), "%s/%s", airy_runtime_dir(), name);
