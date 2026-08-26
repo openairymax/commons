@@ -258,6 +258,15 @@ static int test_sysinfo(void)
            info.os_name, info.os_version, info.hostname, info.cpu_count,
            (unsigned long long)info.memory_total, (unsigned long long)info.memory_free,
            info.cpu_model[0] ? info.cpu_model : "(unknown)");
+
+    /* q8f：GPU 探测 best-effort——必须成功返回，缓冲必须 NUL 终止；
+     * 有 GPU 时非空，无 GPU/无探测工具时为空串（合法结果）。 */
+    char gpu[160];
+    TEST_ASSERT(airy_get_gpu_info(gpu, sizeof(gpu)) == 0, "gpu info should succeed");
+    TEST_ASSERT(gpu[sizeof(gpu) - 1] == '\0', "gpu buffer must be NUL-terminated");
+    TEST_ASSERT(airy_get_gpu_info(NULL, 0) != 0, "gpu info NULL arg should fail");
+    TEST_ASSERT(strlen(gpu) < sizeof(gpu), "gpu string within buffer");
+    printf("  gpu: %s\n", gpu[0] ? gpu : "(not reported)");
     return 0;
 }
 

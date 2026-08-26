@@ -703,6 +703,25 @@ typedef struct {
 
 int airy_get_sysinfo(airy_sysinfo_t *info);
 
+/**
+ * @brief Probe GPU model(s) into a caller buffer (best effort).
+ *
+ * Used by the F2 hardware panel and the hardware auto-trim detector so
+ * the runtime can report (and later act on) GPU presence. Formats a
+ * short human string, e.g. "NVIDIA GeForce RTX 4090" (first adapter
+ * only, for display). On platforms/tools without a probe it writes an
+ * empty string and returns AIRY_SUCCESS (not an error — "no GPU
+ * reported" is a valid result). Probe order (POSIX):
+ *   1. nvidia-smi -L (NVIDIA driver present)
+ *   2. /proc/driver/nvidia/version (driver without nvidia-smi)
+ *   3. lspci (generic VGA/3D/display controller)
+ *
+ * @param out [out] GPU info string (NUL-terminated; empty when none found)
+ * @param cap [in]  out buffer capacity
+ * @return AIRY_SUCCESS / AIRY_EINVAL
+ */
+int airy_get_gpu_info(char *out, size_t cap);
+
 
 #ifndef AIRY_ATOMIC_INT_T_DEFINED
 #define AIRY_ATOMIC_INT_T_DEFINED
