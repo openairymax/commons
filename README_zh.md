@@ -82,12 +82,12 @@ commons/
 │   ├── print/                   # 打印 / 格式化助手（统一打印宏）
 │   ├── compliance/              # 合规校验与策略执行
 │   ├── quality/                 # 代码质量检查
-│   ├── sd/                      # 安全删除 / 服务发现（共享内存跨进程注册表）
+│   ├── sd/                      # 跨进程服务发现（共享内存注册表）
 │   ├── effect/                  # 回卷机制（airy_effect：注册即副作用、逆序回滚）
 │   ├── ext/                     # 统一扩展注册表（LLM/tool/storage/sandbox/memory 五域）
 │   ├── id/                      # 品牌化 ID 生成（trace_id / msg_id）
 │   ├── task/                    # A-TD 任务描述符（创建 + CRC32 完整性校验）
-│   ├── cjson/                   # cJSON 三步宏辅助层（CJSON_PARSE_GUARD 等）
+│   ├── cjson/                   # cJSON 宏辅助层（CJSON_PARSE_GUARD 等）
 │   └── ime/                     # 轻量内置输入法（全拼词典，纯 C）
 └── tests/                       # 测试套件
     ├── utils/                   # 测试工具框架

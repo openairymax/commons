@@ -7,11 +7,13 @@
  *
  * After ipc_common.c was split by functional domain, this header carries
  * the shared contract between the pieces:
- *   - ipc_common.c  channel basics + message send/receive
- *   - ipc_server.c  server/client
- *   - ipc_shm.c     shared memory
- *   - ipc_mq.c      message queue
- *   - ipc_rpc.c     RPC framework
+ *   - ipc_common.c    channel basics (lifecycle/state/accessors)
+ *   - ipc_common_io.c message send/receive transports (Phase 2.3a split
+ *                     out of ipc_common.c)
+ *   - ipc_server.c    server/client
+ *   - ipc_shm.c       shared memory
+ *   - ipc_mq.c        message queue
+ *   - ipc_rpc.c       RPC framework
  */
 
 #ifndef AIRY_RT_IPC_COMMON_INTERNAL_H

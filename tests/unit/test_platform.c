@@ -259,13 +259,16 @@ static int test_sysinfo(void)
            (unsigned long long)info.memory_total, (unsigned long long)info.memory_free,
            info.cpu_model[0] ? info.cpu_model : "(unknown)");
 
-    /* q8f：GPU 探测 best-effort——必须成功返回，缓冲必须 NUL 终止；
-     * 有 GPU 时非空，无 GPU/无探测工具时为空串（合法结果）。 */
+    /* q8f：GPU 探测 best-effort——必须成功返回，返回字符串必须落在缓冲内且
+     * NUL 终止；有 GPU 时非空，无 GPU/无探测工具时为空串（合法结果）。
+     * 预填充 0xFF：函数契约仅保证字符串自身终止，末字节断言依赖未初始化
+     * 栈内存会产生伪失败，故只断言字符串契约。 */
     char gpu[160];
+    memset(gpu, 0xFF, sizeof(gpu));
     TEST_ASSERT(airy_get_gpu_info(gpu, sizeof(gpu)) == 0, "gpu info should succeed");
-    TEST_ASSERT(gpu[sizeof(gpu) - 1] == '\0', "gpu buffer must be NUL-terminated");
-    TEST_ASSERT(airy_get_gpu_info(NULL, 0) != 0, "gpu info NULL arg should fail");
     TEST_ASSERT(strlen(gpu) < sizeof(gpu), "gpu string within buffer");
+    TEST_ASSERT(gpu[strlen(gpu)] == '\0', "gpu string must be NUL-terminated");
+    TEST_ASSERT(airy_get_gpu_info(NULL, 0) != 0, "gpu info NULL arg should fail");
     printf("  gpu: %s\n", gpu[0] ? gpu : "(not reported)");
     return 0;
 }
