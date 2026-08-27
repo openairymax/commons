@@ -3,10 +3,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(SOURCES
     # platform 兼容层按功能域拆分：主文件/同步原语/进程/路径
-    platform/platform.c
-    platform/platform_sync.c
-    platform/platform_process.c
-    platform/platform_paths.c
+    # 2026-08-27 目录整理：实现集中到 src/，include/ 仅保留公共头
+    platform/src/platform.c
+    platform/src/platform_sync.c
+    platform/src/platform_process.c
+    platform/src/platform_paths.c
     utils/platform/src/platform_adapter.c
     utils/token/src/counter.c
     utils/token/src/budget.c
@@ -21,7 +22,11 @@ set(SOURCES
     utils/security/src/input_validator.c
     utils/resource/src/resource_guard.c
     utils/resource/src/resource_quota.c
-    utils/logging/src/logging.c
+    # logging 核心按功能域拆分：核心/格式化/文件后端/运行时控制（2026-08-27）
+    utils/logging/src/logging_core.c
+    utils/logging/src/logging_format.c
+    utils/logging/src/logging_backend_file.c
+    utils/logging/src/logging_control.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
     utils/memory/src/memory.c
@@ -75,25 +80,30 @@ set(SOURCES
     utils/network/src/network_pool.c
     utils/network/src/network_dns.c
     utils/uuid/src/uuid_generator.c
-    utils/config_unified/src/config_service.c
-    utils/config_unified/src/config_service_validator.c
-    utils/config_unified/src/config_service_hotreload.c
-    utils/config_unified/src/config_service_crypto.c
-    utils/config_unified/src/config_service_version.c
+    # config_unified 按功能域组织（2026-08-27）：service（配置服务）/source（配置源）/parse（格式解析）
+    utils/config_unified/src/service/config_service.c
+    utils/config_unified/src/service/config_service_validator.c
+    utils/config_unified/src/service/config_service_hotreload.c
+    utils/config_unified/src/service/config_service_crypto.c
+    utils/config_unified/src/service/config_service_version.c
     utils/config_unified/src/core_config.c
-    utils/config_unified/src/config_source.c
-    utils/config_unified/src/config_source_file.c
-    utils/config_unified/src/config_source_env.c
-    utils/config_unified/src/config_source_args.c
-    utils/config_unified/src/config_source_memory.c
-    utils/config_unified/src/config_source_manager.c
-    utils/config_unified/src/config_parse.c
-    utils/config_unified/src/yaml_minimal.c
-    utils/config_unified/src/yaml_minimal_lexer.c
-    utils/config_unified/src/yaml_minimal_parser.c
-    utils/config_unified/src/yaml_minimal_node.c
-    utils/config_unified/src/yaml_minimal_scalar.c
-    utils/config_unified/src/yaml_minimal_serialize.c
+    utils/config_unified/src/source/config_source.c
+    utils/config_unified/src/source/config_source_file.c
+    utils/config_unified/src/source/config_source_env.c
+    utils/config_unified/src/source/config_source_args.c
+    utils/config_unified/src/source/config_source_memory.c
+    utils/config_unified/src/source/config_source_manager.c
+    # config_parse 按格式域拆分：INI（本文件）/JSON/YAML 结构/YAML 标量（2026-08-27）
+    utils/config_unified/src/parse/config_parse.c
+    utils/config_unified/src/parse/config_parse_json.c
+    utils/config_unified/src/parse/config_parse_yaml.c
+    utils/config_unified/src/parse/config_parse_yaml_scalar.c
+    utils/config_unified/src/parse/yaml_minimal.c
+    utils/config_unified/src/parse/yaml_minimal_lexer.c
+    utils/config_unified/src/parse/yaml_minimal_parser.c
+    utils/config_unified/src/parse/yaml_minimal_node.c
+    utils/config_unified/src/parse/yaml_minimal_scalar.c
+    utils/config_unified/src/parse/yaml_minimal_serialize.c
     # execution/checkpoint 模块按功能域拆分：生命周期/持久化/快照/会话管理
     utils/execution/src/checkpoint.c
     utils/execution/src/checkpoint_persist.c
@@ -112,6 +122,7 @@ set(SOURCES
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
+    list(APPEND SOURCES utils/ipc/src/ipc_common_io.c) # Phase 2.3a: 消息收发域（从 ipc_common.c 拆分）
     list(APPEND SOURCES utils/ipc/src/ipc_common_message.c)
     list(APPEND SOURCES utils/ipc/src/ipc_server_client.c)
     list(APPEND SOURCES utils/ipc/src/ipc_shm.c)
@@ -159,6 +170,10 @@ set(_inc_dirs
     utils/cache/include
     utils/platform/include
     utils/config_unified/include
+    # 2026-08-27 按功能域组织后，跨族裸名 include 经下列子目录解析
+    utils/config_unified/src/parse
+    utils/config_unified/src/source
+    utils/config_unified/src/service
     utils/execution/include
     utils/cognition/include
     utils/strategy/include
@@ -201,7 +216,10 @@ set_source_files_properties(
     utils/memory/src/memory_prealloc.c
     utils/memory/src/arena.c
     utils/memory/src/tcache.c
-    utils/logging/src/logging.c
+    utils/logging/src/logging_core.c
+    utils/logging/src/logging_format.c
+    utils/logging/src/logging_backend_file.c
+    utils/logging/src/logging_control.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
     PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"
