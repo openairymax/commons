@@ -31,6 +31,9 @@ set(SOURCES
     utils/logging/src/service_logging.c
     utils/memory/src/memory.c
     utils/memory/src/memory_pool.c
+    # memory_pool 按功能域拆分：块区生命周期/分配释放与容量/统计查询校验（2026-08-27）
+    utils/memory/src/memory_pool_alloc.c
+    utils/memory/src/memory_pool_stats.c
     # memory_debug 模块按功能域拆分：生命周期/分配追踪/泄漏检测/校验/统计
     utils/memory/src/memory_debug.c
     utils/memory/src/memory_debug_track.c
@@ -72,6 +75,9 @@ set(SOURCES
     # the engine itself is unit-tested on Linux too. POSIX callers use the
     # system <regex.h> via airy_regex.h and never call airy_re_* symbols.
     utils/compat/src/airy_regex.c
+    # airy_regex ERE 引擎按功能域拆分：公共 API+VM/解析/编译（2026-08-27）
+    utils/compat/src/airy_regex_parse.c
+    utils/compat/src/airy_regex_compile.c
     utils/cognition/src/cognition_common.c
     utils/strategy/src/strategy_common.c
     # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
@@ -87,6 +93,9 @@ set(SOURCES
     utils/config_unified/src/service/config_service_crypto.c
     utils/config_unified/src/service/config_service_version.c
     utils/config_unified/src/core_config.c
+    # core_config 按功能域拆分：上下文/value 值对象/字符串化与调试（2026-08-27）
+    utils/config_unified/src/core_config_value.c
+    utils/config_unified/src/core_config_strings.c
     utils/config_unified/src/source/config_source.c
     utils/config_unified/src/source/config_source_file.c
     utils/config_unified/src/source/config_source_env.c
@@ -101,6 +110,9 @@ set(SOURCES
     utils/config_unified/src/parse/yaml_minimal.c
     utils/config_unified/src/parse/yaml_minimal_lexer.c
     utils/config_unified/src/parse/yaml_minimal_parser.c
+    # yaml parser 按功能域拆分：块结构/节点与锚点注册/标量与流值（2026-08-27）
+    utils/config_unified/src/parse/yaml_minimal_anchor.c
+    utils/config_unified/src/parse/yaml_minimal_value.c
     utils/config_unified/src/parse/yaml_minimal_node.c
     utils/config_unified/src/parse/yaml_minimal_scalar.c
     utils/config_unified/src/parse/yaml_minimal_serialize.c
@@ -206,6 +218,8 @@ endif()
 set_source_files_properties(
     utils/memory/src/memory.c
     utils/memory/src/memory_pool.c
+    utils/memory/src/memory_pool_alloc.c
+    utils/memory/src/memory_pool_stats.c
     utils/memory/src/memory_debug.c
     utils/memory/src/memory_debug_track.c
     utils/memory/src/memory_debug_leak.c

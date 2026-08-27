@@ -9,7 +9,9 @@
  * carries the shared contract between the pieces:
  *   - yaml_minimal.c           document lifecycle and parsing entry
  *   - yaml_minimal_lexer.c     lexing
- *   - yaml_minimal_parser.c    syntax tree construction
+ *   - yaml_minimal_parser.c    syntax tree construction (block structures)
+ *   - yaml_minimal_anchor.c    node lifecycle and anchor/alias registry
+ *   - yaml_minimal_value.c     scalar/flow value parsing
  *   - yaml_minimal_node.c      node type access
  *   - yaml_minimal_scalar.c    scalar type conversion
  *   - yaml_minimal_serialize.c serialization output
@@ -92,6 +94,17 @@ void skip_yaml_directives(struct parse_ctx *ctx);
 bool is_document_marker(struct parse_ctx *ctx, const char *marker);
 void skip_document_marker(struct parse_ctx *ctx, const char *marker);
 void cleanup_parse_ctx(struct parse_ctx *ctx);
+
+/* Scalar/flow value parsing (yaml_minimal_value.c) */
+struct yaml_node *parse_alias_value(struct parse_ctx *ctx, char *tag, char *anchor_name);
+struct yaml_node *parse_quoted_value(struct parse_ctx *ctx, int quote, char *tag,
+                                     char *anchor_name);
+struct yaml_node *parse_block_scalar_value(struct parse_ctx *ctx, bool is_folded,
+                                           char *tag, char *anchor_name);
+struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_indent,
+                                              char *tag, char *anchor_name);
+struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_indent,
+                                             char *tag, char *anchor_name);
 
 #ifdef __cplusplus
 }

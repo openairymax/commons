@@ -3,21 +3,25 @@
 
 /**
  * @file memory_pool.c
- * @brief Unified memory management module - memory pool implementation.
+ * @brief Unified memory management module - memory pool lifecycle and
+ *        block region management.
  *
- * Implements an efficient memory pool that reduces fragmentation and
- * allocation overhead. Free blocks are managed via a linked list, with
- * thread safety and dynamic growth support.
+ * Implements the memory pool instance lifecycle (create/destroy), the
+ * lock/alignment primitives and block region allocation/release shared by
+ * the whole pool family. Allocation/release and capacity management live
+ * in memory_pool_alloc.c; statistics/queries/validation live in
+ * memory_pool_stats.c.
  */
 
 #include "memory_pool.h"
+
+#include "memory_pool_internal.h"
 
 #include "airy_memory.h"
 
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "airy_memory.h"
 #include "string_compat.h"
 #include "logging.h"
 
@@ -25,83 +29,6 @@
 #include <string.h>
 #include "platform.h"
 #include <stdint.h>
-
-/**
- * @brief Memory pool block structure.
- * @note Performance optimization: the block header embeds the pool pointer
- * for O(1) ownership validation, avoiding O(n) linear scans.
- */
-typedef struct memory_pool_block {
-    struct memory_pool_block *next;
-    bool allocated;
-    size_t index;
-    struct memory_pool *pool;
-} memory_pool_block_t;
-
-/**
- * @brief Old region list node (tracks old regions produced by growth;
- * released together at destruction).
- */
-typedef struct memory_region_node {
-    void *region;
-    size_t region_size;
-    struct memory_region_node *next;
-} memory_region_node_t;
-
-struct memory_pool {
-    memory_pool_options_t options;
-
-    void *memory_area;
-    size_t memory_area_size;
-    memory_pool_block_t **blocks;
-    size_t blocks_capacity;
-
-    memory_pool_block_t *free_list;
-
-    memory_pool_stats_t stats;
-
-    airy_mtx_t lock;
-
-    char *name;
-
-    memory_region_node_t *old_regions;
-};
-
-static bool memory_pool_lock_init(memory_pool_t *pool)
-{
-    if (!pool->options.thread_safe) {
-        return true;
-    }
-
-    return airy_mtx_init(&pool->lock) == 0;
-}
-
-static void memory_pool_lock_destroy(memory_pool_t *pool)
-{
-    if (!pool->options.thread_safe) {
-        return;
-    }
-
-    airy_mtx_destroy(&pool->lock);
-}
-
-static void memory_pool_lock(memory_pool_t *pool)
-{
-    if (!pool->options.thread_safe) {
-        return;
-    }
-
-    airy_mtx_lock(&pool->lock);
-}
-
-static void memory_pool_unlock(memory_pool_t *pool)
-{
-    if (!pool->options.thread_safe) {
-        return;
-    }
-
-    airy_mtx_unlock(&pool->lock);
-}
 
 static size_t memory_pool_align_size(size_t size, size_t alignment)
 {
@@ -112,7 +39,43 @@ static size_t memory_pool_align_size(size_t size, size_t alignment)
     return ((size + alignment - 1) / alignment) * alignment;
 }
 
-static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
+bool memory_pool_lock_init(memory_pool_t *pool)
+{
+    if (!pool->options.thread_safe) {
+        return true;
+    }
+
+    return airy_mtx_init(&pool->lock) == 0;
+}
+
+void memory_pool_lock_destroy(memory_pool_t *pool)
+{
+    if (!pool->options.thread_safe) {
+        return;
+    }
+
+    airy_mtx_destroy(&pool->lock);
+}
+
+void memory_pool_lock(memory_pool_t *pool)
+{
+    if (!pool->options.thread_safe) {
+        return;
+    }
+
+    airy_mtx_lock(&pool->lock);
+}
+
+void memory_pool_unlock(memory_pool_t *pool)
+{
+    if (!pool->options.thread_safe) {
+        return;
+    }
+
+    airy_mtx_unlock(&pool->lock);
+}
+
+bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
 {
     if (pool == NULL || block_count == 0) {
         return false;
@@ -198,7 +161,7 @@ static bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
     return true;
 }
 
-static void memory_pool_free_blocks(memory_pool_t *pool)
+void memory_pool_free_blocks(memory_pool_t *pool)
 {
     if (pool == NULL) {
         return;
@@ -336,458 +299,6 @@ void memory_pool_destroy(memory_pool_t *pool)
     }
 
     memory_free(pool);
-}
-
-void *memory_pool_alloc(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return NULL;
-    }
-
-    memory_pool_lock(pool);
-
-    if (pool->free_list == NULL) {
-        pool->stats.miss_count++;
-        AIRY_LOG_DEBUG("memory_pool: memory_pool_alloc MISS (pool=%p, free_blocks=0, miss#=%" PRIu64 ")",
-                  (void *)pool, pool->stats.miss_count);
-
-        if (!memory_pool_allocate_blocks(pool, pool->options.expansion_size)) {
-            memory_pool_unlock(pool);
-            AIRY_LOG_WARN("memory_pool: memory_pool_alloc EXPAND_FAILED (pool=%p)", (void *)pool);
-            return NULL;
-        }
-    } else {
-        pool->stats.hit_count++;
-    }
-
-    memory_pool_block_t *block = pool->free_list;
-    pool->free_list = block->next;
-
-    block->allocated = true;
-    block->next = NULL;
-
-    void *data_ptr = (uint8_t *)block + sizeof(memory_pool_block_t);
-
-    pool->stats.allocated_blocks++;
-    pool->stats.free_blocks--;
-    pool->stats.used_memory += pool->options.block_size;
-    pool->stats.allocation_count++;
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_alloc ok (pool=%p, ptr=%p, block_index=%zu, "
-              "free=%zu/%zu, alloc#=%" PRIu64 ")",
-              (void *)pool, data_ptr, block->index, pool->stats.free_blocks,
-              pool->stats.total_blocks, pool->stats.allocation_count);
-
-    return data_ptr;
-}
-
-void *memory_pool_calloc(memory_pool_t *pool)
-{
-    void *ptr = memory_pool_alloc(pool);
-    if (ptr != NULL) {
-        __builtin_memset(ptr, 0, pool->options.block_size);
-    }
-    return ptr;
-}
-
-size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blocks)
-{
-    if (pool == NULL || out_blocks == NULL || count == 0) {
-        return 0;
-    }
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc START (pool=%p, count=%zu, free=%zu)",
-              (void *)pool, count, pool->stats.free_blocks);
-
-    memory_pool_lock(pool);
-
-    size_t allocated = 0;
-    for (size_t i = 0; i < count; i++) {
-
-        if (pool->free_list == NULL) {
-            if (!memory_pool_allocate_blocks(pool, pool->options.expansion_size)) {
-                break;
-            }
-        }
-
-        memory_pool_block_t *block = pool->free_list;
-        pool->free_list = block->next;
-
-        block->allocated = true;
-        block->next = NULL;
-
-        void *data_ptr = (uint8_t *)block + sizeof(memory_pool_block_t);
-        out_blocks[allocated] = data_ptr;
-
-        pool->stats.allocated_blocks++;
-        pool->stats.free_blocks--;
-        pool->stats.used_memory += pool->options.block_size;
-        pool->stats.allocation_count++;
-        allocated++;
-    }
-
-    pool->stats.hit_count += allocated;
-    if (allocated < count) {
-        pool->stats.miss_count += (count - allocated);
-    }
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc DONE (pool=%p, requested=%zu, allocated=%zu, "
-              "free=%zu/%zu, alloc_total=%" PRIu64 ")",
-              (void *)pool, count, allocated, pool->stats.free_blocks, pool->stats.total_blocks,
-              pool->stats.allocation_count);
-
-    return allocated;
-}
-
-size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count)
-{
-    if (pool == NULL || blocks == NULL || count == 0) {
-        return 0;
-    }
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free START (pool=%p, count=%zu, allocated=%zu)",
-              (void *)pool, count, pool->stats.allocated_blocks);
-
-    memory_pool_lock(pool);
-
-    size_t freed = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (blocks[i] == NULL)
-            continue;
-
-        memory_pool_block_t *block =
-            (memory_pool_block_t *)((uint8_t *)blocks[i] - sizeof(memory_pool_block_t));
-
-        if (block->pool != pool || !block->allocated) {
-            AIRY_LOG_WARN("memory_pool: memory_pool_batch_free skip invalid block (pool=%p, ptr=%p)",
-                     (void *)pool, blocks[i]);
-            continue;
-        }
-
-        block->allocated = false;
-        block->next = pool->free_list;
-        pool->free_list = block;
-
-        pool->stats.allocated_blocks--;
-        pool->stats.free_blocks++;
-        pool->stats.used_memory -= pool->options.block_size;
-        pool->stats.free_count++;
-        freed++;
-    }
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free DONE (pool=%p, count=%zu, freed=%zu, "
-              "free=%zu/%zu, free_total=%" PRIu64 ")",
-              (void *)pool, count, freed, pool->stats.free_blocks, pool->stats.total_blocks,
-              pool->stats.free_count);
-
-    return freed;
-}
-
-void memory_pool_free(memory_pool_t *pool, void *ptr)
-{
-    if (pool == NULL || ptr == NULL) {
-        return;
-    }
-
-    memory_pool_block_t *block =
-        (memory_pool_block_t *)((uint8_t *)ptr - sizeof(memory_pool_block_t));
-
-    memory_pool_lock(pool);
-
-    /* O(1) ownership validation via the embedded pool pointer
-     * (replaces the former O(n) linear scan) */
-    if (block->pool != pool || !block->allocated) {
-        AIRY_LOG_ERROR("错误：尝试释放无效的内存池块");
-        memory_pool_unlock(pool);
-        return;
-    }
-
-    block->allocated = false;
-
-    block->next = pool->free_list;
-    pool->free_list = block;
-
-    pool->stats.allocated_blocks--;
-    pool->stats.free_blocks++;
-    pool->stats.used_memory -= pool->options.block_size;
-    pool->stats.free_count++;
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_free ok (pool=%p, ptr=%p, block_index=%zu, "
-              "free=%zu/%zu, free#=%" PRIu64 ")",
-              (void *)pool, ptr, block->index, pool->stats.free_blocks, pool->stats.total_blocks,
-              pool->stats.free_count);
-}
-
-bool memory_pool_get_stats(memory_pool_t *pool, memory_pool_stats_t *stats)
-{
-    if (pool == NULL || stats == NULL) {
-        return false;
-    }
-
-    memory_pool_lock(pool);
-    __builtin_memcpy(stats, &pool->stats, sizeof(memory_pool_stats_t));
-    memory_pool_unlock(pool);
-
-    return true;
-}
-
-void memory_pool_reset_stats(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return;
-    }
-
-    memory_pool_lock(pool);
-
-    pool->stats.allocation_count = 0;
-    pool->stats.free_count = 0;
-    pool->stats.hit_count = 0;
-    pool->stats.miss_count = 0;
-
-    memory_pool_unlock(pool);
-}
-
-bool memory_pool_prealloc(memory_pool_t *pool, size_t count)
-{
-    if (pool == NULL || count == 0) {
-        return false;
-    }
-
-    AIRY_LOG_INFO("memory_pool: memory_pool_prealloc (pool=%p, count=%zu)", (void *)pool, count);
-
-    memory_pool_lock(pool);
-    bool result = memory_pool_allocate_blocks(pool, count);
-    memory_pool_unlock(pool);
-
-    return result;
-}
-
-void memory_pool_clear(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return;
-    }
-
-    AIRY_LOG_INFO("memory_pool: memory_pool_clear (pool=%p, allocated=%zu, total=%zu)", (void *)pool,
-             pool->stats.allocated_blocks, pool->stats.total_blocks);
-
-    memory_pool_lock(pool);
-
-    size_t blocks_to_keep = pool->stats.allocated_blocks;
-
-    if (blocks_to_keep == 0) {
-        memory_pool_free_blocks(pool);
-
-        if (pool->options.initial_blocks > 0) {
-            memory_pool_allocate_blocks(pool, pool->options.initial_blocks);
-        }
-    }
-
-    memory_pool_unlock(pool);
-}
-
-bool memory_pool_is_empty(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return true;
-    }
-
-    memory_pool_lock(pool);
-    bool empty = (pool->stats.allocated_blocks == 0);
-    memory_pool_unlock(pool);
-
-    return empty;
-}
-
-bool memory_pool_is_full(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return false;
-    }
-
-    memory_pool_lock(pool);
-
-    bool full = false;
-    if (pool->options.max_blocks > 0) {
-        full = (pool->stats.total_blocks >= pool->options.max_blocks);
-    }
-
-    memory_pool_unlock(pool);
-
-    return full;
-}
-
-bool memory_pool_expand(memory_pool_t *pool, size_t additional_blocks)
-{
-    if (pool == NULL || additional_blocks == 0) {
-        return false;
-    }
-
-    AIRY_LOG_INFO("memory_pool: memory_pool_expand (pool=%p, additional=%zu, total=%zu→%zu)",
-             (void *)pool, additional_blocks, pool->stats.total_blocks,
-             pool->stats.total_blocks + additional_blocks);
-
-    memory_pool_lock(pool);
-    bool result = memory_pool_allocate_blocks(pool, additional_blocks);
-    memory_pool_unlock(pool);
-
-    return result;
-}
-
-size_t memory_pool_shrink(memory_pool_t *pool, size_t blocks_to_keep)
-{
-    if (pool == NULL) {
-        return 0;
-    }
-
-    AIRY_LOG_INFO("memory_pool: memory_pool_shrink (pool=%p, keep=%zu, total=%zu)", (void *)pool,
-             blocks_to_keep, pool->stats.total_blocks);
-
-    memory_pool_lock(pool);
-
-    if (blocks_to_keep < pool->stats.allocated_blocks) {
-        blocks_to_keep = pool->stats.allocated_blocks;
-    }
-
-    size_t blocks_to_free = 0;
-    if (pool->stats.total_blocks > blocks_to_keep) {
-        blocks_to_free = pool->stats.total_blocks - blocks_to_keep;
-    }
-
-    if (blocks_to_free == 0) {
-        memory_pool_unlock(pool);
-        return 0;
-    }
-
-    size_t freed = 0;
-    memory_pool_block_t *prev = NULL;
-    memory_pool_block_t *current = pool->free_list;
-
-    while (current != NULL && freed < blocks_to_free) {
-        memory_pool_block_t *next = current->next;
-
-        AIRY_FREE(current);
-        pool->stats.total_blocks--;
-        pool->stats.free_blocks--;
-        freed++;
-
-        if (prev == NULL) {
-            pool->free_list = next;
-        } else {
-            prev->next = next;
-        }
-        current = next;
-    }
-
-    memory_pool_unlock(pool);
-    return freed;
-}
-
-bool memory_pool_validate(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return false;
-    }
-
-    memory_pool_lock(pool);
-
-    bool valid = true;
-
-    if (pool->stats.total_blocks != pool->stats.allocated_blocks + pool->stats.free_blocks) {
-        valid = false;
-    }
-
-    if (pool->stats.total_memory !=
-        pool->stats.total_blocks * (sizeof(memory_pool_block_t) + pool->options.block_size)) {
-        valid = false;
-    }
-
-    if (pool->stats.used_memory != pool->stats.allocated_blocks * pool->options.block_size) {
-        valid = false;
-    }
-
-    size_t free_count = 0;
-    memory_pool_block_t *current = pool->free_list;
-    while (current != NULL) {
-        free_count++;
-
-        if (current->allocated) {
-            valid = false;
-            break;
-        }
-
-        current = current->next;
-    }
-
-    if (free_count != pool->stats.free_blocks) {
-        valid = false;
-    }
-
-    memory_pool_unlock(pool);
-
-    return valid;
-}
-
-void memory_pool_iterate(memory_pool_t *pool,
-                         void (*callback)(void *block, bool allocated, void *user_data),
-                         void *user_data)
-{
-
-    if (pool == NULL || callback == NULL) {
-        return;
-    }
-
-    memory_pool_lock(pool);
-
-    for (size_t i = 0; i < pool->stats.total_blocks; i++) {
-        memory_pool_block_t *block = pool->blocks[i];
-        if (block != NULL) {
-            void *data_ptr = (uint8_t *)block + sizeof(memory_pool_block_t);
-            callback(data_ptr, block->allocated, user_data);
-        }
-    }
-
-    memory_pool_unlock(pool);
-}
-
-const char *memory_pool_get_name(memory_pool_t *pool)
-{
-    if (pool == NULL) {
-        return NULL;
-    }
-
-    return pool->name;
-}
-
-void memory_pool_set_name(memory_pool_t *pool, const char *name)
-{
-    if (pool == NULL) {
-        return;
-    }
-
-    memory_pool_lock(pool);
-
-    if (pool->name != NULL) {
-        memory_free(pool->name);
-        pool->name = NULL;
-    }
-
-    if (name != NULL) {
-        pool->name = memory_calloc(strlen(name) + 1, "memory_pool_name");
-        if (pool->name != NULL) {
-            __builtin_memcpy(pool->name, name, strlen(name) + 1);
-        }
-    }
-
-    memory_pool_unlock(pool);
 }
 
 memory_pool_t *memory_pool_create_default(size_t block_size)
