@@ -86,16 +86,16 @@ set(SOURCES
     utils/network/src/network_pool.c
     utils/network/src/network_dns.c
     utils/uuid/src/uuid_generator.c
-    # config_unified 按功能域组织（2026-08-27）：service（配置服务）/source（配置源）/parse（格式解析）
+    # config_unified 按功能域组织（2026-08-27）：core（核心上下文）/service（配置服务）/source（配置源）/parse（格式解析）
+    utils/config_unified/src/core/core_config.c
+    # core_config 按功能域拆分：上下文/value 值对象/字符串化与调试（2026-08-27）
+    utils/config_unified/src/core/core_config_value.c
+    utils/config_unified/src/core/core_config_strings.c
     utils/config_unified/src/service/config_service.c
     utils/config_unified/src/service/config_service_validator.c
     utils/config_unified/src/service/config_service_hotreload.c
     utils/config_unified/src/service/config_service_crypto.c
     utils/config_unified/src/service/config_service_version.c
-    utils/config_unified/src/core_config.c
-    # core_config 按功能域拆分：上下文/value 值对象/字符串化与调试（2026-08-27）
-    utils/config_unified/src/core_config_value.c
-    utils/config_unified/src/core_config_strings.c
     utils/config_unified/src/source/config_source.c
     utils/config_unified/src/source/config_source_file.c
     utils/config_unified/src/source/config_source_env.c
