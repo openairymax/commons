@@ -29,7 +29,10 @@ set(SOURCES
     utils/logging/src/logging_control.c
     utils/logging/src/atomic_logging.c
     utils/logging/src/service_logging.c
-    utils/memory/src/memory.c
+    # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
+    utils/memory/src/memory_core.c
+    utils/memory/src/memory_stats.c
+    utils/memory/src/memory_debug_core.c
     utils/memory/src/memory_pool.c
     # memory_pool 按功能域拆分：块区生命周期/分配释放与容量/统计查询校验（2026-08-27）
     utils/memory/src/memory_pool_alloc.c
@@ -216,7 +219,10 @@ if(_inc_missing GREATER 0)
 endif()
 
 set_source_files_properties(
-    utils/memory/src/memory.c
+    # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
+    utils/memory/src/memory_core.c
+    utils/memory/src/memory_stats.c
+    utils/memory/src/memory_debug_core.c
     utils/memory/src/memory_pool.c
     utils/memory/src/memory_pool_alloc.c
     utils/memory/src/memory_pool_stats.c
