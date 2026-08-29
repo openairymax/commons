@@ -222,6 +222,42 @@ int airy_get_sysinfo(airy_sysinfo_t *info);
  */
 int airy_get_gpu_info(char *out, size_t cap);
 
+/* ==================== Hardware profile (0.1.6 P1-3/d) ==================== */
+
+/* 硬件画像判定阈值——与 install.sh / airymaxrt assess_hardware 同口径
+ * （SSoT 单一判据，见 sdk/tui/scripts/airymaxrt）：
+ *   minimal：MemTotal < 2.5 GiB 或 MemAvailable < 1.5 GiB 或 CPU 核数 < 3
+ *   full：资源充足（大型服务器/个人电脑） */
+#define AIRY_HW_MIN_MEM_TOTAL_KIB (2560u * 1024u)  /* 2.5 GiB */
+#define AIRY_HW_MIN_MEM_AVAIL_KIB (1536u * 1024u)  /* 1.5 GiB */
+#define AIRY_HW_MIN_CPU_COUNT     3u
+
+#define AIRY_HW_PROFILE_MINIMAL   0
+#define AIRY_HW_PROFILE_FULL      1
+
+typedef struct {
+    uint32_t cpu_count;       /* 在线 CPU 核数 */
+    uint64_t mem_total_kib;   /* 物理内存总量（KiB） */
+    uint64_t mem_avail_kib;   /* 可用内存（KiB） */
+    int      profile;         /* AIRY_HW_PROFILE_MINIMAL / _FULL */
+    int      accel_present;   /* 1 = 检测到加速器（GPU），0 = 无 */
+    uint32_t accel_count;     /* 加速器数量（best-effort，>=1 当 accel_present） */
+    char     accel_model[128];/* 首块加速器型号（空串当无） */
+} airy_hw_profile_t;
+
+/**
+ * @brief Query the hardware profile (CPU/memory/accelerator) and classify
+ *        it into minimal/full using the SSoT thresholds above.
+ *
+ * 与 install.sh/airymaxrt 的 assess_hardware() 同口径（C 侧 SSoT 判据）。
+ * 供 info_d 服务、CLI 与上层自动裁剪/监控复用：插入显卡或扩充内存后，
+ * 调用方可据此恢复被裁剪的能力。
+ *
+ * @param out [out] hardware profile
+ * @return AIRY_SUCCESS / AIRY_EINVAL
+ */
+int airy_get_hw_profile(airy_hw_profile_t *out);
+
 
 #ifdef __cplusplus
 }
