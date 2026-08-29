@@ -669,4 +669,37 @@ int airy_get_gpu_info(char *out, size_t cap)
 #endif
 }
 
+/* 硬件画像（0.1.6 P1-3/d）：CPU/内存/加速器聚合 + minimal/full 分类。
+ * 与 install.sh/airymaxrt assess_hardware() 同口径（SSoT 单一判据）。
+ * 供 info_d 服务与上层自动裁剪/监控复用：外设增强（插卡/扩容）后调用方
+ * 可据此恢复被裁剪的能力。 */
+int airy_get_hw_profile(airy_hw_profile_t *out)
+{
+    if (!out)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(out, 0, sizeof(*out));
+
+    airy_sysinfo_t si;
+    if (airy_get_sysinfo(&si) == AIRY_SUCCESS) {
+        out->cpu_count = si.cpu_count;
+        /* airy_get_sysinfo 的内存单位为字节，画像判据使用 KiB */
+        out->mem_total_kib = si.memory_total / 1024;
+        out->mem_avail_kib = si.memory_free / 1024;
+    }
+
+    out->profile = (out->mem_total_kib >= AIRY_HW_MIN_MEM_TOTAL_KIB &&
+                    out->mem_avail_kib >= AIRY_HW_MIN_MEM_AVAIL_KIB &&
+                    out->cpu_count >= AIRY_HW_MIN_CPU_COUNT)
+                       ? AIRY_HW_PROFILE_FULL
+                       : AIRY_HW_PROFILE_MINIMAL;
+
+    char gpu[128];
+    if (airy_get_gpu_info(gpu, sizeof(gpu)) == AIRY_SUCCESS && gpu[0]) {
+        out->accel_present = 1;
+        out->accel_count = 1;
+        AIRY_STRNCPY_TERM(out->accel_model, gpu, sizeof(out->accel_model));
+    }
+    return AIRY_SUCCESS;
+}
+
 
