@@ -24,7 +24,7 @@
  *   airy_tool_provider.h    Tool 域（list / execute / execute_stream）
  *   airy_storage_provider.h Storage 域（get / set / delete / list）
  *   airy_sandbox_provider.h Sandbox 域（能力描述）
- * memory 域复用 atoms/memory/include/memory_provider.h 的
+ * memory 域复用 atoms/memory/provider.h 的
  * airy_memory_provider_t 作为 vtable（首个接入域，验证范式）。
  */
 

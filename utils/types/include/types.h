@@ -230,7 +230,7 @@ typedef enum {
 
 /**
  * @brief Memory handle type - forward declaration (defined in
- *        memory_provider.h)
+ *        provider.h)
  */
 struct airy_memory;
 typedef struct airy_memory airy_memory_t;
