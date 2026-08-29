@@ -33,7 +33,6 @@
 
 #include "../../../include/airy_types.h"
 #include "../../../platform/include/platform.h"
-#include "../../error/include/error.h"
 
 #include <stdbool.h>
 #include <stddef.h>

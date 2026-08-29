@@ -59,11 +59,12 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
-/* Unified base library compatibility layer */
-#include "../../memory/include/airy_memory.h"
-#include "../../string/include/string_compat.h"
-
+/* 0.1.6 P1-2 依赖图去环：本头仅声明平台适配 API（bool/size_t/time_t 等
+ * 标准类型），不使用 airy_memory.h / string_compat.h 的任何符号，两处
+ * include 为历史遗留，移除以消除 platform -> memory / platform -> string
+ * 域级环（platform 成为只被依赖的基座域）。 */
 #include <string.h>
 
 /**

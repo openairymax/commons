@@ -18,7 +18,12 @@
 #ifndef AIRY_RT_CHECK_H
 #define AIRY_RT_CHECK_H
 
-#include "../error/include/error.h"
+/* 0.1.6 P1-2 依赖图去环：check.h 仅需 airy_err_t 类型与 AIRY_SUCCESS/AIRY_E*
+ * 错误码宏（[SC] 契约层 airy_types.h 提供），不再 include error.h ——
+ * 消除 include -> error -> types -> platform -> compat/include -> include 域级环。
+ * 宏体中引用的 AIRY_MALLOC/FREE/CALLOC/STRDUP 在使用点展开（调用方已包含
+ * airy_memory.h），本头不要求其在此处可见。 */
+#include "../../../include/airy_types.h"
 
 #include <stdbool.h>
 
