@@ -1,0 +1,53 @@
+# commons 子域公共头依赖声明（0.1.6 P1-2 依赖图 SSoT 单一权威源）
+#
+# 语法: <子域名>: <依赖子域...>    依赖以空格分隔；无依赖可省略冒号后内容
+# 注释: # 开头行 / 行尾 # 之后内容
+#
+# 语义: 边 = 某子域公共头（utils/X/include/*.h、platform/include/*.h、
+#       commons/include/*.h）对其余子域公共头的 #include 关系（公共 API
+#       契约级依赖，不含 src/*.c 与内部头 src/*.h 的实现细节）。
+#
+# 约束:
+#   - 本图必须为 DAG：airy_depgraph 构建期 Kahn 拓扑排序 + 环检测，
+#     有环即 fail（报环路径），禁止绕过。
+#   - contract（[SC] 契约层）必须自包含（无依赖）：其头文件须能在
+#     内核态独立编译，不得 include 用户态 platform/utils 头。
+#   - 新增子域必须在此登记；公共头引用的依赖必须在此声明，否则
+#     include 漂移无法被门禁捕获。
+#
+# 注: compat 的 <io.h>/<stdint.h> 等为 Windows 系统头（platform/compat/
+#     下的 MSVC 替身），不计入项目依赖边。
+cache:
+cjson:
+cognition:
+compat: include
+compliance:
+config_unified: include
+contract:
+cost:
+effect: contract
+error: types
+execution:
+ext: contract error
+id:
+ime:
+include: observability
+io:
+ipc: contract error memory types
+logging: compat error include observability platform
+memory: error
+network: error types
+observability:
+platform: compat include
+print: logging
+quality:
+resource:
+sd: ipc
+security:
+strategy: memory string
+string:
+sync: platform
+task:
+token:
+types: contract platform
+uuid:
