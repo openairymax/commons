@@ -19,8 +19,9 @@
 #ifndef AIRY_RT_UNIFIED_TYPES_H
 #define AIRY_RT_UNIFIED_TYPES_H
 
-
-#include "../platform/include/platform.h"
+/* [SC] 契约层自包含（0.1.6 P1-2 依赖图去环）：本头不再 include platform.h。
+ * 下方注释引用的 airy_thread_t/airy_mtx_t 等平台类型由使用者自行包含
+ * platform.h 获得；[SC] 契约头须能独立编译（含内核态）。 */
 
 /* S-1 收敛 (2026-08-14, 用户决策): 错误码统一收敛至 A-UEF [SC] 唯一权威
  * commons/include/airymax/error.h。按 [SC] 契约自身声明（error.h 顶部注释）：
