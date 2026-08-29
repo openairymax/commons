@@ -6,9 +6,12 @@
 
 #ifdef _WIN32
 
-#include "airy_memory.h"
+/* compat 为最底层域：使用标准库内存/字符串原语，不依赖上层 memory 域
+ * （0.1.6 P1-2 依赖图去环：airy_dirent.h 曾 include airy_memory.h，
+ * 形成 compat → memory → logging → compat 头文件环）。 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <windows.h>
 
 #define AIRY_MAX_PATH 260
@@ -26,7 +29,7 @@ typedef struct {
 
 static inline DIR *opendir(const char *name)
 {
-    DIR *dir = (DIR *)AIRY_MALLOC(sizeof(DIR));
+    DIR *dir = (DIR *)malloc(sizeof(DIR));
     if (!dir)
         return NULL;
 
@@ -35,7 +38,7 @@ static inline DIR *opendir(const char *name)
 
     dir->hFind = FindFirstFileA(pattern, &dir->ffd);
     if (dir->hFind == INVALID_HANDLE_VALUE) {
-        AIRY_FREE(dir);
+        free(dir);
         return NULL;
     }
     dir->first = 1;
@@ -51,7 +54,7 @@ static inline struct dirent *readdir(DIR *dir)
             return NULL;
     }
     dir->first = 0;
-    AIRY_STRNCPY_TERM(dir->ent.d_name, dir->ffd.cFileName, AIRY_MAX_PATH);
+    snprintf(dir->ent.d_name, AIRY_MAX_PATH, "%s", dir->ffd.cFileName);
     dir->ent.d_name[AIRY_MAX_PATH - 1] = '\0';
     return &dir->ent;
 }
@@ -62,7 +65,7 @@ static inline int closedir(DIR *dir)
     if (!dir)
         return -1; /* BAN-073 exempt: POSIX API contract */
     FindClose(dir->hFind);
-    AIRY_FREE(dir);
+    free(dir);
     return 0;
 }
 
