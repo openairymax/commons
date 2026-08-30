@@ -18,7 +18,10 @@ typedef _Atomic uint64_t atomic_uint64_t;
 typedef _Atomic int64_t atomic_int64_t;
 typedef _Atomic size_t atomic_size_t;
 typedef _Atomic uint_fast64_t atomic_uint_fast64_t;
-typedef _Atomic unsigned long atomic_uint_fast32_t;
+/* 须与系统 <stdatomic.h> 的 atomic_uint_fast32_t 保持同一底层类型：
+ * LP64 下 __UINT_FAST32_TYPE__ = unsigned long，ILP32（i686/armv7l）下为
+ * unsigned int，硬编码 unsigned long 在 32 位目标上报 conflicting types。 */
+typedef _Atomic uint_fast32_t atomic_uint_fast32_t;
 
 
 static inline double atomic_load_double_fn(_Atomic double *ptr, memory_order order)
@@ -70,7 +73,7 @@ typedef volatile uint64_t atomic_uint_fast64_t;
 #else
 typedef volatile uint_fast64_t atomic_uint_fast64_t;
 #endif
-typedef volatile unsigned long atomic_uint_fast32_t;
+typedef volatile uint_fast32_t atomic_uint_fast32_t;
 typedef volatile int atomic_bool;
 
 #endif
