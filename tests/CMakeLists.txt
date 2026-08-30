@@ -11,6 +11,8 @@ set(COMMONS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 # 测试源文件
 set(UNIT_TEST_SOURCES
     unit/test_platform.c
+    # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
+    unit/test_platform_time.c
     unit/test_error.c
     unit/test_logger.c
     # unit/test_config.c  # 禁用：config_unified模块实现与头文件不匹配

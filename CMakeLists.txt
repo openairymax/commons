@@ -8,6 +8,8 @@ set(SOURCES
     platform/src/platform_sync.c
     platform/src/platform_process.c
     platform/src/platform_paths.c
+    # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
+    platform/src/platform_time.c
     utils/platform/src/platform_adapter.c
     utils/token/src/counter.c
     utils/token/src/budget.c
