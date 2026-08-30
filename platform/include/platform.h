@@ -23,6 +23,7 @@
  *   - platform_process.h 线程 / 套接字 / 子进程
  *   - platform_paths.h   路径常量 / AIRY_HOME 路径系统
  *   - platform_misc.h    时间 / 随机数 / 文件 / 系统信息
+ *   - platform_time.h    时间服务：逻辑墙钟 / 时区 / SNTP 校对（2026-08-30）
  *
  * @note Thread safety: the platform abstraction layer itself does not
  *       involve thread safety
@@ -37,5 +38,6 @@
 #include "platform_process.h"
 #include "platform_paths.h"
 #include "platform_misc.h"
+#include "platform_time.h"
 
 #endif /* AIRY_RT_PLATFORM_H */
