@@ -61,6 +61,56 @@ extern "C" {
 #include "export.h"
 
 
+/* ==================== CPU architecture detection ==================== */
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+#define AIRY_ARCH_X86_64 1
+#define AIRY_ARCH_NAME "x86_64"
+#define AIRY_ARCH_LE 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define AIRY_ARCH_X86 1
+#define AIRY_ARCH_NAME "x86"
+#define AIRY_ARCH_LE 1
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define AIRY_ARCH_ARM64 1
+#define AIRY_ARCH_NAME "arm64"
+#if defined(__AARCH64EB__)
+#define AIRY_ARCH_LE 0
+#else
+#define AIRY_ARCH_LE 1
+#endif
+#elif defined(__arm__) || defined(_M_ARM)
+#define AIRY_ARCH_ARM 1
+#define AIRY_ARCH_NAME "arm"
+#if defined(__ARMEB__) || defined(__BIG_ENDIAN__)
+#define AIRY_ARCH_LE 0
+#else
+#define AIRY_ARCH_LE 1
+#endif
+#elif defined(__riscv)
+#define AIRY_ARCH_RISCV 1
+#define AIRY_ARCH_NAME "riscv"
+/* RISC-V 默认小端；大端（__riscv_bi_endian 或显式宏）极罕见，暂不细分 */
+#define AIRY_ARCH_LE 1
+#elif defined(__loongarch64)
+#define AIRY_ARCH_LOONGARCH 1
+#define AIRY_ARCH_NAME "loongarch64"
+#define AIRY_ARCH_LE 1
+#elif defined(__powerpc64__)
+#define AIRY_ARCH_PPC64 1
+#define AIRY_ARCH_NAME "ppc64"
+#if defined(__BIG_ENDIAN__)
+#define AIRY_ARCH_LE 0
+#else
+#define AIRY_ARCH_LE 1
+#endif
+#else
+#define AIRY_ARCH_UNKNOWN 1
+#define AIRY_ARCH_NAME "unknown"
+#define AIRY_ARCH_LE 1
+#endif
+
+
 #if defined(_WIN32) || defined(_WIN64)
 #define AIRY_THREAD_LOCAL __declspec(thread)
 #else

@@ -196,10 +196,12 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
 
     {
         int expected = 0;
+        /* once-init（0.1.6f 强化）：CAS 成功 acq_rel 发布，失败 relaxed 即可 */
         if (atomic_compare_exchange_strong_explicit(&g_checkpoint_mutex_initialized, &expected, 1,
-                                                    memory_order_seq_cst, memory_order_seq_cst)) {
+                                                    memory_order_acq_rel,
+                                                    memory_order_relaxed)) {
             if (airy_mtx_init(&g_checkpoint_mutex) != 0) {
-                atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_seq_cst);
+                atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_release);
                 AIRY_LOG_ERROR("C-L07: Checkpoint: INIT-FAIL — mutex init failed "
                           "path=%s",
                           g_checkpoint_storage_path);
@@ -209,7 +211,7 @@ airy_err_t airy_checkpoint_init(const char *storage_path)
     }
 
     __builtin_memset(&g_checkpoint_stats, 0, sizeof(g_checkpoint_stats));
-    atomic_store_explicit(&g_checkpoint_initialized, 1, memory_order_seq_cst);
+    atomic_store_explicit(&g_checkpoint_initialized, 1, memory_order_release);
     AIRY_LOG_INFO("C-L07: Checkpoint: INIT-OK path=%s", g_checkpoint_storage_path);
     return AIRY_SUCCESS;
 }
@@ -220,11 +222,11 @@ airy_err_t airy_checkpoint_shutdown(void)
         return AIRY_SUCCESS;
     if (atomic_load_explicit(&g_checkpoint_mutex_initialized, memory_order_acquire)) {
         airy_mtx_destroy(&g_checkpoint_mutex);
-        atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_seq_cst);
+        atomic_store_explicit(&g_checkpoint_mutex_initialized, 0, memory_order_release);
     }
     g_auto_hook = NULL;
     g_auto_hook_user_data = NULL;
-    atomic_store_explicit(&g_checkpoint_initialized, 0, memory_order_seq_cst);
+    atomic_store_explicit(&g_checkpoint_initialized, 0, memory_order_release);
     AIRY_LOG_INFO("C-L07: Checkpoint: SHUTDOWN-OK "
              "total=%llu success=%llu failed=%llu",
              (unsigned long long)g_checkpoint_stats.total_checkpoints,

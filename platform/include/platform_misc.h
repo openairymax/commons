@@ -184,6 +184,16 @@ const char *airy_strerror(int error);
 
 /* ==================== System info ==================== */
 
+/**
+ * @brief 当前 CPU 架构名称（x86_64 / x86 / arm64 / arm / riscv / …）。
+ *
+ * 由 platform_base.h 的 AIRY_ARCH_NAME 宏导出，供日志/诊断/硬件画像
+ * 使用（0.1.6f 强化：显式架构识别，替代字符串猜测）。
+ *
+ * @return 架构名称（静态字符串，NUL 终止）
+ */
+const char *airy_arch_name(void);
+
 #ifndef AIRY_SYSINFO_T_DEFINED
 #define AIRY_SYSINFO_T_DEFINED
 typedef struct {
