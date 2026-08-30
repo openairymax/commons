@@ -10,35 +10,36 @@
 # 约束:
 #   - 本图必须为 DAG：airy_depgraph 构建期 Kahn 拓扑排序 + 环检测，
 #     有环即 fail（报环路径），禁止绕过。
-#   - contract（[SC] 契约层）必须自包含（无依赖）：其头文件须能在
-#     内核态独立编译，不得 include 用户态 platform/utils 头。
-#   - 新增子域必须在此登记；公共头引用的依赖必须在此声明，否则
-#     include 漂移无法被门禁捕获。
+#   - 契约层（[SC]，commons/include/airymax/*.h，节点名 "include"）
+#     必须自包含（无依赖）：其头文件须能在内核态独立编译，不得 include
+#     用户态 platform/utils 头。
+#   - 新增子域必须在此登记；公共头引用的依赖必须在此声明——airy_depgraph
+#     --root 构建期双向门禁：未声明的跨子域公共头引用（include 漂移）即
+#     fail；声明的依赖在公共头中零实际 include 时输出陈旧边告警。
 #
 # 注: compat 的 <io.h>/<stdint.h> 等为 Windows 系统头（platform/compat/
 #     下的 MSVC 替身），不计入项目依赖边。
 cache:
 cjson:
 cognition:
-compat: include
+compat:
 compliance:
-config_unified: include
-contract:
+config_unified:
 cost:
-effect: contract
+effect: include
 error: types
 execution:
-ext: contract error
+ext: error include
 id:
 ime:
-include: observability
+include:
 io:
-ipc: contract error memory types
-logging: compat error include observability platform
+ipc: error memory types include
+logging: compat error observability platform
 memory: error
 network: error types
 observability:
-platform: compat include
+platform: compat
 print: logging
 quality:
 resource:
@@ -49,5 +50,5 @@ string:
 sync: platform
 task:
 token:
-types: contract platform
+types: include platform
 uuid:
