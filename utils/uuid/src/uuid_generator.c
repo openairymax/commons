@@ -40,18 +40,20 @@ static atomic_uint64_t g_uuid_counter = 0;
 airy_uuid_error_t airy_uuid_init(void)
 {
     int expected = 0;
+    /* once-init：CAS 成功用 acq_rel（发布初始化完成），失败仅需确认
+     * 已初始化（relaxed）——降级 seq_cst 全屏障（0.1.6f 强化）。 */
     if (atomic_compare_exchange_strong_explicit(&g_uuid_initialized, &expected, 1,
-                                                memory_order_seq_cst, memory_order_seq_cst)) {
+                                                memory_order_acq_rel, memory_order_relaxed)) {
 #if defined(_WIN32) || defined(_WIN64)
         RPC_STATUS status = UuidCreateSequential(NULL);
         if (status != RPC_S_OK && status != RPC_S_UUID_LOCAL_ONLY) {
-            atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
+            atomic_store_explicit(&g_uuid_initialized, 0, memory_order_release);
             return AIRY_UUID_EUNAVAIL;
         }
 #elif defined(__linux__) || defined(__APPLE__)
         int fd = open("/dev/urandom", O_RDONLY);
         if (fd < 0) {
-            atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
+            atomic_store_explicit(&g_uuid_initialized, 0, memory_order_release);
             return AIRY_UUID_EUNAVAIL;
         }
         close(fd);
@@ -64,7 +66,7 @@ airy_uuid_error_t airy_uuid_init(void)
 
 void airy_uuid_cleanup(void)
 {
-    atomic_store_explicit(&g_uuid_initialized, 0, memory_order_seq_cst);
+    atomic_store_explicit(&g_uuid_initialized, 0, memory_order_release);
     g_uuid_counter = 0;
 }
 

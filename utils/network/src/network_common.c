@@ -53,11 +53,11 @@ int network_init_winsock(void)
 #ifdef _WIN32
     static atomic_int initialized = 0;
     int expected = 0;
-    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1, memory_order_seq_cst,
-                                                memory_order_seq_cst)) {
+    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1, memory_order_acq_rel,
+                                                memory_order_relaxed)) {
         WSADATA wsaData;
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-            atomic_store_explicit(&initialized, 0, memory_order_seq_cst);
+            atomic_store_explicit(&initialized, 0, memory_order_release);
             return AIRY_EINVAL;
         }
     }

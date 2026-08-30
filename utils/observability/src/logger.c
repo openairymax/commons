@@ -40,8 +40,9 @@ static void ensure_log_initialized(void)
 {
     static atomic_int initialized = 0;
     int expected = 0;
-    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1, memory_order_seq_cst,
-                                                memory_order_seq_cst)) {
+    /* once-init（0.1.6f 强化）：CAS 成功 acq_rel 发布，失败 relaxed 即可 */
+    if (atomic_compare_exchange_strong_explicit(&initialized, &expected, 1, memory_order_acq_rel,
+                                                memory_order_relaxed)) {
         log_init(NULL);
     }
 }

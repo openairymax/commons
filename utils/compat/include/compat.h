@@ -183,8 +183,10 @@ AIRY_API int nanosleep(const struct timespec *ts, struct timespec *rem);
 AIRY_API char *strndup(const char *s, size_t n);
 AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 
-#define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
-#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
+/* 采样/统计计数器（0.1.6f 强化）：relaxed——fetch_add 无同步需求，
+ * 仅作近似计数（logging_control 采样率），避免 seq_cst 全屏障。 */
+#define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_relaxed)
+#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_relaxed)
 
 #ifndef _SC_PAGESIZE
 #define _SC_PAGESIZE 1
@@ -199,8 +201,9 @@ AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
 #define _SC_CLK_TCK 4
 #endif
 #else
-#define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
-#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_seq_cst)
+/* 采样/统计计数器（0.1.6f 强化）：relaxed，理由同 Windows 分支。 */
+#define AIRY_ATOMIC_FETCH_ADD(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_relaxed)
+#define AIRY_ATOMIC_FETCH_ADD64(ptr, val) atomic_fetch_add_explicit(ptr, val, memory_order_relaxed)
 #endif
 
 

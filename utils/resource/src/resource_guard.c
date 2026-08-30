@@ -79,8 +79,9 @@ static atomic_int g_resource_mutex_initialized = 0;
 static void ensure_mutex_initialized(void)
 {
     int expected = 0;
+    /* once-init（0.1.6f 强化）：CAS 成功 acq_rel 发布，失败 relaxed 即可 */
     if (atomic_compare_exchange_strong_explicit(&g_resource_mutex_initialized, &expected, 1,
-                                                memory_order_seq_cst, memory_order_seq_cst)) {
+                                                memory_order_acq_rel, memory_order_relaxed)) {
         airy_mtx_init(&g_resource_mutex);
     }
 }
