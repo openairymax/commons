@@ -13,162 +13,162 @@ set(SOURCES
     # 0c A 类直搬：平台扩展实现（airy_dl_*/airy_sock_*/进程/线程别名等，
     # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
     platform/src/platform_compat.c
-    utils/platform/src/platform_adapter.c
-    utils/token/src/counter.c
-    utils/token/src/budget.c
-    utils/token/src/token_standard.c
-    utils/cost/src/estimator.c
-    utils/cost/src/controller.c
-    utils/observability/src/logger.c
-    utils/observability/src/metrics.c
-    utils/observability/src/trace.c
-    utils/error/src/handler.c
-    utils/io/src/file_utils.c
-    utils/security/src/input_validator.c
-    utils/resource/src/resource_guard.c
-    utils/resource/src/resource_quota.c
+    utils/platform/platform_adapter.c
+    utils/token/counter.c
+    utils/token/budget.c
+    utils/token/token_standard.c
+    utils/cost/estimator.c
+    utils/cost/controller.c
+    utils/observability/logger.c
+    utils/observability/metrics.c
+    utils/observability/trace.c
+    utils/error/handler.c
+    utils/io/file_utils.c
+    utils/security/input_validator.c
+    utils/resource/resource_guard.c
+    utils/resource/resource_quota.c
     # logging 核心按功能域拆分：核心/格式化/文件后端/运行时控制（2026-08-27）
-    utils/logging/src/logging_core.c
-    utils/logging/src/logging_format.c
-    utils/logging/src/logging_backend_file.c
-    utils/logging/src/logging_control.c
-    utils/logging/src/atomic_logging.c
-    utils/logging/src/service_logging.c
+    utils/logging/logging_core.c
+    utils/logging/logging_format.c
+    utils/logging/logging_backend_file.c
+    utils/logging/logging_control.c
+    utils/logging/atomic_logging.c
+    utils/logging/service_logging.c
     # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
-    utils/memory/src/memory_core.c
-    utils/memory/src/memory_stats.c
-    utils/memory/src/memory_debug_core.c
-    utils/memory/src/memory_pool.c
+    utils/memory/memory_core.c
+    utils/memory/memory_stats.c
+    utils/memory/memory_debug_core.c
+    utils/memory/memory_pool.c
     # memory_pool 按功能域拆分：块区生命周期/分配释放与容量/统计查询校验（2026-08-27）
-    utils/memory/src/memory_pool_alloc.c
-    utils/memory/src/memory_pool_stats.c
+    utils/memory/memory_pool_alloc.c
+    utils/memory/memory_pool_stats.c
     # memory_debug 模块按功能域拆分：生命周期/分配追踪/泄漏检测/校验/统计
-    utils/memory/src/memory_debug.c
-    utils/memory/src/memory_debug_track.c
-    utils/memory/src/memory_debug_leak.c
-    utils/memory/src/memory_debug_validate.c
-    utils/memory/src/memory_debug_stats.c
-    utils/memory/src/memory_common.c
-    utils/memory/src/memory_stats_reporter.c
-    utils/memory/src/memory_prealloc.c
-    utils/memory/src/arena.c
-    utils/memory/src/tcache.c
-    utils/string/src/string_common.c
-    utils/string/src/string.c
-    utils/string/src/string_find.c
-    utils/string/src/string_split.c
-    utils/string/src/string_classify.c
-    utils/string/src/string_format.c
-    utils/string/src/string_buffer.c
-    utils/string/src/string_view.c
-    utils/string/src/string_encode.c
-    utils/string/src/safe_string_utils.c
-    utils/sync/src/sync.c
-    utils/sync/src/sync_platform.c
-    utils/sync/src/sync_internal.c
-    utils/sync/src/sync_spinlock.c
-    utils/sync/src/sync_mutex.c
-    utils/sync/src/sync_rwlock.c
-    utils/sync/src/sync_semaphore.c
-    utils/sync/src/sync_condition.c
-    utils/sync/src/sync_event.c
-    utils/sync/src/sync_barrier.c
-    utils/sync/src/sync_recursive_mutex.c
-    utils/sync/src/sync_common.c
+    utils/memory/memory_debug.c
+    utils/memory/memory_debug_track.c
+    utils/memory/memory_debug_leak.c
+    utils/memory/memory_debug_validate.c
+    utils/memory/memory_debug_stats.c
+    utils/memory/memory_common.c
+    utils/memory/memory_stats_reporter.c
+    utils/memory/memory_prealloc.c
+    utils/memory/arena.c
+    utils/memory/tcache.c
+    utils/string/string_common.c
+    utils/string/string.c
+    utils/string/string_find.c
+    utils/string/string_split.c
+    utils/string/string_classify.c
+    utils/string/string_format.c
+    utils/string/string_buffer.c
+    utils/string/string_view.c
+    utils/string/string_encode.c
+    utils/string/safe_string_utils.c
+    utils/sync/sync.c
+    utils/sync/sync_platform.c
+    utils/sync/sync_internal.c
+    utils/sync/sync_spinlock.c
+    utils/sync/sync_mutex.c
+    utils/sync/sync_rwlock.c
+    utils/sync/sync_semaphore.c
+    utils/sync/sync_condition.c
+    utils/sync/sync_event.c
+    utils/sync/sync_barrier.c
+    utils/sync/sync_recursive_mutex.c
+    utils/sync/sync_common.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）
-    utils/sync/src/cancel_token.c
-    utils/sync/src/thread_pool.c
-    utils/cache/src/cache_common.c
-    utils/compat/src/compat.c
+    utils/sync/cancel_token.c
+    utils/sync/thread_pool.c
+    utils/cache/cache_common.c
+    utils/compat/compat.c
     # POSIX ERE engine for Windows (no <regex.h>); compiled everywhere so
     # the engine itself is unit-tested on Linux too. POSIX callers use the
     # system <regex.h> via airy_regex.h and never call airy_re_* symbols.
-    utils/compat/src/airy_regex.c
+    utils/compat/airy_regex.c
     # airy_regex ERE 引擎按功能域拆分：公共 API+VM/解析/编译（2026-08-27）
-    utils/compat/src/airy_regex_parse.c
-    utils/compat/src/airy_regex_compile.c
-    utils/cognition/src/cognition_common.c
-    utils/strategy/src/strategy_common.c
+    utils/compat/airy_regex_parse.c
+    utils/compat/airy_regex_compile.c
+    utils/cognition/cognition_common.c
+    utils/strategy/strategy_common.c
     # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
-    utils/network/src/network_common.c
-    utils/network/src/network_http.c
-    utils/network/src/network_pool.c
-    utils/network/src/network_dns.c
-    utils/uuid/src/uuid_generator.c
+    utils/network/network_common.c
+    utils/network/network_http.c
+    utils/network/network_pool.c
+    utils/network/network_dns.c
+    utils/uuid/uuid_generator.c
     # config_unified 按功能域组织（2026-08-27）：core（核心上下文）/service（配置服务）/source（配置源）/parse（格式解析）
-    utils/config_unified/src/core/core_config.c
+    utils/config_unified/core_config.c
     # core_config 按功能域拆分：上下文/value 值对象/字符串化与调试（2026-08-27）
-    utils/config_unified/src/core/core_config_value.c
-    utils/config_unified/src/core/core_config_strings.c
-    utils/config_unified/src/service/config_service.c
-    utils/config_unified/src/service/config_service_validator.c
-    utils/config_unified/src/service/config_service_hotreload.c
-    utils/config_unified/src/service/config_service_crypto.c
-    utils/config_unified/src/service/config_service_version.c
-    utils/config_unified/src/source/config_source.c
-    utils/config_unified/src/source/config_source_file.c
-    utils/config_unified/src/source/config_source_env.c
-    utils/config_unified/src/source/config_source_args.c
-    utils/config_unified/src/source/config_source_memory.c
-    utils/config_unified/src/source/config_source_manager.c
+    utils/config_unified/core_config_value.c
+    utils/config_unified/core_config_strings.c
+    utils/config_unified/config_service.c
+    utils/config_unified/config_service_validator.c
+    utils/config_unified/config_service_hotreload.c
+    utils/config_unified/config_service_crypto.c
+    utils/config_unified/config_service_version.c
+    utils/config_unified/config_source.c
+    utils/config_unified/config_source_file.c
+    utils/config_unified/config_source_env.c
+    utils/config_unified/config_source_args.c
+    utils/config_unified/config_source_memory.c
+    utils/config_unified/config_source_manager.c
     # config_parse 按格式域拆分：INI（本文件）/JSON/YAML 结构/YAML 标量（2026-08-27）
-    utils/config_unified/src/parse/config_parse.c
-    utils/config_unified/src/parse/config_parse_json.c
-    utils/config_unified/src/parse/config_parse_yaml.c
-    utils/config_unified/src/parse/config_parse_yaml_scalar.c
-    utils/config_unified/src/parse/yaml_minimal.c
-    utils/config_unified/src/parse/yaml_minimal_lexer.c
-    utils/config_unified/src/parse/yaml_minimal_parser.c
+    utils/config_unified/config_parse.c
+    utils/config_unified/config_parse_json.c
+    utils/config_unified/config_parse_yaml.c
+    utils/config_unified/config_parse_yaml_scalar.c
+    utils/config_unified/yaml_minimal.c
+    utils/config_unified/yaml_minimal_lexer.c
+    utils/config_unified/yaml_minimal_parser.c
     # yaml parser 按功能域拆分：块结构/节点与锚点注册/标量与流值（2026-08-27）
-    utils/config_unified/src/parse/yaml_minimal_anchor.c
-    utils/config_unified/src/parse/yaml_minimal_value.c
-    utils/config_unified/src/parse/yaml_minimal_node.c
-    utils/config_unified/src/parse/yaml_minimal_scalar.c
-    utils/config_unified/src/parse/yaml_minimal_serialize.c
+    utils/config_unified/yaml_minimal_anchor.c
+    utils/config_unified/yaml_minimal_value.c
+    utils/config_unified/yaml_minimal_node.c
+    utils/config_unified/yaml_minimal_scalar.c
+    utils/config_unified/yaml_minimal_serialize.c
     # execution/checkpoint 模块按功能域拆分：生命周期/持久化/快照/会话管理
-    utils/execution/src/checkpoint.c
-    utils/execution/src/checkpoint_persist.c
-    utils/execution/src/checkpoint_snapshot.c
-    utils/execution/src/checkpoint_session.c
-    utils/task/src/task_desc.c
+    utils/execution/checkpoint.c
+    utils/execution/checkpoint_persist.c
+    utils/execution/checkpoint_snapshot.c
+    utils/execution/checkpoint_session.c
+    utils/task/task_desc.c
     # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
-    utils/effect/src/airy_effect.c
+    utils/effect/airy_effect.c
     # 阶段 2: 统一扩展注册表 + 四域 provider 注册辅助（memory/llm/tool/storage/sandbox）
-    utils/ext/src/airy_ext.c
-    utils/ext/src/airy_providers.c
+    utils/ext/airy_ext.c
+    utils/ext/airy_providers.c
     # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名，类型层不可互赋）
-    utils/id/src/airy_id.c
+    utils/id/airy_id.c
     # 阶段 4: 轻量内置拼音输入法词典（全拼，本地只读，无 IME 设备中文输入）
-    utils/ime/src/airy_ime.c
+    utils/ime/airy_ime.c
     # 0c A 类直搬（daemons/common → commons，IRON-6 归位；原在 svc_common 全平台编译）
-    utils/ipc/src/ipc_backpressure.c  # IPC 总线背压控制
-    utils/ipc/src/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
-    utils/ipc/src/method_dispatcher.c  # 方法分发器（注册表模式）
-    utils/ipc/src/param_validator.c    # JSON-RPC 参数校验
+    utils/ipc/ipc_backpressure.c  # IPC 总线背压控制
+    utils/ipc/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
+    utils/ipc/method_dispatcher.c  # 方法分发器（注册表模式）
+    utils/ipc/param_validator.c    # JSON-RPC 参数校验
     # 0c A 类直搬：airy_event_loop 全家族（三后端各自 #if 守卫，全平台编译）
-    utils/sync/src/airy_event_loop.c
-    utils/sync/src/airy_event_loop_epoll.c
-    utils/sync/src/airy_event_loop_win.c
-    utils/sync/src/airy_event_loop_kqueue.c
-    utils/sync/src/airy_event_timer.c
+    utils/sync/airy_event_loop.c
+    utils/sync/airy_event_loop_epoll.c
+    utils/sync/airy_event_loop_win.c
+    utils/sync/airy_event_loop_kqueue.c
+    utils/sync/airy_event_timer.c
     # 0c A 类直搬：observability 域
-    utils/observability/src/unified_metrics.c
-    utils/observability/src/alert_manager.c
+    utils/observability/unified_metrics.c
+    utils/observability/alert_manager.c
     # 0c A 类直搬：resource 域（api_recovery）
-    utils/resource/src/api_recovery.c
+    utils/resource/api_recovery.c
     # 0c A 类直搬：security 域（log_sanitizer）
-    utils/security/src/log_sanitizer.c
+    utils/security/log_sanitizer.c
 )
 if(NOT WIN32)
-    list(APPEND SOURCES utils/ipc/src/ipc_common.c)
-    list(APPEND SOURCES utils/ipc/src/ipc_common_io.c) # Phase 2.3a: 消息收发域（从 ipc_common.c 拆分）
-    list(APPEND SOURCES utils/ipc/src/ipc_common_message.c)
-    list(APPEND SOURCES utils/ipc/src/ipc_server_client.c)
-    list(APPEND SOURCES utils/ipc/src/ipc_shm.c)
-    list(APPEND SOURCES utils/ipc/src/ipc_mq.c)
-    list(APPEND SOURCES utils/ipc/src/ipc_rpc.c)
+    list(APPEND SOURCES utils/ipc/ipc_common.c)
+    list(APPEND SOURCES utils/ipc/ipc_common_io.c) # Phase 2.3a: 消息收发域（从 ipc_common.c 拆分）
+    list(APPEND SOURCES utils/ipc/ipc_common_message.c)
+    list(APPEND SOURCES utils/ipc/ipc_server_client.c)
+    list(APPEND SOURCES utils/ipc/ipc_shm.c)
+    list(APPEND SOURCES utils/ipc/ipc_mq.c)
+    list(APPEND SOURCES utils/ipc/ipc_rpc.c)
     # 0c SSoT 收敛：熔断器唯一权威实现（daemons 776 行版迁入）
-    list(APPEND SOURCES utils/ipc/src/circuit_breaker.c)
+    list(APPEND SOURCES utils/ipc/circuit_breaker.c)
 endif()
 
 add_library(airy_common STATIC ${SOURCES})
@@ -192,43 +192,36 @@ endif()
 airy_print_info("[COMMONS] Verifying include directories...")
 set(_inc_dirs
     platform/include
-    utils/types/include
-    utils/logging/include
-    utils/error/include
-    utils/sync/include
-    utils/sync/src
+    utils/types
+    utils/logging
+    utils/error
+    utils/sync
     utils/include
     utils/memory
     utils/string
-    utils/compat/include
-    utils/token/include
-    utils/cost/include
-    utils/observability/include
-    utils/io/include
-    utils/security/src
-    utils/resource/src
-    utils/memory/include
-    utils/string/include
-    utils/cache/include
-    utils/platform/include
-    utils/config_unified/include
-    # 2026-08-27 按功能域组织后，跨族裸名 include 经下列子目录解析
-    utils/config_unified/src/parse
-    utils/config_unified/src/source
-    utils/config_unified/src/service
-    utils/execution/include
-    utils/cognition/include
-    utils/strategy/include
-    utils/network/include
-    utils/ipc/include
-    utils/uuid/include
+    utils/compat
+    utils/token
+    utils/cost
+    utils/observability
+    utils/io
+    utils/security
+    utils/resource
+    utils/cache
+    utils/platform
+    utils/config_unified
+    utils/execution
+    utils/cognition
+    utils/strategy
+    utils/network
+    utils/ipc
+    utils/uuid
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
-    utils/cjson/include
-    utils/effect/include
+    utils/cjson
+    utils/effect
     # 阶段 2: 统一扩展注册表头
-    utils/ext/include
+    utils/ext
     # 阶段 4: 内置拼音输入法头
-    utils/ime/include
+    utils/ime
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
     include
 )
@@ -247,28 +240,28 @@ endif()
 
 set_source_files_properties(
     # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
-    utils/memory/src/memory_core.c
-    utils/memory/src/memory_stats.c
-    utils/memory/src/memory_debug_core.c
-    utils/memory/src/memory_pool.c
-    utils/memory/src/memory_pool_alloc.c
-    utils/memory/src/memory_pool_stats.c
-    utils/memory/src/memory_debug.c
-    utils/memory/src/memory_debug_track.c
-    utils/memory/src/memory_debug_leak.c
-    utils/memory/src/memory_debug_validate.c
-    utils/memory/src/memory_debug_stats.c
-    utils/memory/src/memory_common.c
-    utils/memory/src/memory_stats_reporter.c
-    utils/memory/src/memory_prealloc.c
-    utils/memory/src/arena.c
-    utils/memory/src/tcache.c
-    utils/logging/src/logging_core.c
-    utils/logging/src/logging_format.c
-    utils/logging/src/logging_backend_file.c
-    utils/logging/src/logging_control.c
-    utils/logging/src/atomic_logging.c
-    utils/logging/src/service_logging.c
+    utils/memory/memory_core.c
+    utils/memory/memory_stats.c
+    utils/memory/memory_debug_core.c
+    utils/memory/memory_pool.c
+    utils/memory/memory_pool_alloc.c
+    utils/memory/memory_pool_stats.c
+    utils/memory/memory_debug.c
+    utils/memory/memory_debug_track.c
+    utils/memory/memory_debug_leak.c
+    utils/memory/memory_debug_validate.c
+    utils/memory/memory_debug_stats.c
+    utils/memory/memory_common.c
+    utils/memory/memory_stats_reporter.c
+    utils/memory/memory_prealloc.c
+    utils/memory/arena.c
+    utils/memory/tcache.c
+    utils/logging/logging_core.c
+    utils/logging/logging_format.c
+    utils/logging/logging_backend_file.c
+    utils/logging/logging_control.c
+    utils/logging/atomic_logging.c
+    utils/logging/service_logging.c
     PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"
 )
 
@@ -278,40 +271,38 @@ endif()
 
 target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/types/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/logging/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/error/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/sync/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/types
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/logging
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/error
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/sync
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/memory
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/string
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/compat/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/token/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cost/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/observability/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/io/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/security/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/resource/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/memory/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/string/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cache/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/platform/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/config_unified/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/execution/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cognition/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/strategy/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/network/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/print/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/compat
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/token
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cost
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/observability
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/io
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/security
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/resource
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cache
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/platform
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/config_unified
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/execution
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cognition
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/strategy
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/print
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson
     # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/effect/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/effect
     # 阶段 2: 统一扩展注册表头
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext
     # 阶段 4: 内置拼音输入法头
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ime/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ime
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2，6 核心 + 1 补充 + uapi_compat）
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -364,35 +355,58 @@ endif()
 
 install(TARGETS airy_common DESTINATION lib)
 install(DIRECTORY platform/include/ DESTINATION include/agentrt/platform)
-install(DIRECTORY utils/token/include/ DESTINATION include/agentrt/utils/token)
-install(DIRECTORY utils/cost/include/ DESTINATION include/agentrt/utils/cost)
-install(DIRECTORY utils/observability/include/ DESTINATION include/agentrt/utils/observability)
-install(DIRECTORY utils/logging/include/ DESTINATION include/agentrt/utils/logging)
-install(DIRECTORY utils/error/include/ DESTINATION include/agentrt/utils/error)
-install(DIRECTORY utils/config_unified/include/ DESTINATION include/agentrt/utils/config_unified)
-install(DIRECTORY utils/execution/include/ DESTINATION include/agentrt/utils/execution)
-install(DIRECTORY utils/io/include/ DESTINATION include/agentrt/utils/io)
-install(DIRECTORY utils/types/include/ DESTINATION include/agentrt/utils/types)
-install(FILES utils/security/src/input_validator.h DESTINATION include/agentrt/utils/security)
-install(FILES utils/resource/src/resource_guard.h DESTINATION include/agentrt/utils/resource)
-install(FILES utils/resource/src/resource_quota.h DESTINATION include/agentrt/utils/resource)
-install(DIRECTORY utils/memory/include/ DESTINATION include/agentrt/utils/memory)
-install(DIRECTORY utils/string/include/ DESTINATION include/agentrt/utils/string)
-install(DIRECTORY utils/sync/include/ DESTINATION include/agentrt/utils/sync)
-install(DIRECTORY utils/cache/include/ DESTINATION include/agentrt/utils/cache)
-install(DIRECTORY utils/compat/include/ DESTINATION include/agentrt/utils/compat)
-install(DIRECTORY utils/network/include/ DESTINATION include/agentrt/utils/network)
-install(DIRECTORY utils/ipc/include/ DESTINATION include/agentrt/utils/ipc)
-install(DIRECTORY utils/platform/include/ DESTINATION include/agentrt/utils/platform)
-install(DIRECTORY utils/cognition/include/ DESTINATION include/agentrt/utils/cognition)
-install(DIRECTORY utils/strategy/include/ DESTINATION include/agentrt/utils/strategy)
-# P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
-install(DIRECTORY utils/cjson/include/ DESTINATION include/agentrt/utils/cjson)
-install(DIRECTORY utils/effect/include/ DESTINATION include/agentrt/utils/effect)
-# 阶段 2: 统一扩展注册表头安装
-install(DIRECTORY utils/ext/include/ DESTINATION include/agentrt/utils/ext)
+# 0.1.9 0d 扁平化：utils/<X>/ 平铺后仅安装公共头（*.h），排除 _internal.h
+install(DIRECTORY utils/token/ DESTINATION include/agentrt/utils/token
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/cost/ DESTINATION include/agentrt/utils/cost
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/observability/ DESTINATION include/agentrt/utils/observability
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/logging/ DESTINATION include/agentrt/utils/logging
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/error/ DESTINATION include/agentrt/utils/error
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/config_unified/ DESTINATION include/agentrt/utils/config_unified
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/execution/ DESTINATION include/agentrt/utils/execution
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/io/ DESTINATION include/agentrt/utils/io
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/types/ DESTINATION include/agentrt/utils/types
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/security/ DESTINATION include/agentrt/utils/security
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/resource/ DESTINATION include/agentrt/utils/resource
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/memory/ DESTINATION include/agentrt/utils/memory
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/string/ DESTINATION include/agentrt/utils/string
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/sync/ DESTINATION include/agentrt/utils/sync
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/cache/ DESTINATION include/agentrt/utils/cache
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/compat/ DESTINATION include/agentrt/utils/compat
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/network/ DESTINATION include/agentrt/utils/network
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/ipc/ DESTINATION include/agentrt/utils/ipc
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/platform/ DESTINATION include/agentrt/utils/platform
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/cognition/ DESTINATION include/agentrt/utils/cognition
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/strategy/ DESTINATION include/agentrt/utils/strategy
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/cjson/ DESTINATION include/agentrt/utils/cjson
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/effect/ DESTINATION include/agentrt/utils/effect
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/ext/ DESTINATION include/agentrt/utils/ext
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 # 阶段 4: 内置拼音输入法头与词典安装（词典随安装分发，本地只读）
-install(DIRECTORY utils/ime/include/ DESTINATION include/agentrt/ime)
+install(DIRECTORY utils/ime/ DESTINATION include/agentrt/ime
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(FILES utils/ime/data/airy_ime.dat DESTINATION share/agentrt/ime)
 # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
 install(DIRECTORY include/airymax/ DESTINATION include/airymax)

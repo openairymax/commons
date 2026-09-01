@@ -14,7 +14,7 @@
  *
  */
 
-#include "../../utils/security/src/input_validator.h"
+#include "../../utils/security/input_validator.h"
 #include "../utils/test_framework.h"
 
 #include <stdbool.h>

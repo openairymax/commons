@@ -9,7 +9,7 @@
  *
  */
 
-#include "../../utils/observability/include/observability.h"
+#include "../../utils/observability/observability.h"
 #include "../utils/test_framework.h"
 
 #include <stdbool.h>

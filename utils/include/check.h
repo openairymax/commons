@@ -23,7 +23,7 @@
  * 消除 include -> error -> types -> platform -> compat/include -> include 域级环。
  * 宏体中引用的 AIRY_MALLOC/FREE/CALLOC/STRDUP 在使用点展开（调用方已包含
  * airy_memory.h），本头不要求其在此处可见。 */
-#include "../../../include/airy_types.h"
+#include "../../include/airy_types.h"
 
 #include <stdbool.h>
 

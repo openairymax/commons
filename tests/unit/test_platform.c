@@ -10,8 +10,8 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "../../utils/error/include/error.h"
-#include "include/airy_memory.h"
+#include "../../utils/error/error.h"
+#include "airy_memory.h"
 #include "platform.h"
 #include "string_compat.h"
 #include "cancel_token.h"

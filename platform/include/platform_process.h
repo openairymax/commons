@@ -119,7 +119,7 @@ int airy_sock_set_reuseaddr(airy_sock_t sock, int reuse);
 
 /* Forward declaration: cancellation token (improvement 1 "cancellation
  * push-down"). Full definition in
- * commons/utils/sync/include/cancel_token.h (that header includes
+ * commons/utils/sync/cancel_token.h (that header includes
  * platform.h, so only a pointer parameter is declared here to avoid a
  * circular dependency). */
 struct airy_cancel_token;

@@ -9,7 +9,7 @@
  *
  */
 
-#include "../../utils/memory/include/memory.h"
+#include "../../utils/memory/memory.h"
 #include "../utils/test_framework.h"
 
 #include <stdbool.h>

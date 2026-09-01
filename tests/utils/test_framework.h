@@ -53,7 +53,7 @@
 #include "cmocka_stub.h"
 #endif /* AIRY_HAS_CMOCKA */
 
-#include "../../../utils/types/include/types.h"
+#include "../../utils/types/types.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -70,22 +70,22 @@ foreach(test_source ${UNIT_TEST_SOURCES})
     target_include_directories(${test_name} PRIVATE
         ${COMMONS_ROOT}/include
         ${COMMONS_ROOT}/platform/include
-        ${COMMONS_ROOT}/utils/logging/include
-        ${COMMONS_ROOT}/utils/error/include
-        ${COMMONS_ROOT}/utils/string/include
-        ${COMMONS_ROOT}/utils/observability/include
-        ${COMMONS_ROOT}/utils/types/include
-        ${COMMONS_ROOT}/utils/token/include
-        ${COMMONS_ROOT}/utils/cost/include
-        ${COMMONS_ROOT}/utils/ipc/include
-        ${COMMONS_ROOT}/utils/network/include
-        ${COMMONS_ROOT}/utils/memory/include
-        ${COMMONS_ROOT}/utils/print/include
-        ${COMMONS_ROOT}/utils/sync/include
-        ${COMMONS_ROOT}/utils/effect/include
-        ${COMMONS_ROOT}/utils/ext/include
-        ${COMMONS_ROOT}/utils/ime/include
-        ${COMMONS_ROOT}/utils/io/include
+        ${COMMONS_ROOT}/utils/logging
+        ${COMMONS_ROOT}/utils/error
+        ${COMMONS_ROOT}/utils/string
+        ${COMMONS_ROOT}/utils/observability
+        ${COMMONS_ROOT}/utils/types
+        ${COMMONS_ROOT}/utils/token
+        ${COMMONS_ROOT}/utils/cost
+        ${COMMONS_ROOT}/utils/ipc
+        ${COMMONS_ROOT}/utils/network
+        ${COMMONS_ROOT}/utils/memory
+        ${COMMONS_ROOT}/utils/print
+        ${COMMONS_ROOT}/utils/sync
+        ${COMMONS_ROOT}/utils/effect
+        ${COMMONS_ROOT}/utils/ext
+        ${COMMONS_ROOT}/utils/ime
+        ${COMMONS_ROOT}/utils/io
         ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -110,11 +110,11 @@ foreach(test_source ${INTEGRATION_TEST_SOURCES})
 
     target_include_directories(${test_name} PRIVATE
         ${COMMONS_ROOT}/platform/include
-        ${COMMONS_ROOT}/utils/logging/include
-        ${COMMONS_ROOT}/utils/error/include
-        ${COMMONS_ROOT}/utils/string/include
-        ${COMMONS_ROOT}/utils/observability/include
-        ${COMMONS_ROOT}/utils/types/include
+        ${COMMONS_ROOT}/utils/logging
+        ${COMMONS_ROOT}/utils/error
+        ${COMMONS_ROOT}/utils/string
+        ${COMMONS_ROOT}/utils/observability
+        ${COMMONS_ROOT}/utils/types
         ${COMMONS_ROOT}/../atoms/corekern/include
         ${CMAKE_CURRENT_SOURCE_DIR}
     )

@@ -94,7 +94,7 @@ extern "C" {
  * 用户态 POSIX errno 负值码（含上方 #undef 重定义的 14 个 [SC] 同名码）
  * 统一在本文件定义，值域与 Linux errno 一致（AIRY_EINVAL=-22 等），
  * 全部存量调用点（return AIRY_E* 族 / 错误码比较）语义保持正确。
- * AIRY_ERR_* 用户态扩展码权威源为 commons/utils/error/include/error_codes.h。
+ * AIRY_ERR_* 用户态扩展码权威源为 commons/utils/error/error_codes.h。
  * [SC] 正幅值码（airymax/error.h）仅供跨态契约/内核态编译单元使用。
  * ──────────────────────────────────────────────────────────────────────────── */
 
@@ -260,7 +260,7 @@ airy_msg_id_t airy_msg_id_from_string(const char *str);
  *
  * **Level 3: IPC module internal types (implementation detail)**
  * - Type: ipc_message_t + ipc_message_header_t
- * - Location: commons/utils/ipc/include/ipc_common.h
+ * - Location: commons/utils/ipc/ipc_common.h
  * - Purpose: IPC subsystem internal implementation
  * - Features: contains implementation-detail fields (reserved, etc.); must not
  *   be used in public APIs
