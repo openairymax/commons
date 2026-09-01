@@ -19,8 +19,6 @@
 
 #include "logging.h"
 
-#include "airy_rt.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #if defined(_WIN32)

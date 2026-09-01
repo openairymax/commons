@@ -10,6 +10,9 @@ set(SOURCES
     platform/src/platform_paths.c
     # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
     platform/src/platform_time.c
+    # 0c A 类直搬：平台扩展实现（airy_dl_*/airy_sock_*/进程/线程别名等，
+    # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
+    platform/src/platform_compat.c
     utils/platform/src/platform_adapter.c
     utils/token/src/counter.c
     utils/token/src/budget.c
@@ -74,6 +77,7 @@ set(SOURCES
     utils/sync/src/sync_common.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）
     utils/sync/src/cancel_token.c
+    utils/sync/src/thread_pool.c
     utils/cache/src/cache_common.c
     utils/compat/src/compat.c
     # POSIX ERE engine for Windows (no <regex.h>); compiled everywhere so
@@ -136,6 +140,24 @@ set(SOURCES
     utils/id/src/airy_id.c
     # 阶段 4: 轻量内置拼音输入法词典（全拼，本地只读，无 IME 设备中文输入）
     utils/ime/src/airy_ime.c
+    # 0c A 类直搬（daemons/common → commons，IRON-6 归位；原在 svc_common 全平台编译）
+    utils/ipc/src/ipc_backpressure.c  # IPC 总线背压控制
+    utils/ipc/src/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
+    utils/ipc/src/method_dispatcher.c  # 方法分发器（注册表模式）
+    utils/ipc/src/param_validator.c    # JSON-RPC 参数校验
+    # 0c A 类直搬：airy_event_loop 全家族（三后端各自 #if 守卫，全平台编译）
+    utils/sync/src/airy_event_loop.c
+    utils/sync/src/airy_event_loop_epoll.c
+    utils/sync/src/airy_event_loop_win.c
+    utils/sync/src/airy_event_loop_kqueue.c
+    utils/sync/src/airy_event_timer.c
+    # 0c A 类直搬：observability 域
+    utils/observability/src/unified_metrics.c
+    utils/observability/src/alert_manager.c
+    # 0c A 类直搬：resource 域（api_recovery）
+    utils/resource/src/api_recovery.c
+    # 0c A 类直搬：security 域（log_sanitizer）
+    utils/security/src/log_sanitizer.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_common.c)
@@ -145,6 +167,8 @@ if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/src/ipc_shm.c)
     list(APPEND SOURCES utils/ipc/src/ipc_mq.c)
     list(APPEND SOURCES utils/ipc/src/ipc_rpc.c)
+    # 0c SSoT 收敛：熔断器唯一权威实现（daemons 776 行版迁入）
+    list(APPEND SOURCES utils/ipc/src/circuit_breaker.c)
 endif()
 
 add_library(airy_common STATIC ${SOURCES})
@@ -172,6 +196,7 @@ set(_inc_dirs
     utils/logging/include
     utils/error/include
     utils/sync/include
+    utils/sync/src
     utils/include
     utils/memory
     utils/string
@@ -260,7 +285,6 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/memory
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/string
-    ${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/compat/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/token/include
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cost/include
