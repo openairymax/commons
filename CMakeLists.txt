@@ -410,6 +410,8 @@ install(DIRECTORY utils/ime/ DESTINATION include/agentrt/ime
 install(FILES utils/ime/data/airy_ime.dat DESTINATION share/agentrt/ime)
 # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
 install(DIRECTORY include/airymax/ DESTINATION include/airymax)
+# M1-1a: 工具目录 OpenAI tools schema 单一权威（agent_d/gateway/tool_d 共引）
+install(FILES include/airy_tool_schema.h DESTINATION include/agentrt)
 
 option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)
