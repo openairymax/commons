@@ -103,9 +103,9 @@ static int test_cross_platform(void)
     TEST_ASSERT(end > start, "Time should advance");
     printf("  Time elapsed: %llu ns\n", (unsigned long long)(end - start));
 
-    void *ptr = airy_mem_alloc(1024);
+    void *ptr = AIRY_MALLOC(1024);
     TEST_ASSERT(ptr != NULL, "Memory allocation should succeed");
-    airy_mem_free(ptr);
+    AIRY_FREE(ptr);
 
     return 0;
 }

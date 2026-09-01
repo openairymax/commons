@@ -12,7 +12,6 @@
 /* Unified base library compatibility layer */
 #include "../../utils/error/include/error.h"
 #include "include/airy_memory.h"
-#include "mem.h"
 #include "platform.h"
 #include "string_compat.h"
 #include "cancel_token.h"
@@ -86,18 +85,18 @@ static int test_time_functions(void)
  */
 static int test_memory_allocation(void)
 {
-    void *ptr1 = airy_mem_alloc(1024);
+    void *ptr1 = AIRY_MALLOC(1024);
     TEST_ASSERT(ptr1 != NULL, "Memory allocation should succeed");
 
-    void *ptr2 = airy_mem_alloc(512);
+    void *ptr2 = AIRY_MALLOC(512);
     TEST_ASSERT(ptr2 != NULL, "Second allocation should succeed");
 
-    void *ptr3 = airy_mem_alloc(0);
+    void *ptr3 = AIRY_MALLOC(0);
     TEST_ASSERT(ptr3 == NULL || ptr3 != NULL,
                 "Zero-size allocation: implementation-defined (NULL or unique pointer)");
 
-    airy_mem_free(ptr1);
-    airy_mem_free(ptr2);
+    AIRY_FREE(ptr1);
+    AIRY_FREE(ptr2);
 
     printf("  Memory allocation: OK\n");
     return 0;

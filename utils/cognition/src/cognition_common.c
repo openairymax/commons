@@ -11,7 +11,6 @@
 
 #include "cognition_common.h"
 
-#include <airy_time.h>
 #include <math.h>
 #include <memory_common.h>
 #include <platform.h>
@@ -41,7 +40,7 @@ int agent_info_init(agent_info_t *agent, const char *agent_id)
     agent->total_tasks = 0;
     agent->successful_tasks = 0;
     agent->avg_latency = 0.0;
-    agent->last_used = airy_time_monotonic_ms();
+    agent->last_used = airy_time_ns() / 1000000ULL;
 
     return 0;
 }
@@ -81,7 +80,7 @@ void agent_info_update_stats(agent_info_t *agent, bool success, uint64_t latency
     agent->avg_latency =
         (agent->avg_latency * (agent->total_tasks - 1) + latency) / agent->total_tasks;
 
-    agent->last_used = airy_time_monotonic_ms();
+    agent->last_used = airy_time_ns() / 1000000ULL;
 
     agent->weight = agent_info_calculate_weight(agent);
 }
@@ -356,7 +355,7 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
     }
 
     if (task->deadline > 0) {
-        uint64_t now = airy_time_monotonic_ms();
+        uint64_t now = airy_time_ns() / 1000000ULL;
         uint64_t time_left = task->deadline - now;
 
         if (time_left < 3600000) {

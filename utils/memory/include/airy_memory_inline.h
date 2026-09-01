@@ -268,30 +268,6 @@ static inline void airy_auto_free_impl(void *p)
 
 /** @} */ /* end of secure_free */
 
-void *airy_arena_alloc(airy_arena_t *arena, size_t size);
-
-/**
- * @def AIRY_ARENA_ALLOC(size)
- * @brief 从当前线程 Arena 分配内存
- *
- * 如果当前线程没有设置 Arena，回退到 AIRY_MALLOC。
- */
-#define AIRY_ARENA_ALLOC(size)                                                     \
-    (airy_arena_get_current() ? airy_arena_alloc(airy_arena_get_current(), size) : \
-                                AIRY_MALLOC(size))
-
-/**
- * @brief 获取当前线程的 Arena（线程局部存储）
- * @return Arena 句柄，未设置时返回 NULL
- */
-airy_arena_t *airy_arena_get_current(void);
-
-/**
- * @brief 设置当前线程的 Arena
- * @param arena Arena 句柄（可为 NULL 清除）
- */
-void airy_arena_set_current(airy_arena_t *arena);
-
 /** @} */ /* end of arena_alloc */
 
 /**

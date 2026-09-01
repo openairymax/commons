@@ -10,7 +10,11 @@
 #ifndef AIRY_RT_ATOMS_CHECKPOINT_H
 #define AIRY_RT_ATOMS_CHECKPOINT_H
 
-#include "airy_rt.h"
+/* 0a 地基归位：解除对 atoms/corekern airy_rt.h 的依赖，
+ * 改由 commons 自洽头提供 AIRY_API（platform/export.h）与
+ * airy_err_t（utils/error/error.h）。 */
+#include "../../../platform/include/export.h"
+#include "../../error/include/error.h"
 
 #include <stdbool.h>
 #include <stddef.h>

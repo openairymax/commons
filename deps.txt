@@ -28,13 +28,13 @@ config_unified:
 cost:
 effect: include
 error: types
-execution:
+execution: error platform
 ext: error include
 id:
 ime:
 include:
 io:
-ipc: error memory types include
+ipc: error memory types include cjson
 logging: compat error observability platform
 memory: error
 network: error types
