@@ -9,7 +9,7 @@
  *
  */
 
-#include "../../agentrt/commons/utils/string/include/string_compat.h"
+#include "../../agentrt/commons/utils/string/string_compat.h"
 #include "../utils/test_framework.h"
 
 #include <stdbool.h>

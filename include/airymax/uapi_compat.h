@@ -73,7 +73,7 @@
  * AirymaxOS cannot reuse __aligned(N) directly in [SC] headers because
  * macOS/Windows user-space builds do not include <linux/types.h>.
  *
- * 注意：与 commons/utils/compat/include/compat.h 的 AIRY_ALIGNED 同名，
+ * 注意：与 commons/utils/compat/compat.h 的 AIRY_ALIGNED 同名，
  * 用 #ifndef 保护避免跨头重复定义（2026-08-14 构建修复）。
  */
 #ifndef AIRY_ALIGNED

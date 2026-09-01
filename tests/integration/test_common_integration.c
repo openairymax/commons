@@ -12,7 +12,7 @@
 /* Unified base library compatibility layer */
 #include "cost.h"
 #include "error.h"
-#include "include/airy_memory.h"
+#include "airy_memory.h"
 #include "logger.h"
 #include "manager.h"
 #include "platform.h"

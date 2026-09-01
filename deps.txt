@@ -41,13 +41,13 @@ network: error types
 observability:
 platform: compat
 print: logging
-quality:
-resource:
+quality: error
+resource: error memory
 sd: ipc
-security:
+security: error
 strategy: memory string
 string:
-sync: platform
+sync: platform memory
 task:
 token:
 types: include platform

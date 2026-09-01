@@ -9,7 +9,7 @@
  * @brief AIRY_LOG_* 宏转发头 - 转发到 observability/logger.h 的权威定义。
  *
  * S-2 收敛 (2026-08-14, 用户决策: 与 [SC] log_types.h 枚举名对齐):
- * AIRY_LOG_* 的唯一权威定义在 commons/utils/observability/include/logger.h
+ * AIRY_LOG_* 的唯一权威定义在 commons/utils/observability/logger.h
  * （基于 airy_log_write → log_write_va → log_write）。本头文件仅作为
  * 兼容入口，把旧 include 路径（logging_compat.h）转发到权威源。
  *
@@ -18,7 +18,7 @@
  */
 
 #if __has_include("../observability/include/logger.h")
-#include "../observability/include/logger.h"
+#include "../observability/logger.h"
 #else
 
 #include <stdio.h>

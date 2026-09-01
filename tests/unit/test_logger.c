@@ -10,7 +10,7 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "include/airy_memory.h"
+#include "airy_memory.h"
 #include "logger.h"
 #include "string_compat.h"
 

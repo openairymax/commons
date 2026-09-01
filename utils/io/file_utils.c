@@ -1,0 +1,391 @@
+// SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0
+
+/**
+ * @file file_utils.c
+ * @brief File operations implementation (cross-platform).
+ */
+
+#include "../memory/airy_memory.h"
+#include "io.h"
+#include "airy_memory.h"
+#include "airy_dirent.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include "error.h"
+
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+#include <windows.h>
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#else
+#include <unistd.h>
+#endif
+
+/**
+ * @brief Read the full contents of a file.
+ */
+char *airy_io_read_file(const char *path, size_t *out_len)
+{
+    if (!path) {
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (size < 0) {
+        fclose(f);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    char *buf = (char *)memory_alloc(size + 1, "file_read_buffer");
+    if (!buf) {
+        fclose(f);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    size_t read = fread(buf, 1, size, f);
+    fclose(f);
+    if (read != (size_t)size) {
+        memory_free(buf);
+        AIRY_ERROR_NULL(AIRY_ERR_IO, "io operation failed");
+    }
+    buf[size] = '\0';
+    if (out_len)
+        *out_len = size;
+    return buf;
+}
+
+int airy_io_write_file(const char *path, const void *data, size_t len)
+{
+    if (!path || !data)
+        return AIRY_EINVAL;
+    if (len == (size_t)-1)
+        len = strlen((const char *)data);
+
+    /* P2: atomic write - write to a temp file in the same directory, fsync,
+     * then rename over the target, so a crash mid-write never leaves a
+     * truncated/partial file at the destination. */
+    char tmppath[1024];
+    if (snprintf(tmppath, sizeof(tmppath), "%s.tmp", path) >= (int)sizeof(tmppath))
+        return -1;
+
+    FILE *f = fopen(tmppath, "wb");
+    if (!f)
+        return -1;
+
+    int failed = 0;
+    size_t written = fwrite(data, 1, len, f);
+    if (written != len)
+        failed = 1;
+    if (!failed && fflush(f) != 0)
+        failed = 1;
+#ifndef _WIN32
+    if (!failed) {
+        int fd = fileno(f);
+        if (fd >= 0 && fsync(fd) != 0)
+            failed = 1;
+    }
+#else
+    if (!failed) {
+        int fd = _fileno(f);
+        if (fd >= 0 && _commit(fd) != 0)
+            failed = 1;
+    }
+#endif
+    if (fclose(f) != 0)
+        failed = 1;
+
+    if (failed) {
+        remove(tmppath);
+        return -1;
+    }
+
+#ifndef _WIN32
+    if (rename(tmppath, path) != 0) {
+        remove(tmppath);
+        return -1;
+    }
+#else
+    /* MoveFileExA 可原子替换已存在的目标（C 标准 rename 在目标存在时会失败） */
+    if (!MoveFileExA(tmppath, path, MOVEFILE_REPLACE_EXISTING)) {
+        remove(tmppath);
+        return -1;
+    }
+#endif
+    return 0;
+}
+
+int airy_io_ensure_dir(const char *path)
+{
+    if (!path)
+        return AIRY_EINVAL;
+    struct stat st = {0};
+    if (stat(path, &st) == -1) {
+#ifdef _WIN32
+        if (_mkdir(path) != 0)
+            return AIRY_EINVAL;
+#else
+        if (mkdir(path, 0755) != 0)
+            return AIRY_EINVAL;
+#endif
+    }
+    return 0;
+}
+
+int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
+{
+    if (!path || !out_files || !out_count)
+        return AIRY_EINVAL;
+
+#ifdef _WIN32
+    char search_path[MAX_PATH];
+    snprintf(search_path, sizeof(search_path), "%s\\*", path);
+
+    WIN32_FIND_DATAA find_data;
+    HANDLE hFind = FindFirstFileA(search_path, &find_data);
+    if (hFind == INVALID_HANDLE_VALUE)
+        return AIRY_EINVAL;
+
+    size_t capacity = 64;
+    size_t count = 0;
+    char **files = NULL;
+    SAFE_MALLOC_ARRAY(files, capacity, sizeof(char *));
+
+    do {
+        if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            if (count >= capacity) {
+                capacity *= 2;
+                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
+                if (!new_files) {
+                    for (size_t i = 0; i < count; i++)
+                        AIRY_FREE(files[i]);
+                    AIRY_FREE(files);
+                    FindClose(hFind);
+                    return AIRY_EINVAL;
+                }
+                files = new_files;
+            }
+            files[count] = AIRY_STRDUP(find_data.cFileName);
+            if (!files[count]) {
+                for (size_t i = 0; i < count; i++)
+                    AIRY_FREE(files[i]);
+                AIRY_FREE(files);
+                FindClose(hFind);
+                return AIRY_EINVAL;
+            }
+            count++;
+        }
+    } while (FindNextFileA(hFind, &find_data));
+
+    FindClose(hFind);
+    *out_files = files;
+    *out_count = count;
+    return 0;
+#else
+    DIR *dir = opendir(path);
+    if (!dir)
+        return AIRY_EINVAL;
+
+    size_t capacity = 64;
+    size_t count = 0;
+    char **files = NULL;
+    SAFE_MALLOC_ARRAY(files, capacity, sizeof(char *));
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            if (count >= capacity) {
+                capacity *= 2;
+                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
+                if (!new_files) {
+                    for (size_t i = 0; i < count; i++)
+                        AIRY_FREE(files[i]);
+                    AIRY_FREE(files);
+                    closedir(dir);
+                    return AIRY_EINVAL;
+                }
+                files = new_files;
+            }
+            files[count] = AIRY_STRDUP(entry->d_name);
+            if (!files[count]) {
+                for (size_t i = 0; i < count; i++)
+                    AIRY_FREE(files[i]);
+                AIRY_FREE(files);
+                closedir(dir);
+                return AIRY_EINVAL;
+            }
+            count++;
+        }
+    }
+    closedir(dir);
+    *out_files = files;
+    *out_count = count;
+    return 0;
+#endif
+}
+
+void airy_io_free_list(char **files, size_t count)
+{
+    if (!files)
+        return;
+    for (size_t i = 0; i < count; i++)
+        AIRY_FREE(files[i]);
+    AIRY_FREE(files);
+}
+
+int airy_io_mkdir_p(const char *path, int mode)
+{
+    if (!path)
+        return AIRY_EINVAL;
+
+    struct stat st = {0};
+    if (stat(path, &st) == 0) {
+        return S_ISDIR(st.st_mode) ? 0 : -1;
+    }
+
+    char path_copy[1024];
+    AIRY_STRNCPY_TERM(path_copy, path, sizeof(path_copy));
+    path_copy[sizeof(path_copy) - 1] = '\0';
+
+    size_t len = strlen(path_copy);
+
+#ifdef _WIN32
+    size_t start_pos = 0;
+    if (len >= 2 && path_copy[1] == ':') {
+        start_pos = 2;
+    }
+
+    for (size_t i = start_pos; i < len; i++) {
+        if (path_copy[i] == '/') {
+            path_copy[i] = '\\';
+        }
+    }
+#else
+    size_t start_pos = 0;
+    if (path_copy[0] == '/') {
+        start_pos = 1;
+    }
+#endif
+
+    for (size_t i = start_pos; i < len; i++) {
+#ifdef _WIN32
+        if (path_copy[i] == '\\') {
+#else
+        if (path_copy[i] == '/') {
+#endif
+            char save_char = path_copy[i];
+            path_copy[i] = '\0';
+
+            if (stat(path_copy, &st) == -1) {
+#ifdef _WIN32
+                if (_mkdir(path_copy) != 0) {
+                    return AIRY_EINVAL;
+                }
+#else
+                if (mkdir(path_copy, mode) != 0) {
+                    return AIRY_EINVAL;
+                }
+#endif
+            } else if (!S_ISDIR(st.st_mode)) {
+                return AIRY_EINVAL;
+            }
+
+            path_copy[i] = save_char;
+        }
+    }
+
+#ifdef _WIN32
+    return _mkdir(path_copy) == 0 ? 0 : -1;
+#else
+    return mkdir(path_copy, mode) == 0 ? 0 : -1;
+#endif
+}
+
+/**
+ * @brief Recursively delete a directory tree (cross-platform).
+ *
+ * Used by tests and runtime cleanup to remove temporary workspaces under
+ * $AIRY_HOME/tmp without leaving stale artifacts. Deleting a non-existent
+ * path is a no-op success (idempotent).
+ *
+ * @param path Directory path
+ * @return 0 on success (including not-exists), AIRY_EINVAL on failure
+ */
+int airy_io_remove_dir_recursive(const char *path)
+{
+    if (!path || !path[0])
+        return AIRY_EINVAL;
+
+    struct stat st = {0};
+    if (stat(path, &st) != 0)
+        return 0; /* not exists → idempotent success */
+
+    if (!S_ISDIR(st.st_mode))
+        return (remove(path) == 0) ? 0 : AIRY_EINVAL;
+
+    DIR *dir = opendir(path);
+    if (!dir)
+        return AIRY_EINVAL;
+
+    struct dirent *entry;
+    char child[1024];
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+        snprintf(child, sizeof(child), "%s/%s", path, entry->d_name);
+        struct stat cst = {0};
+        if (stat(child, &cst) != 0)
+            continue;
+        if (S_ISDIR(cst.st_mode)) {
+            if (airy_io_remove_dir_recursive(child) != 0) {
+                closedir(dir);
+                return AIRY_EINVAL;
+            }
+        } else {
+            if (remove(child) != 0) {
+                closedir(dir);
+                return AIRY_EINVAL;
+            }
+        }
+    }
+    closedir(dir);
+#ifdef _WIN32
+    if (_rmdir(path) != 0)
+        return AIRY_EINVAL;
+#else
+    if (rmdir(path) != 0)
+        return AIRY_EINVAL;
+#endif
+    return 0;
+}
+
+/**
+ * @brief Delete a single file (cross-platform).
+ *
+ * Deleting a non-existent file is a no-op success (idempotent), matching
+ * the semantics of airy_io_remove_dir_recursive.
+ *
+ * @param path File path
+ * @return 0 on success (including not-exists), AIRY_EINVAL on failure
+ */
+int airy_io_remove_file(const char *path)
+{
+    if (!path || !path[0])
+        return AIRY_EINVAL;
+
+    if (remove(path) != 0) {
+        if (errno == ENOENT)
+            return 0; /* not exists → idempotent success */
+        return AIRY_EINVAL;
+    }
+    return 0;
+}

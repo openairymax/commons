@@ -20,16 +20,16 @@
 #include <stdlib.h>
 
 /* Unified base library compatibility layer */
-#include "include/airy_memory.h"
+#include "airy_memory.h"
 #include "string_compat.h"
 
-#include "../../utils/logging/include/atomic_logging.h"
-#include "../../utils/logging/include/logging.h"
-#include "../../utils/logging/include/service_logging.h"
+#include "../../utils/logging/atomic_logging.h"
+#include "../../utils/logging/logging.h"
+#include "../../utils/logging/service_logging.h"
 
-#include "../../utils/config_unified/include/config_service.h"
-#include "../../utils/config_unified/include/config_source.h"
-#include "../../utils/config_unified/include/core_config.h"
+#include "../../utils/config_unified/config_service.h"
+#include "../../utils/config_unified/config_source.h"
+#include "../../utils/config_unified/core_config.h"
 
 int main(void)
 {
