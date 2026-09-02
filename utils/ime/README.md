@@ -6,7 +6,7 @@
 
 ## 设计原则
 
-- **运行期纯 C**：`src/airy_ime.c` + `include/airy_ime.h` 为唯一运行期代码，
+- **运行期纯 C**：`airy_ime.c` + `airy_ime.h` 为唯一运行期代码，
   无任何 Python/外部进程依赖；词典一次性读入内存，查询零拷贝。
 - **零外部依赖**：词典 `data/airy_ime.dat` 随安装分发（确定性构建产物，随
   git 追踪），运行期无网络、无数据库、无第三方库。
@@ -35,5 +35,5 @@ commons/utils/ime/
 
 ## 开发期生成工具
 
-`tools/gen_ime_dict.py` 仅用于维护者**重新生成**词典（数据来源与用法见
+`gen_ime_dict.py` 仅用于维护者**重新生成**词典（数据来源与用法见
 `data/README.md`），不参与运行期；运行期依赖为零，符合 commons 纯 C 约束。

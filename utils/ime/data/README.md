@@ -19,7 +19,7 @@ curl -sL -o pinyin.json https://raw.githubusercontent.com/xiaohk/pinyin_data/mas
 # jieba dict.txt 需从 PyPI 包内获取（pip download jieba 后解压取 jieba/dict.txt）
 
 # 2. 生成词典（默认 5 万词组、词长 ≤6）
-python3 tools/gen_ime_dict.py \
+python3 ../gen_ime_dict.py \
     --pinyin-json /path/pinyin.json --jieba-dict /path/dict.txt \
     --out data/airy_ime.dat
 ```
