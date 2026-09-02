@@ -689,8 +689,8 @@ int airy_get_gpu_info(char *out, size_t cap)
 
 /* 硬件画像（0.1.6 P1-3/d）：CPU/内存/加速器聚合 + minimal/full 分类。
  * 与 install.sh/airymaxrt assess_hardware() 同口径（SSoT 单一判据）。
- * 供 info_d 服务与上层自动裁剪/监控复用：外设增强（插卡/扩容）后调用方
- * 可据此恢复被裁剪的能力。 */
+ * 供 monit_d info 模块与上层自动裁剪/监控复用：外设增强（插卡/扩容）后
+ * 调用方可据此恢复被裁剪的能力。 */
 int airy_get_hw_profile(airy_hw_profile_t *out)
 {
     if (!out)

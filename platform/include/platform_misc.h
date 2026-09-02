@@ -260,7 +260,7 @@ typedef struct {
  *        it into minimal/full using the SSoT thresholds above.
  *
  * 与 install.sh/airymaxrt 的 assess_hardware() 同口径（C 侧 SSoT 判据）。
- * 供 info_d 服务、CLI 与上层自动裁剪/监控复用：插入显卡或扩充内存后，
+ * 供 monit_d info 模块、CLI 与上层自动裁剪/监控复用：插入显卡或扩充内存后，
  * 调用方可据此恢复被裁剪的能力。
  *
  * @param out [out] hardware profile
