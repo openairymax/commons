@@ -26,7 +26,7 @@ gen_ime_dict.py — 生成 airy_ime 内置输入法词典（airy_ime.dat）。
   字符串池: 所有拼音串与候选文本的 UTF-8 连续存储（'\\0' 结尾）
 
 用法：
-  python3 tools/gen_ime_dict.py \
+  python3 gen_ime_dict.py \
       --pinyin-json /path/pinyin.json --jieba-dict /path/dict.txt \
       --out data/airy_ime.dat [--max-words 50000] [--max-word-len 6]
 """
