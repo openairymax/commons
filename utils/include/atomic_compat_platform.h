@@ -169,6 +169,14 @@ static inline _Bool atomic_compare_exchange_strong_ptr(_Atomic(void *) *ptr, voi
     return atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail);
 }
 
+/* Portable name for "atomic void* object" so call sites can cast to
+ * (atomic_void_ptr_t *) without spelling _Atomic themselves.  Clang rejects
+ * "_Atomic void **" as "pointer to _Atomic void" (ill-formed), and the
+ * _Atomic->volatile macro below would corrupt "_Atomic(void *)" when the
+ * Windows/fallback branches are active, so each branch defines its own
+ * typedef instead. */
+typedef _Atomic(void *) atomic_void_ptr_t;
+
 #else
 
 
@@ -195,6 +203,8 @@ typedef enum {
 
 #define _Atomic volatile
 
+/* See C11 branch: call sites cast to (atomic_void_ptr_t *) only. */
+typedef void *volatile atomic_void_ptr_t;
 
 static inline char atomic_load_8(volatile char *ptr, memory_order order)
 {
@@ -475,6 +485,9 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 #elif !AIRY_USE_STDATOMIC
 
 #define _Atomic volatile
+
+/* See C11 branch: call sites cast to (atomic_void_ptr_t *) only. */
+typedef void *volatile atomic_void_ptr_t;
 
 static inline char atomic_load_8(volatile char *ptr, memory_order order)
 {
