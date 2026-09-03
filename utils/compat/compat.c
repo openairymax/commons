@@ -238,7 +238,7 @@ int nanosleep(const struct timespec *ts, struct timespec *rem)
     return 0;
 }
 
-char *AIRY_STRDUP(const char *s, size_t n)
+char *strndup(const char *s, size_t n)
 {
     size_t len = 0;
     const char *p = s;
