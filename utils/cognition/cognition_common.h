@@ -42,7 +42,7 @@ typedef struct {
     char *task_content;
     uint64_t priority;
     uint64_t deadline;
-} task_info_t;
+} airy_task_info_t;
 
 /**
  * @brief Plan result structure
@@ -114,14 +114,14 @@ double agent_info_calculate_weight(const agent_info_t *agent);
  * @param task_content Task content
  * @return 0 on success, non-zero on failure
  */
-int task_info_init(task_info_t *task, const char *task_id, const char *task_type,
+int task_info_init(airy_task_info_t *task, const char *task_id, const char *task_type,
                    const char *task_content);
 
 /**
  * @brief Clean up task information
  * @param task Task information pointer
  */
-void task_info_cleanup(task_info_t *task);
+void task_info_cleanup(airy_task_info_t *task);
 
 /**
  * @brief Initialize a plan result
@@ -170,8 +170,8 @@ void coordination_result_cleanup(coordination_result_t *result);
  * @param result Dispatch result
  * @return 0 on success, non-zero on failure
  */
-int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const task_info_t *task,
-                                dispatch_result_t *result);
+int cognition_select_best_agent(agent_info_t *agents, size_t agent_count,
+                                const airy_task_info_t *task, dispatch_result_t *result);
 
 /**
  * @brief Generate a plan
@@ -179,7 +179,7 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
  * @param result Plan result
  * @return 0 on success, non-zero on failure
  */
-int cognition_generate_plan(const task_info_t *task, plan_result_t *result);
+int cognition_generate_plan(const airy_task_info_t *task, plan_result_t *result);
 
 /**
  * @brief Coordinate the results of multiple agents
@@ -196,7 +196,7 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
  * @param task Task information
  * @return Priority value
  */
-uint64_t cognition_calculate_task_priority(const task_info_t *task);
+uint64_t cognition_calculate_task_priority(const airy_task_info_t *task);
 
 /**
  * @brief Evaluate plan quality
@@ -204,7 +204,7 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task);
  * @param task Task information
  * @return Quality score (0-100)
  */
-int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task);
+int cognition_evaluate_plan_quality(const char *plan, const airy_task_info_t *task);
 
 #ifdef __cplusplus
 }
