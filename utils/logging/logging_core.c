@@ -175,9 +175,15 @@ int log_init(const log_config_t *manager)
                 g_log_use_color = true;
             }
         } else {
-
+#if defined(_WIN32)
+            /* log_internal_is_terminal() 在 Windows 分支恒返回 false，且 UCRT
+             * 不提供 POSIX fd 宏（STDOUT_FILENO/STDERR_FILENO），此处直接
+             * 关闭颜色，避免引用未声明标识符（C2065）。 */
+            g_log_use_color = false;
+#else
             g_log_use_color =
                 log_internal_is_terminal(STDOUT_FILENO) || log_internal_is_terminal(STDERR_FILENO);
+#endif
         }
     }
 
