@@ -262,9 +262,14 @@ struct tm *localtime_r(const time_t *timer, struct tm *buf)
 }
 
 /* strtok_r: MSVC's strtok_s takes char **context as the third argument,
- * which matches POSIX strtok_r's char **saveptr semantics, so map directly. */
+ * which matches POSIX strtok_r's char **saveptr semantics, so map directly.
+ * MSVC 下 windows_preinclude.h 已把 strtok_r 宏映射为 strtok_s，此处再
+ * 定义同名函数会被宏展开成 strtok_s 定义 → 与 ucrt.lib 冲突（LNK2005）
+ * 且无限自递归；UCRT 已提供 strtok_s，MSVC 构建无需此 shim。 */
+#if !defined(_MSC_VER)
 char *strtok_r(char *str, const char *delim, char **saveptr)
 {
     return strtok_s(str, delim, saveptr);
 }
+#endif
 #endif
