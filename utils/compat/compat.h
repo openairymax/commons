@@ -120,7 +120,12 @@ extern "C" {
 #define AIRY_USED
 #define AIRY_WEAK
 #define AIRY_PACKED
+/* 与 include/airymax/uapi_compat.h 同名宏（其 MSVC 分支为 no-op）互斥：
+ * 谁先被包含谁生效，避免 C4005 重定义（/WX 下即错误）。MSVC 下
+ * __declspec(align(n)) 需置于 struct 关键字之前（见 AIRY_ALIGNED_PREFIX）。 */
+#ifndef AIRY_ALIGNED
 #define AIRY_ALIGNED(x) __declspec(align(x))
+#endif
 #define AIRY_DEPRECATED __declspec(deprecated)
 #define AIRY_FALLTHROUGH
 #define AIRY_PRINTF_FORMAT(fmt, args)
