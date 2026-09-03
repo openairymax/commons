@@ -99,7 +99,7 @@ double agent_info_calculate_weight(const agent_info_t *agent)
     return weight;
 }
 
-int task_info_init(task_info_t *task, const char *task_id, const char *task_type,
+int task_info_init(airy_task_info_t *task, const char *task_id, const char *task_type,
                    const char *task_content)
 {
     if (!task || !task_id || !task_type || !task_content) {
@@ -121,7 +121,7 @@ int task_info_init(task_info_t *task, const char *task_id, const char *task_type
     return 0;
 }
 
-void task_info_cleanup(task_info_t *task)
+void task_info_cleanup(airy_task_info_t *task)
 {
     if (!task) {
         return;
@@ -254,8 +254,8 @@ void coordination_result_cleanup(coordination_result_t *result)
     result->error_size = 0;
 }
 
-int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const task_info_t *task,
-                                dispatch_result_t *result)
+int cognition_select_best_agent(agent_info_t *agents, size_t agent_count,
+                                const airy_task_info_t *task, dispatch_result_t *result)
 {
     if (!agents || agent_count == 0 || !task || !result) {
         return AIRY_EINVAL;
@@ -285,7 +285,7 @@ int cognition_select_best_agent(agent_info_t *agents, size_t agent_count, const 
     return 0;
 }
 
-int cognition_generate_plan(const task_info_t *task, plan_result_t *result)
+int cognition_generate_plan(const airy_task_info_t *task, plan_result_t *result)
 {
     if (!task || !result) {
         return AIRY_EINVAL;
@@ -336,7 +336,7 @@ int cognition_coordinate_results(const char **agent_results, size_t result_count
     return 0;
 }
 
-uint64_t cognition_calculate_task_priority(const task_info_t *task)
+uint64_t cognition_calculate_task_priority(const airy_task_info_t *task)
 {
     if (!task) {
         return 0;
@@ -368,7 +368,7 @@ uint64_t cognition_calculate_task_priority(const task_info_t *task)
     return priority;
 }
 
-int cognition_evaluate_plan_quality(const char *plan, const task_info_t *task)
+int cognition_evaluate_plan_quality(const char *plan, const airy_task_info_t *task)
 {
     if (!plan || !task) {
         return 0;

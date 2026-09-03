@@ -39,7 +39,7 @@ cognition/
 | `avg_latency` | `double` | 平均延迟（毫秒） |
 | `last_used` | `uint64_t` | 最后使用时间戳 |
 
-### task_info_t — 任务信息
+### airy_task_info_t — 任务信息
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -126,7 +126,7 @@ agent_info_update_stats(&agents[0], true, 120);
 agent_info_update_stats(&agents[1], false, 350);
 agent_info_update_stats(&agents[2], true, 80);
 
-task_info_t task;
+airy_task_info_t task;
 task_info_init(&task, "task-001", "code_review", "Review PR #42");
 
 dispatch_result_t dispatch;
