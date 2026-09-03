@@ -5,13 +5,13 @@
 
 **语言:** [English](README.md) | 简体中文
 
-[![Version](https://img.shields.io/badge/version-0.1.1-5a6b7e)](https://atomgit.com/openairymax/commons)
+[![Version](https://img.shields.io/badge/version-0.1.9-5a6b7e)](https://atomgit.com/openairymax/commons)
 [![License](https://img.shields.io/badge/license-AGPL--3.0+Apache--2.0-4a90d9)](LICENSE)
 [![C11](https://img.shields.io/badge/C-11-00599C?logo=c&logoColor=white)](https://en.cppreference.com/w/c/11)
 
 - **仓库地址：** `git@atomgit.com:openairymax/commons.git`
-- **分支：** `feature/official-hubs-01`
-- **版本：** 0.1.1（Airymax 奠基版本）
+- **分支：** `develop/hubs-01`（`main` 为发布快照）
+- **版本：** 0.1.9
 
 ---
 
@@ -21,7 +21,7 @@
 
 作为项目类型定义（`airy_types.h`）和统一错误码契约（`airy_err_t`）的权威来源，commons 保证跨模块类型一致性，消除跨模块类型冲突。其设计目标是：零依赖抽象（平台无关的类型系统和接口定义使内核与外围代码解耦）、统一错误契约、高性能基础设施（内存池、无锁队列、零拷贝流水线）、内置可观测性（标准化的日志/指标/追踪捕获接口）、默认安全的 I/O 路径（参数校验、边界检查、资源限制）。
 
-commons 构建单一静态库 `airy_common`，聚合 32 个工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。在 Airymax 0.1.1 发行版中，工作区被拆分为 **38 个仓库**（1 umbrella + 5 management + 29 leaf + 3 top-level）；`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
+commons 构建单一静态库 `airy_common`，聚合 32 个工具模块；include 路径以 PUBLIC 导出，消费者通过单次 target 链接即可访问所有子模块头文件。`commons` 是 [agentrt](../) 管理仓聚合的 7 个叶子仓之一，是其他 6 个叶子仓共享的**唯一基础点**。
 
 ## 模块分类
 
@@ -39,20 +39,21 @@ commons/
 ├── LICENSE                      # 双许可证文本（AGPL-3.0 + Apache-2.0）
 ├── NOTICE                       # 版权声明
 ├── platform/                    # 平台抽象层
-│   ├── include/
+│   ├── include/                 # 平台公共头文件
 │   │   ├── platform.h           # 平台检测与基础定义
 │   │   └── export.h             # 符号导出控制
 │   ├── compat/                  # 平台兼容头文件（stdbool.h、stdint.h）
-│   ├── platform.c               # 基础工具域：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
-│   ├── platform_paths.c         # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
-│   ├── platform_process.c       # 进程域（start/wait/kill/run_capture）
-│   ├── platform_sync.c          # 同步域（线程、互斥锁、条件变量、线程命名）
-│   └── platform_internal.h      # 域间共享头（域拆分）
+│   └── src/                     # 平台实现（按域拆分）
+│       ├── platform.c           # 基础工具域：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
+│       ├── platform_paths.c     # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
+│       ├── platform_process.c   # 进程域（start/wait/kill/run_capture）
+│       ├── platform_sync.c      # 同步域（线程、互斥锁、条件变量、线程命名）
+│       └── platform_internal.h  # 域间共享头（域拆分）
 ├── include/                     # 全局公共头文件
 │   ├── airy_types.h          # 统一类型与错误码定义（权威来源）
 │   ├── airy_defaults.h       # 项目级默认值（路径、限额、调优开关）
-│   └── airymax/              # Airymax 统一类型契约（task_desc/uapi/syscalls/ipc/sched/…）
-├── third_party/                 # 内置第三方头文件（如 nghttp2）
+│   ├── airymax/              # Airymax 统一类型契约（task_desc/uapi/syscalls/ipc/sched/…）
+│   └── third_party/          # 内置第三方头文件（如 nghttp2）
 ├── utils/                       # 工具模块集合（32 个模块）
 │   ├── include/                 # 跨模块共享头文件
 │   │   ├── atomic_compat.h      # 跨平台原子操作兼容层
@@ -239,7 +240,7 @@ commons/
 | **heapstore** | logging、config_unified、内存池、同步原语用于堆式持久化 |
 | **protocols** | 类型系统（`airy_ipc_hdr_t` / `airy_ipc_msg_t`）、sync、observability、ipc 用于 AgentsIPC 线协议 |
 | **gateway** | network 工具、token 管理、logging、config_unified 用于网关守护进程 |
-| **daemons** | logging、config_unified、network、token、cost、observability、cognition、strategy——全部 12 个守护进程消费完整接口面 |
+| **daemons** | logging、config_unified、network、token、cost、observability、cognition、strategy——全部 15 个守护进程消费完整接口面 |
 | SDK 层 | Python/Go/Rust/TypeScript SDK 最终回绑 commons 类型与错误契约，闭合 Airymax 循环架构 |
 
 ## 构建
@@ -280,7 +281,7 @@ commons 通过统一类型头和各模块公共头暴露接口。权威入口：
 - `platform/include/platform.h` —— 平台检测与基础定义
 - `utils/include/atomic_compat.h` —— 跨平台原子操作（11 种类型，3 种后端）
 - `utils/include/check.h` —— 通用检查宏
-- 各模块入口头：`utils/logging/include/logging.h`、`utils/sync/include/sync.h`、`utils/memory/include/airy_memory.h`、`utils/string/include/airy_string.h`、`utils/config_unified/include/config_unified.h`、`utils/observability/include/observability.h`、`utils/token/include/token.h`、`utils/cost/include/cost.h`、`utils/error/include/error.h`、`utils/network/include/network_common.h`、`utils/security/src/input_validator.h`、`utils/resource/src/resource_guard.h`、`utils/uuid/include/uuid_generator.h`、`utils/cache/include/cache_common.h`、`utils/io/include/io.h`、`utils/ipc/include/ipc_common.h`、`utils/execution/include/checkpoint.h`、`utils/cognition/include/cognition_common.h`、`utils/strategy/include/strategy_common.h`、`utils/types/include/types.h`、`utils/platform/include/platform_adapter.h`、`utils/compat/include/compat.h`、`utils/print/include/airy_print.h`、`utils/compliance/include/compliance_exempt.h`、`utils/quality/airy_quality.h`、`utils/sd/include/service_discovery.h`、`utils/effect/include/airy_effect.h`、`utils/ext/include/airy_ext.h`、`utils/cjson/include/cjson_helpers.h`、`utils/ime/include/airy_ime.h`
+- 各模块公共头随模块目录平铺（0.1.9 起扁平化，无 `utils/<模块>/include` 子目录），如 `utils/logging/logging.h`、`utils/sync/sync.h`、`utils/config_unified/config_unified.h`、`utils/security/input_validator.h`——公共头与实现同目录，完整清单见各模块目录
 
 内存宏（`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`）和严格合规的不安全函数投毒（如通过 `utils/string` 替换 `strcpy`）是项目级的。
 
