@@ -9,6 +9,16 @@
 #ifndef AIRY_RT_ATOMIC_COMPAT_API_H
 #define AIRY_RT_ATOMIC_COMPAT_API_H
 
+/* MSVC：本文件末尾有一对 #pragma warning(pop)（L278），顶部须配对一个
+ * push，否则报 C4193（unexpected pop）；/WX 下随即 C2220。GCC-only 的
+ * #pragma GCC diagnostic* 均位于 AIRY_USE_STDATOMIC 分支内，MSVC 下
+ * AIRY_USE_STDATOMIC 恒为 0 不会见到（C4068），此处仍屏蔽未知 pragma
+ * 以防后续在非守卫区新增。 */
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4068 4069)
+#endif
+
 /* MSVC 不识别 #pragma GCC（C4068），warnings-as-errors 下即 C2220 */
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC system_header
