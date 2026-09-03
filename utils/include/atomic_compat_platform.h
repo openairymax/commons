@@ -12,7 +12,10 @@
 #ifndef AIRY_RT_ATOMIC_COMPAT_PLATFORM_H
 #define AIRY_RT_ATOMIC_COMPAT_PLATFORM_H
 
+/* MSVC 不识别 #pragma GCC（C4068），warnings-as-errors 下即 C2220 */
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC system_header
+#endif
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && !defined(_WIN32) && \
     !defined(AIRY_NO_STDATOMIC) && !defined(_MSC_VER)
@@ -643,5 +646,9 @@ static inline double atomic_fetch_add_double(volatile double *ptr, double value,
 }
 
 #endif /* Platform selection */
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif /* AIRY_RT_ATOMIC_COMPAT_PLATFORM_H */

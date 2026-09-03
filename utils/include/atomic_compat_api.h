@@ -9,7 +9,10 @@
 #ifndef AIRY_RT_ATOMIC_COMPAT_API_H
 #define AIRY_RT_ATOMIC_COMPAT_API_H
 
+/* MSVC 不识别 #pragma GCC（C4068），warnings-as-errors 下即 C2220 */
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC system_header
+#endif
 
 #if AIRY_USE_STDATOMIC
 
@@ -269,6 +272,10 @@ static inline void atomic_thread_fence(memory_order order)
     __atomic_thread_fence((int)order);
 }
 
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 
 #endif /* AIRY_RT_ATOMIC_COMPAT_API_H */
