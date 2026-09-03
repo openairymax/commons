@@ -74,7 +74,6 @@ void set_nonblocking_mode(void *handle)
     int flags = fcntl((int)(intptr_t)handle, F_GETFL, 0);
     fcntl((int)(intptr_t)handle, F_SETFL, flags | O_NONBLOCK);
 #endif
-    return 0;
 }
 
 void set_socket_timeout(void *handle, int timeout_ms, int is_recv)
