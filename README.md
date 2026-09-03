@@ -5,13 +5,13 @@
 
 **Language:** English | [简体中文](README_zh.md)
 
-[![Version](https://img.shields.io/badge/version-0.1.1-5a6b7e)](https://atomgit.com/openairymax/commons)
+[![Version](https://img.shields.io/badge/version-0.1.9-5a6b7e)](https://atomgit.com/openairymax/commons)
 [![License](https://img.shields.io/badge/license-AGPL--3.0+Apache--2.0-4a90d9)](LICENSE)
 [![C11](https://img.shields.io/badge/C-11-00599C?logo=c&logoColor=white)](https://en.cppreference.com/w/c/11)
 
 - **Repository:** `git@atomgit.com:openairymax/commons.git`
-- **Branch:** `feature/official-hubs-01`
-- **Version:** 0.1.1 (Airymax foundational release)
+- **Branch:** `develop/hubs-01` (`main` is the release snapshot)
+- **Version:** 0.1.9
 
 ---
 
@@ -21,7 +21,7 @@
 
 As the project's authoritative source for type definitions (`airy_types.h`) and the unified error-code contract (`airy_err_t`), commons guarantees type consistency across modules and eliminates cross-module type conflicts. Its design goals are: zero-dependency abstraction (platform-agnostic type system and interface definitions keep the kernel decoupled from peripheral code), a unified error contract, high-performance infrastructure (memory pools, lock-free queues, zero-copy pipelines), built-in observability (standardized capture interfaces for logs/metrics/traces), and safe-by-default I/O paths (parameter validation, boundary checks, resource limits).
 
-commons builds a single static library `airy_common` aggregating 32 utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. Within the Airymax 0.1.1 release, the workspace is partitioned into **38 repositories** (1 umbrella + 5 management + 29 leaf + 3 top-level); `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
+commons builds a single static library `airy_common` aggregating 32 utility modules; include paths are exported PUBLIC so consumers see every sub-module header through a single target link. `commons` is one of the 7 leaf repositories aggregated by the [agentrt](../) management repo, and is the **single point of foundation** shared by the other 6 leaf repos.
 
 ## Module Classification
 
@@ -39,20 +39,21 @@ commons/
 ├── LICENSE                      # Dual license texts (AGPL-3.0 + Apache-2.0)
 ├── NOTICE                       # Copyright notice
 ├── platform/                    # Platform abstraction layer
-│   ├── include/
+│   ├── include/                 # Platform public headers
 │   │   ├── platform.h           # Platform detection and base definitions
 │   │   └── export.h             # Symbol export control
 │   ├── compat/                  # Platform compatibility headers (stdbool.h, stdint.h)
-│   ├── platform.c               # Base tools: network/atomic/time/random/fs/string/sysinfo/file lock
-│   ├── platform_paths.c         # AIRY_HOME path system (bin/lib/run/logs/config/data/tmp/cache/workspace)
-│   ├── platform_process.c       # Process domain (start/wait/kill/run_capture)
-│   ├── platform_sync.c          # Sync domain (threads, mutex, cond, thread naming)
-│   └── platform_internal.h      # Cross-domain shared header (domain split)
+│   └── src/                     # Platform implementation (domain-split)
+│       ├── platform.c           # Base tools: network/atomic/time/random/fs/string/sysinfo/file lock
+│       ├── platform_paths.c     # AIRY_HOME path system (bin/lib/run/logs/config/data/tmp/cache/workspace)
+│       ├── platform_process.c   # Process domain (start/wait/kill/run_capture)
+│       ├── platform_sync.c      # Sync domain (threads, mutex, cond, thread naming)
+│       └── platform_internal.h  # Cross-domain shared header (domain split)
 ├── include/                     # Global public headers
 │   ├── airy_types.h          # Unified type and error-code definitions (authoritative)
 │   ├── airy_defaults.h       # Project-wide defaults (paths, limits, tuning knobs)
-│   └── airymax/              # Unified Airymax type contracts (task_desc/uapi/syscalls/ipc/sched/…)
-├── third_party/                 # Vendored third-party headers (e.g. nghttp2)
+│   ├── airymax/              # Unified Airymax type contracts (task_desc/uapi/syscalls/ipc/sched/…)
+│   └── third_party/          # Vendored third-party headers (e.g. nghttp2)
 ├── utils/                       # Tooling module collection (32 modules)
 │   ├── include/                 # Cross-module shared headers
 │   │   ├── atomic_compat.h      # Cross-platform atomic operation compat layer
@@ -252,7 +253,7 @@ When cJSON/YAML are unavailable, commons degrades gracefully: `AIRY_NO_CJSON` is
 | **heapstore** | Logging, config_unified, memory pools, sync primitives for heap persistence |
 | **protocols** | Type system (`airy_ipc_hdr_t` / `airy_ipc_msg_t`), sync, observability, ipc for the AgentsIPC wire format |
 | **gateway** | Network utilities, token management, logging, config_unified for the gateway daemon |
-| **daemons** | Logging, config_unified, network, token, cost, observability, cognition, strategy — full surface consumed by all 12 daemons |
+| **daemons** | Logging, config_unified, network, token, cost, observability, cognition, strategy — full surface consumed by all 15 daemons |
 | SDK layer | The Python/Go/Rust/TypeScript SDKs ultimately bind back to commons types and error contract, closing the Airymax cyclic architecture |
 
 ## Build
@@ -293,7 +294,7 @@ commons exposes its surface through the unified type header and per-module publi
 - `platform/include/platform.h` — platform detection and base definitions
 - `utils/include/atomic_compat.h` — cross-platform atomic operations (11 types, 3 backends)
 - `utils/include/check.h` — generic check macros
-- Per-module entry headers: `utils/logging/include/logging.h`, `utils/sync/include/sync.h`, `utils/memory/include/airy_memory.h`, `utils/string/include/airy_string.h`, `utils/config_unified/include/config_unified.h`, `utils/observability/include/observability.h`, `utils/token/include/token.h`, `utils/cost/include/cost.h`, `utils/error/include/error.h`, `utils/network/include/network_common.h`, `utils/security/src/input_validator.h`, `utils/resource/src/resource_guard.h`, `utils/uuid/include/uuid_generator.h`, `utils/cache/include/cache_common.h`, `utils/io/include/io.h`, `utils/ipc/include/ipc_common.h`, `utils/execution/include/checkpoint.h`, `utils/cognition/include/cognition_common.h`, `utils/strategy/include/strategy_common.h`, `utils/types/include/types.h`, `utils/platform/include/platform_adapter.h`, `utils/compat/include/compat.h`, `utils/print/include/airy_print.h`, `utils/compliance/include/compliance_exempt.h`, `utils/quality/airy_quality.h`, `utils/sd/include/service_discovery.h`, `utils/effect/include/airy_effect.h`, `utils/ext/include/airy_ext.h`, `utils/cjson/include/cjson_helpers.h`, `utils/ime/include/airy_ime.h`
+- Per-module public headers are laid out flat inside each module directory (flattened since 0.1.9 — no `utils/<module>/include` sub-directories), e.g. `utils/logging/logging.h`, `utils/sync/sync.h`, `utils/config_unified/config_unified.h`, `utils/security/input_validator.h` — headers and implementation share the module directory; see each module directory for the full list
 
 Memory macros (`AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_FREE`) and the strict-compliance unsafe-function poisoning (e.g. `strcpy` replacement via `utils/string`) are project-wide.
 
