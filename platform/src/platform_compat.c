@@ -308,13 +308,20 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
     setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&opt, sizeof(opt));
 #if defined(__APPLE__) && defined(__MACH__)
     {
-        /* macOS 无 TCP_KEEPIDLE/INTVL/CNT 三个选项：10.15+ 经
-         * struct tcp_keepalive + TCP_KEEPALIVE 一次性设三参数。 */
-        struct tcp_keepalive ka;
-        ka.tcpk_idle = 30;     /* 空闲 30s 后开始探测 */
-        ka.tcpk_interval = 10; /* 每 10s 重试 */
-        ka.tcpk_count = 3;     /* 3 次失败判死 */
-        setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, (const char *)&ka, sizeof(ka));
+        /* macOS 用户态无 struct tcp_keepalive（netinet/tcp.h 中该结构体
+         * 位于 _KERNEL 段，仅内核可见）。Apple TN1446 方案：TCP_KEEPALIVE
+         * 选项直接收 int 秒数（等价 Linux TCP_KEEPIDLE）；探测间隔与次数
+         * 自 10.2 起分别经 TCP_KEEPINTVL/TCP_KEEPCNT 提供，按存在性设置。 */
+        int idle = 30; /* 空闲 30s 后开始探测 */
+        setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, (const char *)&idle, sizeof(idle));
+#ifdef TCP_KEEPINTVL
+        int intvl = 10; /* 每 10s 重试 */
+        setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (const char *)&intvl, sizeof(intvl));
+#endif
+#ifdef TCP_KEEPCNT
+        int cnt = 3; /* 3 次失败判死 */
+        setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, (const char *)&cnt, sizeof(cnt));
+#endif
     }
 #elif defined(__linux__) || defined(__FreeBSD__)
     {
