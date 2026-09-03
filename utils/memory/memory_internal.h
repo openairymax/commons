@@ -50,6 +50,8 @@ void memory_lock_destroy(void);
 void memory_lock(void);
 void memory_unlock(void);
 struct memory_debug_info *memory_find_debug_info(void *addr);
+/* 毫秒级墙钟时间戳；定义在 memory_core.c，memory_debug_core.c 跨 TU 调用 */
+uint64_t memory_get_timestamp(void);
 
 #ifdef __cplusplus
 }
