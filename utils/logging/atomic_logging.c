@@ -199,7 +199,7 @@ static void *flush_thread_func(void *arg __attribute__((unused)))
         airy_mtx_unlock(&g_atomic_state.ring_buffer.mutex);
 
         for (size_t i = 0; i < count; i++) {
-            service_log_output_record(&records[i]);
+            service_logging_process_record(&records[i]);
         }
 
         atomic_sleep_ms(g_atomic_state.manager.flush_thread_sleep_ms);

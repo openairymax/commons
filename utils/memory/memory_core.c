@@ -57,7 +57,7 @@ void memory_unlock(void)
     airy_mtx_unlock(&g_state.lock);
 }
 
-static uint64_t memory_get_timestamp(void)
+uint64_t memory_get_timestamp(void)
 {
 #ifdef _WIN32
     FILETIME ft;
