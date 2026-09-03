@@ -306,14 +306,26 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
      * 网络闪断）由内核探活回收，避免连接数只增不减。服务端 listen fd
      * 的 keepalive 会经 accept 继承到每个连接。 */
     setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&opt, sizeof(opt));
-#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) && defined(__MACH__)
+    {
+        /* macOS 无 TCP_KEEPIDLE/INTVL/CNT 三个选项：10.15+ 经
+         * struct tcp_keepalive + TCP_KEEPALIVE 一次性设三参数。 */
+        struct tcp_keepalive ka;
+        ka.tcpk_idle = 30;     /* 空闲 30s 后开始探测 */
+        ka.tcpk_interval = 10; /* 每 10s 重试 */
+        ka.tcpk_count = 3;     /* 3 次失败判死 */
+        setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, (const char *)&ka, sizeof(ka));
+    }
+#elif defined(__linux__) || defined(__FreeBSD__)
     {
         int idle = 30;   /* 空闲 30s 后开始探测 */
         int intvl = 10;  /* 每 10s 重试 */
-        int cnt = 3;     /* 3 次失败判死 */
         setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, (const char *)&idle, sizeof(idle));
         setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, (const char *)&intvl, sizeof(intvl));
+#ifdef TCP_KEEPCNT
+        int cnt = 3; /* 3 次失败判死 */
         setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, (const char *)&cnt, sizeof(cnt));
+#endif
     }
 #endif
 
