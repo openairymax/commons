@@ -1,6 +1,6 @@
-# commons — 统一基础库
+# commons 统一基础库
 
-> Airymax 运行时的最底层：所有其他 agentrt 模块都构建在 commons 之上。
+> Airymax 运行时的最底层：所有其他 agentrt 模块都构建在 commons 之上。  
 > [agentrt](../) 管理仓下的叶子仓。
 
 **语言:** [English](README.md) | 简体中文
