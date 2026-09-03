@@ -147,22 +147,22 @@ static inline _Bool atomic_compare_exchange_strong_16(volatile _Atomic short *pt
     return atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail);
 }
 
-static inline void *atomic_load_ptr(_Atomic void **ptr, memory_order order)
+static inline void *atomic_load_ptr(_Atomic(void *) *ptr, memory_order order)
 {
     return (void *)atomic_load_explicit(ptr, order);
 }
-static inline void atomic_store_ptr(_Atomic void **ptr, void *val, memory_order order)
+static inline void atomic_store_ptr(_Atomic(void *) *ptr, void *val, memory_order order)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
     atomic_store_explicit(ptr, val, order);
 #pragma GCC diagnostic pop
 }
-static inline void *atomic_exchange_ptr(_Atomic void **ptr, void *val, memory_order order)
+static inline void *atomic_exchange_ptr(_Atomic(void *) *ptr, void *val, memory_order order)
 {
     return (void *)atomic_exchange_explicit(ptr, val, order);
 }
-static inline _Bool atomic_compare_exchange_strong_ptr(_Atomic void **ptr, void **expected,
+static inline _Bool atomic_compare_exchange_strong_ptr(_Atomic(void *) *ptr, void **expected,
                                                        void *desired, memory_order succ,
                                                        memory_order fail)
 {

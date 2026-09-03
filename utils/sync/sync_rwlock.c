@@ -97,6 +97,33 @@ sync_result_t sync_rwlock_read_lock_ex(sync_rwlock_t rwlock, const sync_timeout_
             return SYNC_ERROR_TIMEOUT;
         }
     }
+#elif defined(__APPLE__) && defined(__MACH__)
+    /* macOS 无 pthread_rwlock_timedrdlock：tryrdlock + 1ms 睡眠轮询
+     * 至 deadline，与 Windows 分支 TryAcquire 同范式。 */
+    int rc;
+    if (timeout == NULL || timeout->timeout_ms == 0) {
+        rc = pthread_rwlock_rdlock(&rwlock->rwlock);
+    } else {
+        int64_t remaining_ms = (int64_t)timeout->timeout_ms;
+        rc = EBUSY;
+        while (rc == EBUSY && remaining_ms-- > 0) {
+            rc = pthread_rwlock_tryrdlock(&rwlock->rwlock);
+            if (rc == EBUSY) {
+                struct timespec nap = {0, 1000000L};
+                nanosleep(&nap, NULL);
+            }
+        }
+        if (rc == EBUSY) {
+            rc = ETIMEDOUT;
+        }
+    }
+    if (rc == ETIMEDOUT) {
+        sync_internal_update_stats_timeout(&rwlock->stats);
+        return SYNC_ERROR_TIMEOUT;
+    }
+    if (rc != 0) {
+        return sync_internal_posix_error_to_result(rc);
+    }
 #else
     int rc;
     if (timeout == NULL || timeout->timeout_ms == 0) {
@@ -176,6 +203,33 @@ sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout
             sync_internal_update_stats_timeout(&rwlock->stats);
             return SYNC_ERROR_TIMEOUT;
         }
+    }
+#elif defined(__APPLE__) && defined(__MACH__)
+    /* macOS 无 pthread_rwlock_timedwrlock：trywrlock + 1ms 睡眠轮询
+     * 至 deadline，与 Windows 分支 TryAcquire 同范式。 */
+    int rc;
+    if (timeout == NULL || timeout->timeout_ms == 0) {
+        rc = pthread_rwlock_wrlock(&rwlock->rwlock);
+    } else {
+        int64_t remaining_ms = (int64_t)timeout->timeout_ms;
+        rc = EBUSY;
+        while (rc == EBUSY && remaining_ms-- > 0) {
+            rc = pthread_rwlock_trywrlock(&rwlock->rwlock);
+            if (rc == EBUSY) {
+                struct timespec nap = {0, 1000000L};
+                nanosleep(&nap, NULL);
+            }
+        }
+        if (rc == EBUSY) {
+            rc = ETIMEDOUT;
+        }
+    }
+    if (rc == ETIMEDOUT) {
+        sync_internal_update_stats_timeout(&rwlock->stats);
+        return SYNC_ERROR_TIMEOUT;
+    }
+    if (rc != 0) {
+        return sync_internal_posix_error_to_result(rc);
     }
 #else
     int rc;
