@@ -11,6 +11,13 @@
  * @see unified_metrics.h
  */
 
+#if defined(__APPLE__)
+/* 必须位于所有项目头之前：mach 系统头 zone_info.h 的
+ * `uint64_t free;` 成员名会被 banned_functions.h 的
+ * `#pragma GCC poison free` 判为 poisoned identifier。 */
+#include <mach/mach.h>
+#endif
+
 #include "unified_metrics.h"
 
 #include "airy_memory.h"
@@ -21,10 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-
-#if defined(__APPLE__)
-#include <mach/mach.h>
-#endif
 
 static struct {
     um_config_t config;
