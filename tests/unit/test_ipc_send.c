@@ -221,7 +221,7 @@ void test_try_receive_message(void **state)
 /**
  * @brief 消息回调（文件作用域：GCC 禁止函数内 static 嵌套函数）
  */
-static int test_msg_cb(ipc_channel_t *ch, ipc_message_t *msg, void *user_data)
+static int test_msg_cb(ipc_channel_t *ch, const ipc_message_t *msg, void *user_data)
 {
     (void)ch;
     (void)msg;
