@@ -13,7 +13,11 @@
 #ifndef AIRY_RT_ATOMIC_COMPAT_H
 #define AIRY_RT_ATOMIC_COMPAT_H
 
+/* MSVC 不识别 #pragma GCC（C4068），在 warnings-as-errors 工程下即 C2220；
+ * 该 pragma 仅对 GCC/Clang 有意义。 */
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC system_header
+#endif
 
 #include <stdbool.h>
 #include <stddef.h>
