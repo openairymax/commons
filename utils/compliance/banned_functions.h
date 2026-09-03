@@ -18,6 +18,13 @@
 #ifndef _WIN32
 #include <unistd.h>
 #endif
+/* 同理必须先于 poison 拉入 mach/mach.h：macOS SDK 的
+ * host_priv.h → mach_debug_types.h → zone_info.h 链中
+ * struct 成员 `uint64_t free;` 会被下方 free 毒化判为
+ * poisoned identifier。头卫保证 pre-include 无副作用。 */
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#endif
 
 #pragma GCC poison malloc
 #pragma GCC poison free
