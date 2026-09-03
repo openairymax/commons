@@ -12,6 +12,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+/* 必须先于 poison 拉入 unistd.h：macOS SDK 的 unistd.h:687 声明 mktemp，
+ * 若在本头毒化 mktemp 之后才被首次解析，会在系统头内报
+ * "impossible memory violation"。头卫保证 pre-include 无副作用。 */
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #pragma GCC poison malloc
 #pragma GCC poison free

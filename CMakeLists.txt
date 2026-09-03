@@ -307,7 +307,14 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_compile_definitions(airy_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
+if(APPLE)
+    # macOS：特性宏由上层（cmake/platform.cmake 的 APPLE 分支
+    # _POSIX_C_SOURCE=200112L + _DARWIN_C_SOURCE）统一决定；target 级
+    # 重定义 200809L 会把 SDK 收紧成 glibc 语义，隐藏 Darwin 平台声明。
+    target_compile_definitions(airy_common PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
+    target_compile_definitions(airy_common PRIVATE _CRT_SECURE_NO_WARNINGS _GNU_SOURCE _POSIX_C_SOURCE=200809L _XOPEN_SOURCE=700)
+endif()
 if(NOT AIRY_HAS_CJSON)
     target_compile_definitions(airy_common PRIVATE AIRY_NO_CJSON)
 endif()

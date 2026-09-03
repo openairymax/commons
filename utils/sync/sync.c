@@ -501,6 +501,15 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
             return false;
         }
         return true;
+#elif defined(__APPLE__) && defined(__MACH__)
+        /* macOS 无 pthread_spinlock_t：platform_spinlock_t 即 atomic_int，
+         * 与 sync_spinlock.c 的 CAS 实现同语义。 */
+        int expected = 0;
+        if (atomic_compare_exchange_strong(&sp->lock, &expected, 1)) {
+            atomic_store(&sp->lock, 0);
+            return false;
+        }
+        return true;
 #else
         int rc = pthread_spin_trylock(&sp->lock);
         if (rc == 0) {
