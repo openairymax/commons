@@ -117,6 +117,24 @@ extern "C" {
 #define AIRY_THREAD_LOCAL __thread
 #endif
 
+/* explicit_bzero(): glibc(≥2.25, 默认 feature) 与 macOS(需 _DARWIN_C_SOURCE)
+ * 才在 <string.h> 声明；Windows UCRT 与 macOS 严格 feature 宏
+ * （CI 以 -std=c99 等触发）不声明 → 隐式函数声明告警/错误。提供 volatile
+ * 擦除等价实现并以宏映射（static inline，编译器不可优化消去），调用点
+ * 零改动，与 airy_quality.h 的 airy_explicit_bzero 同语义。 */
+#if defined(_WIN32) || defined(_WIN64) || (defined(__APPLE__) && !defined(_DARWIN_C_SOURCE))
+#ifndef explicit_bzero
+static inline void airy_platform_explicit_bzero(void *s, size_t n)
+{
+    volatile unsigned char *p = (volatile unsigned char *)s;
+    while (n-- > 0) {
+        *p++ = 0;
+    }
+}
+#define explicit_bzero(s, n) airy_platform_explicit_bzero((s), (n))
+#endif
+#endif
+
 
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef AIRY_INLINE
