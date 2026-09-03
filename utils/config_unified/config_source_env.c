@@ -20,6 +20,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__APPLE__) && defined(__MACH__)
+/* macOS 动态链接下不导出全局 environ（仅 libc 起始代码可见），
+ * 须经 _NSGetEnviron() 取环境向量指针。 */
+#include <crt_externs.h>
+#define environ (*_NSGetEnviron())
+#endif
+
 /* Unified base library compatibility layer */
 #include "airy_memory.h"
 #include "string_compat.h"
