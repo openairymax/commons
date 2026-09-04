@@ -187,6 +187,16 @@ extern "C" {
 AIRY_API int nanosleep(const struct timespec *ts, struct timespec *rem);
 AIRY_API char *strndup(const char *s, size_t n);
 AIRY_API struct tm *localtime_r(const time_t *timer, struct tm *buf);
+/* C11 时钟/环境垫片（UCRT 不提供；windows_preinclude.h 与 <time.h> 均可能
+ * 定义 CLOCK_*，用 #ifndef 守卫防重定义冲突）。 */
+#ifndef CLOCK_REALTIME
+#define CLOCK_REALTIME 0
+#endif
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#endif
+AIRY_API int clock_gettime(int clk_id, struct timespec *ts);
+AIRY_API int setenv(const char *name, const char *value, int overwrite);
 
 /* 采样/统计计数器（0.1.6f 强化）：relaxed——fetch_add 无同步需求，
  * 仅作近似计数（logging_control 采样率），避免 seq_cst 全屏障。 */

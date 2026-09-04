@@ -238,6 +238,45 @@ int nanosleep(const struct timespec *ts, struct timespec *rem)
     return 0;
 }
 
+int clock_gettime(int clk_id, struct timespec *ts)
+{
+    if (!ts)
+        return -1;
+    if (clk_id == CLOCK_MONOTONIC) {
+        LARGE_INTEGER freq, cnt;
+        if (!QueryPerformanceFrequency(&freq) || !QueryPerformanceCounter(&cnt))
+            return -1;
+        ts->tv_sec = (time_t)(cnt.QuadPart / freq.QuadPart);
+        ts->tv_nsec = (long)((cnt.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
+        return 0;
+    }
+    /* CLOCK_REALTIME（默认分支）：GetSystemTimeAsFileTime 100ns 自
+     * 1601-01-01，减 Unix 纪元偏移（11644473600s）后换算。用不带
+     * _WIN32_WINNT>=0x0602 要求的版本，兼容任意 SDK 目标。 */
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER u;
+    u.LowPart = ft.dwLowDateTime;
+    u.HighPart = ft.dwHighDateTime;
+    const uint64_t epoch_100ns = UINT64_C(116444736000000000);
+    uint64_t t100 = u.QuadPart - epoch_100ns;
+    ts->tv_sec = (time_t)(t100 / UINT64_C(10000000));
+    ts->tv_nsec = (long)((t100 % UINT64_C(10000000)) * 100);
+    return 0;
+}
+
+int setenv(const char *name, const char *value, int overwrite)
+{
+    if (!name || !name[0])
+        return -1;
+    if (!overwrite) {
+        size_t needed = 0;
+        if (getenv_s(&needed, NULL, 0, name) == 0 && needed > 0)
+            return 0;
+    }
+    return _putenv_s(name, value ? value : "") == 0 ? 0 : -1;
+}
+
 char *strndup(const char *s, size_t n)
 {
     size_t len = 0;
