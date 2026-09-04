@@ -319,6 +319,25 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
         /* flawfinder: ignore - executable and argv are caller-controlled, not arbitrary user input
          */
         execvp(executable, argv);
+        /* macOS 实证（2026-09-04 tool_d exec 全 127）：execvp 失败原因不可见。
+         * fork 后子进程不可调 snprintf/strerror（多线程 malloc 锁），改纯
+         * write 手工格式化 errno 到 stderr，供上层 stderr 管道捕获。 */
+        {
+            static const char hdr[] = "[airy] execvp errno=";
+            char digits[12];
+            int d = 0;
+            int v = errno;
+            (void)write(STDERR_FILENO, hdr, sizeof(hdr) - 1);
+            if (v == 0)
+                digits[d++] = '0';
+            while (v > 0 && d < (int)sizeof(digits) - 1) {
+                digits[d++] = (char)('0' + (v % 10));
+                v /= 10;
+            }
+            while (d > 0)
+                (void)write(STDERR_FILENO, &digits[--d], 1);
+            (void)write(STDERR_FILENO, "\n", 1);
+        }
         _exit(127);
     }
 
