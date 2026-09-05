@@ -22,6 +22,9 @@
 #include <direct.h>
 #include <io.h>
 #include <windows.h>
+/* UCRT <io.h> is shadowed by this directory's io.h (PUBLIC -I leakage);
+ * declare the needed CRT prototype locally until the shadow is removed. */
+int _commit(int fd);
 #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #else

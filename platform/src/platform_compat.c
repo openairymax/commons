@@ -21,6 +21,7 @@
 #include <time.h>
 #include "error.h"
 #ifdef _WIN32
+#include <direct.h>
 #include <windows.h>
 #else
 #include <dlfcn.h>
