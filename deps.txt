@@ -34,7 +34,7 @@ id:
 ime:
 include:
 io:
-ipc: error memory types include cjson
+ipc: error memory types include cjson compat
 logging: compat error observability platform
 memory: error
 network: error types
