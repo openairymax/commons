@@ -49,8 +49,10 @@ memory_debug_block_t *memory_debug_find_block(void *user_ptr)
     return block;
 }
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static void memory_debug_add_block(memory_debug_block_t *block)
 {
     if (block == NULL) {
@@ -88,10 +90,11 @@ static void memory_debug_remove_block(memory_debug_block_t *block)
     block->prev = NULL;
     g_debug_state.block_count--;
 }
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 
-static size_t __attribute__((unused)) memory_debug_capture_stack_trace(void **frames,
-                                                                       size_t max_frames)
+static size_t AIRY_UNUSED memory_debug_capture_stack_trace(void **frames, size_t max_frames)
 {
     if (!g_debug_state.stack_trace_enabled || max_frames == 0) {
         return 0;
@@ -185,7 +188,7 @@ size_t memory_debug_get_stack_trace(void *ptr, void **frames, size_t max_frames)
 
     if (block != NULL && block->stack_depth > 0) {
         depth = (block->stack_depth < max_frames) ? block->stack_depth : max_frames;
-        __builtin_memcpy(frames, block->stack_trace, depth * sizeof(void *));
+        AIRY_MEMCPY(frames, block->stack_trace, depth * sizeof(void *));
     }
 
     memory_debug_unlock();

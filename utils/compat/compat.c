@@ -199,7 +199,7 @@ const char *airy_build_info(void)
 #include <windows.h>
 #include "airy_memory.h"
 
-int gethostname(char *name, size_t len)
+int gethostname(char *name, int len)
 {
     DWORD size = (DWORD)len;
     if (!GetComputerNameA(name, &size)) {

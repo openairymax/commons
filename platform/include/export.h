@@ -22,9 +22,8 @@ extern "C" {
 #define AIRY_API __declspec(dllexport)
 #endif
 #else
-#ifndef AIRY_API
-#define AIRY_API __declspec(dllimport)
-#endif
+/* Static linkage: leave AIRY_API empty (matches <compat.h>); dllimport
+ * here would break consumers that link commons statically on Windows. */
 #endif
 #elif defined(__GNUC__) || defined(__clang__)
 #ifndef AIRY_API

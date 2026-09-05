@@ -162,11 +162,14 @@ static inline int atomic_exchange_bool(volatile int *ptr, int desired, memory_or
      sizeof(*(ptr)) == 8 ? (int)atomic_load_64((volatile int64_t *)(ptr), order) : \
                            *(ptr))
 
-#define atomic_store_explicit(ptr, val, order)                                                 \
-    (sizeof(*(ptr)) == 1 ? atomic_store_8((volatile char *)(ptr), (char)(val), order) :        \
-     sizeof(*(ptr)) == 2 ? atomic_store_16((volatile short *)(ptr), (short)(val), order) :     \
-     sizeof(*(ptr)) == 4 ? atomic_store_32((volatile long *)(ptr), (long)(val), order) :       \
-     sizeof(*(ptr)) == 8 ? atomic_store_64((volatile int64_t *)(ptr), (int64_t)(val), order) : \
+/* atomic_store_N primitives return void; wrap each branch with (expr, 0)
+ * so every ternary operand has type int (MSVC C4053 treats a void operand
+ * as an error under /W4, and /WX turns it into C2220). */
+#define atomic_store_explicit(ptr, val, order)                                                     \
+    (sizeof(*(ptr)) == 1 ? (atomic_store_8((volatile char *)(ptr), (char)(val), order), 0) :       \
+     sizeof(*(ptr)) == 2 ? (atomic_store_16((volatile short *)(ptr), (short)(val), order), 0) :    \
+     sizeof(*(ptr)) == 4 ? (atomic_store_32((volatile long *)(ptr), (long)(val), order), 0) :      \
+     sizeof(*(ptr)) == 8 ? (atomic_store_64((volatile int64_t *)(ptr), (int64_t)(val), order), 0) :\
                            (*(ptr) = (val)))
 
 #define atomic_load(ptr) atomic_load_explicit(ptr, memory_order_seq_cst)
