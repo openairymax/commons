@@ -15,7 +15,9 @@
 #ifndef AIRY_RT_COMPAT_UNISTD_H
 #define AIRY_RT_COMPAT_UNISTD_H
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC system_header
+#endif
 
 #ifdef __cplusplus
 extern "C" {

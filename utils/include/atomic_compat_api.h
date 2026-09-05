@@ -205,14 +205,33 @@ static inline int atomic_exchange_bool(volatile int *ptr, int desired, memory_or
                                           (char)(desired), succ, fail) :                     \
      sizeof(*(ptr)) == 2 ?                                                                   \
          atomic_compare_exchange_strong_16((volatile short *)(ptr), (short *)(expected),     \
-                                           (short *)(desired), succ, fail) :                 \
+                                           (short)(desired), succ, fail) :                   \
      sizeof(*(ptr)) == 4 ?                                                                   \
          atomic_compare_exchange_strong_32((volatile long *)(ptr), (long *)(expected),       \
                                            (long)(desired), succ, fail) :                    \
      sizeof(*(ptr)) == 8 ?                                                                   \
          atomic_compare_exchange_strong_64((volatile int64_t *)(ptr), (int64_t *)(expected), \
-                                           (int64_t *)(desired), succ, fail) :               \
+                                           (int64_t)(desired), succ, fail) :                 \
          0)
+
+#define atomic_exchange_explicit(ptr, val, order)                                          \
+    (sizeof(*(ptr)) == 1 ?                                                                 \
+         (int)atomic_exchange_8((char *)(ptr), (char)(val), (order)) :                     \
+     sizeof(*(ptr)) == 2 ?                                                                 \
+         (int)atomic_exchange_16((short *)(ptr), (short)(val), (order)) :                  \
+     sizeof(*(ptr)) == 4 ?                                                                 \
+         (int)atomic_exchange_32((long *)(ptr), (long)(val), (order)) :                    \
+     sizeof(*(ptr)) == 8 ?                                                                 \
+         (int)atomic_exchange_64((int64_t *)(ptr), (int64_t)(val), (order)) :              \
+         *(ptr))
+
+/* weak CAS: forward to strong. C11 allows a weak CAS with no spurious
+ * failures; callers must keep the compare-and-retry loop either way. */
+#define atomic_compare_exchange_weak(ptr, expected, desired)                               \
+    atomic_compare_exchange_strong(ptr, expected, desired)
+
+#define atomic_compare_exchange_weak_explicit(ptr, expected, desired, succ, fail)          \
+    atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail)
 
 #define atomic_fetch_add(ptr, val)                                                          \
     (sizeof(*(ptr)) == 1 ?                                                                  \
