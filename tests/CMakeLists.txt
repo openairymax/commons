@@ -17,7 +17,6 @@ set(UNIT_TEST_SOURCES
     unit/test_token.c
     unit/test_cost.c
     # unit/test_types.c  # 禁用：需要cmocka测试框架
-    unit/test_ipc.c      # 已改为 cmocka_stub 适配（无真实 cmocka 依赖）
     # unit/test_network.c # 禁用：需要cmocka测试框架
     unit/test_arena_tcache.c
     unit/test_print.c
@@ -36,6 +35,14 @@ set(UNIT_TEST_SOURCES
     # 文件增删改查（CRUD）跨平台往返（coding 场景基础能力）
     unit/test_io.c
 )
+
+# IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
+# commons/CMakeLists.txt 将 ipc 实现整批 if(NOT WIN32) 排除（POSIX-only），
+# Windows 下注册 test_ipc 必然 LNK2001（windows-build #101 实证），
+# 支持缺口解除前（Windows ipc 实现）不得在 Windows 编译。
+if(NOT WIN32)
+    list(APPEND UNIT_TEST_SOURCES unit/test_ipc.c)
+endif()
 
 # 单元测试可执行文件
 foreach(test_source ${UNIT_TEST_SOURCES})
