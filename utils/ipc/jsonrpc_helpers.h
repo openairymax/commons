@@ -13,18 +13,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <compat.h>
+
 #include "airy_memory.h"
 #include "error.h"
-
-#ifndef AIRY_API
-#if defined(_WIN32) && defined(AIRY_BUILD_DLL)
-#define AIRY_API __declspec(dllexport)
-#elif defined(_WIN32)
-#define AIRY_API __declspec(dllimport)
-#else
-#define AIRY_API __attribute__((visibility("default")))
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C" {

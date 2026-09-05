@@ -31,8 +31,10 @@
 #include <openssl/rand.h>
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static char *config_bytes_to_hex(const unsigned char *data, size_t len)
 {
     char *hex = (char *)AIRY_CALLOC(1, len * 2 + 1);
@@ -59,7 +61,7 @@ static unsigned char *config_hex_to_bytes(const char *hex, size_t *out_len)
     for (size_t i = 0; i < byte_len; i++) {
         unsigned int val;
         char hex_byte[3] = {0};
-        __builtin_memcpy(hex_byte, hex + i * 2, 2);
+        AIRY_MEMCPY(hex_byte, hex + i * 2, 2);
         val = (unsigned int)strtol(hex_byte, NULL, 16);
         if (hex_byte[0] == '\0') {
             AIRY_FREE(bytes);
@@ -139,9 +141,9 @@ static config_value_t *config_encrypt_string_value(const char *plaintext, size_t
         AIRY_FREE(ciphertext);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
-    __builtin_memcpy(encoded, tag, 16);
-    __builtin_memcpy(encoded + 16, enc->iv, enc->iv_len);
-    __builtin_memcpy(encoded + 16 + enc->iv_len, ciphertext, ct_len);
+    AIRY_MEMCPY(encoded, tag, 16);
+    AIRY_MEMCPY(encoded + 16, enc->iv, enc->iv_len);
+    AIRY_MEMCPY(encoded + 16 + enc->iv_len, ciphertext, ct_len);
     AIRY_FREE(ciphertext);
 
     char *hex = config_bytes_to_hex(encoded, encoded_len);

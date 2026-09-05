@@ -149,24 +149,9 @@ void airy_ignore_sigpipe(void);
 
 /* ==================== Safe string & error ==================== */
 
-/**
- * @brief Safe string copy
- * @param dest destination buffer
- * @param src source string
- * @param dest_size destination buffer size
- * @return 0 on success, non-zero on failure
- */
-int airy_strlcpy(char *dest, const char *src, size_t dest_size);
-
-/**
- * @brief Safe string concatenation
- * @param dest destination buffer
- * @param src source string
- * @param dest_size destination buffer size
- * @return 0 on success, non-zero on failure
- */
-int airy_strlcat(char *dest, const char *src, size_t dest_size);
-
+/* airy_strlcpy/airy_strlcat are declared by <compat.h>; do not redeclare
+ * them here (duplicate declarations without AIRY_API linkage collide on
+ * MSVC with C4273 when compat.h is included first). */
 
 /**
  * @brief Get the last error code

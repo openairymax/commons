@@ -48,8 +48,10 @@ static bool memory_debug_lock_init(void)
 #endif
 }
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 static void memory_debug_lock_destroy(void)
 {
 #ifdef _WIN32

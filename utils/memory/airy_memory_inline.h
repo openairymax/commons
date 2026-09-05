@@ -12,6 +12,25 @@
 
 #include "airy_memory_api.h"
 
+/*
+ * Banned-functions backend: under AIRY_COMPLIANCE_STRICT, GCC/Clang poison
+ * the bare memcpy/memset/memmove identifiers, so the AIRY_MEM* wrappers must
+ * go through __builtin_* to bypass the poison. MSVC has neither the poison
+ * mechanism nor __builtin_* builtins — call the CRT functions directly.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#define AIRY_IMPL_STRLEN(s) __builtin_strlen(s)
+#define AIRY_IMPL_MEMCPY(d, s, n) __builtin_memcpy((d), (s), (n))
+#define AIRY_IMPL_MEMSET(p, v, n) __builtin_memset((p), (v), (n))
+#define AIRY_IMPL_MEMMOVE(d, s, n) __builtin_memmove((d), (s), (n))
+#else
+#include <string.h>
+#define AIRY_IMPL_STRLEN(s) strlen((s))
+#define AIRY_IMPL_MEMCPY(d, s, n) memcpy((d), (s), (n))
+#define AIRY_IMPL_MEMSET(p, v, n) memset((p), (v), (n))
+#define AIRY_IMPL_MEMMOVE(d, s, n) memmove((d), (s), (n))
+#endif
+
 /**
  * @brief 安全的内存分配函数（兼容malloc）
  *
@@ -311,9 +330,9 @@ static inline void airy_auto_free_impl(void *p)
  */
 #define AIRY_STRNCPY_TERM(dst, src, size)                               \
     do {                                                                \
-        size_t _len = __builtin_strlen(src);                            \
+        size_t _len = AIRY_IMPL_STRLEN(src);                            \
         size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
-        __builtin_memcpy((dst), (src), _copy);                          \
+        AIRY_IMPL_MEMCPY((dst), (src), _copy);                          \
         (dst)[_copy] = '\0';                                            \
     } while (0)
 
@@ -328,7 +347,7 @@ static inline void airy_auto_free_impl(void *p)
         if ((size_t)(size) > (size_t)(dst_capacity)) { \
             break; /* overflow: skip copy */           \
         }                                              \
-        __builtin_memcpy((dst), (src), (size));        \
+        AIRY_IMPL_MEMCPY((dst), (src), (size));        \
     } while (0)
 
 /**
@@ -366,7 +385,7 @@ static inline void airy_auto_free_impl(void *p)
 #define AIRY_MEMSET(ptr, value, size)                 \
     do {                                              \
         if ((size) > 0)                               \
-            __builtin_memset((ptr), (value), (size)); \
+            AIRY_IMPL_MEMSET((ptr), (value), (size)); \
     } while (0)
 
 /**
@@ -376,7 +395,7 @@ static inline void airy_auto_free_impl(void *p)
 #define AIRY_MEMCPY(dst, src, size)                 \
     do {                                            \
         if ((size) > 0)                             \
-            __builtin_memcpy((dst), (src), (size)); \
+            AIRY_IMPL_MEMCPY((dst), (src), (size)); \
     } while (0)
 
 /**
@@ -386,7 +405,7 @@ static inline void airy_auto_free_impl(void *p)
 #define AIRY_MEMMOVE(dst, src, size)                 \
     do {                                             \
         if ((size) > 0)                              \
-            __builtin_memmove((dst), (src), (size)); \
+            AIRY_IMPL_MEMMOVE((dst), (src), (size)); \
     } while (0)
 
 /**
