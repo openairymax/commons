@@ -11,6 +11,12 @@
 
 #include "logging_internal.h"
 
+#ifdef _WIN32
+/* UCRT <io.h> is shadowed by commons/utils/io/io.h (PUBLIC -I leakage);
+ * declare the needed CRT prototype locally until the shadow is removed. */
+int _commit(int fd);
+#endif
+
 static log_file_state_t g_log_file_state = {
     .file = NULL,
     .current_size = 0,
