@@ -24,6 +24,16 @@
 #pragma GCC system_header
 #endif
 
+/* C11 的 ATOMIC_VAR_INIT(value) 宏：GCC/Clang 由系统 <stdatomic.h> 提供，
+ * 但新版 GCC（13+，C23 模式）已随 C17/C23 弃用路径删除；MSVC 的兼容层
+ * 从未提供。未定义时 `static atomic_bool x = ATOMIC_VAR_INIT(false);` 中
+ * 该标识符被当作隐式函数调用初始化 static 存储期对象，MSVC 报 C2099
+ * (initializer is not a constant)——windows-build #113 session.c 实证。
+ * C17 起标准即为恒等宏，#ifndef 防御与系统头共存。 */
+#ifndef ATOMIC_VAR_INIT
+#define ATOMIC_VAR_INIT(value) (value)
+#endif
+
 #if AIRY_USE_STDATOMIC
 
 typedef _Atomic double atomic_double;
