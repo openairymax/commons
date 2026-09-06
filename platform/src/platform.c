@@ -456,7 +456,13 @@ const char *airy_strerror(int error)
 int airy_file_lock(int fd, int exclusive, int block)
 {
 #if AIRY_PLATFORM_WINDOWS
-    HANDLE h = (HANDLE)(intptr_t)fd;
+    /* fd 是 UCRT 低级 IO 描述符（lowio 表索引），不是 OS HANDLE；
+     * 必须经 _get_osfhandle 转换，直接强转 LockFileEx 拿无效句柄必败
+     * （GetLastError=ERROR_INVALID_HANDLE，windows ctest test_file_lock
+     * "exclusive lock should be acquired" 实证）。 */
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    if (h == INVALID_HANDLE_VALUE)
+        return AIRY_EINVAL;
     OVERLAPPED ovl;
     AIRY_MEMSET(&ovl, 0, sizeof(ovl));
     DWORD flags = exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
@@ -480,7 +486,9 @@ int airy_file_lock(int fd, int exclusive, int block)
 int airy_file_unlock(int fd)
 {
 #if AIRY_PLATFORM_WINDOWS
-    HANDLE h = (HANDLE)(intptr_t)fd;
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    if (h == INVALID_HANDLE_VALUE)
+        return AIRY_EINVAL;
     OVERLAPPED ovl;
     AIRY_MEMSET(&ovl, 0, sizeof(ovl));
     return UnlockFileEx(h, 0, 1, 0, &ovl) ? 0 : (int)GetLastError();
