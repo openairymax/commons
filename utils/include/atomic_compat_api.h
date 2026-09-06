@@ -86,6 +86,11 @@ typedef volatile int atomic_int;
 typedef volatile unsigned int atomic_uint;
 typedef volatile long atomic_long;
 typedef volatile unsigned long atomic_ulong;
+/* C11 <stdatomic.h> 还提供 atomic_llong/atomic_ullong。agent_d service.h
+ * 的 64 位 perf 计时域用 atomic_ullong（#122 windows-build 实证 C2061
+ * service.h(109,5)），此处补全 volatile 镜像，与 stdatomic 类型一一对应。 */
+typedef volatile long long atomic_llong;
+typedef volatile unsigned long long atomic_ullong;
 typedef volatile int64_t atomic_int64_t;
 typedef volatile uint64_t atomic_uint64_t;
 typedef volatile size_t atomic_size_t;
