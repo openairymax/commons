@@ -159,6 +159,34 @@ int airy_thread_set_name(const char *name)
 
 #if AIRY_PLATFORM_WINDOWS
 
+/* CRITICAL_SECTION 零初始化兼容（Windows）。
+ *
+ * POSIX 端 pthread_mutex_t 全零 == PTHREAD_MUTEX_INITIALIZER（glibc 实证），
+ * 既有代码大量以 `static airy_mtx_t lock;` / `= {0}` 声明互斥量后直接
+ * airy_mtx_lock()（observability/atomic_logging/taskflow/heapstore 等全树
+ * 实证）。Windows 的 CRITICAL_SECTION 必须经 InitializeCriticalSection
+ * 才能使用：对全零对象直接 EnterCriticalSection，单线程快路径碰巧可用，
+ * 但首个竞争线程进入 RtlpWaitOnCriticalSection 会访问空 LockSemaphore →
+ * Access Violation（windows ctest 35 项 SegFault 栈 #127 实证）。
+ *
+ * 此处以 DebugInfo==NULL 判"未初始化"，用全零即可用的 SRWLOCK
+ * （SRWLOCK_INIT 即 {0}，等价 POSIX 零初始化）串行补做一次
+ * InitializeCriticalSection，还原 POSIX 端零初始化语义；显式调用
+ * airy_mtx_init 的路径不受影响（二次 Ensure 因 DebugInfo 非空直接跳过）。
+ * airy_mtx_t 布局不变（仍为 CRITICAL_SECTION），递归语义保持。 */
+static SRWLOCK g_airy_mtx_lazy_guard = SRWLOCK_INIT;
+
+static void airy_mtx_ensure_initialized(airy_mtx_t *mutex)
+{
+    if (mutex && mutex->DebugInfo == NULL) {
+        AcquireSRWLockExclusive(&g_airy_mtx_lazy_guard);
+        if (mutex->DebugInfo == NULL) {
+            InitializeCriticalSection(mutex);
+        }
+        ReleaseSRWLockExclusive(&g_airy_mtx_lazy_guard);
+    }
+}
+
 int airy_mtx_init(airy_mtx_t *mutex)
 {
     InitializeCriticalSection(mutex);
@@ -167,12 +195,14 @@ int airy_mtx_init(airy_mtx_t *mutex)
 
 int airy_mtx_lock(airy_mtx_t *mutex)
 {
+    airy_mtx_ensure_initialized(mutex);
     EnterCriticalSection(mutex);
     return 0;
 }
 
 int airy_mtx_trylock(airy_mtx_t *mutex)
 {
+    airy_mtx_ensure_initialized(mutex);
     return TryEnterCriticalSection(mutex) ? 0 : -1;
 }
 
@@ -268,11 +298,13 @@ int airy_cond_init(airy_cond_t *cond)
 
 int airy_cond_wait(airy_cond_t *cond, airy_mtx_t *mutex)
 {
+    airy_mtx_ensure_initialized(mutex);
     return SleepConditionVariableCS(cond, mutex, INFINITE) ? 0 : -1;
 }
 
 int airy_cond_timedwait(airy_cond_t *cond, airy_mtx_t *mutex, uint32_t timeout_ms)
 {
+    airy_mtx_ensure_initialized(mutex);
     BOOL result = SleepConditionVariableCS(cond, mutex, timeout_ms);
     if (!result) {
         DWORD err = GetLastError();
