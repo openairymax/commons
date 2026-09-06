@@ -22,8 +22,16 @@ extern "C" {
 #define AIRY_API __declspec(dllexport)
 #endif
 #else
-/* Static linkage: leave AIRY_API empty (matches <compat.h>); dllimport
- * here would break consumers that link commons statically on Windows. */
+/* Static linkage: AIRY_API must still be *defined* as an empty macro —
+ * leaving it undefined exposes the bare identifier at every use site,
+ * which MSVC reports as a C2054/C2061 cascade (build-test #110;
+ * uapi_compat.h __s32 errors are recovery noise of the same TU).
+ * dllimport here would break static consumers at their definition
+ * points instead (C2491/C4273, build-test #109). Static builds need
+ * no export decoration. */
+#ifndef AIRY_API
+#define AIRY_API
+#endif
 #endif
 #elif defined(__GNUC__) || defined(__clang__)
 #ifndef AIRY_API
