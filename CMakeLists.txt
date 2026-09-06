@@ -167,9 +167,12 @@ if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/ipc_shm.c)
     list(APPEND SOURCES utils/ipc/ipc_mq.c)
     list(APPEND SOURCES utils/ipc/ipc_rpc.c)
-    # 0c SSoT 收敛：熔断器唯一权威实现（daemons 776 行版迁入）
-    list(APPEND SOURCES utils/ipc/circuit_breaker.c)
 endif()
+# 熔断器（circuit_breaker）全平台编译：仅依赖 airy_mtx_t 与标准库，无
+# POSIX 依赖（原误并入上方 NOT WIN32 组）。#118 实证 MSVC 下
+# airy_coreloopthree orchestrator 引用 cb_*（cb_manager_create 等）时
+# think_d 12×LNK2001——Windows 同样需要熔断能力，从 ipc_common 组剥离。
+list(APPEND SOURCES utils/ipc/circuit_breaker.c)
 
 add_library(airy_common STATIC ${SOURCES})
 
