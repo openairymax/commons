@@ -10,6 +10,18 @@
 #include <io.h>
 #include <windows.h>
 
+/* MSVC UCRT 无 POSIX off_t/mode_t 类型；本文件 Windows 分支的
+ * mmap()/shm_open() 签名使用它们（G1 wave-3 #106 实证 C2081）。
+ * UCRT 定义的是 _off_t/_mode_t，此处映射到兼容宽度类型。 */
+#ifndef _AIRY_COMPAT_OFFT
+#define _AIRY_COMPAT_OFFT
+typedef long long off_t;
+#endif
+#ifndef _AIRY_COMPAT_MODET
+#define _AIRY_COMPAT_MODET
+typedef unsigned int mode_t;
+#endif
+
 #define PROT_NONE 0
 #define PROT_READ 1
 #define PROT_WRITE 2
