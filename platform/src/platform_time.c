@@ -122,8 +122,18 @@ uint64_t airy_time_wall_ms(void)
         }
     }
     uint64_t mono = airy_time_ns();
+#if defined(_WIN32)
+    /* atomic_compat 的泛型 atomic_load_explicit 在 !AIRY_USE_STDATOMIC
+     * 分支按 sizeof 分派，8 字节分支强转 int 截断（x64 上高 32 位丢失），
+     * 64 位墙钟/单调基准被截断即错乱（windows ctest test_wall_system
+     * FAIL 实证）。此处直走全宽 atomic_load_64，两端分支均无截断。 */
+    uint64_t base_mono = (uint64_t)atomic_load_64((volatile int64_t *)&g_wall_base_mono,
+                                                  memory_order_acquire);
+    int64_t base = atomic_load_64((volatile int64_t *)&g_wall_base_ms, memory_order_acquire);
+#else
     uint64_t base_mono = atomic_load_explicit(&g_wall_base_mono, memory_order_acquire);
     int64_t base = atomic_load_explicit(&g_wall_base_ms, memory_order_acquire);
+#endif
     return (uint64_t)(base + (int64_t)((mono - base_mono) / 1000000ULL));
 }
 
