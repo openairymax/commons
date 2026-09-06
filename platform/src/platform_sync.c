@@ -187,6 +187,69 @@ static void airy_mtx_ensure_initialized(airy_mtx_t *mutex)
     }
 }
 
+/* POSIX 侧 airy_mtx_init（含零初始化静态锁）= 递归互斥量，而
+ * airy_mtx_create = 非递归互斥量（corekern 同步测试契约：已持有锁时
+ * trylock 必须失败）。CRITICAL_SECTION 恒为递归，无法原生表达非递归
+ * trylock，故对 create() 产出的互斥量登记集合，trylock 时以自属检测
+ * （RTL_CRITICAL_SECTION.OwningThread == 本线程 id）模拟非递归语义。 */
+typedef struct {
+    SRWLOCK guard;
+    airy_mtx_t **items;
+    size_t count;
+    size_t cap;
+} airy_mtx_created_set_t;
+
+static airy_mtx_created_set_t g_airy_mtx_created = {SRWLOCK_INIT, NULL, 0, 0};
+
+static void airy_mtx_created_add(airy_mtx_t *m)
+{
+    AcquireSRWLockExclusive(&g_airy_mtx_created.guard);
+    if (g_airy_mtx_created.count == g_airy_mtx_created.cap) {
+        size_t ncap = g_airy_mtx_created.cap ? g_airy_mtx_created.cap * 2 : 16;
+        airy_mtx_t **ni = (airy_mtx_t **)AIRY_MALLOC(ncap * sizeof(airy_mtx_t *));
+        if (!ni) {
+            ReleaseSRWLockExclusive(&g_airy_mtx_created.guard);
+            return; /* 集合只是优化提示：漏登记时退化为递归 trylock */
+        }
+        if (g_airy_mtx_created.items) {
+            for (size_t i = 0; i < g_airy_mtx_created.count; i++) {
+                ni[i] = g_airy_mtx_created.items[i];
+            }
+            AIRY_FREE(g_airy_mtx_created.items);
+        }
+        g_airy_mtx_created.items = ni;
+        g_airy_mtx_created.cap = ncap;
+    }
+    g_airy_mtx_created.items[g_airy_mtx_created.count++] = m;
+    ReleaseSRWLockExclusive(&g_airy_mtx_created.guard);
+}
+
+static void airy_mtx_created_remove(airy_mtx_t *m)
+{
+    AcquireSRWLockExclusive(&g_airy_mtx_created.guard);
+    for (size_t i = 0; i < g_airy_mtx_created.count; i++) {
+        if (g_airy_mtx_created.items[i] == m) {
+            g_airy_mtx_created.items[i] = g_airy_mtx_created.items[--g_airy_mtx_created.count];
+            break;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_airy_mtx_created.guard);
+}
+
+static bool airy_mtx_created_has(airy_mtx_t *m)
+{
+    bool found = false;
+    AcquireSRWLockShared(&g_airy_mtx_created.guard);
+    for (size_t i = 0; i < g_airy_mtx_created.count; i++) {
+        if (g_airy_mtx_created.items[i] == m) {
+            found = true;
+            break;
+        }
+    }
+    ReleaseSRWLockShared(&g_airy_mtx_created.guard);
+    return found;
+}
+
 int airy_mtx_init(airy_mtx_t *mutex)
 {
     InitializeCriticalSection(mutex);
@@ -202,7 +265,16 @@ int airy_mtx_lock(airy_mtx_t *mutex)
 
 int airy_mtx_trylock(airy_mtx_t *mutex)
 {
+    if (!mutex)
+        return -1;
     airy_mtx_ensure_initialized(mutex);
+    if (airy_mtx_created_has(mutex)) {
+        /* create() 路径为非递归互斥量：本线程已持锁时 trylock 必须失败，
+         * 与 POSIX pthread_mutex_trylock 非递归语义对齐。 */
+        if (mutex->OwningThread == (HANDLE)(uintptr_t)GetCurrentThreadId()) {
+            return -1;
+        }
+    }
     return TryEnterCriticalSection(mutex) ? 0 : -1;
 }
 
@@ -222,6 +294,7 @@ airy_mtx_t *airy_mtx_create(void)
     airy_mtx_t *mutex = (airy_mtx_t *)AIRY_MALLOC(sizeof(airy_mtx_t));
     if (mutex) {
         InitializeCriticalSection(mutex);
+        airy_mtx_created_add(mutex);
     }
     return mutex;
 }
@@ -230,6 +303,7 @@ void airy_mtx_free(airy_mtx_t *mutex)
 {
     if (mutex) {
         DeleteCriticalSection(mutex);
+        airy_mtx_created_remove(mutex);
         AIRY_FREE(mutex);
     }
 }
