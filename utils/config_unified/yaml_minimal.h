@@ -100,7 +100,11 @@ bool yaml_as_bool(struct yaml_node *node, bool default_val);
 
 bool yaml_has_key(struct yaml_node *node, const char *key);
 
+/* 将 node 树以 YAML 文本追加到 buf（buf 须为已 NUL 终止的缓冲区，可空串；
+ * 供"先写注释头再续写正文"的多段组装使用）。结果保证 NUL 终止。 */
 void yaml_dump(struct yaml_node *node, char *buf, size_t bufsize, int indent);
+/* 将整份文档序列化为新分配字符串。内存由内部统一分配器（AIRY）分配，
+ * 调用方必须用 AIRY_FREE() 释放（勿用 libc free()，Windows 对齐堆不兼容）。 */
 char *yaml_serialize(yaml_document_t *doc);
 
 #ifdef __cplusplus
