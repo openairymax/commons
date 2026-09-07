@@ -58,43 +58,138 @@
 
 /* CreateThread 回调必须是 __stdcall（LPTHREAD_START_ROUTINE），而
  * airy_thread_func_t 为默认 __cdecl；x86 上直接强转会调用约定不匹配
- * 导致栈不平衡。经参数块转发：param 指向 {func, arg}，线程启动后释放。 */
-typedef struct {
+ * 导致栈不平衡。经参数块转发：param 指向 {func, arg, ...}。
+ *
+ * POSIX 语义中 pthread_join 可回填线程入口返回值（retval）；CreateThread
+ * 仅提供 DWORD 退出码，无法承载 void* 返回值。此处以 registry 记录
+ * 每个存活线程的上下文：入口返回后先写 ctx->result 再置 state=done，
+ * join 等待句柄就绪后即可读取并释放；detach 通过 state 状态机协调由
+ * 线程自释或 detach 侧释放，保证上下文恰好释放一次。 */
+typedef struct airy_thread_win_ctx {
     airy_thread_func_t func;
     void *arg;
-} airy_thread_start_ctx_t;
+    void *result;
+    HANDLE h;
+    /* 0=running, 1=done（入口已返回）, 2=detach 已请求（线程退出时自释）,
+     * 3=已释放 */
+    volatile LONG state;
+    struct airy_thread_win_ctx *next;
+} airy_thread_win_ctx_t;
+
+static SRWLOCK g_airy_thread_win_guard = SRWLOCK_INIT;
+static airy_thread_win_ctx_t *g_airy_thread_win_list = NULL;
+
+static void airy_thread_win_register(airy_thread_win_ctx_t *c)
+{
+    AcquireSRWLockExclusive(&g_airy_thread_win_guard);
+    c->next = g_airy_thread_win_list;
+    g_airy_thread_win_list = c;
+    ReleaseSRWLockExclusive(&g_airy_thread_win_guard);
+}
+
+static airy_thread_win_ctx_t *airy_thread_win_unlink(HANDLE thread)
+{
+    airy_thread_win_ctx_t *c = NULL;
+    AcquireSRWLockExclusive(&g_airy_thread_win_guard);
+    airy_thread_win_ctx_t **pp = &g_airy_thread_win_list;
+    while (*pp != NULL) {
+        if ((*pp)->h == thread) {
+            c = *pp;
+            *pp = c->next;
+            break;
+        }
+        pp = &(*pp)->next;
+    }
+    ReleaseSRWLockExclusive(&g_airy_thread_win_guard);
+    return c;
+}
 
 static DWORD WINAPI airy_thread_start_routine(LPVOID param)
 {
-    airy_thread_start_ctx_t *ctx = (airy_thread_start_ctx_t *)param;
-    ctx->func(ctx->arg);
-    AIRY_FREE(ctx);
+    airy_thread_win_ctx_t *ctx = (airy_thread_win_ctx_t *)param;
+    ctx->result = ctx->func(ctx->arg);
+    /* 先记 done 再释放：join 只有在句柄 signaled（入口已返回）后才会读
+     * result，此时 state 必然 >= 1；detach 若先行请求（prev==2）则由本
+     * 线程完成自释。 */
+    LONG prev = InterlockedExchange(&ctx->state, 1);
+    if (prev == 2) {
+        InterlockedExchange(&ctx->state, 3);
+        AIRY_FREE(ctx);
+    }
     return 0;
+}
+
+/* 回收已从 registry 摘出的线程上下文：线程尚存则请其退出时自释
+ * （state 0→2），已退出则本侧直接释放（state 1→3）。恰好一次。 */
+static void airy_thread_win_reclaim(airy_thread_win_ctx_t *ctx)
+{
+    for (;;) {
+        LONG s = ctx->state;
+        if (s == 0) {
+            if (InterlockedCompareExchange(&ctx->state, 2, 0) == 0)
+                break; /* 线程退出时自释（routine prev==2 分支） */
+        } else if (s == 1) {
+            if (InterlockedCompareExchange(&ctx->state, 3, 1) == 1) {
+                AIRY_FREE(ctx);
+                break;
+            }
+        } else if (s == 3) {
+            break;
+        } else if (s == 2) {
+            break;
+        }
+    }
 }
 
 int airy_platform_thread_create(airy_thread_t *thread, airy_thread_func_t func, void *arg)
 {
-    airy_thread_start_ctx_t *ctx =
-        (airy_thread_start_ctx_t *)AIRY_MALLOC(sizeof(airy_thread_start_ctx_t));
+    airy_thread_win_ctx_t *ctx =
+        (airy_thread_win_ctx_t *)AIRY_MALLOC(sizeof(airy_thread_win_ctx_t));
     if (!ctx)
         return AIRY_ENOMEM;
     ctx->func = func;
     ctx->arg = arg;
+    ctx->result = NULL;
+    ctx->h = NULL;
+    ctx->state = 0;
+    ctx->next = NULL;
+    /* 先入 registry 再 CreateThread：即使线程瞬间跑完，join 也能命中 */
+    airy_thread_win_register(ctx);
     HANDLE h = CreateThread(NULL, 0, airy_thread_start_routine, ctx, 0, NULL);
     if (h == NULL) {
+        DWORD err = GetLastError();
+        AcquireSRWLockExclusive(&g_airy_thread_win_guard);
+        airy_thread_win_ctx_t **pp = &g_airy_thread_win_list;
+        while (*pp != NULL && *pp != ctx)
+            pp = &(*pp)->next;
+        if (*pp == ctx)
+            *pp = ctx->next;
+        ReleaseSRWLockExclusive(&g_airy_thread_win_guard);
         AIRY_FREE(ctx);
-        return (int)GetLastError();
+        return (int)err;
     }
+    ctx->h = h;
     *thread = h;
     return 0;
 }
 
 int airy_platform_thread_join(airy_thread_t thread, void **retval)
 {
-    (void)retval;
+    if (!thread)
+        return AIRY_EINVAL;
+    airy_thread_win_ctx_t *ctx = airy_thread_win_unlink(thread);
     DWORD result = WaitForSingleObject(thread, INFINITE);
     if (result != WAIT_OBJECT_0) {
+        if (ctx)
+            airy_thread_win_reclaim(ctx);
+        CloseHandle(thread);
         return AIRY_EINVAL;
+    }
+    if (retval && ctx)
+        *retval = ctx->result;
+    if (ctx) {
+        InterlockedExchange(&ctx->state, 3);
+        AIRY_FREE(ctx);
     }
     CloseHandle(thread);
     return 0;
@@ -105,7 +200,12 @@ int airy_platform_thread_detach(airy_thread_t thread)
     /* Windows has no pthread_detach equivalent: closing the thread handle
      * drops our reference; the thread keeps running and its resources are
      * reclaimed by the system when it exits. After detach the thread must
-     * not be joined. */
+     * not be joined. 上下文经 state 状态机由运行线程退出时自释（detach 在
+     * 线程尚存时置 state=2），或由本函数在线程已退出后直接回收。 */
+    airy_thread_win_ctx_t *ctx = airy_thread_win_unlink(thread);
+    if (ctx) {
+        airy_thread_win_reclaim(ctx);
+    }
     if (thread != NULL) {
         CloseHandle(thread);
     }
