@@ -234,14 +234,16 @@ static inline void atomic_store_8(volatile char *ptr, char value, memory_order o
 /* 8/16-bit Interlocked* helpers are x64-only Windows SDK inline functions; on
  * x86 they are undeclared (C4013 -> /WX C2220, G3 probe run 34196374140).
  * Emulate them with a CAS loop over the containing aligned 32-bit word,
- * touching only the masked byte/half field. */
+ * touching only the masked byte/half field.
+ *
+ * The _8 family uses the CAS emulation on BOTH ABIs: the x64 SDK helpers act
+ * on the enclosing 16-bit unit, so sign-extension and inter-byte carry corrupt
+ * the neighbour byte, and the previous hand-rolled 8-bit CAS was a
+ * non-atomic check-then-set.  The _16 family keeps the x64 SDK helpers (a
+ * 16-bit RMW on a 16-bit-aligned short is in-domain and atomic). */
 static inline char atomic_exchange_8(volatile char *ptr, char desired, memory_order order)
 {
     (void)order;
-#ifdef _WIN64
-    volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
-    return (char)InterlockedExchange16(p, (short)desired);
-#else
     volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
     const int shift = (int)((uintptr_t)ptr & 3u) * 8;
     const LONG mask = 0xFFL << shift;
@@ -253,7 +255,6 @@ static inline char atomic_exchange_8(volatile char *ptr, char desired, memory_or
             return (char)(((unsigned long)prev & (unsigned long)mask) >> shift);
         old = prev;
     }
-#endif
 }
 
 static inline int atomic_compare_exchange_strong_8(volatile char *ptr, char *expected, char desired,
@@ -261,15 +262,6 @@ static inline int atomic_compare_exchange_strong_8(volatile char *ptr, char *exp
 {
     (void)success;
     (void)failure;
-#ifdef _WIN64
-    char old = *ptr;
-    if (old == *expected) {
-        *ptr = desired;
-        return 1;
-    }
-    *expected = old;
-    return 0;
-#else
     volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
     const int shift = (int)((uintptr_t)ptr & 3u) * 8;
     const LONG mask = 0xFFL << shift;
@@ -286,16 +278,11 @@ static inline int atomic_compare_exchange_strong_8(volatile char *ptr, char *exp
             return 1;
         old = prev;
     }
-#endif
 }
 
 static inline char atomic_fetch_add_8(volatile char *ptr, char value, memory_order order)
 {
     (void)order;
-#ifdef _WIN64
-    volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
-    return (char)InterlockedExchangeAdd16(p, (short)value);
-#else
     volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
     const int shift = (int)((uintptr_t)ptr & 3u) * 8;
     const LONG mask = 0xFFL << shift;
@@ -308,16 +295,11 @@ static inline char atomic_fetch_add_8(volatile char *ptr, char value, memory_ord
             return cur;
         old = prev;
     }
-#endif
 }
 
 static inline char atomic_fetch_sub_8(volatile char *ptr, char value, memory_order order)
 {
     (void)order;
-#ifdef _WIN64
-    volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
-    return (char)InterlockedExchangeAdd16(p, -(short)value);
-#else
     volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
     const int shift = (int)((uintptr_t)ptr & 3u) * 8;
     const LONG mask = 0xFFL << shift;
@@ -330,7 +312,6 @@ static inline char atomic_fetch_sub_8(volatile char *ptr, char value, memory_ord
             return cur;
         old = prev;
     }
-#endif
 }
 
 
