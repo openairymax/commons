@@ -169,7 +169,7 @@ static inline int airy_log_init(const airy_logger_config_t *config)
             if (config->targets[i].type == AIRY_LOG_TARGET_FILE) {
                 log_cfg.outputs |= (1 << LOG_OUTPUT_FILE);
                 log_cfg.file_path = config->targets[i].config.file.path;
-                log_cfg.max_file_size = config->targets[i].config.file.max_size;
+                log_cfg.max_file_size = (size_t)config->targets[i].config.file.max_size;
                 log_cfg.max_backup_count = config->targets[i].config.file.max_files;
             }
         }
