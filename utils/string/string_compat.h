@@ -11,7 +11,13 @@
 #include <string.h>
 
 
+/* cmake/windows_preinclude.h 已经 SSIZE_T 定义 ssize_t 并置位
+ * _SSIZE_T_DEFINED；此处重复 typedef 在 MSVC 触发 C4142（benign
+ * redefinition），x86-32 leg 被 /WX 升为 C2220（probe-3 实证）。 */
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 typedef intptr_t ssize_t;
+#endif
 
 
 /* flawfinder: ignore - Windows compat macro, format is always const */
