@@ -211,6 +211,7 @@ typedef enum {
 #if defined(_WIN32)
 
 #include <intrin.h>
+#include <stdint.h>
 #include <windows.h>
 
 #define _Atomic volatile
@@ -230,6 +231,10 @@ static inline void atomic_store_8(volatile char *ptr, char value, memory_order o
     *ptr = value;
 }
 
+/* 8/16-bit Interlocked* helpers are x64-only Windows SDK inline functions; on
+ * x86 they are undeclared (C4013 -> /WX C2220, G3 probe run 34196374140).
+ * Emulate them with a CAS loop over the containing aligned 32-bit word,
+ * touching only the masked byte/half field. */
 static inline char atomic_exchange_8(volatile char *ptr, char desired, memory_order order)
 {
     (void)order;
@@ -237,7 +242,17 @@ static inline char atomic_exchange_8(volatile char *ptr, char desired, memory_or
     volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
     return (char)InterlockedExchange16(p, (short)desired);
 #else
-    return (char)InterlockedExchange8(ptr, (BYTE)desired);
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 3u) * 8;
+    const LONG mask = 0xFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        next = (old & ~mask) | ((LONG)(unsigned char)desired << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return (char)(((unsigned long)prev & (unsigned long)mask) >> shift);
+        old = prev;
+    }
 #endif
 }
 
@@ -255,11 +270,22 @@ static inline int atomic_compare_exchange_strong_8(volatile char *ptr, char *exp
     *expected = old;
     return 0;
 #else
-    char old = (char)InterlockedCompareExchange8(ptr, (BYTE)desired, (BYTE)*expected);
-    if (old == *expected)
-        return 1;
-    *expected = old;
-    return 0;
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 3u) * 8;
+    const LONG mask = 0xFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const char cur = (char)(((unsigned long)old & (unsigned long)mask) >> shift);
+        if (cur != *expected) {
+            *expected = cur;
+            return 0;
+        }
+        next = (old & ~mask) | ((LONG)(unsigned char)desired << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return 1;
+        old = prev;
+    }
 #endif
 }
 
@@ -270,7 +296,18 @@ static inline char atomic_fetch_add_8(volatile char *ptr, char value, memory_ord
     volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
     return (char)InterlockedExchangeAdd16(p, (short)value);
 #else
-    return (char)InterlockedExchangeAdd8(ptr, (char)value);
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 3u) * 8;
+    const LONG mask = 0xFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const char cur = (char)(((unsigned long)old & (unsigned long)mask) >> shift);
+        next = (old & ~mask) | ((LONG)(unsigned char)(cur + value) << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return cur;
+        old = prev;
+    }
 #endif
 }
 
@@ -281,7 +318,18 @@ static inline char atomic_fetch_sub_8(volatile char *ptr, char value, memory_ord
     volatile short *p = (volatile short *)((uintptr_t)ptr & ~(uintptr_t)1);
     return (char)InterlockedExchangeAdd16(p, -(short)value);
 #else
-    return (char)InterlockedExchangeAdd8(ptr, -(char)value);
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 3u) * 8;
+    const LONG mask = 0xFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const char cur = (char)(((unsigned long)old & (unsigned long)mask) >> shift);
+        next = (old & ~mask) | ((LONG)(unsigned char)(cur - value) << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return cur;
+        old = prev;
+    }
 #endif
 }
 
@@ -301,7 +349,21 @@ static inline void atomic_store_16(volatile short *ptr, short value, memory_orde
 static inline short atomic_exchange_16(volatile short *ptr, short desired, memory_order order)
 {
     (void)order;
+#ifdef _WIN64
     return (short)InterlockedExchange16((volatile SHORT *)ptr, desired);
+#else
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 2u) * 8;
+    const LONG mask = 0xFFFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        next = (old & ~mask) | ((LONG)(unsigned short)desired << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return (short)(((unsigned long)prev & (unsigned long)mask) >> shift);
+        old = prev;
+    }
+#endif
 }
 
 static inline int atomic_compare_exchange_strong_16(volatile short *ptr, short *expected,
@@ -310,23 +372,72 @@ static inline int atomic_compare_exchange_strong_16(volatile short *ptr, short *
 {
     (void)success;
     (void)failure;
+#ifdef _WIN64
     short old = (short)InterlockedCompareExchange16((volatile SHORT *)ptr, desired, *expected);
     if (old == *expected)
         return 1;
     *expected = old;
     return 0;
+#else
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 2u) * 8;
+    const LONG mask = 0xFFFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const short cur = (short)(((unsigned long)old & (unsigned long)mask) >> shift);
+        if (cur != *expected) {
+            *expected = cur;
+            return 0;
+        }
+        next = (old & ~mask) | ((LONG)(unsigned short)desired << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return 1;
+        old = prev;
+    }
+#endif
 }
 
 static inline short atomic_fetch_add_16(volatile short *ptr, short value, memory_order order)
 {
     (void)order;
+#ifdef _WIN64
     return (short)InterlockedExchangeAdd16((volatile SHORT *)ptr, value);
+#else
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 2u) * 8;
+    const LONG mask = 0xFFFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const short cur = (short)(((unsigned long)old & (unsigned long)mask) >> shift);
+        next = (old & ~mask) | ((LONG)(unsigned short)(cur + value) << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return cur;
+        old = prev;
+    }
+#endif
 }
 
 static inline short atomic_fetch_sub_16(volatile short *ptr, short value, memory_order order)
 {
     (void)order;
+#ifdef _WIN64
     return (short)InterlockedExchangeAdd16((volatile SHORT *)ptr, -value);
+#else
+    volatile LONG *word = (volatile LONG *)((uintptr_t)ptr & ~(uintptr_t)3);
+    const int shift = (int)((uintptr_t)ptr & 2u) * 8;
+    const LONG mask = 0xFFFFL << shift;
+    LONG old = *word, prev, next;
+    for (;;) {
+        const short cur = (short)(((unsigned long)old & (unsigned long)mask) >> shift);
+        next = (old & ~mask) | ((LONG)(unsigned short)(cur - value) << shift);
+        prev = InterlockedCompareExchange(word, next, old);
+        if (prev == old)
+            return cur;
+        old = prev;
+    }
+#endif
 }
 
 
