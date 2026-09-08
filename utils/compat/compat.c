@@ -199,14 +199,10 @@ const char *airy_build_info(void)
 #include <windows.h>
 #include "airy_memory.h"
 
-int gethostname(char *name, int len)
-{
-    DWORD size = (DWORD)len;
-    if (!GetComputerNameA(name, &size)) {
-        return AIRY_EINVAL;
-    }
-    return 0;
-}
+/* No private gethostname shim: Winsock2 already exports it for the
+ * Windows caller (network_dns.c includes <winsock2.h> and links
+ * ws2_32.lib after WSAStartup), and a local definition collides with
+ * the SDK declaration on x86-32 (C2373, G3 probe evidence). */
 
 long sysconf(int name)
 {
