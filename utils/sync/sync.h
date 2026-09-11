@@ -41,8 +41,7 @@ typedef enum {
     SYNC_TYPE_SPINLOCK,
     SYNC_TYPE_SEMAPHORE,
     SYNC_TYPE_CONDITION,
-    SYNC_TYPE_BARRIER,
-    SYNC_TYPE_EVENT
+    SYNC_TYPE_BARRIER
 } sync_type_t;
 
 /**
@@ -55,8 +54,7 @@ typedef enum {
     SYNC_LOCK_SPINLOCK,
     SYNC_LOCK_SEMAPHORE,
     SYNC_LOCK_CONDITION,
-    SYNC_LOCK_BARRIER,
-    SYNC_LOCK_EVENT
+    SYNC_LOCK_BARRIER
 } sync_lock_type_t;
 
 /**
@@ -141,11 +139,6 @@ typedef struct sync_condition *sync_condition_t;
  * @brief Barrier handle
  */
 typedef struct sync_barrier *sync_barrier_t;
-
-/**
- * @brief Event handle
- */
-typedef struct sync_event *sync_event_t;
 
 /**
  * @brief Lock attributes
@@ -524,51 +517,6 @@ sync_result_t sync_barrier_wait_ex(sync_barrier_t barrier, const sync_timeout_t 
  * @return SYNC_SUCCESS on success, error code on failure
  */
 sync_result_t sync_barrier_reset(sync_barrier_t barrier, unsigned int new_count);
-
-/**
- * @brief Create an event
- *
- * @param[out] event Event handle
- * @param[in] manual_reset Whether manual reset
- * @param[in] initial_state Initial state
- * @param[in] attr Event attributes (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_event_create(sync_event_t *event, bool manual_reset, bool initial_state,
-                                const sync_attr_t *attr);
-
-/**
- * @brief Destroy an event
- *
- * @param[in] event Event handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_event_free(sync_event_t event);
-
-/**
- * @brief Set the event to the signaled state
- *
- * @param[in] event Event handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_event_set_ex(sync_event_t event);
-
-/**
- * @brief Reset the event to the non-signaled state
- *
- * @param[in] event Event handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_event_reset(sync_event_t event);
-
-/**
- * @brief Wait on an event
- *
- * @param[in] event Event handle
- * @param[in] timeout Timeout setting (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_event_wait_ex(sync_event_t event, const sync_timeout_t *timeout);
 
 /**
  * @brief Get lock statistics

@@ -223,13 +223,6 @@ typedef struct {
  */
 
 /**
- * @defgroup arena_alloc Arena 短生命周期分配
- * @{
- *
- * P1.19: ALLOC_SHORT_LIVED 类别使用 Arena 分配器。
- */
-
-/**
  * @defgroup safe_memory_alloc 安全内存分配宏（SEC-016合规）
  * @{
  */

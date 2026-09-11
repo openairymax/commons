@@ -6,8 +6,8 @@
  * @brief Unified memory management module - memory pool allocation/release
  *        and capacity management domain.
  *
- * Implements single/batch block allocation and release, plus capacity
- * management (prealloc/clear/expand/shrink), single responsibility.
+ * Implements block allocation/release, plus capacity management
+ * (prealloc/clear/expand/shrink), single responsibility.
  * Split out of memory_pool.c.
  */
 
@@ -73,103 +73,6 @@ void *memory_pool_calloc(memory_pool_t *pool)
         __builtin_memset(ptr, 0, pool->options.block_size);
     }
     return ptr;
-}
-
-size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blocks)
-{
-    if (pool == NULL || out_blocks == NULL || count == 0) {
-        return 0;
-    }
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc START (pool=%p, count=%zu, free=%zu)",
-              (void *)pool, count, pool->stats.free_blocks);
-
-    memory_pool_lock(pool);
-
-    size_t allocated = 0;
-    for (size_t i = 0; i < count; i++) {
-
-        if (pool->free_list == NULL) {
-            if (!memory_pool_allocate_blocks(pool, pool->options.expansion_size)) {
-                break;
-            }
-        }
-
-        memory_pool_block_t *block = pool->free_list;
-        pool->free_list = block->next;
-
-        block->allocated = true;
-        block->next = NULL;
-
-        void *data_ptr = (uint8_t *)block + sizeof(memory_pool_block_t);
-        out_blocks[allocated] = data_ptr;
-
-        pool->stats.allocated_blocks++;
-        pool->stats.free_blocks--;
-        pool->stats.used_memory += pool->options.block_size;
-        pool->stats.allocation_count++;
-        allocated++;
-    }
-
-    pool->stats.hit_count += allocated;
-    if (allocated < count) {
-        pool->stats.miss_count += (count - allocated);
-    }
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_alloc DONE (pool=%p, requested=%zu, allocated=%zu, "
-              "free=%zu/%zu, alloc_total=%" PRIu64 ")",
-              (void *)pool, count, allocated, pool->stats.free_blocks, pool->stats.total_blocks,
-              pool->stats.allocation_count);
-
-    return allocated;
-}
-
-size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count)
-{
-    if (pool == NULL || blocks == NULL || count == 0) {
-        return 0;
-    }
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free START (pool=%p, count=%zu, allocated=%zu)",
-              (void *)pool, count, pool->stats.allocated_blocks);
-
-    memory_pool_lock(pool);
-
-    size_t freed = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (blocks[i] == NULL)
-            continue;
-
-        memory_pool_block_t *block =
-            (memory_pool_block_t *)((uint8_t *)blocks[i] - sizeof(memory_pool_block_t));
-
-        if (block->pool != pool || !block->allocated) {
-            AIRY_LOG_WARN("memory_pool: memory_pool_batch_free skip invalid block (pool=%p, ptr=%p)",
-                     (void *)pool, blocks[i]);
-            continue;
-        }
-
-        block->allocated = false;
-        block->next = pool->free_list;
-        pool->free_list = block;
-
-        pool->stats.allocated_blocks--;
-        pool->stats.free_blocks++;
-        pool->stats.used_memory -= pool->options.block_size;
-        pool->stats.free_count++;
-        freed++;
-    }
-
-    memory_pool_unlock(pool);
-
-    AIRY_LOG_DEBUG("memory_pool: memory_pool_batch_free DONE (pool=%p, count=%zu, freed=%zu, "
-              "free=%zu/%zu, free_total=%" PRIu64 ")",
-              (void *)pool, count, freed, pool->stats.free_blocks, pool->stats.total_blocks,
-              pool->stats.free_count);
-
-    return freed;
 }
 
 void memory_pool_free(memory_pool_t *pool, void *ptr)

@@ -51,8 +51,6 @@ set(SOURCES
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
     utils/memory/memory_prealloc.c
-    utils/memory/arena.c
-    utils/memory/tcache.c
     utils/string/string_common.c
     utils/string/string.c
     utils/string/string_find.c
@@ -71,7 +69,6 @@ set(SOURCES
     utils/sync/sync_rwlock.c
     utils/sync/sync_semaphore.c
     utils/sync/sync_condition.c
-    utils/sync/sync_event.c
     utils/sync/sync_barrier.c
     utils/sync/sync_recursive_mutex.c
     utils/sync/sync_common.c
@@ -257,8 +254,6 @@ set_source_files_properties(
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
     utils/memory/memory_prealloc.c
-    utils/memory/arena.c
-    utils/memory/tcache.c
     utils/logging/logging_core.c
     utils/logging/logging_format.c
     utils/logging/logging_backend_file.c

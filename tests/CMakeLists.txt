@@ -18,7 +18,6 @@ set(UNIT_TEST_SOURCES
     unit/test_cost.c
     # unit/test_types.c  # 禁用：需要cmocka测试框架
     # unit/test_network.c # 禁用：需要cmocka测试框架
-    unit/test_arena_tcache.c
     unit/test_print.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链 + 跨线程唤醒）
     unit/test_cancel_token.c

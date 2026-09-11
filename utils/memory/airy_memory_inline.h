@@ -3,7 +3,7 @@
 
 /*
  * Compatibility wrappers & safe inline helpers (airy_malloc family,
- * secure free, arena macros, string macros).
+ * secure free, string macros).
  * Split from airy_memory.h (0.1.6 大文件拆分).
  */
 
@@ -286,8 +286,6 @@ static inline void airy_auto_free_impl(void *p)
 #endif
 
 /** @} */ /* end of secure_free */
-
-/** @} */ /* end of arena_alloc */
 
 /**
  * @def SAFE_MALLOC(ptr, size)

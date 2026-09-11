@@ -32,8 +32,6 @@ memory/
 │   ├── memory_pool.c             # 内存池实现
 │   └── memory_debug.c            # 内存调试实现
 └── README.md                     # 本文档
-
-注：内存单测在 commons/tests/unit/test_arena_tcache.c。
 ```
 
 ## 核心数据结构

@@ -18,7 +18,6 @@
  *       - sync_semaphore.c: semaphore
  *       - sync_condition.c: condition variable
  *       - sync_barrier.c: barrier
- *       - sync_event.c: event
  */
 
 #include "sync.h"
@@ -103,8 +102,6 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
         return SYNC_TYPE_CONDITION;
     case SYNC_LOCK_BARRIER:
         return SYNC_TYPE_BARRIER;
-    case SYNC_LOCK_EVENT:
-        return SYNC_TYPE_EVENT;
     default:
         return SYNC_TYPE_UNKNOWN;
     }
@@ -136,8 +133,6 @@ const char *sync_get_name(void *lock)
         return ((struct sync_condition *)lock)->name;
     case SYNC_TYPE_BARRIER:
         return ((struct sync_barrier *)lock)->name;
-    case SYNC_TYPE_EVENT:
-        return ((struct sync_event *)lock)->name;
     default:
         return NULL;
     }
@@ -624,13 +619,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
         if (old_name)
             AIRY_FREE((void *)b->name);
         b->name = new_name;
-        break;
-    }
-    case SYNC_TYPE_EVENT: {
-        struct sync_event *e = (struct sync_event *)lock;
-        if (old_name)
-            AIRY_FREE((void *)e->name);
-        e->name = new_name;
         break;
     }
     default:

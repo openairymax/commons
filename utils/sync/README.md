@@ -32,7 +32,6 @@ sync/
 │   ├── sync_semaphore.c    # 信号量实现
 │   ├── sync_condition.c    # 条件变量实现
 │   ├── sync_barrier.c      # 屏障实现
-│   ├── sync_event.c        # 事件实现
 │   ├── sync_platform.c     # 平台适配层
 │   ├── sync_common.c       # 公共层同步原语实现
 │   ├── sync_internal.c     # 内部辅助函数
@@ -57,7 +56,6 @@ sync/
 | `SYNC_TYPE_SEMAPHORE` | 信号量 |
 | `SYNC_TYPE_CONDITION` | 条件变量 |
 | `SYNC_TYPE_BARRIER` | 屏障 |
-| `SYNC_TYPE_EVENT` | 事件 |
 
 ### sync_result_t — 操作结果
 
@@ -204,16 +202,6 @@ sync/
 | `sync_barrier_free(barrier)` | 销毁屏障 |
 | `sync_barrier_wait_ex(barrier, timeout)` | 等待屏障（所有线程到达后释放） |
 | `sync_barrier_reset(barrier, new_count)` | 重置屏障 |
-
-### 事件（Event）
-
-| 函数 | 说明 |
-|------|------|
-| `sync_event_create(event, manual_reset, init_state, attr)` | 创建事件 |
-| `sync_event_free(event)` | 销毁事件 |
-| `sync_event_set_ex(event)` | 设置事件为有信号状态 |
-| `sync_event_reset(event)` | 重置事件为无信号状态 |
-| `sync_event_wait_ex(event, timeout)` | 等待事件 |
 
 ### 统计与诊断
 

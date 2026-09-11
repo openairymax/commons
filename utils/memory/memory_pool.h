@@ -268,49 +268,6 @@ void memory_pool_set_name(memory_pool_t *pool, const char *name);
 memory_pool_t *memory_pool_create_default(size_t block_size);
 
 
-/**
- * @brief P1.20.3: Batch-allocate blocks (single lock acquisition)
- *
- * @ownership alloc -- the returned blocks are caller-owned; return each
- *                     with memory_pool_free
- *
- * Allocates multiple blocks in one lock operation, reducing lock
- * contention. Designed for tcache batch filling, also usable for other
- * batch-allocation scenarios.
- *
- * @param[in]  pool       Memory pool handle
- * @param[in]  count      Number of blocks requested
- * @param[out] out_blocks Output block pointer array (caller-allocated,
- *                        size >= count)
- * @return Number of blocks actually allocated (may be < count if the pool
- *         is empty)
- *
- * @note The returned blocks are uninitialized
- * @note Performance: N-1 fewer lock operations than a loop of
- *       memory_pool_alloc calls
- */
-size_t memory_pool_batch_alloc(memory_pool_t *pool, size_t count, void **out_blocks);
-
-/**
- * @brief P1.20.3: Batch-release blocks (single lock acquisition)
- *
- * @ownership release -- releases ownership of all pointers in blocks
- *
- * Releases multiple blocks in one lock operation, reducing lock
- * contention. Designed for tcache batch return, also usable for other
- * batch-release scenarios.
- *
- * @param[in] pool   Memory pool handle
- * @param[in] blocks Block pointer array to release
- * @param[in] count  Number of blocks
- * @return Number of blocks successfully released
- *
- * @note Invalid blocks (NULL or not from this pool) are skipped
- * @note Performance: N-1 fewer lock operations than a loop of
- *       memory_pool_free calls
- */
-size_t memory_pool_batch_free(memory_pool_t *pool, void **blocks, size_t count);
-
 /** @} */ /* end of memory_pool_api */
 #ifdef __cplusplus
 }
