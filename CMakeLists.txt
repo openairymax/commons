@@ -173,6 +173,25 @@ list(APPEND SOURCES utils/ipc/circuit_breaker.c)
 
 add_library(airy_common STATIC ${SOURCES})
 
+# 8.2.3 (SSoT): monotonic clock single source — corekern clock.c is compiled
+# into airy_common so every airy_common consumer resolves airy_time_ns/ms
+# without a reverse link edge to atoms (single-pass GNU ld ordering keeps
+# corekern members before commons; see atoms/CMakeLists.txt ARC-06 note).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/src/time/clock.c")
+    target_sources(airy_common PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/src/time/clock.c)
+    # clock.c include closure (airy_time.h -> error.h + export.h) lives in
+    # the corekern include tree; PRIVATE so consumers are unaffected.
+    target_include_directories(airy_common PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/include)
+else()
+    # prebuilt atoms mode: sources are stripped from the delivery tree; the
+    # symbols then resolve from prebuilt libairy_core.a instead.
+    message(WARNING
+        "atoms corekern clock.c not found (prebuilt mode?) — "
+        "airy_time_ns/ms will resolve from prebuilt libairy_core.a")
+endif()
+
 # 验证源文件存在性
 airy_print_info("[COMMONS] Verifying source files...")
 set(_missing_count 0)

@@ -179,31 +179,9 @@ void airy_sock_close(airy_sock_t sock)
 #endif
 }
 
-uint64_t airy_time_ns(void)
-{
-#if AIRY_PLATFORM_WINDOWS
-    /* QPC 频率在系统生命周期内不变：缓存避免每次调用查询
-     * QueryPerformanceFrequency（该 API 相对昂贵）。 */
-    static LARGE_INTEGER frequency;
-    static int frequency_inited = 0;
-    if (!frequency_inited) {
-        QueryPerformanceFrequency(&frequency);
-        frequency_inited = 1;
-    }
-    LARGE_INTEGER counter;
-    QueryPerformanceCounter(&counter);
-    return (uint64_t)((counter.QuadPart * 1000000000ULL) / frequency.QuadPart);
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
-#endif
-}
-
-uint64_t airy_time_ms(void)
-{
-    return airy_time_ns() / 1000000ULL;
-}
+/* airy_time_ns/ms: 8.2.3 (SSoT) delegated to corekern clock.c, which is
+ * source-shared into libairy_common.a. Declaration facade in
+ * platform_misc.h. */
 
 void airy_sleep_ms(uint32_t ms)
 {
