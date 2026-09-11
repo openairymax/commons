@@ -153,6 +153,11 @@ typedef struct rpc_method_node {
     struct rpc_method_node *next;
 } rpc_method_node_t;
 
+/* S1: hard cap for RPC method names carried in ipc_rpc_header_t. Requests
+ * whose method name reaches this limit are rejected instead of overflowing
+ * the stack-allocated response header. */
+#define IPC_RPC_METHOD_NAME_MAX 256
+
 typedef struct {
     uint32_t magic;
     uint32_t version;
@@ -160,7 +165,7 @@ typedef struct {
     uint32_t method_name_len;
     uint64_t payload_len;
     uint32_t status;
-    char method_name[256];
+    char method_name[IPC_RPC_METHOD_NAME_MAX];
 } ipc_rpc_header_t;
 
 #define IPC_RPC_MAGIC 0x52504300 /* "RPC\0" */

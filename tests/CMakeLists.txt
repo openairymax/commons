@@ -58,6 +58,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
             unit/test_ipc_server.c
             unit/test_ipc_shm_mq.c
             unit/test_ipc_message.c
+            unit/test_ipc_rpc.c
         )
     endif()
 

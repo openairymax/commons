@@ -63,6 +63,7 @@ int main(void)
         cmocka_unit_test(test_receive_message),
         cmocka_unit_test(test_try_receive_message),
         cmocka_unit_test(test_set_message_callback),
+        cmocka_unit_test(test_receive_oversized_payload_rejected),
 
         cmocka_unit_test(test_server_create),
         cmocka_unit_test(test_server_create_null_config),
@@ -84,6 +85,7 @@ int main(void)
         cmocka_unit_test(test_message_create),
         cmocka_unit_test(test_message_create_empty),
         cmocka_unit_test(test_message_free_null),
+        cmocka_unit_test(test_message_release),
         cmocka_unit_test(test_message_clone),
         cmocka_unit_test(test_message_clone_null),
         cmocka_unit_test(test_message_checksum),
@@ -97,6 +99,11 @@ int main(void)
         cmocka_unit_test(test_is_valid),
         cmocka_unit_test(test_is_valid_null),
         cmocka_unit_test(test_flush),
+
+        cmocka_unit_test(test_rpc_roundtrip),
+        cmocka_unit_test(test_rpc_method_not_found),
+        cmocka_unit_test(test_rpc_oversized_method_name_rejected),
+        cmocka_unit_test(test_rpc_oversized_request_rejected),
     };
 
     return cmocka_run_group_tests(tests, sizeof(tests) / sizeof(tests[0]), NULL, NULL);

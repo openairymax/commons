@@ -197,7 +197,13 @@ ipc_channel_t *ipc_server_accept(ipc_server_t *server, uint32_t timeout_ms)
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    ipc_channel_open(client_channel);
+    if (ipc_channel_open(client_channel) != AIRY_SUCCESS) {
+        /* S5: fail closed instead of registering a channel that failed
+         * to open (not yet in the tracking array, so a direct destroy
+         * is safe here). */
+        ipc_channel_destroy(client_channel);
+        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "operation failed");
+    }
 
     server->connections[server->connection_count] = client_channel;
     server->connection_count++;

@@ -35,30 +35,6 @@
 #include <poll.h>
 #endif
 
-/* 循环接收直到收满 len 字节（0=成功，-1=失败/对端关闭）。
- * macOS 无 MSG_WAITALL，且可移植实现能处理 recv 被 EINTR 打断。 */
-static int ipc_recv_full(int fd, void *buf, size_t len)
-{
-    uint8_t *p = (uint8_t *)buf;
-    size_t got = 0;
-
-    while (got < len) {
-        ssize_t n = recv(fd, p + got, len - got, 0);
-        if (n > 0) {
-            got += (size_t)n;
-            continue;
-        }
-        if (n == 0) {
-            return -1; /* 对端关闭 */
-        }
-        if (errno == EINTR) {
-            continue;
-        }
-        return -1;
-    }
-    return 0;
-}
-
 airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
 {
     if (!channel || !message) {
@@ -187,53 +163,12 @@ airy_err_t ipc_send_request(ipc_channel_t *channel, ipc_message_t *request, ipc_
         return err;
     }
 
-    if (channel->config.type == IPC_TYPE_SOCKET && channel->socket_fd >= 0) {
-        struct timeval tv;
-        tv.tv_sec = timeout_ms / 1000;
-        tv.tv_usec = (timeout_ms % 1000) * 1000;
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(channel->socket_fd, &readfds);
-        int sel = select(channel->socket_fd + 1, &readfds, NULL, NULL, &tv);
-        if (sel <= 0) {
-            return AIRY_ETIMEDOUT;
-        }
-
-        uint32_t net_len = 0;
-        if (ipc_recv_full(channel->socket_fd, &net_len, sizeof(net_len)) != 0) {
-            return AIRY_EIO;
-        }
-        uint32_t payload_len = ntohl(net_len);
-        if (payload_len > 0 && payload_len <= channel->config.buffer_size) {
-            if (!channel->internal_buffer) {
-                channel->internal_buffer = AIRY_MALLOC(channel->config.buffer_size);
-            }
-            if (channel->internal_buffer) {
-                size_t want = payload_len > channel->config.buffer_size
-                                  ? (size_t)channel->config.buffer_size
-                                  : (size_t)payload_len;
-                if (ipc_recv_full(channel->socket_fd, channel->internal_buffer, want) == 0) {
-                    AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
-                    response->header.type = IPC_MSG_RESPONSE;
-                    response->header.correlation_id = request->header.msg_id;
-                    response->header.aipc.payload_len = (uint32_t)want;
-                    response->payload = channel->internal_buffer;
-                    response->payload_size = (uint64_t)want;
-                    channel->stats.messages_received++;
-                    return AIRY_SUCCESS;
-                }
-            }
-        }
-        return AIRY_EIO;
-    }
-
-    AIRY_MEMSET(response, 0, sizeof(ipc_message_t));
-    response->header.type = IPC_MSG_RESPONSE;
-    response->header.correlation_id = request->header.msg_id;
-
-    channel->stats.messages_received++;
-
-    return AIRY_SUCCESS;
+    /* P0-4: receive with the same frame format ipc_send emits (128-byte
+     * header + payload). The previous socket branch parsed a 4-byte
+     * length prefix that ipc_send never writes, mis-framing every
+     * response; the non-socket branch returned success without
+     * receiving anything. */
+    return ipc_receive(channel, response, timeout_ms);
 }
 
 airy_err_t ipc_broadcast(ipc_channel_t *channel, const ipc_message_t *message)
@@ -350,9 +285,18 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         return AIRY_EINVAL;
     }
 
-    if (message->header.aipc.payload_len > 0 &&
-        message->header.aipc.payload_len <= channel->config.max_message_size) {
+    if (message->header.aipc.payload_len > channel->config.max_message_size) {
+        /* T-23: fail loudly on oversized payloads. Silently skipping the
+         * payload used to leave its bytes in the stream, permanently
+         * desynchronizing the frame parser. */
+        snprintf(channel->error_msg, sizeof(channel->error_msg), "Payload too large: %u > %u",
+                 message->header.aipc.payload_len,
+                 (unsigned int)channel->config.max_message_size);
+        channel->stats.errors++;
+        return AIRY_EOVERFLOW;
+    }
 
+    if (message->header.aipc.payload_len > 0) {
         message->payload = AIRY_MALLOC(message->header.aipc.payload_len);
         if (!message->payload) {
             return AIRY_ENOMEM;

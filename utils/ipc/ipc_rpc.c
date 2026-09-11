@@ -155,24 +155,38 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
         return err;
 
     if (msg.header.aipc.magic != IPC_MAGIC) {
-        ipc_message_free(&msg);
+        ipc_message_release(&msg);
         return AIRY_EINVAL;
     }
 
     if (msg.payload == NULL || msg.payload_size == 0) {
-        ipc_message_free(&msg);
+        ipc_message_release(&msg);
         return AIRY_EINVAL;
     }
 
     char *method_name = (char *)msg.payload;
     size_t name_len = strnlen(method_name, msg.payload_size);
     if (name_len >= msg.payload_size) {
-        ipc_message_free(&msg);
+        ipc_message_release(&msg);
         return AIRY_EINVAL;
+    }
+
+    if (name_len >= IPC_RPC_METHOD_NAME_MAX) {
+        /* S1: reject oversized method names instead of overflowing the
+         * stack-allocated response header's method_name field. */
+        ipc_message_release(&msg);
+        return AIRY_EOVERFLOW;
     }
 
     void *request_payload = (char *)msg.payload + name_len + 1;
     size_t request_len = msg.payload_size - name_len - 1;
+
+    if (request_len > server->max_request_size) {
+        /* T-14: enforce the configured request-size cap (previously
+         * stored but never checked). */
+        ipc_message_release(&msg);
+        return AIRY_EOVERFLOW;
+    }
 
     rpc_method_node_t *node = rpc_find_method_node(server, method_name);
     if (!node) {
@@ -193,14 +207,14 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
         rsp_msg.payload_size = sizeof(rsp_hdr);
 
         ipc_send(server->transport, &rsp_msg);
-        ipc_message_free(&msg);
+        ipc_message_release(&msg);
         return AIRY_ENOENT;
     }
 
     size_t response_max = server->max_response_size;
     void *response_buf = AIRY_CALLOC(1, response_max);
     if (!response_buf) {
-        ipc_message_free(&msg);
+        ipc_message_release(&msg);
         return AIRY_ENOMEM;
     }
 
@@ -237,7 +251,7 @@ airy_err_t ipc_rpc_server_process(ipc_rpc_server_t *server, uint32_t timeout_ms)
     }
 
     AIRY_FREE(response_buf);
-    ipc_message_free(&msg);
+    ipc_message_release(&msg);
     return AIRY_SUCCESS;
 }
 
@@ -311,19 +325,19 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, 
         return err;
 
     if (rsp_msg.payload == NULL || rsp_msg.payload_size < sizeof(ipc_rpc_header_t)) {
-        ipc_message_free(&rsp_msg);
+        ipc_message_release(&rsp_msg);
         return AIRY_EINVAL;
     }
 
     ipc_rpc_header_t *rsp_hdr = (ipc_rpc_header_t *)rsp_msg.payload;
     if (rsp_hdr->magic != IPC_RPC_MAGIC) {
-        ipc_message_free(&rsp_msg);
+        ipc_message_release(&rsp_msg);
         return AIRY_EINVAL;
     }
 
     if (rsp_hdr->status != 0) {
 
-        ipc_message_free(&rsp_msg);
+        ipc_message_release(&rsp_msg);
         return (airy_err_t)rsp_hdr->status;
     }
 
@@ -341,6 +355,6 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, 
         *response_len = rsp_hdr->payload_len;
     }
 
-    ipc_message_free(&rsp_msg);
+    ipc_message_release(&rsp_msg);
     return AIRY_SUCCESS;
 }

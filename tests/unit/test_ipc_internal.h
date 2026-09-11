@@ -43,6 +43,7 @@ void test_send_error_cases(void **state);
 void test_receive_message(void **state);
 void test_try_receive_message(void **state);
 void test_set_message_callback(void **state);
+void test_receive_oversized_payload_rejected(void **state);
 
 /* ============================================================================
  * 服务端 / 客户端测试（test_ipc_server.c）
@@ -74,6 +75,7 @@ void test_mq_clear(void **state);
 void test_message_create(void **state);
 void test_message_create_empty(void **state);
 void test_message_free_null(void **state);
+void test_message_release(void **state);
 void test_message_clone(void **state);
 void test_message_clone_null(void **state);
 void test_message_checksum(void **state);
@@ -86,5 +88,14 @@ void test_get_error_message_null(void **state);
 void test_is_valid(void **state);
 void test_is_valid_null(void **state);
 void test_flush(void **state);
+
+/* ============================================================================
+ * RPC 测试（test_ipc_rpc.c）
+ * ============================================================================ */
+
+void test_rpc_roundtrip(void **state);
+void test_rpc_method_not_found(void **state);
+void test_rpc_oversized_method_name_rejected(void **state);
+void test_rpc_oversized_request_rejected(void **state);
 
 #endif /* AIRY_RT_TEST_IPC_INTERNAL_H */
