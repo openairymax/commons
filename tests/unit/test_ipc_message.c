@@ -69,6 +69,45 @@ void test_message_free_null(void **state)
 }
 
 /**
+ * @brief 测试仅释放 payload 而保留结构（P0-3）
+ *
+ * ipc_receive / ipc_message_deserialize 填充的是调用方提供的结构（常为
+ * 栈局部变量），只有 payload 是堆分配。对这类消息调用 ipc_message_free
+ * 会 free 栈地址；ipc_message_release 只释放 payload。
+ */
+void test_message_release(void **state)
+{
+    (void)state;
+
+    /* NULL 安全 */
+    ipc_message_release(NULL);
+
+    /* 堆消息：release 后结构仍可用，由调用方自行 free */
+    const char *payload = "Release payload";
+    ipc_message_t *msg = ipc_message_create(IPC_MSG_DATA, payload, strlen(payload));
+    assert_non_null(msg);
+    assert_non_null(msg->payload);
+
+    ipc_message_release(msg);
+    assert_null(msg->payload);
+    assert_int_equal(msg->payload_size, 0);
+
+    ipc_message_free(msg);
+
+    /* 栈上构造的消息：release 只释放堆 payload，不得触碰栈地址 */
+    ipc_message_t stack_msg = {0};
+    stack_msg.header.aipc.magic = IPC_MAGIC;
+    stack_msg.header.version = 1;
+    stack_msg.payload = AIRY_MALLOC(4);
+    assert_non_null(stack_msg.payload);
+    stack_msg.payload_size = 4;
+
+    ipc_message_release(&stack_msg);
+    assert_null(stack_msg.payload);
+    assert_int_equal(stack_msg.payload_size, 0);
+}
+
+/**
  * @brief 测试克隆消息
  */
 void test_message_clone(void **state)

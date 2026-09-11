@@ -11,11 +11,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "airy_memory.h"
 
 #include "../tests/utils/test_framework.h"
 #include "ipc_common.h"
+#include "ipc_common_internal.h"
 #include "test_ipc_internal.h"
 
 /* ============================================================================
@@ -213,6 +215,42 @@ void test_try_receive_message(void **state)
     airy_err_t err = ipc_try_receive(channel, &msg);
 
     assert_true(err == AIRY_SUCCESS || err == AIRY_EBUSY);
+
+    ipc_channel_close(channel);
+    ipc_channel_destroy(channel);
+}
+
+/**
+ * @brief 测试超限 payload 被拒绝且不再静默错位（T-23）
+ *
+ * 旧实现在 payload_len 超过 max_message_size 时静默跳过 payload 读取并
+ * 返回成功，使 payload 字节残留流中、帧解析器永久错位。修复后应显式
+ * 失败（AIRY_EOVERFLOW）。
+ */
+void test_receive_oversized_payload_rejected(void **state)
+{
+    (void)state;
+
+    ipc_config_t config = ipc_create_default_config(IPC_TYPE_PIPE);
+    config.max_message_size = 64;
+    ipc_channel_t *channel = ipc_channel_create(&config);
+    assert_non_null(channel);
+    ipc_channel_open(channel);
+
+    /* 直接写入一个 payload_len 超限的头帧，模拟损坏/恶意的对端 */
+    ipc_message_header_t hdr;
+    memset(&hdr, 0, sizeof(hdr));
+    hdr.aipc.magic = IPC_MAGIC;
+    hdr.version = 1;
+    hdr.type = IPC_MSG_DATA;
+    hdr.aipc.payload_len = 65;
+
+    ssize_t written = write(((struct ipc_channel *)channel)->fd_write, &hdr, sizeof(hdr));
+    assert_int_equal((int)written, (int)sizeof(hdr));
+
+    ipc_message_t received = {0};
+    airy_err_t err = ipc_receive(channel, &received, 1000);
+    assert_int_equal(err, AIRY_EOVERFLOW);
 
     ipc_channel_close(channel);
     ipc_channel_destroy(channel);

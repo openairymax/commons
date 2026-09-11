@@ -23,9 +23,27 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
 
 /**
  * @brief Free a message
+ *
+ * Only for messages whose structure itself was heap-allocated by
+ * ipc_message_create / ipc_message_clone. For received or stack-constructed
+ * messages (ipc_receive / ipc_message_deserialize / local ipc_message_t),
+ * use ipc_message_release instead.
+ *
  * @param message Message structure
  */
 void ipc_message_free(ipc_message_t *message);
+
+/**
+ * @brief Release the payload of a message without freeing the structure
+ *
+ * For received or stack-constructed messages the structure is owned by the
+ * caller (often a stack local); only the payload is heap-allocated. This
+ * releases the payload (P0-3: calling ipc_message_free on such messages
+ * used to free the stack address).
+ *
+ * @param message Message structure
+ */
+void ipc_message_release(ipc_message_t *message);
 
 /**
  * @brief Clone a message

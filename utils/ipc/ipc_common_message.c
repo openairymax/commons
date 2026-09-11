@@ -58,7 +58,7 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
     return msg;
 }
 
-void ipc_message_free(ipc_message_t *message)
+void ipc_message_release(ipc_message_t *message)
 {
     if (!message) {
         return;
@@ -68,7 +68,16 @@ void ipc_message_free(ipc_message_t *message)
         AIRY_FREE(message->payload);
         message->payload = NULL;
     }
+    message->payload_size = 0;
+}
 
+void ipc_message_free(ipc_message_t *message)
+{
+    if (!message) {
+        return;
+    }
+
+    ipc_message_release(message);
     AIRY_FREE(message);
 }
 
