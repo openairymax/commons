@@ -86,16 +86,6 @@ struct sync_barrier {
     platform_barrier_t barrier;
 };
 
-struct sync_event {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_t stats;
-    bool manual_reset;
-    bool signaled;
-    platform_event_t event;
-};
-
 #ifdef __cplusplus
 }
 #endif

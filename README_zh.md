@@ -60,7 +60,7 @@ commons/
 │   │   └── check.h              # 通用检查宏
 │   ├── logging/                 # 日志（三级：Core → Atomic → Service）
 │   ├── sync/                    # 同步原语（8+ 锁与队列）
-│   ├── memory/                  # 内存管理（池、智能指针、零拷贝、arena、tcache）
+│   ├── memory/                  # 内存管理（池、智能指针、零拷贝）
 │   ├── string/                  # 字符串操作与安全格式化
 │   ├── ipc/                     # IPC 抽象层
 │   ├── token/                   # 令牌管理（API Key / JWT 生命周期、counter、budget）
@@ -118,7 +118,7 @@ commons/
 |------|------|------|
 | logging | `utils/logging/` | 三级日志（Core → Atomic → Service）；JSON/文本格式；原子日志 |
 | sync | `utils/sync/` | 8+ 同步原语：自旋锁、互斥锁、读写锁、信号量、条件变量、事件、屏障、递归互斥锁 |
-| memory | `utils/memory/` | 内存池、智能指针、零拷贝、arena、tcache、预分配、调试、统计上报 |
+| memory | `utils/memory/` | 内存池、智能指针、零拷贝、预分配、调试、统计上报 |
 | string | `utils/string/` | 字符串操作与安全字符串工具（严格合规下替换不安全的 `strcpy` 家族） |
 | ipc | `utils/ipc/` | IPC 抽象层（ipc_common；仅 POSIX） |
 | token | `utils/token/` | 令牌管理：API Key / JWT 生命周期、counter、budget |

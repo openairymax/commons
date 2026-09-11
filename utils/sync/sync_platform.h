@@ -60,9 +60,6 @@ typedef struct {
 } platform_barrier_t;
 
 
-typedef HANDLE platform_event_t;
-
-
 #else
 #include <errno.h>
 #include <pthread.h>
@@ -113,13 +110,6 @@ typedef struct {
 typedef pthread_barrier_t platform_barrier_t;
 #endif
 
-
-typedef struct {
-    pthread_cond_t cond;
-    pthread_mutex_t mutex;
-    bool signaled;
-    bool manual_reset;
-} platform_event_t;
 
 #endif /* _WIN32 */
 /**
@@ -368,43 +358,6 @@ int platform_barrier_destroy(platform_barrier_t *barrier);
  * @return 0 on success, non-zero on failure
  */
 int platform_barrier_wait(platform_barrier_t *barrier);
-
-/**
- * @brief Initialize a platform event
- * @param[in] event Event pointer
- * @param[in] manual_reset Whether manual reset
- * @return 0 on success, non-zero on failure
- */
-int platform_event_init(platform_event_t *event, bool manual_reset);
-
-/**
- * @brief Destroy a platform event
- * @param[in] event Event pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_event_destroy(platform_event_t *event);
-
-/**
- * @brief Set a platform event to the signaled state
- * @param[in] event Event pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_event_set(platform_event_t *event);
-
-/**
- * @brief Reset a platform event to the non-signaled state
- * @param[in] event Event pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_event_reset(platform_event_t *event);
-
-/**
- * @brief Wait on a platform event
- * @param[in] event Event pointer
- * @param[in] timeout_ms Timeout in milliseconds, 0 waits indefinitely
- * @return 0 on success, non-zero on failure
- */
-int platform_event_wait(platform_event_t *event, uint64_t timeout_ms);
 
 /**
  * @brief Get the current timestamp (milliseconds)

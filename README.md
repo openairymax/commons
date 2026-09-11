@@ -60,7 +60,7 @@ commons/
 │   │   └── check.h              # Generic check macros
 │   ├── logging/                 # Logging (3-tier: Core → Atomic → Service)
 │   ├── sync/                    # Sync primitives (8+ locks & queues)
-│   ├── memory/                  # Memory management (pools, smart ptrs, zero-copy, arena, tcache)
+│   ├── memory/                  # Memory management (pools, smart ptrs, zero-copy)
 │   ├── string/                  # String operations and safe formatting
 │   ├── ipc/                     # IPC abstraction layer
 │   ├── token/                   # Token management (API Key / JWT lifecycle, counter, budget)
@@ -118,7 +118,7 @@ The unified error code system (`AIRY_E*`) covers 29 standard errors including in
 |--------|------|----------------|
 | logging | `utils/logging/` | 3-tier logging (Core → Atomic → Service); JSON/text formats; atomic logging |
 | sync | `utils/sync/` | 8+ sync primitives: spinlock, mutex, rwlock, semaphore, condition, event, barrier, recursive mutex |
-| memory | `utils/memory/` | Memory pools, smart pointers, zero-copy, arena, tcache, prealloc, debug, stats reporter |
+| memory | `utils/memory/` | Memory pools, smart pointers, zero-copy, prealloc, debug, stats reporter |
 | string | `utils/string/` | String operations and safe string utilities (replaces unsafe `strcpy` family under strict compliance) |
 | ipc | `utils/ipc/` | IPC abstraction layer (ipc_common; POSIX-only) |
 | token | `utils/token/` | Token management: API Key / JWT lifecycle, counter, budget |

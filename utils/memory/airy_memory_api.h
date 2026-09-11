@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
-#include "arena.h"
 #include "airy_memory_types.h"
 
 #ifdef __cplusplus

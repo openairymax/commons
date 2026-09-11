@@ -30,7 +30,6 @@ tests/
 │   ├── test_logger.c            # 日志系统测试
 │   ├── test_token.c             # 令牌管理测试
 │   ├── test_cost.c              # 成本估算与控制测试
-│   ├── test_arena_tcache.c      # 内存池/竞技场测试
 │   ├── test_print.c             # 打印工具测试
 │   ├── test_config.c            # 配置系统测试（当前禁用）
 │   ├── test_types.c             # 类型系统测试（当前禁用）
@@ -123,7 +122,6 @@ cd build/agentrt/commons/tests
 | `test_token` | 活跃 | 令牌管理 |
 | `test_cost` | 活跃 | 成本估算与控制 |
 | `test_ipc` | 活跃 | IPC 抽象层（按功能域拆分 6 个文件，cmocka_stub 适配） |
-| `test_arena_tcache` | 活跃 | 内存池/竞技场 |
 | `test_print` | 活跃 | 打印工具 |
 | `test_cancel_token` | 活跃 | 取消令牌（异步可中断） |
 | `test_airy_effect` | 活跃 | 统一作用域 effect 原语 |
