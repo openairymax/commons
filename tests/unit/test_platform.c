@@ -97,6 +97,7 @@ static int test_memory_allocation(void)
 
     AIRY_FREE(ptr1);
     AIRY_FREE(ptr2);
+    AIRY_FREE(ptr3); /* 零尺寸分配可能返回可释放指针，须回收（ASan/LSan 门禁） */
 
     printf("  Memory allocation: OK\n");
     return 0;
