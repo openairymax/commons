@@ -11,20 +11,16 @@
  *   - CRC32 covers header[0:72) + payload (same algorithm as IPC C-S12)
  *   - validate() checks magic/version/flags/reserved/payload_len/CRC32
  *
- * Timestamps use a monotonic clock (monotonic ns), cross-platform
- * (POSIX/Win32).
+ * Timestamps use the monotonic clock via airy_time_ns() (8.2.3 SSoT,
+ * implemented once in corekern clock.c).
  */
 
 #include <airymax/task_desc.h>
 
+#include <platform_misc.h>
+
 #include <stddef.h>
 #include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <time.h>
-#endif
 
 /* ============================================================================
  * CRC-32 (IEEE 802.3, same algorithm as the IPC ipc_calc_crc32)
@@ -87,23 +83,6 @@ static __u32 task_desc_compute_crc(const struct airy_task_desc_hdr *desc, const 
     return ~crc;
 }
 
-static __u64 task_desc_monotonic_ns(void)
-{
-#ifdef _WIN32
-    LARGE_INTEGER freq, counter;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&counter);
-    if (freq.QuadPart > 0)
-        return (__u64)((double)counter.QuadPart / freq.QuadPart * 1000000000.0);
-    return 0;
-#else
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        return (__u64)ts.tv_sec * 1000000000ull + (__u64)ts.tv_nsec;
-    return 0;
-#endif
-}
-
 
 airy_err_t airy_task_desc_create(struct airy_task_desc_hdr *desc, __u16 opcode, __u64 task_id,
                                  __u64 parent_task_id, __u64 deadline_ns, __u64 src_task,
@@ -123,7 +102,7 @@ airy_err_t airy_task_desc_create(struct airy_task_desc_hdr *desc, __u16 opcode, 
     desc->opcode = opcode;
     desc->task_id = task_id;
     desc->parent_task_id = parent_task_id;
-    desc->submit_time_ns = task_desc_monotonic_ns();
+    desc->submit_time_ns = airy_time_ns();
     desc->deadline_ns = deadline_ns;
     desc->src_task = src_task;
     desc->dst_task = dst_task;

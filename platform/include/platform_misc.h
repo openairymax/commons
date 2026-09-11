@@ -26,14 +26,18 @@ extern "C" {
 
 /* ==================== Time & random ==================== */
 
+/* 8.2.3 (SSoT): facade declarations kept for consumer compatibility — the
+ * authoritative declaration lives in atoms/corekern/include/airy_time.h and
+ * the single implementation in corekern src/time/clock.c, source-shared
+ * into libairy_common.a since 0.1.15. */
 /**
- * @brief Get high-precision timestamp (nanoseconds)
+ * @brief Get high-precision monotonic timestamp (nanoseconds)
  * @return timestamp
  */
 uint64_t airy_time_ns(void);
 
 /**
- * @brief Get current timestamp (milliseconds)
+ * @brief Get current monotonic timestamp (milliseconds)
  * @return timestamp
  */
 uint64_t airy_time_ms(void);
