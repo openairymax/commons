@@ -12,10 +12,12 @@
  * A daemon calls this module at startup and it automatically performs:
  * 1. IPC Bus initialization
  * 2. Channel registration
- * 3. Endpoint registration (so other daemons can discover it)
- * 4. Default message handler registration
- * 5. Automatic protocol routing
- * 6. Automatic unregistration on shutdown
+ * 3. Handler registration (optional, via daemon_bootstrap_ipc_register_handler)
+ * 4. Automatic cleanup on shutdown
+ *
+ * 8.3.4 (0.1.15): endpoint registration and protocol auto-routing were
+ * removed with the bus endpoint registry, and the convenience send()
+ * wrapper was removed with the never-delivering send family.
  *
  * Typical usage (daemon main()):
  * @code
@@ -58,8 +60,9 @@ typedef struct daemon_bootstrap_ipc_s daemon_bootstrap_ipc_t;
  *
  * @param daemon_name    daemon name (e.g. "llm_d")
  * @param channel_name   channel name (e.g. "llm")
- * @param host           listen address (e.g. "127.0.0.1"), NULL uses Unix socket
- * @param port           listen port, 0 uses Unix socket
+ * @param host           unused since 8.3.4 (kept for atoms ops-table
+ *                       compatibility; pass NULL for a Unix socket)
+ * @param port           unused since 8.3.4 (pass 0)
  * @param protocol       default protocol
  * @return Bootstrap handle, NULL on failure
  */
@@ -99,19 +102,6 @@ void daemon_bootstrap_ipc_stop(daemon_bootstrap_ipc_t *bipc);
  */
 int daemon_bootstrap_ipc_register_handler(daemon_bootstrap_ipc_t *bipc,
                                           ipc_bus_message_handler_t handler, void *user_data);
-
-
-/**
- * @brief Convenience send method (auto routing).
- *
- * @param bipc           Bootstrap handle
- * @param target_service Target service name
- * @param payload        Message payload
- * @param payload_size   Payload size
- * @return 0 on success, nonzero on failure
- */
-int daemon_bootstrap_ipc_send(daemon_bootstrap_ipc_t *bipc, const char *target_service,
-                              const void *payload, size_t payload_size);
 
 
 /**

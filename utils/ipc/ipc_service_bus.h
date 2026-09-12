@@ -6,22 +6,24 @@
  * @brief IPC service bus: unified inter-daemon communication framework
  *        (authoritative commons version).
  *
- * Provides an efficient communication abstraction layer between daemons,
- * integrating the UnifiedProtocol stack with multi-protocol messaging,
- * service discovery, and load balancing.
+ * Provides an efficient communication abstraction layer between daemons:
+ * bus bring-up (create/start/stop/destroy), channel + handler
+ * registration, and request/response transport.
  *
  * P0.17 phase 3: migrated from daemons/common/include/ipc_service_bus.h
  * into commons, removing the atoms->daemons compile-time reverse
  * dependency (IRON-6). The daemons copy is kept as a re-exporting
  * compatibility header.
  *
- * Design principles:
+ * 8.3.4 (0.1.15): the send/broadcast/notify family and the endpoint
+ * registry (register/discover/select/health) were removed: send() never
+ * delivered a message, and every real conversation flows through
+ * request(). Surviving design principles:
  * 1. Unified message bus: all daemons communicate over a unified bus
  * 2. Protocol aware: messages carry a protocol type, supporting MCP/A2A/
  *    OpenAI API etc.
- * 3. Location transparency: service consumers need not know the provider's
- *    physical location
- * 4. Resilient communication: built-in retry, timeout, and circuit breaker
+ * 3. Location transparency: request() addresses peers by service name
+ * 4. Resilient communication: built-in retry and timeout
  *
  * @see svc_common.h service management framework
  * @see ipc_common.h IPC low-level abstraction
@@ -41,24 +43,17 @@ extern "C" {
 #endif
 
 
-#define IPC_BUS_MAX_SERVICES 64
 #define IPC_BUS_MAX_CHANNELS 32
 #define IPC_BUS_MAX_MESSAGE_SIZE (512 * 1024)
 #define IPC_BUS_DEFAULT_TIMEOUT_MS 5000
 #define IPC_BUS_MAX_RETRIES 3
-#define IPC_BUS_MAX_PROTOCOLS 8
 #define IPC_BUS_CHANNEL_NAME_LEN 128
 #define IPC_BUS_SERVICE_ID_LEN 64
 
 
 typedef enum {
     IPC_BUS_MSG_REQUEST = 0,
-    IPC_BUS_MSG_RESPONSE = 1,
-    IPC_BUS_MSG_NOTIFICATION = 2,
-    IPC_BUS_MSG_BROADCAST = 3,
-    IPC_BUS_MSG_HEARTBEAT = 4,
-    IPC_BUS_MSG_DISCOVERY = 5,
-    IPC_BUS_MSG_CONTROL = 6
+    IPC_BUS_MSG_RESPONSE = 1
 } ipc_bus_msg_type_t;
 
 
@@ -117,19 +112,6 @@ typedef struct {
 
 
 typedef struct {
-    char service_name[IPC_BUS_SERVICE_ID_LEN];
-    char endpoint[256];
-    ipc_bus_proto_t supported_protocols[4];
-    uint32_t protocol_count;
-    uint32_t weight;
-    bool healthy;
-    uint64_t last_heartbeat;
-    uint32_t active_connections;
-    uint32_t max_connections;
-} ipc_bus_endpoint_t;
-
-
-typedef struct {
     uint64_t messages_sent;
     uint64_t messages_received;
     uint64_t bytes_sent;
@@ -139,7 +121,6 @@ typedef struct {
     uint64_t avg_latency_us;
     uint64_t max_latency_us;
     uint32_t active_channels;
-    uint32_t active_endpoints;
 } ipc_bus_stats_t;
 
 
@@ -149,9 +130,6 @@ typedef struct ipc_bus_channel_s *ipc_bus_channel_t;
 
 typedef int (*ipc_bus_message_handler_t)(ipc_bus_channel_t channel,
                                          const ipc_bus_message_t *message, void *user_data);
-
-typedef void (*ipc_bus_event_handler_t)(ipc_service_bus_t bus, const char *event_name,
-                                        const void *event_data, size_t data_len, void *user_data);
 
 
 /**
@@ -208,16 +186,6 @@ AIRY_API const char *ipc_bus_channel_get_name(ipc_bus_channel_t channel);
 
 
 /**
- * @brief Send a message to a specific service
- * @param bus Bus handle
- * @param target_service Target service name
- * @param message Message structure
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *target_service,
-                                         const ipc_bus_message_t *message);
-
-/**
  * @brief Send a request and wait for the response
  * @param bus Bus handle
  * @param target_service Target service name
@@ -229,28 +197,6 @@ AIRY_API airy_err_t ipc_service_bus_send(ipc_service_bus_t bus, const char *targ
 AIRY_API airy_err_t ipc_service_bus_request(ipc_service_bus_t bus, const char *target_service,
                                             const ipc_bus_message_t *request,
                                             ipc_bus_message_t *response, uint32_t timeout_ms);
-
-/**
- * @brief Broadcast a message to all services
- * @param bus Bus handle
- * @param message Message structure
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_broadcast(ipc_service_bus_t bus,
-                                              const ipc_bus_message_t *message);
-
-/**
- * @brief Send a notification message
- * @param bus Bus handle
- * @param target_service Target service name
- * @param payload Payload data
- * @param payload_size Payload size
- * @param protocol Protocol type
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_notify(ipc_service_bus_t bus, const char *target_service,
-                                           const void *payload, size_t payload_size,
-                                           ipc_bus_proto_t protocol);
 
 
 /**
@@ -273,75 +219,6 @@ AIRY_API airy_err_t ipc_service_bus_register_handler(ipc_service_bus_t bus,
 AIRY_API airy_err_t ipc_service_bus_unregister_handler(ipc_service_bus_t bus,
                                                        ipc_bus_message_handler_t handler);
 
-/**
- * @brief Register an event handler
- * @param bus Bus handle
- * @param event_name Event name
- * @param handler Event handler function
- * @param user_data User data
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_register_event_handler(ipc_service_bus_t bus,
-                                                           const char *event_name,
-                                                           ipc_bus_event_handler_t handler,
-                                                           void *user_data);
-
-
-/**
- * @brief Register a service endpoint
- * @param bus Bus handle
- * @param endpoint Endpoint information
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_register_endpoint(ipc_service_bus_t bus,
-                                                      const ipc_bus_endpoint_t *endpoint);
-
-/**
- * @brief Unregister a service endpoint
- * @param bus Bus handle
- * @param service_name Service name
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_unregister_endpoint(ipc_service_bus_t bus,
-                                                        const char *service_name);
-
-/**
- * @brief Discover service endpoints
- * @param bus Bus handle
- * @param service_name Service name (NULL for all)
- * @param protocol Protocol filter (IPC_BUS_PROTO_AUTO for no filtering)
- * @param endpoints [out] Endpoint array
- * @param max_count Maximum array capacity
- * @param found_count [out] Actual count found
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_discover(ipc_service_bus_t bus, const char *service_name,
-                                             ipc_bus_proto_t protocol,
-                                             ipc_bus_endpoint_t *endpoints, uint32_t max_count,
-                                             uint32_t *found_count);
-
-/**
- * @brief Select the best endpoint (load balancing)
- * @param bus Bus handle
- * @param service_name Service name
- * @param protocol Protocol type
- * @param endpoint [out] Selected endpoint
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_select_endpoint(ipc_service_bus_t bus, const char *service_name,
-                                                    ipc_bus_proto_t protocol,
-                                                    ipc_bus_endpoint_t *endpoint);
-
-/**
- * @brief Update endpoint health status
- * @param bus Bus handle
- * @param service_name Service name
- * @param healthy Whether healthy
- * @return 0 on success, non-zero on failure
- */
-AIRY_API airy_err_t ipc_service_bus_update_endpoint_health(ipc_service_bus_t bus,
-                                                           const char *service_name, bool healthy);
-
 
 /**
  * @brief Create a service bus message
@@ -360,13 +237,6 @@ AIRY_API ipc_bus_message_t *ipc_bus_message_create(ipc_bus_msg_type_t msg_type,
  * @param message Message structure
  */
 AIRY_API void ipc_bus_message_free(ipc_bus_message_t *message);
-
-/**
- * @brief Clone a message
- * @param message Source message
- * @return New message, NULL on failure
- */
-AIRY_API ipc_bus_message_t *ipc_bus_message_clone(const ipc_bus_message_t *message);
 
 /**
  * @brief Convert a protocol type to a string
