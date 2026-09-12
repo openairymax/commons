@@ -1,11 +1,13 @@
 # Tests — Commons 测试套件
 
-**模块路径**: `agentrt/commons/tests/`
-**版本**: v0.1.0
+**模块路径**: `commons/tests/`
+**版本**: 0.1.15
 
 ## 概述
 
-Tests 是 Commons 统一基础库的测试套件，包含单元测试和集成测试，覆盖平台抽象、错误处理、日志系统、令牌管理、成本控制、输入校验等核心模块。测试套件使用 CMake + CTest 框架，支持自动化构建和回归检测。
+Tests 是 Commons 统一基础库的测试套件，覆盖平台抽象、错误处理、日志系统、
+令牌管理、成本控制、IPC、输入法、正则引擎等核心模块。测试套件使用
+CMake + CTest 框架，支持自动化构建和回归检测。
 
 ## 设计目标
 
@@ -20,28 +22,24 @@ Tests 是 Commons 统一基础库的测试套件，包含单元测试和集成�
 tests/
 ├── CMakeLists.txt               # 测试构建配置
 ├── README.md                    # 本文档
+├── test_sc_headers.c            # 系统契约头（include/airymax/）编译自检
 ├── utils/                       # 测试工具框架
 │   ├── test_framework.h         # 通用测试框架（断言宏、测试注册）
 │   ├── test_macros.h            # 测试辅助宏（EXPECT_EQ、ASSERT_TRUE 等）
-│   └── cmocka_stub.h            # cmocka 模拟框架兼容适配
-├── unit/                        # 单元测试
-│   ├── test_platform.c          # 平台抽象层测试
-│   ├── test_error.c             # 错误处理框架测试
-│   ├── test_logger.c            # 日志系统测试
-│   ├── test_token.c             # 令牌管理测试
-│   ├── test_cost.c              # 成本估算与控制测试
-│   ├── test_print.c             # 打印工具测试
-│   ├── test_config.c            # 配置系统测试（当前禁用）
-│   ├── test_types.c             # 类型系统测试（当前禁用）
-│   ├── test_ipc.c               # IPC 测试（当前禁用）
-│   ├── test_network.c           # 网络工具测试（当前禁用）
-│   ├── test_string_utils.c      # 字符串工具测试（未接线 CMake）
-│   ├── test_observability.c     # 可观测性测试（未接线 CMake）
-│   ├── test_resource_guard.c    # 资源保护测试（未接线 CMake）
-│   └── test_input_validator.c   # 输入校验测试（未接线 CMake）
-└── integration/                  # 集成测试
-    ├── test_common_integration.c # 公共模块集成测试（当前禁用）
-    └── test_unified_modules.c   # 统一模块集成测试（当前禁用）
+│   └── cmocka_stub.h            # cmocka 兼容适配层
+├── unit/                        # 单元测试（test_*.c，IPC 按功能域拆分）
+│   ├── test_platform.c / test_platform_time.c
+│   ├── test_error.c / test_logger.c / test_print.c
+│   ├── test_token.c / test_cost.c / test_io.c
+│   ├── test_ipc.c + test_ipc_channel.c / test_ipc_send.c / test_ipc_server.c
+│   │              test_ipc_shm_mq.c / test_ipc_message.c / test_ipc_rpc.c
+│   │              test_ipc_internal.h
+│   ├── test_cancel_token.c / test_airy_effect.c / test_airy_ext.c
+│   ├── test_airy_id.c / test_airy_regex.c / test_ime.c
+│   └── test_types.c / test_network.c / test_string_utils.c
+│       test_observability.c / test_resource_guard.c / test_input_validator.c
+└── bench/                       # 性能基准
+    └── bench_platform_perf.c    # 平台层性能基准
 ```
 
 ## 测试框架
@@ -71,7 +69,8 @@ tests/
 
 ### cmocka 适配
 
-`cmocka_stub.h` 为尚未迁移到 cmocka 框架的测试提供兼容适配层，确保测试代码在无 cmocka 环境下也能编译执行。
+`cmocka_stub.h` 提供 cmocka 风格的兼容适配层，确保测试代码在无 cmocka
+环境下也能编译执行。
 
 ## 构建与运行
 
@@ -105,51 +104,49 @@ ctest -j $(nproc) --output-on-failure
 ### 运行指定测试可执行文件
 
 ```bash
-cd build/agentrt/commons/tests
-./test_platform
-./test_error
+# 可执行文件位于构建目录下的 commons/tests/ 中
+./build/**/commons/tests/test_platform
+./build/**/commons/tests/test_error
 ```
 
-## 当前状态
+## 已接入构建的测试
 
-### 活跃测试（已接线 CMake，15 个）
+以下测试在 `tests/CMakeLists.txt` 中注册为 CTest 用例（前缀 `commons_test_`）：
 
-| 测试 | 状态 | 覆盖模块 |
-|------|------|----------|
-| `test_platform` | 活跃 | 平台抽象层（含 sysinfo / 文件锁 / 线程命名） |
-| `test_error` | 活跃 | 错误处理框架 |
-| `test_logger` | 活跃 | 日志系统 |
-| `test_token` | 活跃 | 令牌管理 |
-| `test_cost` | 活跃 | 成本估算与控制 |
-| `test_ipc` | 活跃 | IPC 抽象层（按功能域拆分 6 个文件，cmocka_stub 适配） |
-| `test_print` | 活跃 | 打印工具 |
-| `test_cancel_token` | 活跃 | 取消令牌（异步可中断） |
-| `test_airy_effect` | 活跃 | 统一作用域 effect 原语 |
-| `test_airy_ext` | 活跃 | 统一扩展注册表 + 四域 provider 契约 |
-| `test_airy_id` | 活跃 | 品牌化 ID（trace_id/msg_id） |
-| `test_airy_regex` | 活跃 | POSIX ERE 引擎（airy_re_*） |
-| `test_ime` | 活跃 | 内置拼音输入法词典 |
-| `test_io` | 活跃 | 文件 CRUD 跨平台往返 |
-
-### 禁用测试（源码保留，未纳入 CMake 构建）
-
-| 测试 | 禁用原因 |
+| 测试 | 覆盖模块 |
 |------|----------|
-| `test_config` | config_unified 模块实现与头文件不匹配 |
-| `test_types` | 需要 cmocka 测试框架 |
-| `test_network` | 需要 cmocka 测试框架 |
-| `test_common_integration` | 依赖 manager.h（utils/manager.h 已存在，待重新接线 include 路径） |
-| `test_unified_modules` | 依赖 test_common_integration |
+| `test_platform` | 平台抽象层（含 sysinfo / 文件锁 / 线程命名） |
+| `test_platform_time` | 时间服务（逻辑墙钟 / 时区 / SNTP 校对 / 周期同步） |
+| `test_error` | 错误处理框架 |
+| `test_logger` | 日志系统 |
+| `test_token` | 令牌管理 |
+| `test_cost` | 成本估算与控制 |
+| `test_print` | 打印工具 |
+| `test_cancel_token` | 取消令牌（异步可中断） |
+| `test_airy_effect` | 统一作用域 effect 原语 |
+| `test_airy_ext` | 统一扩展注册表 + 四域 provider 契约 |
+| `test_airy_id` | 品牌化 ID（trace_id/msg_id） |
+| `test_airy_regex` | POSIX ERE 引擎（airy_re_*） |
+| `test_ime` | 内置拼音输入法词典 |
+| `test_io` | 文件 CRUD 跨平台往返 |
+| `test_ipc` | IPC 抽象层（按功能域拆分 6 个文件；POSIX 平台专属） |
+
+`unit/` 下另保留若干测试源码（如 `test_string_utils.c`、
+`test_observability.c`、`test_resource_guard.c`、`test_input_validator.c`），
+其构建接线以 `tests/CMakeLists.txt` 为准。
 
 ## 依赖关系
 
 | 依赖 | 说明 |
 |------|------|
 | `airy_common` | Commons 聚合库，所有测试的链接目标 |
-| `airy_core` | 核心库，提供基础功能 |
+| `airy_core` | 核心库（由 agentrt 构建树提供） |
 | CMake 3.20+ | 构建系统 |
 | CTest | 测试执行框架 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd.
+
+SPDX-License-Identifier: `AGPL-3.0-or-later OR Apache-2.0`（双许可，任选其一遵守，
+完整文本见仓库根 [LICENSE](../LICENSE)）。

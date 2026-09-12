@@ -1,242 +1,164 @@
-# Security — 安全模块
+# security — 安全工具
 
-**模块路径**: `agentrt/commons/utils/security/`
-**版本**: v0.1.1
+**模块路径**: `commons/utils/security/` · **版本**: 0.1.15
+
+提供两个相互独立的安全组件：`input_validator`（基于白名单的输入验证与净化）和 `log_sanitizer`（日志敏感信息脱敏）。两者均编译进 commons 静态库 `airy_common`。
 
 ## 概述
 
-Security 模块提供统一的输入验证和净化功能，防止注入攻击、路径遍历、缓冲区溢出、SSRF 等常见安全漏洞。该模块遵循白名单验证原则，只允许已知安全的输入模式，是 AgentRT 安全内生体系（E-1 原则）的核心实现。
-
-## 设计目标
-
-- **白名单验证**：只允许已知安全的输入模式，拒绝一切未明确允许的内容
-- **多层防护**：字符串验证、路径验证、命令验证、SQL 验证、URL 验证、数值验证、缓冲区验证
-- **安全失败**：验证失败时明确返回错误信息，不静默通过
-- **净化输出**：提供输入净化函数，将危险输入转换为安全形式
-- **线程安全**：所有公共接口均为线程安全
-
-## 安全原则
-
-1. **永不信任外部输入** — 所有来自用户、网络、文件的输入必须经过验证
-2. **白名单优于黑名单** — 定义允许的模式，拒绝其他一切
-3. **边界检查必须严格** — 长度、范围、缓冲区大小检查不可省略
-4. **错误时安全失败** — 验证失败必须拒绝操作，不能静默通过
+- **input_validator**：对字符串、标识符、JSON、文件路径、Shell 命令、SQL、URL、数值范围做验证，并提供 `airy_safe_*` 系列带边界检查的缓冲区操作。遵循白名单优先、边界从严、失败即拒绝的原则。纯函数、无内部状态，可并发调用。
+- **log_sanitizer**：维护一张全局敏感字段模式表（内置 15 个默认模式，如 `api_key`、`password`、`token`、`authorization`），对任意日志文本做大小写不敏感的模式匹配，将字段值替换为掩码（默认 `***`）。内部以互斥锁保护全局表，接口线程安全。
 
 ## 目录结构
 
 ```
 security/
-├── src/
-│   ├── input_validator.h        # 输入验证接口定义
-│   └── input_validator.c        # 输入验证实现
-└── README.md                    # 本文档
+├── input_validator.h        # 输入验证接口（17 个函数 + 4 个宏）
+├── input_validator.c        # 输入验证实现
+├── log_sanitizer.h          # 日志脱敏接口（7 个函数）
+├── log_sanitizer.c          # 日志脱敏实现
+└── README.md
 ```
 
-## 核心数据结构
+## input_validator — 输入验证与净化
 
-### airy_validation_result_t — 验证结果
+### 验证结果结构
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `is_valid` | `int` | 是否通过验证（1=有效，0=无效） |
-| `error_message` | `const char *` | 错误消息 |
-| `error_code` | `int` | 错误码 |
-| `error_field` | `const char *` | 错误字段名称 |
+```c
+typedef struct {
+    int is_valid;             /* 1 = 通过，0 = 拒绝 */
+    const char *error_message; /* 静态字符串，无需释放 */
+    int error_code;           /* AIRY_EINVAL / AIRY_ESECURITY / AIRY_ESANITIZE */
+    const char *error_field;  /* 出错字段名，静态字符串 */
+} airy_validation_result_t;
+```
 
-## 接口说明
+所有 `airy_validate_*` 函数返回 `void`，结果写入调用方提供的 `result`；`result` 为 NULL 时直接返回、不产生任何输出。
 
-### 字符串验证
-
-| 函数 | 说明 |
-|------|------|
-| `airy_validate_string_length(str, min_len, max_len, result)` | 验证字符串长度是否在范围内 |
-| `airy_validate_string_charset(str, allowed_chars, result)` | 验证字符串是否只包含白名单字符 |
-| `airy_validate_identifier(str, max_len, result)` | 验证标识符（字母/数字/下划线，首字符为字母或下划线） |
-| `airy_validate_json_string(str, max_len, result)` | 验证 JSON 字符串（检查括号平衡、引号闭合） |
-
-### 路径验证
+### 验证接口
 
 | 函数 | 说明 |
 |------|------|
-| `airy_validate_file_path(path, allowed_root, result)` | 验证文件路径安全性（检测 `../` 遍历、空字节注入、根目录限制） |
-| `airy_normalize_path(path, out_normalized, out_len)` | 规范化路径（解析符号链接、相对路径） |
+| `airy_validate_string_length(str, min_len, max_len, result)` | 长度区间校验 |
+| `airy_validate_string_charset(str, allowed_chars, result)` | 字符白名单校验（逐字符 `strchr`） |
+| `airy_validate_identifier(str, max_len, result)` | 标识符：字母/下划线开头，其后字母/数字/下划线 |
+| `airy_validate_json_string(str, max_len, result)` | 仅做括号平衡与引号闭合扫描，非完整 JSON 解析 |
+| `airy_validate_file_path(path, allowed_root, result)` | 拒绝含 `..` 的路径；`allowed_root` 非 NULL 时要求路径以之为前缀；长度 ≤ 4096 |
+| `airy_validate_shell_command(cmd, allowed_commands, result)` | 拒绝 `;`、`|`、`&`、`$`、反引号、换行；黑名单子串检测；白名单为前缀匹配 |
+| `airy_validate_sql_query(sql, result)` | 危险关键字子串检测 + 单引号奇偶校验 |
+| `airy_validate_url(url, allowed_schemes, result)` | 危险协议前缀检测；SSRF 私有地址前缀为全 URL 子串检测 |
+| `airy_validate_int_range(value, min, max, result)` | 整数范围 |
+| `airy_validate_float_range(value, min, max, result)` | 浮点范围 |
 
-### 命令验证
-
-| 函数 | 说明 |
-|------|------|
-| `airy_validate_shell_command(cmd, allowed_commands, result)` | 验证 Shell 命令安全性（检测 `;` `\|` `&` `$` `` ` `` 等注入字符） |
-| `airy_sanitize_shell_param(param, out_sanitized)` | 净化 Shell 参数（转义单引号，移除危险字符） |
-
-### SQL 验证
-
-| 函数 | 说明 |
-|------|------|
-| `airy_validate_sql_query(sql, result)` | 验证 SQL 查询安全性（检测 DROP、UNION SELECT、OR 1=1、注释注入等） |
-| `airy_sanitize_sql_identifier(identifier, out_sanitized)` | 净化 SQL 标识符（验证后加双引号包裹） |
-
-### URL 验证
+### 净化与解析接口
 
 | 函数 | 说明 |
 |------|------|
-| `airy_validate_url(url, allowed_schemes, result)` | 验证 URL 安全性（检测危险协议、内网 IP、localhost） |
-| `airy_parse_url(url, out_scheme, out_host, out_port, out_path)` | 解析 URL 组件（协议、主机、端口、路径） |
+| `airy_normalize_path(path, out_normalized, out_len)` | POSIX 走 `realpath`（要求路径存在）；Windows 走 `GetFullPathNameA`（纯词法，≤ MAX_PATH）。输出由调用方释放 |
+| `airy_sanitize_shell_param(param, out_sanitized)` | 单引号包裹整体，内部 `'` 转义为 `'\''`，非可打印字符与 `` ` `` `$` 静默剔除。输出由调用方释放 |
+| `airy_sanitize_sql_identifier(identifier, out_sanitized)` | 先按标识符规则校验（≤ 128），再以双引号包裹。输出由调用方释放 |
+| `airy_parse_url(url, out_scheme, out_host, out_port, out_path)` | 拆分 `://` 后的协议/主机/端口/路径，各 out 参数可为 NULL。无端口时端口为 0，无路径时路径为空串 |
 
-### 数值验证
-
-| 函数 | 说明 |
-|------|------|
-| `airy_validate_int_range(value, min_val, max_val, result)` | 验证整数范围 |
-| `airy_validate_float_range(value, min_val, max_val, result)` | 验证浮点数范围 |
-
-### 缓冲区验证
+### 缓冲区安全操作
 
 | 函数 | 说明 |
 |------|------|
-| `airy_safe_memcpy(dest, dest_size, src, src_size)` | 安全内存复制（带边界检查） |
-| `airy_safe_strcpy(dest, dest_size, src)` | 安全字符串复制（带终止符空间检查） |
-| `airy_safe_strcat(dest, dest_size, src)` | 安全字符串拼接（带长度检查） |
+| `airy_safe_memcpy(dest, dest_size, src, src_size)` | `src_size > dest_size` 时返回 `AIRY_EOVERFLOW` |
+| `airy_safe_strcpy(dest, dest_size, src)` | 要求含终止符空间，`strlen(src) >= dest_size` 返回 `AIRY_EOVERFLOW` |
+| `airy_safe_strcat(dest, dest_size, src)` | 拼接后总长（含终止符）不得超出 `dest_size` |
 
 ### 便捷宏
 
 | 宏 | 说明 |
 |------|------|
-| `AIRY_VALIDATE_OR_RETURN(result, error_code)` | 验证失败则返回错误码 |
-| `AIRY_VALIDATE_OR_GOTO(result, label, error_code)` | 验证失败则跳转到清理标签 |
-| `AIRY_SAFE_STRCPY(dest, src)` | 安全字符串复制（自动计算 sizeof） |
-| `AIRY_SAFE_STRCAT(dest, src)` | 安全字符串拼接（自动计算 sizeof） |
+| `AIRY_VALIDATE_OR_RETURN(result, error_code)` | 未通过验证则返回给定错误码 |
+| `AIRY_VALIDATE_OR_GOTO(result, label, error_code)` | 未通过验证则赋值 `err` 并 `goto label`（要求作用域内已声明 `err`） |
+| `AIRY_SAFE_STRCPY(dest, src)` / `AIRY_SAFE_STRCAT(dest, src)` | 自动以 `sizeof(dest)` 作为容量 |
 
-## 使用示例
+## log_sanitizer — 日志脱敏
+
+| 函数 | 说明 |
+|------|------|
+| `log_sanitizer_init(max_fields)` | 重建模式表（容量 0 → 默认 32），预置内置模式 |
+| `log_sanitizer_destroy(void)` | 释放模式表并复位，之后可再次 `init` |
+| `log_sanitizer_add_pattern(pattern, replacement)` | 追加模式；`replacement` 为 NULL 时用 `***`；表满返回 `false` |
+| `log_sanitize(message, buffer, buffer_size)` | 脱敏写入调用方缓冲 |
+| `log_sanitize_dup(message)` | 动态版本，返回调用方释放的副本 |
+| `log_contains_sensitive(message)` | 是否命中任一模式 |
+| `log_get_default_patterns(count)` | 取内置模式表（15 项）与数量 |
+
+脱敏行为：模式匹配大小写不敏感，且要求字段名前后为边界字符（前：串首/空白/引号/逗号；后：`=` `:` 空格/引号/换行/`&`/串尾）。命中后从字段名结束到值结束整段消费，重写为 `字段名=替换串`——即原分隔符（`:`、`=`、空白）被归一为 `=`，例如 `password: hunter2` 输出 `password=***`。
+
+## 语义与约束
+
+- `airy_normalize_path` 在 POSIX 下要求目标路径真实存在（`realpath` 语义），文件不存在返回 `AIRY_EINVAL`，与参数非法不可区分。
+- 路径校验只检测 `..` 子串：任何位置出现连续两个点（含合法文件名）都会被拒绝；不检查符号链接，也无法检测内嵌空字节（`const char *` 接口在首个 NUL 处即截断，头文件注释中的该项声明与实现不符，检测逻辑已作为恒假式移除）。
+- Shell 白名单与 URL scheme 白名单均为不区分大小写的前缀匹配，不校验词边界；SSRF 私有地址检测是对完整 URL 做子串匹配，路径或版本号中出现 `10.`、`fc` 等前缀会产生误报。检测规则偏保守，适合纵深防御的一层而非完备判定。
+- `airy_parse_url` 不支持 IPv6 字面量（方括号内 `:` 会被当作端口分隔符）。
+- 日志脱敏的全局模式表由内部互斥锁保护；`pattern`/`replacement` 字符串按指针保存，调用方须保证其生命周期覆盖 sanitizer 使用期。
+- `log_sanitize` 成功返回输出长度；失败返回负错误码（参数非法 `-36`、缓冲不足 `-60`），调用方按 `< 0` 判断即可。`log_sanitize_dup` 分配量不小于 4096 字节。
+- 脱敏输出始终为完整拷贝，不存在零拷贝路径。
+
+## 用法示例
 
 ```c
 #include "input_validator.h"
+#include "log_sanitizer.h"
+#include "airy_memory.h"
 
-// ===== 字符串验证 =====
-airy_validation_result_t result;
+#include <stddef.h>
 
-// 验证标识符
-airy_validate_identifier("my_var_123", 64, &result);
-if (result.is_valid) {
-    // 标识符安全，继续处理
+/* 请求入口：验证 + 净化 */
+int handle_request(const char *id, const char *cmd)
+{
+    airy_validation_result_t v;
+    char *safe_arg = NULL;
+    int ret;
+
+    airy_validate_identifier(id, 64, &v);
+    if (!v.is_valid) {
+        return -1;
+    }
+
+    const char *allowed[] = { "ls", "cat", NULL };
+    airy_validate_shell_command(cmd, allowed, &v);
+    if (!v.is_valid) {
+        return -1;
+    }
+
+    ret = airy_sanitize_shell_param(id, &safe_arg);
+    if (ret == AIRY_SUCCESS) {
+        /* 拼接命令时只使用 safe_arg（已单引号包裹） */
+        AIRY_FREE(safe_arg);
+    }
+    return ret;
 }
 
-// 验证 JSON
-airy_validate_json_string("{\"key\": \"value\"}", 4096, &result);
-if (!result.is_valid) {
-    fprintf(stderr, "Invalid JSON: %s\n", result.error_message);
-}
-
-// ===== 路径验证 =====
-airy_validate_file_path("/tmp/data/config.json", "/tmp", &result);
-AIRY_VALIDATE_OR_RETURN(result, AIRY_ESECURITY);
-
-// 规范化路径
-char *normalized = NULL;
-size_t normalized_len = 0;
-if (airy_normalize_path("../../etc/passwd", &normalized, &normalized_len) == AIRY_SUCCESS) {
-    printf("Normalized: %s\n", normalized);
-    AIRY_FREE(normalized);
-}
-
-// ===== 命令验证 =====
-const char *allowed[] = {"ls", "cat", "echo", "grep", NULL};
-airy_validate_shell_command("ls -la /tmp", allowed, &result);
-if (result.is_valid) {
-    // 命令安全，可以执行
-}
-
-// 净化 Shell 参数
-char *safe_param = NULL;
-airy_sanitize_shell_param("user's input; rm -rf /", &safe_param);
-printf("Sanitized: %s\n", safe_param);  // 输出: 'user\'s input; rm -rf /'
-AIRY_FREE(safe_param);
-
-// ===== SQL 验证 =====
-airy_validate_sql_query("SELECT * FROM users WHERE id = 1", &result);
-if (result.is_valid) {
-    // SQL 安全
-}
-
-// 净化 SQL 标识符
-char *safe_identifier = NULL;
-airy_sanitize_sql_identifier("user_name", &safe_identifier);
-printf("Safe identifier: %s\n", safe_identifier);  // 输出: "user_name"
-AIRY_FREE(safe_identifier);
-
-// ===== URL 验证 =====
-const char *schemes[] = {"http", "https", NULL};
-airy_validate_url("https://api.example.com/data", schemes, &result);
-if (result.is_valid) {
-    // URL 安全，可以发起请求
-}
-
-// 解析 URL
-char *scheme = NULL, *host = NULL, *path = NULL;
-uint16_t port = 0;
-airy_parse_url("https://api.example.com:443/v1/data", &scheme, &host, &port, &path);
-printf("Scheme: %s, Host: %s, Port: %d, Path: %s\n", scheme, host, port, path);
-AIRY_FREE(scheme);
-AIRY_FREE(host);
-AIRY_FREE(path);
-
-// ===== 数值验证 =====
-airy_validate_int_range(100, 0, 255, &result);
-if (result.is_valid) {
-    // 数值在有效范围内
-}
-
-// ===== 缓冲区安全操作 =====
-char dest[64];
-if (airy_safe_strcpy(dest, sizeof(dest), user_input) == AIRY_SUCCESS) {
-    printf("Safe copy: %s\n", dest);
+/* 写日志前脱敏 */
+void prepare_log_line(const char *raw, char *out, size_t out_size)
+{
+    if (log_sanitize(raw, out, out_size) < 0) {
+        out[0] = '\0'; /* 溢出或参数非法时宁可不输出 */
+    }
 }
 ```
 
-## 安全检测规则
+## 构建与依赖
 
-### Shell 命令注入检测
+两个源文件均由 `commons/CMakeLists.txt` 列入 `airy_common` 源列表，`utils/security` 注册为 PUBLIC include 目录，头文件随 `install` 导出到 `include/agentrt/utils/security/`。链接 `airy_common` 即可使用，无需额外 target。
 
-| 检测项 | 说明 |
+| 依赖 | 用途 |
 |------|------|
-| 危险字符 | `;` `\|` `&` `$` `` ` `` `\n` |
-| 危险命令 | `rm -rf`、`dd`、`mkfs`、`fdisk`、`shutdown`、`reboot`、`chmod 777`、`chown` 等 |
-| 命令白名单 | 可选，启用后只允许执行白名单中的命令 |
+| `utils/error`（`error.h`、`error_codes.h`） | `AIRY_EINVAL`、`AIRY_ESECURITY`、`AIRY_ESANITIZE`、`AIRY_EOVERFLOW` 等错误码 |
+| `utils/memory`（`airy_memory.h`） | 净化输出与模式表的分配/释放（`AIRY_MALLOC`/`AIRY_FREE`） |
+| `utils/logging`（`svc_logger.h`） | `log_sanitizer` 的事件日志（`SVC_LOG_*` 转发到 `AIRY_LOG_*`） |
+| `utils/include`（`atomic_compat.h`） | `log_sanitizer` 的互斥锁与原子原语 |
 
-### SQL 注入检测
+本模块仅依赖 commons 内部其他工具模块，无 agentrt 内部上游依赖。
 
-| 检测项 | 说明 |
-|------|------|
-| 危险关键字 | `DROP`、`TRUNCATE`、`ALTER`、`DELETE FROM`、`UNION SELECT`、`EXEC(`、`EXECUTE(` |
-| 注释注入 | `--`、`/*`、`*/`、`; --` |
-| 布尔注入 | `OR 1=1`、`OR '1'='1'` |
-| 引号平衡 | 检测单引号数量是否成对 |
-
-### URL 安全检测
-
-| 检测项 | 说明 |
-|------|------|
-| 危险协议 | `javascript:`、`data:`、`vbscript:`、`file:`、`about:`、`blob:`、`filesystem:` |
-| SSRF 防护 | 检测内网 IP（`10.x`、`172.16-31.x`、`192.168.x`、`127.x`、`169.254.x`） |
-| 本地主机 | 检测 `localhost`、`127.0.0.1`、`::1`、`fc`/`fd`/`fe`/`ff` 前缀 |
-
-### 路径遍历检测
-
-| 检测项 | 说明 |
-|------|------|
-| 目录遍历 | 检测 `..`、`../`、`..\\` |
-| 空字节注入 | 检测路径中间的空字节 |
-| 根目录限制 | 可选，限制路径必须在指定的根目录下 |
-| 路径长度 | 最大 4096 字符 |
-
-## 依赖关系
-
-| 依赖 | 说明 |
-|------|------|
-| `error.h` | 统一错误码定义（`AIRY_SUCCESS`、`AIRY_EINVAL`、`AIRY_ESECURITY` 等） |
-| `logger.h` | 日志记录（安全事件告警） |
-| `airy_memory.h` | 统一内存管理宏 |
-| `string_compat.h` | 字符串操作兼容层 |
+`input_validator` 的单元测试位于 `commons/tests/unit/test_input_validator.c`；`log_sanitizer` 在 commons 测试套件中暂无专项用例。
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+*SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*
+*Copyright (c) 2025-2026 SPHARX Ltd. 及贡献者，详见 [LICENSE](../../LICENSE)。*

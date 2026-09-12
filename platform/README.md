@@ -1,7 +1,7 @@
 # Platform — 平台抽象层
 
-**模块路径**: `agentrt/commons/platform/`
-**版本**: v0.1.0
+**模块路径**: `commons/platform/`
+**版本**: 0.1.15
 
 ## 概述
 
@@ -19,16 +19,26 @@ Platform 是 Airymax AgentRT 的跨平台抽象层，屏蔽 Linux、Windows、ma
 ```
 platform/
 ├── include/
-│   ├── platform.h               # 平台检测与基础定义（线程、互斥锁、条件变量、Socket、进程、时间等）
+│   ├── platform.h               # 总入口（聚合头，包含下列各功能域头文件）
+│   ├── platform_base.h          # 平台检测与基础定义
+│   ├── platform_sync.h          # 同步域声明（线程、互斥锁、条件变量、线程命名）
+│   ├── platform_process.h       # 进程域声明（start/wait/kill/run_capture）
+│   ├── platform_paths.h         # AIRY_HOME 路径体系声明
+│   ├── platform_misc.h          # 杂项域声明（网络/原子/随机/文件系统/字符串/系统信息/文件锁）
+│   ├── platform_time.h          # 时间与休眠声明
+│   ├── daemon_platform_ext.h    # 守护进程平台扩展
 │   └── export.h                 # 符号导出控制（DLL/SO 可见性）
 ├── compat/
 │   ├── stdbool.h                # C99 stdbool 兼容头文件（旧编译器）
 │   └── stdint.h                 # C99 stdint 兼容头文件（旧编译器）
-├── platform.c                   # 基础工具域：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
-├── platform_paths.c             # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
-├── platform_process.c           # 进程域（start/wait/kill/run_capture/事件源驱动取消执行）
-├── platform_sync.c              # 同步原语域（线程 create/join/detach/set_name、互斥锁、条件变量）
-├── platform_internal.h          # 域间共享头
+├── src/
+│   ├── platform.c               # 基础工具实现：网络/原子/时间/随机/文件系统/字符串/系统信息/文件锁
+│   ├── platform_compat.c        # 兼容性实现
+│   ├── platform_paths.c         # AIRY_HOME 路径体系（bin/lib/run/logs/config/data/tmp/cache/workspace）
+│   ├── platform_process.c       # 进程域（start/wait/kill/run_capture/事件源驱动取消执行）
+│   ├── platform_sync.c          # 同步原语域（线程 create/join/detach/set_name、互斥锁、条件变量）
+│   ├── platform_time.c          # 时间与休眠实现
+│   └── platform_internal.h      # 域间共享头
 └── README.md                    # 本文档
 ```
 
@@ -55,9 +65,11 @@ platform/
 
 > **注**：读写锁（`sync_rwlock_t`）定义在 Commons 的 sync 模块中，不在 platform 层。
 
-### 3. 平台抽象实现 (`platform.c`)
+### 3. 平台能力一览（`include/` 各域头 + `src/` 实现）
 
-提供统一的跨平台实现：
+`platform.h` 为聚合入口，声明按功能域分布于 `platform_base.h` /
+`platform_sync.h` / `platform_process.h` / `platform_paths.h` /
+`platform_misc.h` / `platform_time.h`：
 
 - **线程管理**：`airy_thread_create` / `airy_thread_join` / `airy_thread_detach`
 - **互斥锁**：`airy_mtx_init` / `airy_mtx_lock` / `airy_mtx_trylock` / `airy_mtx_unlock` / `airy_mtx_destroy`
@@ -145,4 +157,7 @@ airy_thread_join(thread, NULL);
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+Copyright (c) 2025-2026 SPHARX Ltd.
+
+SPDX-License-Identifier: `AGPL-3.0-or-later OR Apache-2.0`（双许可，任选其一遵守，
+完整文本见仓库根 [LICENSE](../LICENSE)）。
