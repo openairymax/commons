@@ -138,7 +138,6 @@ set(SOURCES
     # 阶段 4: 轻量内置拼音输入法词典（全拼，本地只读，无 IME 设备中文输入）
     utils/ime/airy_ime.c
     # 0c A 类直搬（daemons/common → commons，IRON-6 归位；原在 svc_common 全平台编译）
-    utils/ipc/ipc_backpressure.c  # IPC 总线背压控制
     utils/ipc/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
     utils/ipc/method_dispatcher.c  # 方法分发器（注册表模式）
     utils/ipc/param_validator.c    # JSON-RPC 参数校验
