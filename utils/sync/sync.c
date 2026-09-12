@@ -307,6 +307,9 @@ sync_result_t sync_debug(void *lock)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
+    /* base is consumed only by debug logging, which compiles out in
+     * release builds; keep the (void) to stay warning-clean there. */
+    (void)base;
 
     AIRY_LOG_DEBUG("[SYNC DEBUG] ====================");
     AIRY_LOG_DEBUG("[SYNC DEBUG] Lock at: %p", (void *)lock);
