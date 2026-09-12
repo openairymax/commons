@@ -1,169 +1,107 @@
-# Include — 公共头文件模块
+# include — 共享头目录
 
-**模块路径**: `agentrt/commons/utils/include/`
-**版本**: v0.1.1
+**模块路径**: `commons/utils/include/` · **版本**: 0.1.15
 
-## 概述
-
-Include 模块提供 AgentRT 项目范围内的公共头文件，包含跨平台原子操作兼容层和通用检查宏。这些头文件供项目中的其他模块直接引用，提供一致的底层工具支持。
-
-## 设计目标
-
-- **跨平台原子操作**：统一 C11 `stdatomic.h`、Windows `Interlocked` API 和 GCC/Clang `__atomic` builtins 三套原子操作接口，提供跨平台的原子操作能力
-- **通用检查宏**：消除项目中分散的参数验证和错误处理代码，提供一致的验证模式
-- **零依赖**：尽可能减少对外部模块的依赖，提供独立的工具支持
+commons 的 header-only 共享头目录：跨平台原子操作兼容层、`AIRY_LOG_*` 兼容转发头与检查宏。本目录不产生编译单元，作为 `airy_common` 的公开接口搜索路径导出，供各模块与下游直接引用。
 
 ## 目录结构
 
 ```
-include/
-├── atomic_compat.h              # 跨平台原子操作兼容层
-├── check.h                      # 通用检查宏定义
-└── README.md                    # 本文档
+utils/include/
+├── atomic_compat.h            聚合入口：一次包含即获得完整原子兼容层
+├── atomic_compat_platform.h   平台选择与底层原子原语（C11 / GCC 内建 / Windows）
+├── atomic_compat_api.h        统一原子类型与操作 API
+├── logging_compat.h           AIRY_LOG_* 宏兼容转发头（旧 include 路径入口）
+├── check.h                    参数校验 / 错误跳转 / 资源分配检查宏
+└── README.md
 ```
 
-## 文件说明
+## 原子操作兼容层（atomic_compat*.h）
 
-### atomic_compat.h — 跨平台原子操作兼容层
+将 C11 `<stdatomic.h>`、GCC/Clang `__atomic` 内建与 Windows `Interlocked` API 统一为一组 `atomic_load_64` / `atomic_compare_exchange_strong_ptr` 等带位宽后缀的接口，并提供 `atomic_int`、`atomic_uint64_t`、`atomic_double` 等类型别名与 `memory_order_*` 常量。消费方只需包含聚合入口 `atomic_compat.h`。
 
-提供 C11 `<stdatomic.h>` 的跨平台兼容实现，支持以下平台：
+完整的操作矩阵、类型别名与内存顺序说明见 [utils/compat README](../compat/README.md)（该模块文档承载原子兼容层的 API 细节）。
 
-- **C11+ (Linux/macOS)**：使用系统 `<stdatomic.h>`
-- **Windows**：使用 `Interlocked` API（`intrin.h`）
-- **POSIX fallback**：使用 GCC/Clang `__atomic` builtins
+## 日志宏转发头（logging_compat.h）
 
-#### 支持的操作类型
+`AIRY_LOG_ERROR / WARN / INFO / DEBUG / FATAL` 的兼容入口：当 observability 模块的权威 `logger.h` 可感知时由其提供定义；否则本头回退为直接写 stderr 的同名宏（`[AIRY][级别] 文件:行 函数: 消息` 格式，`FATAL` 输出后 `abort()`）。新代码应直接使用 `observability/logger.h` 的权威定义。
 
-| 位宽 | 加载 | 存储 | 交换 | CAS | 算术加 | 算术减 |
-|------|------|------|------|-----|--------|--------|
-| 8 位 | `atomic_load_8` | `atomic_store_8` | `atomic_exchange_8` | `atomic_compare_exchange_strong_8` | `atomic_fetch_add_8` | `atomic_fetch_sub_8` |
-| 16 位 | `atomic_load_16` | `atomic_store_16` | `atomic_exchange_16` | `atomic_compare_exchange_strong_16` | `atomic_fetch_add_16` | `atomic_fetch_sub_16` |
-| 32 位 | `atomic_load_32` | `atomic_store_32` | `atomic_exchange_32` | `atomic_compare_exchange_strong_32` | `atomic_fetch_add_32` | `atomic_fetch_sub_32` |
-| 64 位 | `atomic_load_64` | `atomic_store_64` | `atomic_exchange_64` | `atomic_compare_exchange_strong_64` | `atomic_fetch_add_64` | `atomic_fetch_sub_64` |
-| 指针 | `atomic_load_ptr` | `atomic_store_ptr` | `atomic_exchange_ptr` | `atomic_compare_exchange_strong_ptr` | — | — |
-| bool | `atomic_load_bool` | `atomic_store_bool` | `atomic_exchange_bool` | — | — | — |
-| double | `atomic_load_double` | `atomic_store_double` | `atomic_exchange_double` | — | `atomic_fetch_add_double` | — |
+## 检查宏（check.h）
 
-#### 统一类型别名
+共 18 个宏，分三组。所有宏无运行时副作用，可在任意线程使用；`*_RET` 组要求所在函数以 `airy_err_t` 返回，`*_GOTO` / `*_CHECK` 组要求作用域内存在目标清理标签。
 
-| 类型 | 说明 |
-|------|------|
-| `atomic_bool` | 原子布尔 |
-| `atomic_int` | 原子 int |
-| `atomic_uint` | 原子 unsigned int |
-| `atomic_long` | 原子 long |
-| `atomic_ulong` | 原子 unsigned long |
-| `atomic_int64_t` | 原子 int64_t |
-| `atomic_uint64_t` | 原子 uint64_t |
-| `atomic_size_t` | 原子 size_t |
-| `atomic_double` | 原子 double |
+**校验并返回**：
 
-#### 内存顺序
+| 宏 | 语义 |
+|---|---|
+| `CHECK_NULL_RET(ptr, err)` | `ptr == NULL` 时 `return err` |
+| `CHECK_NULL(ptr)` | 同上，固定返回 `AIRY_EINVAL` |
+| `CHECK_COND_RET(expr, err)` | `expr` 为假时 `return err` |
+| `CHECK_COND(expr)` | 同上，固定返回 `AIRY_EINVAL` |
+| `CHECK_ERR_RET(call, var)` | 以 `airy_err_t var = call` 承接调用结果，非 `AIRY_SUCCESS` 时原样返回 |
+| `CHECK_RANGE_RET(value, min, max, err)` | `value` 不在闭区间 `[min, max]` 时 `return err` |
+| `CHECK_NONZERO_RET(value, err)` | `value == 0` 时 `return err` |
+| `CHECK_STRING_RET(str, err)` | `str` 为 NULL 或空串时 `return err` |
 
-| 枚举值 | 说明 |
-|------|------|
-| `memory_order_relaxed` | 宽松顺序 |
-| `memory_order_consume` | 消费顺序 |
-| `memory_order_acquire` | 获取顺序 |
-| `memory_order_release` | 释放顺序 |
-| `memory_order_acq_rel` | 获取-释放顺序 |
-| `memory_order_seq_cst` | 顺序一致性 |
+**校验并跳转**：
 
-#### 通用宏
+| 宏 | 语义 |
+|---|---|
+| `CHECK_ERR_GOTO(call, var, label)` | 调用失败时 `goto label`（错误值保留在 `var`） |
+| `CHECK_NULL_GOTO(ptr, label)` | `ptr == NULL` 时 `goto label` |
+| `CHECK_NULL_GOTO_ERR(ptr, label, var, err)` | `ptr == NULL` 时置 `var = err` 并跳转 |
 
-| 宏 | 说明 |
-|------|------|
-| `atomic_init(ptr, val)` | 初始化原子变量 |
-| `atomic_load(ptr)` | 原子加载（seq_cst） |
-| `atomic_store(ptr, val)` | 原子存储（seq_cst） |
-| `atomic_exchange(ptr, val)` | 原子交换（seq_cst） |
-| `atomic_compare_exchange_strong(ptr, expected, desired)` | CAS 操作（seq_cst） |
-| `atomic_fetch_add(ptr, val)` | 原子加法（seq_cst） |
-| `atomic_fetch_sub(ptr, val)` | 原子减法（seq_cst） |
-| `atomic_thread_fence(order)` | 内存屏障 |
+**资源分配检查**（失败跳转或置错后跳转）：
 
-### check.h — 通用检查宏
+| 宏 | 语义 |
+|---|---|
+| `SAFE_FREE(ptr)` | 非 NULL 时 `AIRY_FREE(ptr)` 并置 NULL |
+| `ALLOC_CHECK(var, size, label)` | `AIRY_MALLOC` 失败跳转 |
+| `CALLOC_CHECK(var, count, size, label)` | `AIRY_CALLOC` 失败跳转 |
+| `STRDUP_CHECK(dest, src, label)` | `AIRY_STRDUP` 失败跳转 |
+| `MALLOC_CHECK_ERR(var, size, label, err_var, err)` | 分配失败置错误码并跳转 |
+| `CALLOC_CHECK_ERR(var, count, size, label, err_var, err)` | 同上（calloc） |
+| `STRDUP_CHECK_ERR(dest, src, label, err_var, err)` | 同上（strdup） |
 
-提供一组统一的参数验证、错误处理和资源清理宏。
+**使用前提**：`check.h` 本身仅包含 `airy_types.h`（`airy_err_t`、`AIRY_SUCCESS`、`AIRY_EINVAL` 等）；`AIRY_MALLOC` / `AIRY_FREE` / `AIRY_CALLOC` / `AIRY_STRDUP` 在宏体内于使用点展开，调用方所在翻译元必须先包含 `airy_memory.h`。
 
-#### 检查宏
-
-| 宏 | 说明 |
-|------|------|
-| `CHECK_NULL_RET(ptr, err_code)` | 指针为 NULL 时返回指定错误码 |
-| `CHECK_NULL(ptr)` | 指针为 NULL 时返回 `AIRY_EINVAL` |
-| `CHECK_COND_RET(expr, err_code)` | 表达式为假时返回指定错误码 |
-| `CHECK_COND(expr)` | 表达式为假时返回 `AIRY_EINVAL` |
-| `CHECK_ERR_RET(func_call, err_var)` | 函数调用失败时返回错误码 |
-| `CHECK_RANGE_RET(value, min, max, err_code)` | 值超出范围时返回错误码 |
-| `CHECK_NONZERO_RET(value, err_code)` | 值为零时返回错误码 |
-| `CHECK_STRING_RET(str, err_code)` | 字符串为空或 NULL 时返回错误码 |
-
-#### 跳转标签宏
-
-| 宏 | 说明 |
-|------|------|
-| `CHECK_ERR_GOTO(func_call, err_var, label)` | 函数调用失败时跳转到清理标签 |
-| `CHECK_NULL_GOTO(ptr, label)` | 指针为 NULL 时跳转到清理标签 |
-| `CHECK_NULL_GOTO_ERR(ptr, label, err_var, err_code)` | 指针为 NULL 时设置错误码并跳转 |
-
-#### 资源管理宏
-
-| 宏 | 说明 |
-|------|------|
-| `SAFE_FREE(ptr)` | 安全释放内存并将指针置为 NULL |
-| `ALLOC_CHECK(ptr_var, size, label)` | 分配内存，失败则跳转到清理标签 |
-| `CALLOC_CHECK(ptr_var, count, size, label)` | 分配并清零内存，失败则跳转到清理标签 |
-| `STRDUP_CHECK(dest, src, label)` | 字符串复制，失败则跳转到清理标签 |
-| `MALLOC_CHECK_ERR(ptr_var, size, label, err_var, err_code)` | 分配内存，失败则设置错误码并跳转 |
-| `CALLOC_CHECK_ERR(ptr_var, count, size, label, err_var, err_code)` | 分配并清零内存，失败则设置错误码并跳转 |
-| `STRDUP_CHECK_ERR(dest, src, label, err_var, err_code)` | 字符串复制，失败则设置错误码并跳转 |
-
-## 使用示例
+## 用法示例
 
 ```c
-// === atomic_compat.h 使用示例 ===
-#include "atomic_compat.h"
-
-atomic_int64_t counter = 0;
-atomic_init(&counter, 0);
-
-int64_t old = atomic_fetch_add_64(&counter, 1, memory_order_relaxed);
-int64_t current = atomic_load_64(&counter, memory_order_acquire);
-
-atomic_store_bool(&ready, true, memory_order_release);
-atomic_thread_fence(memory_order_seq_cst);
-
-// === check.h 使用示例 ===
+#include "airy_memory.h" /* 分配宏的展开前提 */
 #include "check.h"
 
-airy_err_t process_data(void *data, size_t size) {
-    CHECK_NULL_RET(data, AIRY_ERR_NULL_POINTER);
-    CHECK_RANGE_RET(size, 1, MAX_SIZE, AIRY_ERR_INVALID_PARAM);
+airy_err_t load_name(const char *path, char **out_name)
+{
+    airy_err_t ret = AIRY_SUCCESS;
+    CHECK_STRING_RET(path, AIRY_EINVAL);
+    CHECK_NULL_RET(out_name, AIRY_EINVAL);
 
-    void *buffer = NULL;
-    ALLOC_CHECK(buffer, size, cleanup);
+    char *copy = NULL;
+    STRDUP_CHECK_ERR(copy, path, cleanup, ret, AIRY_ENOMEM);
 
-    // 处理数据...
-
-    SAFE_FREE(buffer);
-    return AIRY_OK;
+    *out_name = copy;
+    return AIRY_SUCCESS;
 
 cleanup:
-    SAFE_FREE(buffer);
-    return AIRY_ERR_OUT_OF_MEMORY;
+    SAFE_FREE(copy);
+    return ret;
 }
 ```
 
-## 依赖关系
+## 构建与依赖
 
-| 依赖 | 说明 |
-|------|------|
-| `error/include/error.h` | check.h 依赖错误码定义（`AIRY_EINVAL` 等） |
-| `stdbool.h` | 布尔类型支持 |
-| `stddef.h` | 标准类型定义 |
-| `stdint.h` | 固定宽度整数类型 |
+本目录为纯头文件，无编译产物；作为 `airy_common` 目标的公开（PUBLIC）头搜索路径导出。
+
+| 头 | 依赖 |
+|---|---|
+| `atomic_compat*.h` | 仅标准头与编译器内建，无项目内依赖 |
+| `logging_compat.h` | 可选转发到 `observability/logger.h`，回退分支仅用 stdio/stdlib |
+| `check.h` | `airy_types.h`（类型与错误码）；分配宏使用点需可见 `airy_memory.h` |
+
+本目录无 agentrt 内部上游依赖。
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+*SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*
+*Copyright (c) 2025-2026 SPHARX Ltd. 及贡献者，详见 [LICENSE](../../LICENSE)。*

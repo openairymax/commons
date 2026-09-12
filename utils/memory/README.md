@@ -1,225 +1,192 @@
 # Memory — 内存管理模块
 
-**模块路径**: `agentrt/commons/utils/memory/`
-**版本**: v0.1.1
+**模块路径**: `commons/utils/memory/`
+**版本**: 0.1.15
 
 ## 概述
 
-Memory 模块提供 AgentRT 统一的内存管理框架，包括安全内存分配/释放、内存池管理、内存调试和统计追踪。该模块是 AgentRT 中所有内存操作的基础设施，旨在消除项目中分散的内存管理代码，提供一致的内存管理策略，并支持泄漏检测、边界检查和 OOM 水位监控。
-
-## 设计目标
-
-- **安全分配**：带标签的内存分配接口，支持零初始化和对齐分配
-- **内存池**：高效的内存池管理，减少频繁分配/释放的内存碎片和开销
-- **调试支持**：可选的泄漏检测、边界检查、释放后使用检查和双重释放检查
-- **统计追踪**：全局内存统计、按类别跟踪、水位监控和 OOM 响应
-- **向后兼容**：提供与标准 C 库兼容的 `AIRY_MALLOC` / `AIRY_FREE` 等宏，便于渐进式迁移
-- **线程安全**：所有公共接口均为线程安全
+Memory 模块提供 commons 统一的内存管理基础设施：带标签的安全分配/释放、
+内存池、调试能力（泄漏检测、边界检查、释放后使用与双重释放检查）、全局与
+扩展统计、内存水位监控与 OOM 响应，以及面向 compliance 封禁策略的全套
+`AIRY_*` 替代宏。公共入口是聚合头 `airy_memory.h`。
 
 ## 目录结构
 
 ```
 memory/
-├── include/
-│   ├── airy_memory.h          # 核心层 API（内存分配/释放/统计）
-│   ├── memory_common.h           # 内存池与安全分配接口
-│   ├── memory_pool.h             # 内存池管理（创建/分配/释放/统计）
-│   ├── memory_debug.h            # 内存调试（泄漏检测/边界检查/堆栈跟踪）
-│   └── airy_memory.h           # 向后兼容层（安全包装器/迁移宏/OOM 水位监控）
-├── src/
-│   ├── memory.c                  # 核心内存分配实现
-│   ├── memory_common.c           # 内存池与安全分配实现
-│   ├── memory_pool.c             # 内存池实现
-│   └── memory_debug.c            # 内存调试实现
-└── README.md                     # 本文档
+├── airy_memory.h               # 聚合公共头（引入下面 4 个 airy_memory_*.h）
+├── airy_memory_api.h           # 核心 API 声明 + MEMORY_FREE_SAFE
+├── airy_memory_types.h         # 子系统类型：选项、统计、类别/水位/OOM 枚举
+├── airy_memory_inline.h        # AIRY_* 兼容宏、SAFE_* 宏、AUTO_FREE、SECURE_FREE
+├── airy_memory_guard.h         # AIRY_MALLOC_GUARD / AIRY_CALLOC_GUARD 分配守卫
+├── airy_memory_stats_ext.h     # 扩展统计跟踪器（inline 实现）
+│
+├── memory_core.c               # 核心分配/释放/统计实现
+├── memory_internal.h           # 核心内部锁与调试表访问
+├── memory_stats.c              # 全局统计实现
+│
+├── memory_common.h / memory_common.c        # 安全分配原语与分配策略切换
+│
+├── memory_pool.h                            # 内存池 API
+├── memory_pool.c / memory_pool_alloc.c / memory_pool_stats.c
+├── memory_pool_internal.h                   # 池内部结构
+├── memory_prealloc.h / memory_prealloc.c    # 低内存关键路径预分配缓冲
+│
+├── memory_debug.h                           # 调试 API
+├── memory_debug.c / memory_debug_core.c / memory_debug_leak.c
+│   / memory_debug_stats.c / memory_debug_track.c / memory_debug_validate.c
+├── memory_debug_internal.h                  # 调试子系统内部结构
+│
+├── memory_stats_reporter.h / memory_stats_reporter.c  # 统计周期上报
+└── README.md
 ```
 
 ## 核心数据结构
 
-### memory_stats_t — 内存统计信息
+### memory_stats_t — 全局统计
+
+`total_allocated` / `total_freed` / `current_allocated` / `peak_allocated` /
+`allocation_count` / `free_count` / `leak_count`（均为 `size_t`）。
+
+### memory_options_t — 分配选项
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `total_allocated` | `size_t` | 总分配内存（字节） |
-| `total_freed` | `size_t` | 总释放内存（字节） |
-| `current_allocated` | `size_t` | 当前分配内存（字节） |
-| `peak_allocated` | `size_t` | 峰值分配内存（字节） |
-| `allocation_count` | `size_t` | 分配次数 |
-| `free_count` | `size_t` | 释放次数 |
-| `leak_count` | `size_t` | 泄漏次数 |
+| `alignment` | `size_t` | 对齐要求 |
+| `zero_memory` | `bool` | 是否零初始化 |
+| `tag` | `const char *` | 分配标签（调试与统计） |
+| `fail_strategy` | `memory_fail_strategy_t` | 失败策略：`RETURN_NULL` / `ABORT` / `CALLBACK` / `RETRY` |
+| `fail_callback` / `fail_callback_user_data` | 回调 | `CALLBACK` 策略下触发 |
 
 ### memory_pool_options_t — 内存池选项
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `block_size` | `size_t` | — | 内存块大小（字节） |
-| `initial_blocks` | `size_t` | 16 | 初始预分配块数 |
+| `block_size` | `size_t` | — | 块大小（字节） |
+| `initial_blocks` | `size_t` | 16 | 创建时预分配块数 |
 | `max_blocks` | `size_t` | 0（无限制） | 最大块数 |
-| `expansion_size` | `size_t` | 8 | 池满时扩展的块数 |
+| `expansion_size` | `size_t` | 8 | 池满时扩展块数 |
 | `thread_safe` | `bool` | true | 是否线程安全 |
-| `name` | `const char *` | NULL | 内存池名称（调试用） |
+| `name` | `const char *` | NULL | 池名称（调试用） |
 
-### memory_pool_stats_t — 内存池统计信息
+`memory_pool_stats_t` 提供块水位（`total/allocated/free_blocks`）、字节用量
+（`total/used_memory`）、`allocation_count` / `free_count` 与命中率
+（`hit_count` / `miss_count`）。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `block_size` | `size_t` | 内存块大小 |
-| `total_blocks` | `size_t` | 总块数 |
-| `allocated_blocks` | `size_t` | 已分配块数 |
-| `free_blocks` | `size_t` | 空闲块数 |
-| `total_memory` | `size_t` | 总内存（字节） |
-| `used_memory` | `size_t` | 已使用内存（字节） |
-| `allocation_count` | `size_t` | 分配次数 |
-| `free_count` | `size_t` | 释放次数 |
-| `hit_count` | `size_t` | 缓存命中次数 |
-| `miss_count` | `size_t` | 缓存未命中次数 |
+### memory_debug_options_t — 调试选项
 
-### memory_debug_options_t — 内存调试选项
+`enable_leak_check`、`enable_boundary_check`、`enable_use_after_free_check`、
+`enable_double_free_check`、`enable_invalid_free_check`、`track_allocations`、
+`fill_pattern_on_alloc`、`fill_pattern_on_free`、`redzone_size`、
+`verbosity_level`（0-3）。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `enable_leak_check` | `bool` | 是否启用泄漏检查 |
-| `enable_boundary_check` | `bool` | 是否启用边界检查 |
-| `enable_use_after_free_check` | `bool` | 是否启用释放后使用检查 |
-| `enable_double_free_check` | `bool` | 是否启用双重释放检查 |
-| `enable_invalid_free_check` | `bool` | 是否启用无效释放检查 |
-| `track_allocations` | `bool` | 是否跟踪分配信息 |
-| `fill_pattern_on_alloc` | `bool` | 分配时填充模式 |
-| `fill_pattern_on_free` | `bool` | 释放时填充模式 |
-| `redzone_size` | `size_t` | 红区大小（边界检查） |
-| `verbosity_level` | `int` | 详细级别（0-3） |
+### 扩展统计与水位监控
 
-### memory_stats_extended_t — 扩展统计（SEC-15 合规）
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `current_allocated` | `size_t` | 当前分配内存 |
-| `peak_allocated` | `size_t` | 峰值分配内存 |
-| `leak_suspected` | `size_t` | 疑似泄漏字节数 |
-| `short_lived_high_water` | `size_t` | 短生命周期分配高水位 |
-| `alloc_count_by_category[3]` | `size_t` | 按类别统计分配次数 |
-| `bytes_by_category[3]` | `size_t` | 按类别统计分配字节 |
-| `oom_event_count` | `uint64_t` | OOM 事件总数 |
-| `current_watermark` | `watermark_level_t` | 当前水位级别 |
-| `total_system_memory` | `size_t` | 系统总内存（字节） |
+- `alloc_category_t`：`ALLOC_SHORT_LIVED=0` / `ALLOC_LONG_LIVED=1` /
+  `ALLOC_CRITICAL=2`；
+- `watermark_level_t`：`NORMAL=0` / `WARNING=1` / `HIGH=2` / `CRITICAL=3`；
+- `oom_response_level_t`：`WARNING=0` / `DEGRADED=1` / `CRITICAL=2` /
+  `FATAL=3`；
+- `memory_stats_extended_t`：在全局统计之上叠加疑似泄漏字节、短生命周期高
+  水位、按类别计数、OOM 事件、系统总内存、环形分配跟踪器与最多
+  `MAX_WATERMARK_CALLBACKS`（8）个水位回调槽。
 
 ## 接口说明
 
-### 核心层 API（airy_memory.h）
+### 核心 API（`airy_memory_api.h`）
 
 | 函数 | 说明 |
 |------|------|
-| `memory_init(options)` | 初始化内存管理模块 |
-| `memory_cleanup()` | 清理内存管理模块 |
-| `memory_alloc(size, tag)` | 分配内存（带标签） |
-| `memory_calloc(size, tag)` | 分配并清零内存 |
-| `memory_aligned_alloc(alignment, size, tag)` | 分配对齐内存 |
-| `memory_realloc(ptr, new_size, tag)` | 重新分配内存 |
-| `memory_free(ptr)` | 释放内存 |
-| `memory_get_stats(stats)` | 获取全局内存统计 |
-| `memory_reset_stats()` | 重置全局内存统计 |
-| `memory_get_current_usage()` | 获取当前分配总量 |
-| `memory_get_peak_usage()` | 获取峰值分配量 |
-| `memory_check_leaks(dump_to_stderr)` | 检查内存泄漏 |
-| `memory_dump_debug_info(file)` | 转储内存调试信息 |
-| `memory_validate(ptr)` | 验证内存块完整性 |
-| `memory_set_fail_callback(callback, user_data)` | 设置分配失败回调 |
+| `memory_init(options)` / `memory_cleanup()` | 初始化 / 清理 |
+| `memory_alloc(size, tag)` / `memory_calloc(size, tag)` | 带标签分配 / 清零分配 |
+| `memory_aligned_alloc(alignment, size, tag)` | 对齐分配 |
+| `memory_realloc(ptr, new_size, tag)` | 重分配 |
+| `memory_free(ptr)` | 释放 |
+| `memory_get_stats(stats)` / `memory_reset_stats()` | 全局统计 |
+| `memory_get_current_usage()` / `memory_get_peak_usage()` | 当前 / 峰值用量 |
+| `memory_check_leaks(dump_to_stderr)` | 泄漏检查 |
+| `memory_dump_debug_info(file)` / `memory_validate(ptr)` | 调试信息转储 / 块完整性验证 |
+| `memory_debug_enable(enable)` | 开/关调试追踪 |
+| `memory_set_fail_callback(cb, user_data)` | 分配失败回调 |
 
-### 内存池 API（memory_pool.h）
+### 安全分配与策略（`memory_common.h`）
 
-| 函数 | 说明 |
-|------|------|
-| `memory_pool_create(options)` | 创建内存池 |
-| `memory_pool_destroy(pool)` | 销毁内存池 |
-| `memory_pool_alloc(pool)` | 从内存池分配内存块 |
-| `memory_pool_calloc(pool)` | 从内存池分配并清零内存块 |
-| `memory_pool_free(pool, ptr)` | 释放内存块回内存池 |
-| `memory_pool_get_stats(pool, stats)` | 获取内存池统计 |
-| `memory_pool_reset_stats(pool)` | 重置内存池统计 |
-| `memory_pool_prealloc(pool, count)` | 预分配内存块 |
-| `memory_pool_clear(pool)` | 清空空闲块 |
-| `memory_pool_is_empty(pool)` | 检查内存池是否为空 |
-| `memory_pool_is_full(pool)` | 检查内存池是否已满 |
-| `memory_pool_expand(pool, additional_blocks)` | 扩展内存池 |
-| `memory_pool_shrink(pool, blocks_to_keep)` | 收缩内存池 |
-| `memory_pool_validate(pool)` | 验证内存池完整性 |
-| `memory_pool_iterate(pool, callback, user_data)` | 遍历所有块 |
-| `memory_pool_create_default(block_size)` | 创建默认选项的内存池 |
+`memory_safe_alloc` / `memory_safe_realloc` / `memory_safe_free` /
+`memory_safe_strdup`；`memory_get_global_stats` / `memory_reset_global_stats`；
+策略切换 `memory_set_strategy` / `memory_get_strategy`
+（`MEMORY_STRATEGY_DEFAULT` / `PERFORMANCE` / `SAFETY` / `LOW_LATENCY`）。
 
-### 内存调试 API（memory_debug.h）
+### 内存池 API（`memory_pool.h`）
 
-| 函数 | 说明 |
-|------|------|
-| `memory_debug_init(options)` | 初始化内存调试 |
-| `memory_debug_enable(enable)` | 启用/禁用内存调试 |
-| `memory_debug_is_enabled()` | 检查调试是否启用 |
-| `memory_debug_set_callback(callback, user_data)` | 设置调试回调 |
-| `memory_debug_check_leaks(report, dump_to_log)` | 检查内存泄漏 |
-| `memory_debug_validate(ptr, error)` | 验证内存块完整性 |
-| `memory_debug_validate_all(error_count, dump_to_log)` | 验证所有已分配内存块 |
-| `memory_debug_dump_info(file, include_stack_trace)` | 转储调试信息 |
-| `memory_debug_get_allocation_info(ptr, ...)` | 获取内存块分配信息 |
-| `memory_debug_set_tag(ptr, tag)` | 设置内存块标签 |
-| `memory_debug_set_feature(feature, enable)` | 启用/禁用特定调试功能 |
-| `memory_debug_get_stats(...)` | 获取调试统计 |
-| `memory_debug_enable_stack_trace(enable, max_depth)` | 启用堆栈跟踪 |
-| `memory_debug_get_stack_trace(ptr, frames, max_frames)` | 获取堆栈跟踪 |
-| `memory_debug_checkpoint(name)` | 创建内存状态检查点 |
-| `memory_debug_compare_checkpoints(cp1, cp2, diff_report)` | 比较检查点 |
-| `memory_debug_set_log_level(level)` | 设置日志级别 |
-| `memory_debug_log_operation(op, ptr, size, file, line, func)` | 记录内存操作 |
+`memory_pool_create` / `create_default` / `destroy`、`alloc` / `calloc` /
+`free`、`get_stats` / `reset_stats`、`prealloc` / `clear` / `expand` /
+`shrink`、`is_empty` / `is_full` / `validate`、`iterate`、`get_name` /
+`set_name`。
 
-### 兼容层 API（airy_memory.h）
+### 预分配缓冲（`memory_prealloc.h`）
 
-| 函数/宏 | 说明 |
-|------|------|
-| `AIRY_MALLOC(size)` | 安全内存分配（兼容 `malloc`） |
-| `AIRY_CALLOC(num, size)` | 安全内存分配并清零（兼容 `calloc`） |
-| `AIRY_REALLOC(ptr, new_size)` | 安全内存重分配（兼容 `realloc`） |
-| `AIRY_FREE(ptr)` | 安全内存释放（兼容 `free`） |
-| `AIRY_STRDUP(str)` | 安全字符串复制（兼容 `strdup`） |
-| `AIRY_STRNDUP(str, n)` | 安全字符串复制（带长度限制） |
-| `AIRY_STRNCPY_TERM(dst, src, size)` | 安全字符串复制（保证 null 终止） |
-| `AIRY_MEMCPY_SAFE(dst, src, size, dst_capacity)` | 带边界检查的 `memcpy` |
-| `AIRY_MEMSET(ptr, value, size)` | 带零大小保护的 `memset` |
-| `SAFE_MALLOC(ptr, size)` | 安全分配（失败返回 NULL） |
-| `SAFE_CALLOC(ptr, num, size)` | 安全清零分配（失败返回 NULL） |
-| `SAFE_MALLOC_ARRAY(ptr, count, element_size)` | 安全数组分配（带溢出检查） |
-| `SAFE_CALLOC_ARRAY(ptr, count, element_size)` | 安全数组清零分配（带溢出检查） |
-| `MEMORY_FREE_SAFE(ptr_ptr)` | 安全释放并置 NULL |
+为信号处理等低内存关键路径预留缓冲：`airy_prealloc_init` /
+`airy_prealloc_shutdown` / `airy_prealloc_acquire(category)` /
+`airy_prealloc_release(category)` / `airy_prealloc_is_initialized`。
 
-### 扩展统计（SEC-15 合规）
+### 调试 API（`memory_debug.h`）
 
-| 函数 | 说明 |
-|------|------|
-| `airy_memory_stats_extended_init(ext_stats, capacity)` | 初始化扩展统计跟踪器 |
-| `airy_memory_track_alloc(ext_stats, ptr, size, category, file, line)` | 记录一次分配 |
-| `airy_memory_track_free(ext_stats, ptr)` | 记录一次释放 |
-| `airy_check_leaks_scheduled(ext_stats, max_age_ms)` | 定期检测疑似泄漏 |
-| `airy_memory_calc_watermark(ext_stats)` | 计算当前内存水位级别 |
-| `airy_register_watermark_callback(ext_stats, callback, context)` | 注册水位变化回调 |
-| `airy_memory_stats_report(ext_stats, tag)` | 内存统计定期上报 |
-| `airy_memory_stats_extended_destroy(ext_stats)` | 销毁扩展统计跟踪器 |
+初始化与开关（`memory_debug_init` / `enable` / `is_enabled` /
+`set_feature` / `set_callback` / `set_log_level`）、泄漏与校验
+（`memory_debug_check_leaks` / `validate` / `validate_all`）、分配信息查询
+（`get_allocation_info` / `set_tag` / `get_stats` / `reset_stats`）、堆栈跟踪
+（`enable_stack_trace` / `get_stack_trace`）、检查点对比
+（`checkpoint` / `compare_checkpoints`）、操作日志
+（`log_operation` / `dump_info`）。
+
+### 扩展统计跟踪（`airy_memory_stats_ext.h`）
+
+`airy_memory_stats_extended_init` / `destroy`、`airy_memory_track_alloc` /
+`track_free`、`airy_check_leaks_scheduled`、`airy_memory_calc_watermark` /
+`airy_memory_check_watermark`、`airy_register_watermark_callback` /
+`airy_unregister_watermark_callback`、`airy_oom_determine_response`、
+`airy_memory_stats_report`，以及轻量包装 `airy_check_memory_leaks` /
+`airy_get_memory_stats`。
+
+### 统计上报器（`memory_stats_reporter.h`）
+
+`airy_mem_stats_reporter_init` / `airy_msrep_shutdown`、
+`airy_mem_stats_get` / `record_alloc` / `record_dealloc` / `record_oom`、
+`airy_mem_stats_set_interval`。
+
+### 便捷宏（`airy_memory_inline.h` / `airy_memory_api.h` / `airy_memory_guard.h`）
+
+| 宏 | 说明 |
+|----|------|
+| `AIRY_MALLOC` / `AIRY_CALLOC` / `AIRY_REALLOC` / `AIRY_FREE` | 兼容 libc 语义的安全分配族 |
+| `AIRY_STRDUP` / `AIRY_STRNDUP` / `AIRY_STRNCPY_TERM` | 字符串安全复制 |
+| `AIRY_MEMCPY` / `AIRY_MEMMOVE` / `AIRY_MEMSET` / `AIRY_MEMCPY_SAFE` | 带容量校验的内存块操作 |
+| `AIRY_SECURE_FREE(ptr, size)` | 先擦除后释放（敏感数据） |
+| `AUTO_FREE` | `__attribute__((cleanup))` 作用域自动释放；不支持的编译器回退为手动 |
+| `AIRY_MALLOC_GUARD` / `AIRY_CALLOC_GUARD` | 分配 + NULL 检查 + 失败跳转三步合一 |
+| `SAFE_MALLOC` / `SAFE_CALLOC` / `SAFE_MALLOC_ARRAY` / `SAFE_CALLOC_ARRAY` | 失败置 NULL，数组版本带溢出检查 |
+| `MEMORY_FREE_SAFE(&ptr)` | 释放并置 NULL |
+
+> 本模块是 compliance 封禁的 `malloc` / `memcpy` / `strncpy` 等函数的官方
+> 替代实现来源；模块自身的实现层通过 `AIRY_COMPLIANCE_IMPL` 豁免裸 libc
+> 调用，详见 `commons/utils/compliance/README.md`。
 
 ## 使用示例
 
 ```c
 #include "airy_memory.h"
 #include "memory_pool.h"
-#include "memory_debug.h"
 
-// === 基本内存分配 ===
 memory_init(NULL);
 
-char *buf = memory_alloc(1024, "my_buffer");
-memory_free(buf);
-MEMORY_FREE_SAFE(&buf);  // buf 现在为 NULL
+/* 基本分配与自动释放 */
+AUTO_FREE char *buf = AIRY_MALLOC(1024);   /* 离开作用域自动 airy_free */
 
-// === 使用兼容层宏 ===
-void *data = AIRY_MALLOC(4096);
+void *data = AIRY_CALLOC(64, 64);
+data = AIRY_REALLOC(data, 4096);
 AIRY_FREE(data);
 
-// === 内存池 ===
+/* 内存池 */
 memory_pool_options_t opts = {
     .block_size = 256,
     .initial_blocks = 32,
@@ -229,54 +196,29 @@ memory_pool_options_t opts = {
     .name = "request_pool"
 };
 memory_pool_t *pool = memory_pool_create(&opts);
-
-void *block = memory_pool_alloc(pool);
-// 使用 block...
-memory_pool_free(pool, block);
-
-memory_pool_stats_t pool_stats;
-memory_pool_get_stats(pool, &pool_stats);
-printf("Pool usage: %zu/%zu blocks\n",
-       pool_stats.allocated_blocks, pool_stats.total_blocks);
-
-memory_pool_destroy(pool);
-
-// === 内存调试 ===
-memory_debug_options_t debug_opts = {
-    .enable_leak_check = true,
-    .enable_boundary_check = true,
-    .enable_double_free_check = true,
-    .track_allocations = true,
-    .verbosity_level = 2
-};
-memory_debug_init(&debug_opts);
-memory_debug_enable(true);
-
-// 发现泄漏
-size_t leaked = memory_debug_check_leaks(NULL, true);
-if (leaked > 0) {
-    printf("Leaked %zu bytes\n", leaked);
+if (pool != NULL) {
+    void *block = memory_pool_alloc(pool);
+    memory_pool_free(pool, block);
+    memory_pool_destroy(pool);
 }
 
-// === 全局统计 ===
+/* 全局统计 */
 memory_stats_t stats;
-memory_get_stats(&stats);
-printf("Current: %zu, Peak: %zu, Allocs: %zu, Frees: %zu\n",
-       stats.current_allocated, stats.peak_allocated,
-       stats.allocation_count, stats.free_count);
-
+if (memory_get_stats(&stats)) {
+    /* stats.current_allocated / stats.peak_allocated ... */
+}
 memory_cleanup();
 ```
 
-## 依赖关系
+## 依赖
 
 | 依赖 | 说明 |
 |------|------|
-| `error.h` | 错误码定义（`airy_err_t`） |
-| `stdbool.h` | 布尔类型支持 |
-| `stddef.h` | 标准类型定义 |
-| `stdint.h` | 固定宽度整数类型 |
+| `platform`（`commons/platform/`） | 原子与锁原语、系统内存信息查询 |
+| `error`（`commons/utils/error/`） | 错误码 |
+| 标准库 | `stdbool.h` / `stddef.h` / `stdint.h` 等 |
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+*SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*
+*Copyright (c) 2025-2026 SPHARX Ltd. 及贡献者，详见 [LICENSE](../../LICENSE)。*

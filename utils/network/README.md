@@ -1,270 +1,177 @@
-# Network — 网络工具模块
+# network — 网络通信抽象层
 
-**模块路径**: `agentrt/commons/utils/network/`
-**版本**: v0.1.1
+**模块路径**: `commons/utils/network/` · **版本**: 0.1.15
+
+跨平台（Windows Winsock2 / POSIX）的 TCP Socket 封装，附 HTTP/1.1 明文客户端、连接池与 DNS 解析工具。
 
 ## 概述
 
-Network 模块提供跨平台的网络通信抽象层，支持 TCP/UDP Socket 连接、HTTP/HTTPS 客户端、连接池管理和 DNS 解析。该模块是 AgentRT 中 Agent 与外部服务通信的基础设施，所有网络操作均经过统一的超时控制、重试机制和事件回调，确保通信的可靠性和可观测性。
-
-## 设计目标
-
-- **跨平台一致性**：统一 API 屏蔽 Windows（Winsock2）与 Linux/macOS（POSIX Socket）的网络编程差异
-- **安全通信**：内置 SSL/TLS 支持，可配置证书验证模式
-- **高可用性**：连接池复用、自动重试、超时控制和健康检查
-- **可观测性**：连接统计信息（字节数、包数、延迟）、事件回调机制
-- **HTTP 客户端**：内置 HTTP/HTTPS 请求支持，自动构建请求头并解析响应
+- **统一 Socket 抽象**：连接生命周期、收发、超时与非阻塞设置经一套 `network_*` API 屏蔽平台差异；Windows 上由 `network_init()`（或首次 `network_connect()`）惰性完成 `WSAStartup`。
+- **HTTP/1.1 客户端**：在已建立连接上构造并发送请求、解析状态码与响应体，`network_http_get` / `network_http_post` 为便捷封装。
+- **连接池**：按需惰性创建连接并缓存复用，`network_pool_health_check` 清理失效条目。
+- **DNS 与地址工具**：`getaddrinfo` 封装的多地址解析（IPv4/IPv6）、主机可达性探测、本机 IP 查询、地址转字符串。
+- **统计与事件**：每连接字节/包/连接/错误/重试计数；连接建立、断开与数据收发时同步触发事件回调。
 
 ## 目录结构
 
 ```
-network/
-├── include/
-│   └── network_common.h       # 网络通信模块公共接口定义
-├── src/
-│   └── network_common.c       # 网络通信模块实现
-└── README.md                  # 本文档
+utils/network/
+├── network_common.h            # 全部公共类型与 API 声明
+├── network_common_internal.h   # 内部结构（connection/pool）与跨文件助手（不安装）
+├── network_common.c            # 连接生命周期与收发 IO 域
+├── network_http.c              # HTTP 请求构造与响应解析域
+├── network_pool.c              # 连接池域
+├── network_dns.c               # DNS 解析与地址工具域
+└── README.md
 ```
 
-## 核心数据结构
+## 常量
 
-### network_config_t — 网络配置
+| 名称 | 值 | 说明 |
+|---|---|---|
+| `NETWORK_DEFAULT_TIMEOUT_MS` | 30000 | 默认连接/读写超时 |
+| `NETWORK_DEFAULT_MAX_RETRIES` | 3 | `*_all` / `*_exact` 默认重试次数 |
+| `NETWORK_DEFAULT_RETRY_INTERVAL` | 1000 | 默认重试间隔（毫秒） |
+| `NETWORK_DEFAULT_BUFFER_SIZE` | 8192 | 默认缓冲尺寸参考 |
+| `NETWORK_MAX_POOL_SIZE` | 32 | 连接池上限 |
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `host` | `const char *` | 主机名或 IP 地址 |
-| `port` | `int` | 端口号 |
-| `timeout_ms` | `int` | 连接超时（毫秒），默认 30000 |
-| `read_timeout_ms` | `int` | 读取超时（毫秒） |
-| `write_timeout_ms` | `int` | 写入超时（毫秒） |
-| `max_retries` | `int` | 最大重试次数，默认 3 |
-| `retry_interval_ms` | `int` | 重试间隔（毫秒） |
-| `sock_type` | `network_sock_type_t` | Socket 类型（STREAM/DGRAM/RAW） |
-| `af` | `network_af_t` | 地址族（INET/INET6） |
-| `keepalive` | `bool` | 是否启用 TCP 保活 |
-| `nonblocking` | `bool` | 是否非阻塞模式 |
-| `ssl_enable` | `bool` | 是否启用 SSL/TLS |
-| `ssl_verify` | `network_ssl_verify_t` | SSL 证书验证模式 |
-| `ssl_cert_path` | `const char *` | SSL 证书路径 |
-| `ssl_key_path` | `const char *` | SSL 私钥路径 |
-| `ssl_ca_path` | `const char *` | CA 证书路径 |
+## 数据结构
 
-### network_stats_t — 网络统计信息
+### network_config_t — 连接配置
 
 | 字段 | 类型 | 说明 |
-|------|------|------|
-| `bytes_sent` | `uint64_t` | 已发送字节数 |
-| `bytes_received` | `uint64_t` | 已接收字节数 |
-| `packets_sent` | `uint64_t` | 已发送包数 |
-| `packets_received` | `uint64_t` | 已接收包数 |
-| `connect_count` | `uint64_t` | 连接次数 |
-| `error_count` | `uint64_t` | 错误次数 |
-| `retry_count` | `uint64_t` | 重试次数 |
-| `avg_latency_us` | `uint64_t` | 平均延迟（微秒） |
+|---|---|---|
+| `host` / `port` | `const char *` / `int` | 目标主机（IP 或域名）与端口 |
+| `timeout_ms` | `int` | 连接时同时应用于读与写的超时 |
+| `read_timeout_ms` / `write_timeout_ms` | `int` | 读/写超时；建连阶段取 `timeout_ms`，之后可经 `network_set_rw_timeout` 生效 |
+| `max_retries` | `int` | `network_send_all` / `network_receive_exact` 的失败重试上限 |
+| `retry_interval_ms` | `int` | 重试间隔配置（当前实现重试间不休眠） |
+| `sock_type` | `network_sock_type_t` | `STREAM` / `DGRAM` / `RAW` |
+| `af` | `network_af_t` | `AF_UNSPEC` / `AF_INET`(2) / `AF_INET6`(10) |
+| `keepalive` | `bool` | 保活配置位（当前实现未设置 `SO_KEEPALIVE`） |
+| `nonblocking` | `bool` | 建连前对 socket 置非阻塞标志 |
+| `ssl_enable` / `ssl_verify` / `ssl_cert_path` / `ssl_key_path` / `ssl_ca_path` | — | SSL/TLS 配置位；当前实现为明文传输，这些字段不产生效果 |
 
-### network_http_request_t — HTTP 请求
+`network_create_default_config()` 返回：`127.0.0.1:8080`、超时 30000/读写 10000、重试 3×1000ms、`STREAM`/`INET`、其余关闭。
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `method` | `const char *` | HTTP 方法（GET/POST/PUT/DELETE） |
-| `path` | `const char *` | 请求路径 |
-| `content_type` | `const char *` | Content-Type |
-| `body` | `const void *` | 请求体 |
-| `body_len` | `size_t` | 请求体长度 |
-| `headers` | `const char **` | 自定义请求头数组 |
-| `header_count` | `size_t` | 请求头数量 |
-| `timeout_ms` | `int` | 超时时间 |
-| `follow_redirects` | `bool` | 是否跟随重定向 |
-| `max_redirects` | `int` | 最大重定向次数 |
+### 其他类型
 
-### network_http_response_t — HTTP 响应
+| 类型 | 说明 |
+|---|---|
+| `network_connection_t` / `network_pool_t` | 不透明句柄 |
+| `network_status_t` | `DISCONNECTED(0)` / `CONNECTING(1)` / `CONNECTED(2)` / `DISCONNECTING(3)` / `ERROR(4)` |
+| `network_stats_t` | `bytes_sent`、`bytes_received`、`packets_sent`、`packets_received`、`connect_count`、`error_count`、`retry_count`、`avg_latency_us`（`uint64_t`） |
+| `network_event_t` / `network_event_callback_t` | 事件 `CONNECTED(1)` / `DISCONNECTED(2)` / `DATA_RECEIVED(3)` / `DATA_SENT(4)` / `ERROR(5)` / `TIMEOUT(6)`；回调签名 `(conn, event, data, data_len, user_data)` |
+| `network_http_request_t` | `method`、`path`、`content_type`、`body`/`body_len`、`headers`/`header_count`、`timeout_ms`、`follow_redirects`、`max_redirects`（重定向字段当前实现不处理） |
+| `network_http_response_t` | 出参：`status_code`、`status_text`、`headers`/`header_count`、`body`/`body_len`、`error`、`error_message`、`latency_us`；经 `network_http_response_free` 释放 |
+| `network_dns_result_t` | `addresses`（字符串数组）、`count`、`ports`；经 `network_dns_result_free` 释放 |
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `status_code` | `int` | HTTP 状态码 |
-| `status_text` | `char *` | 状态文本 |
-| `headers` | `char **` | 响应头数组 |
-| `header_count` | `size_t` | 响应头数量 |
-| `body` | `void *` | 响应体 |
-| `body_len` | `size_t` | 响应体长度 |
-| `error` | `airy_err_t` | 错误码 |
-| `error_message` | `char *` | 错误消息 |
-| `latency_us` | `uint64_t` | 响应延迟（微秒） |
+## 接口
 
-### network_dns_result_t — DNS 解析结果
+### 连接生命周期与 IO
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `addresses` | `char **` | IP 地址数组 |
-| `count` | `size_t` | 地址数量 |
-| `ports` | `int *` | 端口数组 |
+| 函数 | 语义 |
+|---|---|
+| `network_init()` / `network_cleanup()` | 子系统初始化/清理（Windows Winsock；POSIX 为空操作） |
+| `network_connection_create(config)` / `network_connection_destroy(conn)` | 创建/销毁句柄；`config` 被拷贝入句柄；destroy 时自动断开 |
+| `network_connect(conn)` | 建连：host 优先按 IPv4 字面量解析，否则经 `getaddrinfo` 取首地址；仅 `DISCONNECTED`/`ERROR` 态可发起（否则返回 `AIRY_EBUSY`） |
+| `network_disconnect(conn)` | 关闭 socket 并置 `DISCONNECTED`；非连接态幂等返回成功 |
+| `network_send` / `network_receive` | 单次发送/接收，出参可选返回实际字节数；未连接返回 `AIRY_ENOTCONN`，对端关闭返回 `AIRY_ECONNRESET` |
+| `network_send_all` / `network_receive_exact` | 循环发送/收满指定长度，失败按 `max_retries` 重试，最终仍收不满返回 `AIRY_ETIMEDOUT` |
+| `network_get_status(conn)` / `network_get_error_message(conn)` | 状态查询；错误消息为空时返回 `"No error"`，NULL 句柄返回固定文案 |
+| `network_set_timeout` / `network_set_rw_timeout` | 更新超时并即时施加到已连接 socket |
+| `network_get_stats` / `network_reset_stats` | 统计快照/清零 |
+| `network_set_event_callback(conn, cb, user_data)` | 注册事件回调（在调用者线程内同步触发） |
 
-## 接口说明
+### HTTP 客户端
 
-### 基础连接 API
+| 函数 | 语义 |
+|---|---|
+| `network_http_request(conn, req, resp)` | 在已连接句柄上发送 HTTP/1.1 请求（请求行、`Host`、`Content-Type`、`Content-Length`、自定义头），读回响应并解析 |
+| `network_http_get(conn, path, resp)` | GET 便捷封装 |
+| `network_http_post(conn, path, content_type, body, len, resp)` | POST 便捷封装（`content_type` 为空默认 `application/json`） |
+| `network_http_response_free(resp)` | 释放响应内部分配并把结构清零 |
 
-| 函数 | 说明 |
-|------|------|
-| `network_create_default_config()` | 创建默认网络配置 |
-| `network_connection_create(config)` | 创建网络连接句柄 |
-| `network_connection_destroy(connection)` | 销毁网络连接句柄 |
-| `network_connect(connection)` | 建立网络连接 |
-| `network_disconnect(connection)` | 断开网络连接 |
-| `network_send(connection, data, length, sent)` | 发送数据 |
-| `network_receive(connection, buffer, length, received)` | 接收数据 |
-| `network_send_all(connection, data, length)` | 循环发送直到全部完成 |
-| `network_receive_exact(connection, buffer, length)` | 接收指定长度的数据 |
-| `network_get_status(connection)` | 获取连接状态 |
-| `network_set_timeout(connection, timeout_ms)` | 设置连接超时 |
-| `network_set_rw_timeout(connection, read_ms, write_ms)` | 设置读写超时 |
-| `network_get_stats(connection, stats)` | 获取统计信息 |
-| `network_reset_stats(connection)` | 重置统计信息 |
-| `network_set_event_callback(connection, callback, user_data)` | 设置事件回调 |
-| `network_get_error_message(connection)` | 获取错误消息 |
+### 连接池
 
-### HTTP 客户端 API
+| 函数 | 语义 |
+|---|---|
+| `network_pool_create(config, pool_size)` | 创建池；`pool_size` 须为 1..32，否则返回 NULL |
+| `network_pool_destroy(pool)` | 销毁池并断开其中全部连接 |
+| `network_pool_acquire(pool, timeout_ms)` | 返回一个已连接句柄；无现成连接且未达上限时惰性新建并连接；池满或新建失败返回 NULL |
+| `network_pool_release(pool, conn)` | 归还入口（当前实现为无操作，连接留在池内继续复用） |
+| `network_pool_available` / `network_pool_size` | 可用数（已连接数 + 剩余容量）/ 当前条目数 |
+| `network_pool_health_check(pool)` | 销毁 `ERROR`/`DISCONNECTED` 条目（尾部交换压缩），返回健康连接数 |
 
-| 函数 | 说明 |
-|------|------|
-| `network_http_request(connection, request, response)` | 执行 HTTP 请求 |
-| `network_http_get(connection, path, response)` | 执行 HTTP GET 请求 |
-| `network_http_post(connection, path, content_type, body, body_len, response)` | 执行 HTTP POST 请求 |
-| `network_http_response_free(response)` | 释放 HTTP 响应资源 |
+### DNS 与地址工具
 
-### 连接池 API
+| 函数 | 语义 |
+|---|---|
+| `network_dns_resolve(hostname, af, result)` | `getaddrinfo` 解析，产出全部地址与端口；失败返回 `AIRY_EIO`/`AIRY_ENOENT` |
+| `network_dns_result_free(result)` | 释放解析结果 |
+| `network_is_reachable(host, timeout_ms)` | 以默认配置的端口尝试 TCP 建连探测（超时缺省 5000ms） |
+| `network_get_local_ip(af, buffer, buffer_len)` | 查询本机出口 IP；失败回退写入 `127.0.0.1` |
+| `network_addr_to_string(af, addr, buffer, buffer_len)` | 二进制地址转字符串（支持 v4/v6） |
 
-| 函数 | 说明 |
-|------|------|
-| `network_pool_create(config, pool_size)` | 创建连接池（最大 32 个连接） |
-| `network_pool_destroy(pool)` | 销毁连接池 |
-| `network_pool_acquire(pool, timeout_ms)` | 从连接池获取连接 |
-| `network_pool_release(pool, connection)` | 释放连接回连接池 |
-| `network_pool_available(pool)` | 获取可用连接数 |
-| `network_pool_size(pool)` | 获取连接池当前大小 |
-| `network_pool_health_check(pool)` | 健康检查并移除不健康连接 |
+## 语义与约束
 
-### DNS 解析 API
+- **明文传输**：当前实现不含 TLS 握手，`ssl_*` 与 `keepalive` 配置位不产生效果；HTTPS 端点不可直连。
+- **连接路径为 IPv4**：句柄内部地址结构为 `sockaddr_in`；`NETWORK_AF_INET6` 仅在 DNS 解析与地址工具中有效。
+- **HTTP 解析为最小实现**：响应聚合上限 65535 字节；响应头整体存于 `headers[0]`（`header_count` 为 1），不做逐头拆分、不处理 chunked 编码与重定向；状态行不符合 `HTTP/1.x NNN` 形态时 `status_code` 记为 200；`status_text` 与 `latency_us` 不由实现填充。
+- **事件覆盖范围**：实现触发 `CONNECTED`、`DISCONNECTED`、`DATA_SENT`、`DATA_RECEIVED`；`ERROR`/`TIMEOUT` 枚举预留、当前无触发点。
+- **线程模型**：内部无锁。一个连接/池句柄同一时刻由单一线程使用；统计计数为普通读改写。
+- **错误约定**：参数非法返回 `AIRY_EINVAL`，未连接 `AIRY_ENOTCONN`，IO 失败 `AIRY_EIO`，忙 `AIRY_EBUSY`，对端关闭 `AIRY_ECONNRESET`，收不满 `AIRY_ETIMEDOUT`；创建/池类失败经错误栈宏返回 NULL。
 
-| 函数 | 说明 |
-|------|------|
-| `network_dns_resolve(hostname, af, result)` | 执行 DNS 解析 |
-| `network_dns_result_free(result)` | 释放 DNS 解析结果 |
-
-### 工具函数
-
-| 函数 | 说明 |
-|------|------|
-| `network_is_reachable(host, timeout_ms)` | 检查主机是否可达 |
-| `network_get_local_ip(af, buffer, buffer_len)` | 获取本机 IP 地址 |
-| `network_addr_to_string(af, addr, buffer, buffer_len)` | IP 地址转字符串 |
-| `network_init()` | 初始化网络子系统（Windows Winsock） |
-| `network_cleanup()` | 清理网络子系统 |
-
-## 使用示例
+## 用法示例
 
 ```c
 #include "network_common.h"
 
-// 初始化网络子系统
-network_init();
+void fetch_status_path(void)
+{
+    network_init();
 
-// 创建默认配置
-network_config_t config = network_create_default_config();
-config.host = "api.example.com";
-config.port = 443;
-config.ssl_enable = true;
-config.ssl_verify = NETWORK_SSL_VERIFY_PEER;
-config.timeout_ms = 10000;
+    network_config_t config = network_create_default_config();
+    config.host = "internal-service.local";
+    config.port = 80;
+    config.timeout_ms = 10000;
 
-// 创建连接并连接
-network_connection_t *conn = network_connection_create(&config);
-if (!conn) {
-    fprintf(stderr, "Failed to create connection\n");
-    network_cleanup();
-    return;
-}
-
-airy_err_t err = network_connect(conn);
-if (err == AIRY_SUCCESS) {
-    // 发送 HTTP GET 请求
-    network_http_response_t response;
-    err = network_http_get(conn, "/api/v1/status", &response);
-    if (err == AIRY_SUCCESS && response.status_code == 200) {
-        printf("Response: %.*s\n", (int)response.body_len, (char *)response.body);
+    network_connection_t *conn = network_connection_create(&config);
+    if (conn == NULL) {
+        network_cleanup();
+        return;
     }
-    network_http_response_free(&response);
 
-    network_disconnect(conn);
+    if (network_connect(conn) == AIRY_SUCCESS) {
+        network_http_response_t response = {0};
+        if (network_http_get(conn, "/status", &response) == AIRY_SUCCESS &&
+            response.status_code == 200) {
+            /* response.body / response.body_len 为响应体 */
+        }
+        network_http_response_free(&response);
+        network_disconnect(conn);
+    }
+
+    network_connection_destroy(conn);
+    network_cleanup();
 }
-
-// 获取统计信息
-network_stats_t stats;
-network_get_stats(conn, &stats);
-printf("Sent: %llu bytes, Received: %llu bytes\n",
-       (unsigned long long)stats.bytes_sent,
-       (unsigned long long)stats.bytes_received);
-
-network_connection_destroy(conn);
-network_cleanup();
 ```
 
-```c
-// 使用连接池
-network_pool_t *pool = network_pool_create(&config, 8);
-network_connection_t *conn2 = network_pool_acquire(pool, 5000);
-if (conn2) {
-    network_http_response_t resp;
-    network_http_get(conn2, "/api/data", &resp);
-    network_http_response_free(&resp);
-    network_pool_release(pool, conn2);
-}
+## 构建与依赖
 
-// 健康检查
-size_t healthy = network_pool_health_check(pool);
-printf("Healthy connections: %zu / %zu\n", healthy, network_pool_size(pool));
+四个 `.c` 均随 `airy_common` 静态库编译（CMake 源列表 `utils/network/network_{common,http,pool,dns}.c`），`network_common.h` 安装至 `include/agentrt/utils/network/`；内部头 `network_common_internal.h` 按约定不安装。
 
-network_pool_destroy(pool);
-```
+| 依赖 | 用途 |
+|---|---|
+| commons `utils/memory` | 句柄与响应内部分配（`AIRY_CALLOC`、`AIRY_STRDUP`、`AIRY_FREE`） |
+| commons `utils/error` | 错误码与错误栈宏 |
+| commons `utils/types`（`types.h`） | 基础类型 |
+| commons `utils/include`（`atomic_compat.h`） | Winsock 一次性初始化的原子标志 |
+| 平台网络栈 | POSIX socket 或 Winsock2（Windows 经 `#pragma comment` 链接 `ws2_32.lib`） |
 
-## 连接状态
-
-| 状态 | 说明 |
-|------|------|
-| `NETWORK_STATUS_DISCONNECTED` | 已断开连接 |
-| `NETWORK_STATUS_CONNECTING` | 正在连接中 |
-| `NETWORK_STATUS_CONNECTED` | 已建立连接 |
-| `NETWORK_STATUS_DISCONNECTING` | 正在断开连接 |
-| `NETWORK_STATUS_ERROR` | 错误状态 |
-
-## 事件回调类型
-
-| 事件 | 说明 |
-|------|------|
-| `NETWORK_EVENT_CONNECTED` | 连接成功时触发 |
-| `NETWORK_EVENT_DISCONNECTED` | 连接断开时触发 |
-| `NETWORK_EVENT_DATA_RECEIVED` | 数据接收时触发 |
-| `NETWORK_EVENT_DATA_SENT` | 数据发送时触发 |
-| `NETWORK_EVENT_ERROR` | 错误发生时触发 |
-| `NETWORK_EVENT_TIMEOUT` | 超时时触发 |
-
-## 平台差异
-
-| 特性 | Linux | Windows | macOS |
-|------|-------|---------|-------|
-| Socket API | POSIX (fd) | Winsock2 (SOCKET) | POSIX (fd) |
-| 初始化 | 无需 | `WSAStartup()` | 无需 |
-| 清理 | 无需 | `WSACleanup()` | 无需 |
-| 非阻塞 | `fcntl(O_NONBLOCK)` | `ioctlsocket(FIONBIO)` | `fcntl(O_NONBLOCK)` |
-
-## 依赖关系
-
-| 依赖 | 说明 |
-|------|------|
-| `airy_memory.h` | 统一内存管理宏（`AIRY_MALLOC`、`AIRY_FREE` 等） |
-| `error.h` | 统一错误码定义 |
-| `types.h` | 基础类型定义 |
-| `atomic_compat.h` | 跨平台原子操作 |
+单元测试见 `tests/unit/test_network.c`（离线部分：默认配置、句柄生命周期、NULL 处理、枚举取值、HTTP 结构释放、池参数校验与计数）。本模块无 agentrt 内部上游依赖。
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+*SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*
+*Copyright (c) 2025-2026 SPHARX Ltd. 及贡献者，详见 [LICENSE](../../LICENSE)。*

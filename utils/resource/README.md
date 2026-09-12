@@ -1,244 +1,201 @@
-# Resource — 资源管理模块
+# resource — API 错误恢复与资源守卫
 
-**模块路径**: `agentrt/commons/utils/resource/`
-**版本**: v0.1.1
+**模块路径**: `commons/utils/resource/` · **版本**: 0.1.15
+
+三个独立组件的资源工具集：**API 错误恢复池**（多凭证轮换 + 指数退避重试 + 模型降级链）、**作用域守卫**（RAII 自动清理 + 可选分配追踪）、**资源配额账本**（内存 / I/O 记账与超限标志位）。三个源文件均编入静态库 `airy_common`。
 
 ## 概述
 
-Resource 模块提供资源作用域守卫（RAII 模式）和资源配额管理两大功能，确保资源在作用域结束时正确释放，并对内存、CPU、I/O、网络等资源进行配额限制和统计。该模块遵循 E-3 资源确定性原则，确保每个资源的生命周期可预测、可追踪、可验证。
-
-## 设计目标
-
-- **资源作用域守卫**：RAII 模式自动释放资源，支持自定义释放函数，适用于文件句柄、内存、锁、网络连接等
-- **资源配额管理**：对内存、CPU 时间、I/O 操作数、网络字节数进行配额限制和实时监控
-- **资源追踪**：可选的资源分配追踪（通过 `AIRY_RESOURCE_TRACKING` 编译选项启用），检测内存泄漏
-- **可观测性**：配额超限日志告警、资源使用统计、超限类型查询
+- **凭证池自愈**：至多 8 个 API 密钥轮转发放，按成功/失败动态维护健康分，认证失败立即禁用、连续失败 5 次自动失效、全员失效时自动复活最优凭证。
+- **降级重试**：服务端错误持续时沿 fallback 模型链逐级降级，fallback 耗尽进入缓存级；恢复成功后逐级回升。
+- **作用域守卫**：`AIRY_SCOPE_GUARD` / `AIRY_SCOPE_EXIT` 借助编译器 `cleanup` 属性在作用域结束自动调用清理函数。
+- **配额账本**：申请前检查、分配/释放记账、峰值统计与超限位标志，供上层做资源准入控制。
 
 ## 目录结构
 
 ```
-resource/
-├── src/
-│   ├── resource_guard.h         # 资源作用域守卫接口定义
-│   ├── resource_guard.c         # 资源作用域守卫实现
-│   ├── resource_quota.h         # 资源配额管理接口定义
-│   └── resource_quota.c         # 资源配额管理实现
-└── README.md                    # 本文档
+utils/resource/
+├── api_recovery.h       # API 错误恢复池接口（144 行）
+├── api_recovery.c       # 实现（536 行）
+├── resource_guard.h     # 作用域守卫 + 可选资源追踪
+├── resource_guard.c     # 实现（含追踪链表）
+├── resource_quota.h     # 资源配额接口
+├── resource_quota.c     # 实现
+└── README.md
 ```
 
-## 核心数据结构
+## API 错误恢复（api_recovery）
 
-### airy_resource_guard_t — 资源守卫
+### 数据结构与常量
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `resource` | `void *` | 资源指针 |
-| `cleanup` | `airy_resource_cleanup_t` | 清理函数指针 |
-| `file` | `const char *` | 分配所在的文件名 |
-| `line` | `int` | 分配所在的行号 |
-| `name` | `const char *` | 资源名称 |
-| `active` | `int` | 是否激活（1=活跃，0=已取消） |
+| 类型 | 说明 |
+|---|---|
+| `api_rec_pool_t` | 恢复池：名称、凭证数组、fallback 模型数组、重试配置、降级级别、统计计数 |
+| `api_rec_credential_t` | 单个凭证：key、`is_valid`、成功/失败时间、连败计数、`health_score` |
+| `api_rec_model_t` | fallback 模型：名称、成本权重、优先级、可用标志 |
+| `api_rec_result_t` | 单次执行结果：HTTP 码、恢复错误码、可重试/应轮换/应降级标志、消息 |
+| `api_rec_request_fn` | 请求回调 `int (*)(void *ctx, url, body, cred, char **resp_body, long *http_code)`，返回 0 且 `*http_code` 为 2xx 视为成功 |
 
-### airy_resource_quota_t — 资源配额
+| 常量 | 值 | 含义 |
+|---|---|---|
+| `API_REC_MAX_CREDENTIALS` | 8 | 池内凭证上限 |
+| `API_REC_MAX_CRED_LEN` | 256 | 密钥长度上限（含结尾 NUL） |
+| `API_REC_MAX_FALLBACK_MODELS` | 4 | fallback 模型上限 |
+| `API_REC_MAX_MODEL_LEN` | 64 | 模型名长度上限 |
+| `API_REC_MAX_RETRY` | 5 | 默认最大重试次数 |
+| `API_REC_DEFAULT_BASE_DELAY_MS` | 200 | 默认退避基础延迟 |
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `max_memory_bytes` | `size_t` | 最大内存使用量（字节） |
-| `max_cpu_time_ms` | `uint64_t` | 最大 CPU 时间（毫秒） |
-| `max_io_ops` | `size_t` | 最大 I/O 操作数 |
-| `max_network_bytes` | `size_t` | 最大网络传输字节数 |
-| `timeout_ms` | `uint64_t` | 超时时间（毫秒） |
+健康分参数（`commons/include/airy_defaults.h`）：成功衰减系数 0.9（分数向 1.0 收敛）、失败惩罚 0.3（分数 ×0.7）、发放门槛 0.2、连败失效阈值 5。
 
-### airy_resource_usage_t — 资源使用统计
+### 接口
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `current_memory_bytes` | `size_t` | 当前内存使用量 |
-| `peak_usage` | `size_t` | 峰值内存使用量 |
-| `total_cpu_time_ms` | `uint64_t` | 累计 CPU 时间 |
-| `total_io_ops` | `size_t` | 累计 I/O 操作数 |
-| `total_network_bytes` | `size_t` | 累计网络字节数 |
-| `start_time` | `time_t` | 启动时间 |
-| `last_update` | `time_t` | 最后更新时间 |
-| `operation_count` | `uint64_t` | 操作计数 |
+| 组 | 函数 |
+|---|---|
+| 生命周期 | `api_rec_pool_create(name)` / `api_rec_pool_destroy(pool)` |
+| 凭证池 | `api_rec_add_credential(pool, key)` / `api_rec_remove_credential(pool, idx)` / `api_rec_next_credential(pool)` / `api_rec_mark_cred_success(pool)` / `api_rec_mark_cred_failure(pool, err)` / `api_rec_cred_health(pool, idx)` |
+| 模型降级 | `api_rec_add_fallback_model(pool, model, cost_weight, priority)` / `api_rec_current_model(pool)` / `api_rec_degrade(pool)` / `api_rec_upgrade(pool)` / `api_rec_current_level(pool)` |
+| 执行与配置 | `api_rec_execute_with_recovery(...)` / `api_rec_set_retry_config(pool, max_retries, base_delay_ms, backoff_factor, jitter_ratio)` / `api_rec_bind_circuit_breaker(pool, breaker)` / `api_rec_get_stats(pool, ...)` |
+| 字符串化 | `api_rec_error_string(code)` / `api_rec_degradation_string(level)` |
 
-### airy_resource_manager_t — 资源管理器
+### 行为语义
 
-管理器是不透明结构体，内部包含配额配置、使用统计、资源 ID 和超限标志位。
+- **HTTP 码归类**：429 → `RATE_LIMIT`；401/403 → `AUTH`；500–599 → `SERVER`；0 或 ≥600 → `NETWORK`；其余 → `UNKNOWN`。`API_REC_ERR_TIMEOUT` 不由归类产生，保留给调用方自行标注请求超时。
+- **凭证发放**：`next_credential` 轮转发放「有效且健康分 > 0.2」的密钥；全部不合格时选健康分最高者复活（重新置有效、清连败）并发放。`mark_cred_success/failure` 作用于最近一次发放的凭证。`AUTH` 失败立即禁用该凭证；`RATE_LIMIT` 失败直接轮换到下一个。
+- **降级链**：`degrade` 沿 fallback 数组前进一级（`LOWER_TIER`），走完最后一级后进入 `CACHE`；`upgrade` 回退一级，回到起点即 `NONE`。未降级时 `current_model` 返回 `"primary"`。
+- **重试循环**（`execute_with_recovery`）：每次重试前等待 `base_delay × factor^(n-1)` 并叠加 ±jitter 抖动；RATE_LIMIT 轮换凭证后重试；SERVER 且第 2 次尝试起自动 `degrade` 后重试；AUTH 轮换凭证后重试。成功（回调返回 0 且 2xx）时 `mark_cred_success`、若在降级中自动 `upgrade` 一级，并把响应体所有权转交 `*out_response`（调用方以 `AIRY_FREE` 释放）；失败返回 -1，中间响应缓冲区由内部释放，`out_result` 填错误码与 `"All retries exhausted"` 消息并置 `is_retriable`。
+- `set_retry_config` 对非法定值归一为默认（retries/delay 取正、factor ≤1 归 2.0、jitter 为负归 0.1）。
 
-## 接口说明
+## 作用域守卫与资源追踪（resource_guard）
 
-### 资源守卫 API
+### 守卫 API 与宏
+
+| 接口 | 说明 |
+|---|---|
+| `airy_resource_guard_init(guard, resource, cleanup, file, line, name)` | 手工初始化守卫（置 `active = 1`） |
+| `airy_resource_guard_cleanup(guard)` | 立即执行清理并复位守卫 |
+| `airy_resource_guard_dismiss(guard)` | 取消自动清理，所有权移交调用方 |
+| `AIRY_SCOPE_GUARD(resource, cleanup)` | 声明式守卫（变量名 `_guard<行号>`），作用域结束自动 cleanup |
+| `AIRY_SCOPE_EXIT(resource, cleanup)` | 同上（变量名 `_scope_exit<行号>`） |
+| `AIRY_SCOPE_DISMISS(resource)` | 撤销作用域守卫 |
+
+清理回调类型为 `airy_resource_cleanup_t`（`void (*)(void *)`），签名不符的函数需经包装或强转。
+
+### 资源追踪（定义 `AIRY_RESOURCE_TRACKING` 后启用，默认关闭）
+
+| 接口 | 说明 |
+|---|---|
+| `airy_resource_track_alloc(resource, type, file, line)` | 登记一次分配（链表 + 互斥锁，时间戳取 `airy_time_ns()`） |
+| `airy_resource_track_free(resource)` | 按指针注销登记 |
+| `airy_resource_track_report(out_report)` | 返回未释放条目数；`*out_report` 为新建报告字符串（调用方释放），4096 字节上限，最多列出 100 条，超出汇总为 "... and N more" |
+| `airy_resource_track_clear()` | 清空全部登记 |
+| `AIRY_TRACKED_MALLOC(size)` / `AIRY_TRACKED_FREE(ptr)` | 追踪版分配/释放；未启用追踪时分别退化为 `AIRY_MALLOC` / `AIRY_FREE` |
+
+未启用 `AIRY_RESOURCE_TRACKING` 时，`AIRY_TRACK_ALLOC` / `AIRY_TRACK_FREE` 为空操作宏。
+
+## 资源配额（resource_quota）
+
+### 数据结构
+
+| 结构 | 字段 |
+|---|---|
+| `airy_resource_quota_t` | `max_memory_bytes`、`max_cpu_time_ms`、`max_io_ops`、`max_network_bytes`、`timeout_ms` |
+| `airy_resource_usage_t` | `current_memory_bytes`、`peak_usage`、`total_cpu_time_ms`、`total_io_ops`、`total_network_bytes`、`start_time`、`last_update`、`operation_count` |
+| `airy_resource_manager_t` | 配额 + 用量 + `resource_id`（strdup 副本）+ `lock` + `enabled` + `exceeded_flags` |
+
+超限标志位：MEMORY `0x01`、CPU `0x02`、IO `0x04`、NETWORK `0x08`。
+
+### 接口（按头文件声明）
 
 | 函数 | 说明 |
-|------|------|
-| `airy_resource_guard_init(guard, resource, cleanup, file, line, name)` | 初始化资源守卫 |
-| `airy_resource_guard_cleanup(guard)` | 执行资源清理（调用 cleanup 函数） |
-| `airy_resource_guard_dismiss(guard)` | 取消资源清理（转移所有权，不再自动释放） |
+|---|---|
+| `airy_resource_manager_create(quota, resource_id, out_manager)` | 创建管理器（记录 `start_time`） |
+| `airy_resource_manager_destroy(manager)` | 销毁（释放 id 与本体） |
+| `airy_resource_check_memory(manager, requested_bytes)` | 预计用量超 `max_memory_bytes` 时置 MEMORY 位、WARN 并返回 `AIRY_ENOMEM`；0 字节请求返回 `AIRY_EINVAL` |
+| `airy_resource_record_allocation(manager, bytes)` | 记录分配，更新峰值与计数（实现导出符号为 `airy_resource_rec_alloc`，见语义与约束） |
+| `airy_resource_record_free(manager, bytes)` | 记录释放；释放超量时钳到 0 并 WARN |
+| `airy_resource_record_io(manager)` | 累计 I/O 次数；`total_io_ops ≥ max_io_ops` 时置 IO 位、WARN 并返回 `AIRY_EBUSY` |
+| `airy_resource_is_exceeded(manager)` | 任一超限位置位则返回 1 |
+| `airy_resource_get_usage(manager, out_usage)` | 拷贝当前用量快照 |
+| `airy_resource_get_exceeded_info(manager)` | 超限类型描述字符串（实现导出符号为 `airy_resource_get_exc_info`） |
 
-### 资源守卫宏
+`enabled = 0` 或 manager 为 NULL 时各检查按「未超限」放行。
 
-| 宏 | 说明 |
-|------|------|
-| `AIRY_SCOPE_GUARD(resource, cleanup)` | 创建作用域守卫（自动生成变量名，作用域结束时自动清理） |
-| `AIRY_SCOPE_EXIT(resource, cleanup)` | 创建作用域退出守卫（同 `SCOPE_GUARD` 的别名） |
-| `AIRY_SCOPE_DISMISS(resource)` | 取消作用域守卫（转移所有权） |
+## 语义与约束
 
-### 资源追踪 API（需 `AIRY_RESOURCE_TRACKING`）
+- **配额函数名错配**：头文件声明的 `airy_resource_record_allocation` / `airy_resource_get_exceeded_info` 与实现导出的 `airy_resource_rec_alloc` / `airy_resource_get_exc_info` 不一致，库内无对应别名——按头声明调用会导致未定义符号；消费方当前均直接使用实现符号名。
+- **未生效的配额字段**：`max_cpu_time_ms`、`max_network_bytes`、`timeout_ms` 不参与任何检查逻辑，CPU / NETWORK 超限位在当前实现中永不置位；`usage` 中对应的累计字段也无写入路径。
+- **配额非线程安全**：`manager->lock` 恒为 NULL，所有记录/检查操作无锁；`get_exceeded_info` 返回内部 `static` 512 字节缓冲，不可重入。
+- **守卫宏的平台性**：`AIRY_SCOPE_GUARD` / `AIRY_SCOPE_EXIT` 依赖 `__attribute__((cleanup))`；MSVC 下 `AIRY_ATTRIBUTE` 展开为空，守卫变量不会自动清理，需显式调用 `airy_resource_guard_cleanup`。`AIRY_SCOPE_DISMISS` 以自身所在行拼接守卫变量名，与定义处行号不一致时将引用失败——跨行移交所有权请改用 `airy_resource_guard_dismiss(&guard)` 配合手工初始化的守卫。
+- **熔断器仅存储**：`api_rec_bind_circuit_breaker` 只记录指针，执行路径不调用任何熔断逻辑；`user_context` 字段同理预留未用。
+- **恢复池非线程安全**：池结构字段公开且轮转索引为普通变量，多线程共享同一池需外部加锁。
+- `api_rec_cred_health` 以负值（`AIRY_EINVAL`）表示参数错误，正常值域为 `[0.0, 1.0]`。
 
-| 函数/宏 | 说明 |
-|------|------|
-| `airy_resource_track_alloc(resource, type, file, line)` | 注册资源分配 |
-| `airy_resource_track_free(resource)` | 注销资源分配 |
-| `airy_resource_track_report(out_report)` | 获取资源追踪报告（未释放资源列表） |
-| `airy_resource_track_clear()` | 清空资源追踪记录 |
-| `AIRY_TRACKED_MALLOC(size)` | 追踪的内存分配 |
-| `AIRY_TRACKED_FREE(ptr)` | 追踪的内存释放 |
-
-### 资源配额 API
-
-| 函数 | 说明 |
-|------|------|
-| `airy_resource_manager_create(quota, resource_id, out_manager)` | 创建资源管理器 |
-| `airy_resource_manager_destroy(manager)` | 销毁资源管理器 |
-| `airy_resource_check_memory(manager, requested_bytes)` | 检查内存配额是否充足（不足返回 `AIRY_ENOMEM`） |
-| `airy_resource_record_allocation(manager, bytes)` | 记录内存分配（更新峰值） |
-| `airy_resource_record_free(manager, bytes)` | 记录内存释放 |
-| `airy_resource_record_io(manager)` | 记录 I/O 操作（超限返回 `AIRY_EBUSY`） |
-| `airy_resource_is_exceeded(manager)` | 检查是否有资源超限 |
-| `airy_resource_get_usage(manager, out_usage)` | 获取资源使用统计 |
-| `airy_resource_get_exceeded_info(manager)` | 获取超限资源类型信息 |
-
-## 使用示例
+## 用法示例
 
 ```c
+#include "airy_memory.h"
+#include "api_recovery.h"
 #include "resource_guard.h"
-#include "resource_quota.h"
 
-// ===== 资源作用域守卫 =====
-void process_file(const char *path) {
-    FILE *file = fopen(path, "r");
-    if (!file) return;
-
-    // 作用域结束时自动调用 fclose(file)
-    AIRY_SCOPE_EXIT(file, (airy_resource_cleanup_t)fclose);
-
-    char buffer[1024];
-    while (fgets(buffer, sizeof(buffer), file)) {
-        // 处理文件内容...
-    }
-    // 无需手动 fclose，作用域守卫自动处理
+static void pool_reclaim(void *pool)
+{
+    api_rec_pool_destroy((api_rec_pool_t *)pool);
 }
 
-void allocate_buffer(void) {
-    void *buffer = malloc(1024 * 1024);
-    if (!buffer) return;
-
-    // 作用域结束时自动调用 free(buffer)
-    AIRY_SCOPE_GUARD(buffer, free);
-
-    // 使用 buffer...
-    // 如果需要在某个条件分支转移所有权，调用 AIRY_SCOPE_DISMISS
-    if (success) {
-        AIRY_SCOPE_DISMISS(buffer);
-        return buffer;  // 所有权转移给调用者
-    }
-    // 否则 buffer 自动释放
+static int chat_request(void *ctx, const char *url, const char *body, const char *cred,
+                        char **resp_body, long *http_code)
+{
+    (void)ctx;
+    /* 调用实际 HTTP 客户端：回填 *http_code，
+     * 成功时用分配器写入 *resp_body 并返回 0 */
+    *resp_body = NULL;
+    *http_code = 500;
+    return -1;
 }
 
-// ===== 资源配额管理 =====
-void run_with_quota(void) {
-    airy_resource_quota_t quota = {
-        .max_memory_bytes = 100 * 1024 * 1024,  // 100 MB
-        .max_cpu_time_ms = 5000,                 // 5 秒
-        .max_io_ops = 1000,                      // 1000 次 I/O
-        .max_network_bytes = 10 * 1024 * 1024,   // 10 MB
-        .timeout_ms = 10000                       // 10 秒超时
-    };
+int demo(void)
+{
+    api_rec_pool_t *pool = api_rec_pool_create("provider-a");
+    if (!pool)
+        return 1;
+    AIRY_SCOPE_EXIT(pool, pool_reclaim); /* 作用域结束自动销毁 */
 
-    airy_resource_manager_t *manager = NULL;
-    airy_resource_manager_create(&quota, "task-001", &manager);
+    api_rec_add_credential(pool, "sk-first");
+    api_rec_add_credential(pool, "sk-backup");
+    api_rec_add_fallback_model(pool, "small-model", 0.4f, 1);
 
-    // 分配内存前检查配额
-    size_t request = 50 * 1024 * 1024;  // 50 MB
-    if (airy_resource_check_memory(manager, request) == AIRY_SUCCESS) {
-        void *buffer = malloc(request);
-        airy_resource_record_allocation(manager, request);
-        // 使用 buffer...
-        free(buffer);
-        airy_resource_record_free(manager, request);
-    } else {
-        AIRY_LOG_WARN("Memory quota exceeded for task-001");
+    char *resp = NULL;
+    long code = 0;
+    api_rec_result_t result;
+    if (api_rec_execute_with_recovery(pool, chat_request, NULL,
+                                      "https://api.example/v1/chat", "{}",
+                                      &resp, &code, &result) == 0) {
+        /* 成功时 resp 所有权归调用方 */
+        AIRY_FREE(resp);
     }
-
-    // 执行 I/O 操作
-    for (int i = 0; i < 100; i++) {
-        if (airy_resource_record_io(manager) != AIRY_SUCCESS) {
-            AIRY_LOG_WARN("I/O quota exceeded");
-            break;
-        }
-        // 执行 I/O...
-    }
-
-    // 检查资源状态
-    if (airy_resource_is_exceeded(manager)) {
-        printf("Resource exceeded: %s\n",
-               airy_resource_get_exceeded_info(manager));
-    }
-
-    // 获取使用统计
-    airy_resource_usage_t usage;
-    airy_resource_get_usage(manager, &usage);
-    printf("Memory: %zu / %zu (peak: %zu)\n",
-           usage.current_memory_bytes, quota.max_memory_bytes,
-           usage.peak_usage);
-
-    airy_resource_manager_destroy(manager);
+    return result.rec_code == API_REC_ERR_NONE ? 0 : 1;
 }
 ```
 
-## 资源超限标志位
+## 构建与依赖
 
-| 标志位 | 值 | 说明 |
-|------|-----|------|
-| `RESOURCE_FLAG_MEMORY_EXCEEDED` | 0x01 | 内存超限 |
-| `RESOURCE_FLAG_CPU_EXCEEDED` | 0x02 | CPU 时间超限 |
-| `RESOURCE_FLAG_IO_EXCEEDED` | 0x04 | I/O 操作超限 |
-| `RESOURCE_FLAG_NETWORK_EXCEEDED` | 0x08 | 网络字节数超限 |
+三个 `.c` 均在 `airy_common` 源列表中；`utils/resource/` 已注册 PUBLIC include 路径并整体安装头文件（`include/agentrt/utils/resource/`，排除 `*_internal.h`）。
 
-## 资源追踪报告格式
+| 依赖 | 使用方 | 用途 |
+|---|---|---|
+| commons `utils/error` | api_recovery / quota | `airy_err_t` 与错误码宏 |
+| commons `utils/memory` | 三者 | `AIRY_MALLOC/CALLOC/FREE`、strdup 封装 |
+| commons `utils/string` | resource_guard | 追踪登记的字符串拷贝 |
+| commons `utils/sync`、`atomic_compat.h` | resource_guard | 追踪链表的互斥锁与 once-init |
+| commons `platform`（`platform_misc.h`） | api_recovery / guard | `airy_time_ms` / `airy_time_ns` / `airy_random_*` |
+| commons `utils/logging`（`svc_logger.h`） | api_recovery | `SVC_LOG_*` 事件日志 |
+| commons `utils/observability`（`logger.h`） | resource_quota | `AIRY_LOG_WARN` 超限告警 |
+| commons `include/airy_defaults.h` | api_recovery | 健康分/退避默认常量 |
+| agentrt `atoms/corekern`（`airy_rt.h`） | resource_quota | 以仓内相对路径 `../../../atoms/...` 引入，使 commons 反向依赖上层原子模块 |
 
-启用 `AIRY_RESOURCE_TRACKING` 后，`airy_resource_track_report()` 输出格式：
-
-```
-Resource leak report:
-===================
-Total leaks: 3
-
-[1] Type: memory, Ptr: 0x7f8a4c001000, File: main.c:42, Time: 1234567890 ns
-[2] Type: memory, Ptr: 0x7f8a4c002000, File: main.c:58, Time: 1234567891 ns
-[3] Type: memory, Ptr: 0x7f8a4c003000, File: main.c:73, Time: 1234567892 ns
-```
-
-## 配置选项
-
-| 参数 | 说明 |
-|------|------|
-| `AIRY_RESOURCE_TRACKING` | 编译时定义以启用资源追踪功能（默认关闭） |
-
-## 依赖关系
-
-| 依赖 | 说明 |
-|------|------|
-| `airy_memory.h` | 统一内存管理宏 |
-| `airy_memory.h` | 内存分配/释放函数 |
-| `airy_string.h` | 字符串操作 |
-| `sync.h` | 互斥锁（资源追踪使用） |
-| `atomic_compat.h` | 跨平台原子操作 |
-| `platform.h` | 时间戳获取 |
-| `logger.h` | 日志记录（配额超限告警） |
-| `error.h` | 统一错误码定义 |
+commons 测试套件中本模块仅有 `tests/unit/test_resource_guard.c`（以 mock 资源覆盖守卫生命周期与追踪报告）；api_recovery 与 resource_quota 无专项测试。除 `resource_quota.c` 对 `atoms/corekern` 的头文件引用外，本模块其余组件无 agentrt 内部上游依赖。
 
 ---
 
-© 2025-2026 SPHARX Ltd. All Rights Reserved.
+*SPDX-License-Identifier: AGPL-3.0-or-later OR Apache-2.0*
+*Copyright (c) 2025-2026 SPHARX Ltd. 及贡献者，详见 [LICENSE](../../LICENSE)。*
