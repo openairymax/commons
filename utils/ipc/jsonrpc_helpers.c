@@ -289,3 +289,49 @@ int jsonrpc_is_batch_request(const char *raw)
 
     return (*p == '[') ? 1 : 0;
 }
+
+/* ------------------------------------------------------------------
+ * Response routing (socket vs same-process corekern sink)
+ *
+ * The JSONRPC_SEND_ERROR / JSONRPC_SEND_SUCCESS macros funnel every
+ * serialized response through jsonrpc_route_response(). On the default
+ * path it writes to the client socket; when an L2 dispatch trampoline
+ * has installed a thread-local sink (DAEMON_L2_ENABLE in daemon_main.h),
+ * the response is appended to the sink buffer instead and is later
+ * delivered by the corekern IPC layer. The TLS pointer keeps the
+ * socket-thread and corekern-sender-thread paths independent without
+ * any locking.
+ * ------------------------------------------------------------------ */
+
+static AIRY_THREAD_LOCAL jsonrpc_resp_sink_t *tls_resp_sink = NULL;
+
+void jsonrpc_resp_sink_activate(jsonrpc_resp_sink_t *sink)
+{
+    tls_resp_sink = sink;
+}
+
+void jsonrpc_resp_sink_deactivate(void)
+{
+    tls_resp_sink = NULL;
+}
+
+int jsonrpc_route_response(airy_sock_t socket, const char *str, size_t len)
+{
+    if (!str || len == 0)
+        return AIRY_ERR_INVALID_PARAM;
+
+    jsonrpc_resp_sink_t *sink = tls_resp_sink;
+    if (sink) {
+        char *grown = (char *)AIRY_REALLOC(sink->buf, sink->len + len + 1);
+        if (!grown)
+            return AIRY_ERR_OUT_OF_MEMORY;
+        __builtin_memcpy(grown + sink->len, str, len);
+        grown[sink->len + len] = '\0';
+        sink->buf = grown;
+        sink->len += len;
+        return AIRY_SUCCESS;
+    }
+
+    return (airy_sock_send(socket, str, len) == (ssize_t)len) ? AIRY_SUCCESS
+                                                              : AIRY_ERR_GENERIC_FAIL;
+}
