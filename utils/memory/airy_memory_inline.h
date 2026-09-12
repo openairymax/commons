@@ -325,7 +325,12 @@ static inline void airy_auto_free_impl(void *p)
 /**
  * @def AIRY_STRNCPY_TERM(dst, src, size)
  * @brief 安全字符串复制宏，确保目标缓冲区始终以 null 终止
+ *
+ * ifndef-guarded: svc_logger.h inlines an identical macro for TUs that must
+ * not pull in this header (P0.17); whichever definition is seen first wins,
+ * keeping both orders warning-clean with identical semantics.
  */
+#ifndef AIRY_STRNCPY_TERM
 #define AIRY_STRNCPY_TERM(dst, src, size)                               \
     do {                                                                \
         size_t _len = AIRY_IMPL_STRLEN(src);                            \
@@ -333,6 +338,7 @@ static inline void airy_auto_free_impl(void *p)
         AIRY_IMPL_MEMCPY((dst), (src), _copy);                          \
         (dst)[_copy] = '\0';                                            \
     } while (0)
+#endif
 
 /** @} */ /* end of safe_memory_alloc */
 

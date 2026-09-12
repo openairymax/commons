@@ -327,16 +327,25 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
             char digits[12];
             int d = 0;
             int v = errno;
-            (void)write(STDERR_FILENO, hdr, sizeof(hdr) - 1);
+            /* post-fork diagnostics path: write() results are intentionally
+             * ignored (best-effort, async-signal-safe); (void) does not
+             * silence warn_unused_result, so route through an ignored
+             * variable. */
+            ssize_t ignored;
+            ignored = write(STDERR_FILENO, hdr, sizeof(hdr) - 1);
+            (void)ignored;
             if (v == 0)
                 digits[d++] = '0';
             while (v > 0 && d < (int)sizeof(digits) - 1) {
                 digits[d++] = (char)('0' + (v % 10));
                 v /= 10;
             }
-            while (d > 0)
-                (void)write(STDERR_FILENO, &digits[--d], 1);
-            (void)write(STDERR_FILENO, "\n", 1);
+            while (d > 0) {
+                ignored = write(STDERR_FILENO, &digits[--d], 1);
+                (void)ignored;
+            }
+            ignored = write(STDERR_FILENO, "\n", 1);
+            (void)ignored;
         }
         _exit(127);
     }
