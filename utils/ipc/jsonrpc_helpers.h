@@ -16,6 +16,7 @@
 #include <compat.h>
 
 #include "airy_memory.h"
+#include "daemon_platform_ext.h"
 #include "error.h"
 
 #ifdef __cplusplus
@@ -55,22 +56,55 @@ AIRY_API const char *jsonrpc_get_error_message(int code);
 AIRY_API char *jsonrpc_build_error_with_data(int code, const char *message, cJSON *data, int id);
 AIRY_API int jsonrpc_is_batch_request(const char *raw);
 
+/**
+ * @brief Response sink used by the same-process corekern transport.
+ *
+ * When a sink is active for the current thread, the JSONRPC_SEND_ERROR /
+ * JSONRPC_SEND_SUCCESS macros append the serialized response to sink->buf
+ * instead of writing it to a socket. This lets an L2 dispatch trampoline
+ * (see daemon_main.h DAEMON_L2_ENABLE) capture responses in memory and
+ * hand them to the corekern IPC layer. The sink is a dumb byte bucket:
+ * it has no capacity field because the daemon L2 bridge already enforces
+ * the 512 KiB payload ceiling; buf is AIRY_MALLOC'd (realloc'd) and
+ * NUL-terminated, and its owner frees it.
+ */
+typedef struct jsonrpc_resp_sink {
+    char *buf;  /* AIRY_MALLOC'd, NUL-terminated; NULL until first append */
+    size_t len; /* response bytes, NUL excluded */
+} jsonrpc_resp_sink_t;
+
+/** @brief Install @p sink as this thread's response sink (NULL fields). */
+AIRY_API void jsonrpc_resp_sink_activate(jsonrpc_resp_sink_t *sink);
+
+/** @brief Detach this thread's response sink (responses go to the socket). */
+AIRY_API void jsonrpc_resp_sink_deactivate(void);
 
 /**
- * @brief Send a JSON-RPC error response to the client (build+send+free).
+ * @brief Route a serialized JSON-RPC response to the active sink or socket.
+ * @param socket Client socket (ignored while a sink is active)
+ * @param str Serialized response (JSON-RPC error or success object)
+ * @param len Length in bytes
+ * @return AIRY_SUCCESS, or an AIRY_ERR_* code on failure
+ */
+AIRY_API int jsonrpc_route_response(airy_sock_t socket, const char *str, size_t len);
+
+/**
+ * @brief Send a JSON-RPC error response to the client (build+route+free).
  * @param socket Client socket descriptor
  * @param error_code Error code
  * @param message Error message
  * @param id Request ID
  * @note Replaces the manual build_error -> send -> free three-liner
+ * @note Routing honors the thread's response sink when active (corekern
+ *       transport), else writes to @p socket via airy_sock_send
  */
-#define JSONRPC_SEND_ERROR(socket, error_code, message, id)              \
-    do {                                                                 \
-        char *_err = jsonrpc_build_error((error_code), (message), (id)); \
-        if (_err) {                                                      \
-            airy_sock_send((socket), _err, strlen(_err));                \
-            AIRY_FREE(_err);                                             \
-        }                                                                \
+#define JSONRPC_SEND_ERROR(socket, error_code, message, id)                     \
+    do {                                                                        \
+        char *_err = jsonrpc_build_error((error_code), (message), (id));        \
+        if (_err) {                                                             \
+            (void)jsonrpc_route_response((socket), _err, strlen(_err));         \
+            AIRY_FREE(_err);                                                    \
+        }                                                                       \
     } while (0)
 
 /**
@@ -92,7 +126,7 @@ AIRY_API int jsonrpc_is_batch_request(const char *raw);
         char *_success = jsonrpc_build_success((result), (id));                             \
         /* result ownership already moved into jsonrpc_build_success's root; do not Delete */\
         if (_success) {                                                                     \
-            airy_sock_send((socket), _success, strlen(_success));                           \
+            (void)jsonrpc_route_response((socket), _success, strlen(_success));             \
             AIRY_FREE(_success);                                                            \
         }                                                                                   \
     } while (0)
