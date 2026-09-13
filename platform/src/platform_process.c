@@ -311,6 +311,16 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
         close(stdout_pipe[1]);
         close(stderr_pipe[1]);
 
+        /* R-3: airy_process_start launches external system tools (git, dig,
+         * docker/podman, ...). The airymaxrt launcher exports $AIRY_HOME/lib
+         * through LD_LIBRARY_PATH for the runtime's own binaries; leaking that
+         * into an external tool makes it load ABI-mismatched runtime .so files
+         * and fail (e.g. curl: "libcurl.so.4: no version information
+         * available"), which surfaces as "various tools unusable / cannot
+         * reach the network". Clear it before applying envp so an explicit
+         * caller-provided value still wins. The daemon process keeps its own
+         * LD_LIBRARY_PATH; only the child and its descendants are cleaned. */
+        unsetenv("LD_LIBRARY_PATH");
         if (envp) {
             for (int i = 0; envp[i]; i++) {
                 putenv(envp[i]);
