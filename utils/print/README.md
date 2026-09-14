@@ -1,6 +1,6 @@
 # print — 运行时统一打印宏
 
-**模块路径**: `commons/utils/print/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/print/` · **版本**: 0.1.16
 
 header-only 的运行时打印宏集：8 个 `airy_print_*` 宏统一委托 commons 日志系统的 `log_write()`，宏名与构建期 `cmake/airy_print.cmake` 的函数一一对应。
 

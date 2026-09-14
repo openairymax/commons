@@ -1,7 +1,7 @@
 # 合规模块（compliance）
 
 **模块路径**: `commons/utils/compliance/`
-**版本**: 0.1.15
+**版本**: 0.1.16
 
 ## 概述
 

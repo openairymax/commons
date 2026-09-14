@@ -1,6 +1,6 @@
 # task — A-TD 任务描述符
 
-**模块路径**: `commons/utils/task/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/task/` · **版本**: 0.1.16
 
 提供 A-TD（Airymax Task Descriptor）128 字节任务描述符的创建、CRC32 计算与完整性校验实现。契约头文件位于 commons 的共享头目录 `commons/include/airymax/task_desc.h`，实现编译进静态库 `airy_common`。
 

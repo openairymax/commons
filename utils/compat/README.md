@@ -1,6 +1,6 @@
 # compat — 跨平台兼容层
 
-**模块路径**: `commons/utils/compat/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/compat/` · **版本**: 0.1.16
 
 编译器与平台差异的**统一收口层**：编译器/平台检测宏、属性与内建包装、对齐与位操作、安全字符串/内存函数、断言设施、Windows 平台的 POSIX 头垫片（`unistd`、`dirent`、`netdb`、`sys/mman`），以及一个轻量 POSIX ERE 正则引擎。
 

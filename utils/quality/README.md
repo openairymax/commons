@@ -1,6 +1,6 @@
 # quality — 代码质量保障宏与内联工具
 
-**模块路径**: `commons/utils/quality/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/quality/` · **版本**: 0.1.16
 
 header-only 的代码质量工具集：输入验证宏、goto 清理宏、安全内存/字符串操作、整数溢出检测与安全类型转换，全部以宏或 `static inline` 实现，零运行时调度开销。
 

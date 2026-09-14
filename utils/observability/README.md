@@ -1,7 +1,7 @@
 # Observability — 可观测性模块
 
 **模块路径**: `commons/utils/observability/`
-**版本**: 0.1.15
+**版本**: 0.1.16
 
 ## 概述
 

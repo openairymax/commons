@@ -1,6 +1,6 @@
 # include — 共享头目录
 
-**模块路径**: `commons/utils/include/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/include/` · **版本**: 0.1.16
 
 commons 的 header-only 共享头目录：跨平台原子操作兼容层、`AIRY_LOG_*` 兼容转发头与检查宏。本目录不产生编译单元，作为 `airy_common` 的公开接口搜索路径导出，供各模块与下游直接引用。
 
