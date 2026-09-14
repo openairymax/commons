@@ -14,6 +14,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <process.h>
+#define IME_GETPID() ((int)_getpid())
+#else
+#include <unistd.h>
+#define IME_GETPID() ((int)getpid())
+#endif
+
 static int g_fail = 0;
 
 #define CHECK(cond, msg)                                                       \
@@ -97,7 +105,9 @@ int main(int argc, char *argv[])
 
     /* 8. 损坏文件 fail-closed */
     {
-        const char *tmp = "/tmp/airy_ime_corrupt.dat";
+        /* CI-2：路径带 PID，避免并行 ctest 下多个实例写同一文件互相踩踏。 */
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp), "/tmp/airy_ime_corrupt_%d.dat", IME_GETPID());
         FILE *f = fopen(tmp, "wb");
         if (f) {
             const char *bad = "AIRYIME1\x01\x00\x00\x00\xff\xff\xff\xff"
