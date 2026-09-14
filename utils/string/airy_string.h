@@ -649,6 +649,22 @@ size_t string_utf8_next_char(const char *str, uint32_t *ch);
  */
 bool string_utf8_validate(const char *str, size_t len);
 
+/**
+ * @brief Replace every invalid UTF-8 sequence with U+FFFD
+ *
+ * Copies @p in into @p out, substituting the Unicode replacement character
+ * (U+FFFD, EF BF BD) for each invalid sequence (truncated multi-byte tail,
+ * overlong encoding, surrogate code point or code point above U+10FFFF).
+ * The result is always valid UTF-8 and NUL-terminated.
+ *
+ * @param[in]  in      Source bytes (may contain invalid UTF-8)
+ * @param[in]  len     Number of source bytes to inspect
+ * @param[out] out     Destination buffer (NUL-terminated on return)
+ * @param[in]  out_cap Capacity of @p out in bytes, including the NUL
+ * @return Number of bytes written, excluding the terminating NUL
+ */
+size_t string_utf8_sanitize(const char *in, size_t len, char *out, size_t out_cap);
+
 /** @} */ /* end of string_api */
 #ifdef __cplusplus
 }
