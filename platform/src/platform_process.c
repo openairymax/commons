@@ -489,19 +489,13 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
                 output[offset] = '\0';
             return AIRY_PROCESS_RC_CANCELED;
         }
-        int st = 0;
-        pid_t wr = waitpid(proc.pid, &st, WNOHANG);
-        if (wr == proc.pid) {
 
-            if (WIFEXITED(st))
-                exit_code = WEXITSTATUS(st);
-            else if (WIFSIGNALED(st))
-                exit_code = -WTERMSIG(st);
-
-            break;
-        }
-
-        if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
+        /* Reaping must wait until both pipes hit EOF: a child that has
+         * exited still leaves unread data in the pipe buffer, and reaping
+         * earlier would discard it (output='' with exit_code=0 -- the root
+         * cause of the intermittent tool_d test_sandbox_integration Test 1
+         * failures under parallel ctest). */
+        if (!timed_out && deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
             timed_out = 1;
             airy_process_kill(&proc);
             continue;
@@ -522,11 +516,11 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
         }
         if (max_fd < 0) {
             /* All pipes hit EOF: the child exited (its write ends closed
-             * with the process). Must reap it blocking here to close the
-             * race window between EOF and waitpid -- otherwise a break in
-             * that window would report "start failure" with exit_code=-1
-             * (an intermittent heisenbug; see tool_d
-             * test_sandbox_integration Test 1 random failures). */
+             * with the process). This is the only normal reaping point --
+             * drain first, reap last -- so buffered output is fully read
+             * before waitpid, and the blocking call also closes the race
+             * window between EOF and reaping (no zombie, no exit_code=-1
+             * misreport; see tool_d test_sandbox_integration Test 1). */
             int eof_status = 0;
             if (waitpid(proc.pid, &eof_status, 0) == proc.pid) {
                 if (WIFEXITED(eof_status))
