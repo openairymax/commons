@@ -134,4 +134,96 @@ _Static_assert(offsetof(struct airy_ipc_msg_hdr, reserved) == 56,
 	#warning "AIRY_SC_FALLBACK active: ipc.h degraded to minimal 128B header, capability_badge=0 (H6), only SEND/RECV opcodes"
 #endif /* AIRY_SC_FALLBACK */
 
+/* ─── Payload Protocol Layer (02-ipc-protocol.md §3) ───────────────────
+ * Wire form: [8B discriminator (struct airy_ipc_payload)][body struct].
+ * The 128B header carries no type field — the payload protocol type is
+ * carried by the payload's leading discriminator, not by `opcode`
+ * (opcode is the transport SQE/CQE operation; the two are different layers).
+ *
+ * Legacy note: JSON-RPC text payloads that predate the typed framing carry
+ * no discriminator (their first byte is '{'); parse helpers must map them
+ * to the implicit REQUEST/RESPONSE pair instead of failing.
+ */
+#define AIRY_IPC_PT_REQUEST  0x0001u /* request side of request-response */
+#define AIRY_IPC_PT_RESPONSE 0x0002u /* response side of request-response */
+#define AIRY_IPC_PT_EVENT    0x0003u /* publish-subscribe notification */
+#define AIRY_IPC_PT_STREAM   0x0004u /* bidirectional stream data */
+#define AIRY_IPC_PT_CONTROL  0x0005u /* link management */
+
+/* 8-byte discriminator prepended to every typed payload body. */
+struct airy_ipc_payload {
+	__u32 type;     /* offset 0: AIRY_IPC_PT_* */
+	__u32 reserved; /* offset 4: must be zero */
+	__u8  body[];   /* offset 8: body struct, see below */
+};
+
+_Static_assert(sizeof(struct airy_ipc_payload) == 8,
+	       "airy_ipc_payload discriminator must be exactly 8 bytes");
+_Static_assert(offsetof(struct airy_ipc_payload, type) == 0,
+	       "payload type must be the first field");
+_Static_assert(offsetof(struct airy_ipc_payload, body) == 8,
+	       "payload body must start at offset 8");
+
+/* ── REQUEST body (§3.1) ── */
+struct airy_ipc_request {
+	__u64   request_id; /* correlates with RESPONSE.request_id */
+	__u32   method_id;  /* RPC method number */
+	__u32   timeout_ms; /* timeout in milliseconds */
+	__u8    params[];   /* method parameters (flexible) */
+};
+
+/* ── RESPONSE body (§3.2) ── */
+struct airy_ipc_response {
+	__u64   request_id; /* correlates with REQUEST.request_id */
+	__s32   status;     /* 0 success, <0 AIRY_E* error */
+	__u32   reserved;   /* must be zero */
+	__u8    result[];   /* result data (flexible) */
+};
+
+/* ── EVENT body (§3.3) ── */
+struct airy_ipc_event {
+	__u64   event_id;  /* event identifier */
+	__u32   topic_id;  /* topic assigned at subscribe time */
+	__u32   priority;  /* event priority (0-139) */
+	__u8    payload[]; /* event data (flexible) */
+};
+
+/* ── STREAM body (§3.4) ── */
+struct airy_ipc_stream {
+	__u64   stream_id; /* stream identifier */
+	__u32   seq;       /* sequence number (monotonic) */
+	__u32   flags;     /* AIRY_IPC_STREAM_FLAG_* */
+	__u8    chunk[];   /* stream data chunk (flexible) */
+};
+
+#define AIRY_IPC_STREAM_FLAG_FIN  0x00000001u /* final chunk */
+#define AIRY_IPC_STREAM_FLAG_RST  0x00000002u /* abort the stream */
+#define AIRY_IPC_STREAM_FLAG_MORE 0x00000004u /* more chunks follow */
+
+/* ── CONTROL body (§3.5) ── */
+struct airy_ipc_control {
+	__u32   opcode; /* AIRY_IPC_CTRL_* */
+	__u32   arg;    /* operation argument */
+	__u8    data[]; /* additional data (flexible) */
+};
+
+#define AIRY_IPC_CTRL_HELLO    0x0001u /* handshake */
+#define AIRY_IPC_CTRL_BYE      0x0002u /* close */
+#define AIRY_IPC_CTRL_PING     0x0003u /* heartbeat */
+#define AIRY_IPC_CTRL_PONG     0x0004u /* heartbeat reply */
+#define AIRY_IPC_CTRL_FLOW_OFF 0x0005u /* flow control: pause */
+#define AIRY_IPC_CTRL_FLOW_ON  0x0006u /* flow control: resume */
+
+_Static_assert(offsetof(struct airy_ipc_request, request_id) == 0,
+	       "REQUEST body first field must be 8-byte aligned");
+_Static_assert(offsetof(struct airy_ipc_response, request_id) == 0,
+	       "RESPONSE body first field must be 8-byte aligned");
+_Static_assert(offsetof(struct airy_ipc_event, event_id) == 0,
+	       "EVENT body first field must be 8-byte aligned");
+_Static_assert(offsetof(struct airy_ipc_stream, stream_id) == 0,
+	       "STREAM body first field must be 8-byte aligned");
+_Static_assert(offsetof(struct airy_ipc_control, opcode) == 0 &&
+		       offsetof(struct airy_ipc_control, arg) == 4,
+	       "CONTROL body layout must match 02-ipc-protocol.md §3.5");
+
 #endif /* _UAPI_AIRYMAX_IPC_H */
