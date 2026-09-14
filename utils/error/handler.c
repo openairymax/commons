@@ -265,6 +265,8 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_LLM_COST_EXCEED, "ERR_LLM_COST_EXCEED", "Cost exceeded", "超出成本限制",
      AIRY_ERR_SEVERITY_WARNING},
+    {AIRY_ERR_LLM_BAD_REQUEST, "ERR_LLM_BAD_REQUEST", "Provider rejected request body", "模型服务拒绝请求体",
+     AIRY_ERR_SEVERITY_ERROR},
 
     {AIRY_ERR_EXEC_NOT_FOUND, "ERR_EXEC_NOT_FOUND", "Executor not found", "执行器未找到",
      AIRY_ERR_SEVERITY_ERROR},

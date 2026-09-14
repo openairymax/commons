@@ -328,6 +328,16 @@
 #define AIRY_ERR_GCCP_INTERACTION (-411)
 #endif
 
+/* Provider 请求体被拒绝（HTTP 400/422）：请求非法（如消息含无效 UTF-8
+ * 或 JSON 结构错误），属确定性失败——重试不会成功，且与"网络不可达"
+ * 有本质区别（见 llm_d 的 openai_rate_limit.c / provider_stream.c）。
+ * 取值 -412 紧随 LLM 块（-400..-410；-411 已由 GCCP 交互信号占用），
+ * 不复用 -402 AIRY_ERR_LLM_PROVIDER_FAIL：后者在 sched_d DAG 被归类为
+ * 瞬态可重试，复用会让非法请求体被反复重试。 */
+#ifndef AIRY_ERR_LLM_BAD_REQUEST
+#define AIRY_ERR_LLM_BAD_REQUEST (-412)
+#endif
+
 
 #ifndef AIRY_ERR_EXEC_BASE
 #define AIRY_ERR_EXEC_BASE (-500)
