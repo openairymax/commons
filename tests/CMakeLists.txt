@@ -33,6 +33,8 @@ set(UNIT_TEST_SOURCES
     unit/test_ime.c
     # 文件增删改查（CRUD）跨平台往返（coding 场景基础能力）
     unit/test_io.c
+    # UTF-8 校验（RFC 3629）与非法序列清洗（U+FFFD 替换）
+    unit/test_string_utf8.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——

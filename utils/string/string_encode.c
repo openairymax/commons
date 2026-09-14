@@ -720,18 +720,24 @@ bool string_utf8_validate(const char *str, size_t len)
             }
         }
 
-        if (char_len == 2 && first == 0xC0 && (unsigned char)str[i + 1] == 0x80) {
-            return false;
-        }
-
         uint32_t code_point = 0;
+        uint32_t min_code_point = 0;
         if (char_len == 2) {
             code_point = ((first & 0x1F) << 6) | (str[i + 1] & 0x3F);
+            min_code_point = 0x80;
         } else if (char_len == 3) {
             code_point = ((first & 0x0F) << 12) | ((str[i + 1] & 0x3F) << 6) | (str[i + 2] & 0x3F);
+            min_code_point = 0x800;
         } else if (char_len == 4) {
             code_point = ((first & 0x07) << 18) | ((str[i + 1] & 0x3F) << 12) |
                          ((str[i + 2] & 0x3F) << 6) | (str[i + 3] & 0x3F);
+            min_code_point = 0x10000;
+        }
+
+        /* RFC 3629：最小码点以下的编码（overlong）不合法，例如 C0 80 与
+         * E0 80 80 都是「用两个/三个字节表示 ASCII」。 */
+        if (code_point < min_code_point) {
+            return false;
         }
 
         if (code_point > 0x10FFFF) {
@@ -746,4 +752,93 @@ bool string_utf8_validate(const char *str, size_t len)
     }
 
     return true;
+}
+
+size_t string_utf8_sanitize(const char *in, size_t len, char *out, size_t out_cap)
+{
+    if (in == NULL || out == NULL || out_cap == 0) {
+        return 0;
+    }
+
+    /* U+FFFD REPLACEMENT CHARACTER，非法序列的统一替代。 */
+    static const char kReplacement[3] = {(char)0xEF, (char)0xBF, (char)0xBD};
+
+    size_t i = 0;
+    size_t written = 0;
+
+    while (i < len) {
+        unsigned char first = (unsigned char)in[i];
+        size_t char_len = 0;
+        uint32_t code_point = 0;
+        uint32_t min_code_point = 0;
+
+        if (first < 0x80) {
+            char_len = 1;
+            code_point = first;
+        } else if ((first & 0xE0) == 0xC0) {
+            char_len = 2;
+            min_code_point = 0x80;
+        } else if ((first & 0xF0) == 0xE0) {
+            char_len = 3;
+            min_code_point = 0x800;
+        } else if ((first & 0xF8) == 0xF0) {
+            char_len = 4;
+            min_code_point = 0x10000;
+        }
+
+        bool valid = (char_len != 0);
+        if (valid && char_len > 1) {
+            if (i + char_len > len) {
+                valid = false; /* 尾部被截断的多字节序列 */
+            } else {
+                for (size_t j = 1; j < char_len; j++) {
+                    if (((unsigned char)in[i + j] & 0xC0) != 0x80) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            if (valid) {
+                if (char_len == 2) {
+                    code_point = ((first & 0x1Fu) << 6) | ((unsigned char)in[i + 1] & 0x3Fu);
+                } else if (char_len == 3) {
+                    code_point = ((first & 0x0Fu) << 12) |
+                                 (((unsigned char)in[i + 1] & 0x3Fu) << 6) |
+                                 ((unsigned char)in[i + 2] & 0x3Fu);
+                } else {
+                    code_point = ((first & 0x07u) << 18) |
+                                 (((unsigned char)in[i + 1] & 0x3Fu) << 12) |
+                                 (((unsigned char)in[i + 2] & 0x3Fu) << 6) |
+                                 ((unsigned char)in[i + 3] & 0x3Fu);
+                }
+                if (code_point < min_code_point || code_point > 0x10FFFF ||
+                    (code_point >= 0xD800 && code_point <= 0xDFFF)) {
+                    valid = false;
+                }
+            }
+        }
+
+        if (valid) {
+            if (written + char_len + 1 > out_cap) {
+                break;
+            }
+            for (size_t j = 0; j < char_len; j++) {
+                out[written + j] = in[i + j];
+            }
+            written += char_len;
+            i += char_len;
+        } else {
+            if (written + sizeof(kReplacement) + 1 > out_cap) {
+                break;
+            }
+            for (size_t j = 0; j < sizeof(kReplacement); j++) {
+                out[written + j] = kReplacement[j];
+            }
+            written += sizeof(kReplacement);
+            i += 1;
+        }
+    }
+
+    out[written] = '\0';
+    return written;
 } // TESTMARKER
