@@ -1,6 +1,6 @@
 # security — 安全工具
 
-**模块路径**: `commons/utils/security/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/security/` · **版本**: 0.1.16
 
 提供两个相互独立的安全组件：`input_validator`（基于白名单的输入验证与净化）和 `log_sanitizer`（日志敏感信息脱敏）。两者均编译进 commons 静态库 `airy_common`。
 

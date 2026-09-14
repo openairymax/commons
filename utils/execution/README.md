@@ -1,6 +1,6 @@
 # execution — 任务检查点（checkpoint）
 
-**模块路径**: `commons/utils/execution/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/execution/` · **版本**: 0.1.16
 
 将任务执行现场（状态 JSON + 元数据）按「任务 ID + 序号」持久化为文件，支持恢复、列举、过期清理与快照导出，用于中断后重建任务现场。
 

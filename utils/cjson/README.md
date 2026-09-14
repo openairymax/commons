@@ -1,6 +1,6 @@
 # cjson — cJSON 宏辅助层
 
-**模块路径**: `commons/utils/cjson/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/cjson/` · **版本**: 0.1.16
 
 面向 cJSON 的**纯头文件（header-only）宏辅助层**：把「解析判空、字段提取、作用域释放」的重复样板压缩为一行声明式写法，不改变 cJSON 自身语义。
 

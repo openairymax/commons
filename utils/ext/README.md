@@ -1,6 +1,6 @@
 # ext — 统一扩展注册表
 
-**模块路径**: `commons/utils/ext/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/ext/` · **版本**: 0.1.16
 
 进程级的能力接缝注册表：以 `(domain, name)` 为唯一键，在 memory / LLM / tool / storage / sandbox 五个域内注册、查找并遍历 provider 扩展；注册表只持有通用扩展头，域专有调用经不透明 vtable 转发。
 

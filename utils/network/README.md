@@ -1,6 +1,6 @@
 # network — 网络通信抽象层
 
-**模块路径**: `commons/utils/network/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/network/` · **版本**: 0.1.16
 
 跨平台（Windows Winsock2 / POSIX）的 TCP Socket 封装，附 HTTP/1.1 明文客户端、连接池与 DNS 解析工具。
 

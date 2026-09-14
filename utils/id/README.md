@@ -1,6 +1,6 @@
 # id — 品牌化 ID 生成
 
-**模块路径**: `commons/utils/id/` · **版本**: 0.1.15
+**模块路径**: `commons/utils/id/` · **版本**: 0.1.16
 
 `trace_id` 与 `msg_id` 两类品牌化标识的生成、比较与结构化命名（字符串化/解析）。类型与函数声明位于 `commons/include/airy_types.h` 的品牌化 ID 段，本目录仅提供实现。
 
