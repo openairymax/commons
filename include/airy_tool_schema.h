@@ -90,6 +90,13 @@
     "\"parameters\":{\"type\":\"object\",\"properties\":{\"op\":{\"type\":\"string\"}," \
     "\"values\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}}," \
     "\"required\":[\"op\",\"values\"]}}}" \
+    ",{\"type\":\"function\",\"function\":{\"name\":\"maths_plot\"," \
+    "\"description\":\"Sample y=f(x) over [xmin,xmax] and return a " \
+    "plot block that the TUI renders as a braille canvas\"," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"expression\":" \
+    "{\"type\":\"string\"},\"xmin\":{\"type\":\"number\"}," \
+    "\"xmax\":{\"type\":\"number\"},\"samples\":{\"type\":\"integer\"}}," \
+    "\"required\":[\"expression\",\"xmin\",\"xmax\"]}}}" \
     "]"
 
 #endif /* AIRY_RT_TOOL_SCHEMA_H */
