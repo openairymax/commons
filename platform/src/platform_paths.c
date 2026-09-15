@@ -215,32 +215,17 @@ static const char *paths_user_home(void)
 }
 
 /* 从 install.env（build.sh/install.sh 生成的安装信息文件）发现固化安装根。
- * 候选顺序与 airymaxrt 启动器一致：可执行文件逐级上溯（安装根/dev 布局）
- * → $HOME/.airymaxrt → $HOME/.local/share/airymaxrt。仅当环境变量
- * AIRY_HOME 未设置时兜底：直接运行二进制（无 AIRY_HOME 的独立调用）时
- * 定位到真实运行时根，避免解析到 $HOME/.airymaxrt 默认值导致 llm.sock
- * 等路径 404（2026-08-16 实测 airy_cli 直接运行失败）。
+ * 自锚定 SSoT（2026-09-16）：仅以可执行文件位置逐级上溯 install.env
+ * （安装布局 $AIRY_HOME/bin/<bin>、dev 布局 <root>/build/<sub>/<bin>），
+ * 与 latest/airymaxrt、install.sh 内嵌启动器两份 shell 副本口径一致。
+ * 历史故障：旧版把 $HOME/.airymaxrt/config/install.env 与
+ * $HOME/.local/share/airymaxrt/config/install.env 列为兜底候选，装在非默认
+ * 前缀的实例会被静默劫持到默认根——更新读到另一套实例的版本号（“刚装
+ * vX 却提示当前 vY”），运行期数据写进幽灵根；候选已全部移除。
  * 返回 1 表示发现（out 填充 home 路径），0 表示未发现。 */
 static int paths_discover_install_home(char *out, size_t out_size)
 {
-    if (paths_walkup_install_home(out, out_size))
-        return 1;
-
-    const char *uhome = paths_user_home();
-    if (!uhome || uhome[0] == '\0')
-        return 0;
-
-    char cand[AIRY_PATH_MAX * 2];
-    static const char *const rels[] = {
-        ".airymaxrt/config/install.env",
-        ".local/share/airymaxrt/config/install.env",
-    };
-    for (size_t i = 0; i < sizeof(rels) / sizeof(rels[0]); i++) {
-        snprintf(cand, sizeof(cand), "%s/%s", uhome, rels[i]);
-        if (paths_read_install_home(cand, out, out_size))
-            return 1;
-    }
-    return 0;
+    return paths_walkup_install_home(out, out_size);
 }
 
 /* 读取单个 install.env 文件的 AIRY_HOME= 行（去引号/换行）。 */
