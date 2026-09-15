@@ -7,14 +7,13 @@
 
 compliance 模块提供 C 编码规范强制机制：把一类「无边界、不可重入、易误用」的
 C 标准库函数从全部编译单元中封禁，强制调用方改用 commons 提供的带边界检查或
-线程安全的替代接口。整个模块只有两个头文件，不产生任何目标代码，纯编译期机制。
+线程安全的替代接口。整个模块只有一个头文件，不产生任何目标代码，纯编译期机制。
 
 ## 目录结构
 
 ```
 compliance/
-├── banned_functions.h    # 禁止函数封禁头（Strict poison / Standard deprecated 两档）
-└── compliance_exempt.h   # 非 Strict 档下的弃用警告抑制区间
+└── banned_functions.h    # 禁止函数封禁头（Strict poison / Standard deprecated 两档）
 ```
 
 ## 注入方式
@@ -57,17 +56,14 @@ compliance/
 
 ## 豁免机制
 
-两种机制适用场景不同：
+**`AIRY_COMPLIANCE_IMPL`（真豁免）**：作为编译定义、或在包含
+`banned_functions.h` 之前定义，会使整个封禁区被跳过。供替代实现自身使用
+（如 memory 模块的分配器封装层必须触碰裸 `malloc`）；由各所属目录的
+CMakeLists 以 `set_source_files_properties` 对特定源文件单独设置。
 
-1. **`AIRY_COMPLIANCE_IMPL`（真豁免）**：作为编译定义、或在包含
-   `banned_functions.h` 之前定义，会使整个封禁区被跳过。供替代实现自身使用
-   （如 memory 模块的分配器封装层必须触碰裸 `malloc`）；由各所属目录的
-   CMakeLists 以 `set_source_files_properties` 对特定源文件单独设置。
-2. **`compliance_exempt.h`（警告抑制区间）**：`AIRY_COMPLIANCE_EXEMPT_BEGIN`
-   /`AIRY_COMPLIANCE_EXEMPT_END` 一对宏。Strict 模式下为空操作（poison 无法
-   在同一编译单元内局部解除）；仅在 Standard 模式下展开为
-   `-Wdeprecated-declarations` 的 push/ignored/pop 区间，用于确需调用弃用
-   包装且接受其行为的局部代码。
+Strict 档下不存在「局部解除封禁」的机制——`#pragma GCC poison` 无法在同一
+编译单元内撤销。确需触碰被封禁标识符的代码，只能整体归入 `AIRY_COMPLIANCE_IMPL`
+的替代实现层。
 
 ## 被禁函数与替代接口
 

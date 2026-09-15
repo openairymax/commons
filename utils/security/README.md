@@ -156,7 +156,7 @@ void prepare_log_line(const char *raw, char *out, size_t out_size)
 
 本模块仅依赖 commons 内部其他工具模块，无 agentrt 内部上游依赖。
 
-`input_validator` 的单元测试位于 `commons/tests/unit/test_input_validator.c`；`log_sanitizer` 在 commons 测试套件中暂无专项用例。
+`input_validator` 与 `log_sanitizer` 在 commons 测试套件中暂无专项用例（`test_input_validator.c` 已随孤立测试源码清理一并移除）。
 
 ---
 

@@ -22,7 +22,6 @@ CMake + CTest 框架，支持自动化构建和回归检测。
 tests/
 ├── CMakeLists.txt               # 测试构建配置
 ├── README.md                    # 本文档
-├── test_sc_headers.c            # 系统契约头（include/airymax/）编译自检
 ├── utils/                       # 测试工具框架
 │   ├── test_framework.h         # 通用测试框架（断言宏、测试注册）
 │   ├── test_macros.h            # 测试辅助宏（EXPECT_EQ、ASSERT_TRUE 等）
@@ -36,11 +35,14 @@ tests/
 │   │              test_ipc_internal.h
 │   ├── test_cancel_token.c / test_airy_effect.c / test_airy_ext.c
 │   ├── test_airy_id.c / test_airy_regex.c / test_ime.c
-│   └── test_types.c / test_network.c / test_string_utils.c
-│       test_observability.c / test_resource_guard.c / test_input_validator.c
-└── bench/                       # 性能基准
-    └── bench_platform_perf.c    # 平台层性能基准
+│   ├── test_string_utf8.c
+│   └── test_types.c / test_network.c   # 未接线（依赖 cmocka）
 ```
+
+> 已移除的孤立测试源码（`test_sc_headers.c` / `test_observability.c` /
+> `test_resource_guard.c` / `test_input_validator.c` 及 `bench/` 下基准）从未在
+> `tests/CMakeLists.txt` 中注册，属于不参与构建的死代码；其覆盖能力由
+> `atoms/corekern` 权威实现侧的用例承接（commons 侧对应能力已退役）。
 
 ## 测试框架
 
@@ -131,9 +133,8 @@ ctest -j $(nproc) --output-on-failure
 | `test_io` | 文件 CRUD 跨平台往返 |
 | `test_ipc` | IPC 抽象层（按功能域拆分 6 个文件；POSIX 平台专属） |
 
-`unit/` 下另保留若干测试源码（如 `test_string_utils.c`、
-`test_observability.c`、`test_resource_guard.c`、`test_input_validator.c`），
-其构建接线以 `tests/CMakeLists.txt` 为准。
+`unit/` 下另保留 `test_types.c`、`test_network.c` 两个需要 cmocka 的源码，
+其构建接线以 `tests/CMakeLists.txt` 为准（当前未启用）。
 
 ## 依赖关系
 
