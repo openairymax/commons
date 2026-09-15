@@ -83,6 +83,14 @@ typedef struct {
 const char *airy_err_str(airy_err_t code);
 
 /**
+ * @brief 获取错误码的稳定符号名（如 "ERR_SVC_NOT_READY"），供日志与
+ *        机器客户端程序化分诊；语义描述见 airy_err_str
+ * @param code 错误码
+ * @return 符号名；未登记码返回 "ERR_UNKNOWN"
+ */
+const char *airy_err_code_name(airy_err_t code);
+
+/**
  * @brief 获取错误严重程度
  * @param code 错误码
  * @return 严重程度

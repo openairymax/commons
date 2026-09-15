@@ -244,6 +244,8 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SVC_LOADBALANCE, "ERR_SVC_LOADBALANCE", "Load balance error", "负载均衡错误",
      AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_SVC_CYCLE, "ERR_SVC_CYCLE", "Service dependency cycle detected", "检测到服务依赖环",
+     AIRY_ERR_SEVERITY_ERROR},
 
     {AIRY_ERR_LLM_NO_PROVIDER, "ERR_LLM_NO_PROVIDER", "No LLM provider", "无 LLM 提供商",
      AIRY_ERR_SEVERITY_ERROR},
@@ -351,6 +353,18 @@ const char *airy_err_str(airy_err_t code)
         }
     }
     return "Unknown error";
+}
+
+const char *airy_err_code_name(airy_err_t code)
+{
+    /* 与 airy_err_str 同一 AIRY_ERR_NEG 归一语义（S-1 收敛） */
+    airy_err_t norm = AIRY_ERR_NEG(code);
+    for (size_t i = 0; i < g_error_info_count; i++) {
+        if (g_error_info[i].code == norm) {
+            return g_error_info[i].name;
+        }
+    }
+    return "ERR_UNKNOWN";
 }
 
 airy_err_severity_t airy_err_get_severity(airy_err_t code)
