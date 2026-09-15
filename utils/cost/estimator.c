@@ -59,8 +59,8 @@ static const model_cost_config_t default_configs[] = {
     {"claude-3-opus", 0.015, 0.075, 200000, 4096},
     {"claude-3-sonnet", 0.003, 0.015, 200000, 4096},
     {"claude-3-haiku", 0.00025, 0.00125, 200000, 4096},
-    {"deepseek-chat", 0.00014, 0.00028, 163840, 16384},
-    {"deepseek-coder", 0.00014, 0.00028, 163840, 16384},
+    {"deepseek-flash", 0.00015, 0.0006, 1000000, 393216},
+    {"deepseek-coder", 0.00015, 0.0006, 1000000, 393216},
     {"", 0.001, 0.002, 4096, 4096}};
 
 static const model_cost_config_t *find_model_config(airy_cost_estimator_t *estimator,
