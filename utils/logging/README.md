@@ -29,7 +29,6 @@ logging/
 ├── service_logging.h         # Service 层：轮转/传输/过滤/监控 API
 ├── service_logging.c
 ├── svc_logger.h              # 服务层日志宏（SVC_LOG_*、带 trace 上下文的 AIRY_LOG_*_T 等）
-├── bench_atomic_logging.c    # Atomic 层性能基准
 └── README.md
 ```
 
@@ -174,8 +173,7 @@ AIRY_LOG_COLOR=0 ./your_daemon         # 终端中强制禁用色彩
 ## 构建
 
 本模块随 commons 单一静态库 target `airy_common` 一并编译，头文件以 PUBLIC
-方式导出，无需单独构建。Atomic 层吞吐与延迟基准可用
-`bench_atomic_logging.c` 在 agentrt 构建树中运行。
+方式导出，无需单独构建。
 
 ## 依赖
 

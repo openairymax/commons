@@ -80,7 +80,7 @@ int probe_desc(__u64 task_id, const void *payload, __u32 len)
 | `commons/include/airymax/uapi_compat.h` | `__u8`–`__u64` 整数别名 |
 | `platform_misc.h`（`commons/platform/`） | `airy_time_ns()` 单调时钟 |
 
-本模块无 agentrt 内部上游依赖。当前仓库内尚无本模块 API 的调用方，commons 测试套件亦无专项用例（`test_sc_headers.c` 覆盖的是 `airymax/sched.h` 的 64 字节调度描述符，与本模块无关）。
+本模块无 agentrt 内部上游依赖。当前仓库内尚无本模块 API 的调用方，commons 测试套件亦无专项用例。
 
 ---
 
