@@ -140,43 +140,6 @@ static void test_task_result_structure(void **state)
 }
 
 /* ============================================================================
- * 记忆类型测试
- * ============================================================================ */
-
-/**
- * @brief 测试记忆层级枚举
- */
-static void test_memory_layer_enums(void **state)
-{
-    (void)state;
-
-    assert_int_equal(AIRY_MEMORY_L1_WORKING, 0);
-    assert_int_equal(AIRY_MEMORY_L2_EPISODIC, 1);
-    assert_int_equal(AIRY_MEMORY_L3_SEMANTIC, 2);
-    assert_int_equal(AIRY_MEMORY_L4_PROCEDURAL, 3);
-}
-
-/**
- * @brief 测试记忆条目结构体
- */
-static void test_memory_entry_structure(void **state)
-{
-    (void)state;
-
-    airy_memory_entry_t entry = {0};
-
-    entry.layer = AIRY_MEMORY_L2_EPISODIC;
-    entry.importance = 0.8f;
-    entry.access_count = 10;
-    entry.size_bytes = 1024;
-
-    assert_int_equal(entry.layer, AIRY_MEMORY_L2_EPISODIC);
-    assert_float_within(0.01, 0.8f, entry.importance);
-    assert_int_equal(entry.access_count, 10);
-    assert_int_equal(entry.size_bytes, 1024);
-}
-
-/* ============================================================================
  * 会话类型测试
  * ============================================================================ */
 
@@ -463,9 +426,6 @@ int main(void)
         cmocka_unit_test(test_task_status_enums),
         cmocka_unit_test(test_task_config_init),
         cmocka_unit_test(test_task_result_structure),
-
-        cmocka_unit_test(test_memory_layer_enums),
-        cmocka_unit_test(test_memory_entry_structure),
 
         cmocka_unit_test(test_session_config_structure),
         cmocka_unit_test(test_context_structure),

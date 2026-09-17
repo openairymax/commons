@@ -204,18 +204,11 @@ typedef struct {
  */
 
 /**
- * @brief Memory layer enumeration
- * @details Four-layer memory hierarchy
- */
-typedef enum {
-    AIRY_MEM_LAYER1_RAW = 0,
-    AIRY_MEM_LAYER2_WORKING = 1,
-    AIRY_MEM_LAYER3_EPISODIC = 2,
-    AIRY_MEM_LAYER4_SEMANTIC = 3
-} airy_memory_layer_t;
-
-/**
  * @brief Memory type enumeration
+ *
+ * 记忆分层词汇（L1 原始/L2 特征/L3 结构/L4 模式）的唯一权威在
+ * atoms/memory/provider.h 的 airy_memory_capabilities_t，本头文件
+ * 不再定义第二套分层命名。
  */
 #ifndef AIRY_MEMORY_TYPE_T_DEFINED
 #define AIRY_MEMORY_TYPE_T_DEFINED
@@ -233,53 +226,6 @@ typedef enum {
  */
 struct airy_memory;
 typedef struct airy_memory airy_memory_t;
-
-/**
- * @brief Memory entry structure
- */
-typedef struct {
-    char *memory_id;
-    airy_memory_layer_t layer;
-    airy_memory_type_t type;
-    char *content;
-    size_t content_len;
-    float *embedding;
-    size_t embedding_dim;
-    float importance;
-    float decay_rate;
-    uint32_t access_count;
-    airy_timestamp_t created_at;
-    airy_timestamp_t last_access;
-    char *session_id;
-    char *task_id;
-    char **tags;
-    size_t tag_count;
-} airy_memory_entry_t;
-
-/**
- * @brief Memory search configuration
- */
-typedef struct {
-    const char *query;
-    size_t query_len;
-    airy_memory_layer_t layer;
-    uint32_t top_k;
-    float threshold;
-    const char **tags;
-    size_t tag_count;
-} airy_memory_search_t;
-
-/**
- * @brief Memory search results
- */
-#ifndef AIRY_MEMORY_RESULT_T_DEFINED
-#define AIRY_MEMORY_RESULT_T_DEFINED
-typedef struct {
-    airy_memory_entry_t *entries;
-    size_t count;
-    float *scores;
-} airy_memory_result_t;
-#endif
 
 /** @} */ /* end of MemoryTypes */
 /*
