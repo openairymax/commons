@@ -9,7 +9,7 @@
  * crosses the atoms <-> cupolas boundary. atoms/coreloopthree builds the
  * event and interprets the decision; cupolas implements the guard chain.
  * Both sides MUST include this file instead of defining the types locally
- * (ARC-02: atoms must not include an upper-layer header directly).
+ * (atoms must not include an upper-layer header directly).
  *
  * Only the boundary-crossing subset lives here. Guard descriptors, policies,
  * quotas, audit entries and callbacks stay in cupolas/include/safety_guard.h,

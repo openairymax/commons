@@ -153,7 +153,6 @@ size_t memory_debug_validate_all(size_t *error_count, bool dump_to_log)
             }
         }
 
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "=== 内存完整性验证===\n");
 
         if (log != stderr) {
@@ -177,9 +176,7 @@ size_t memory_debug_validate_all(size_t *error_count, bool dump_to_log)
             }
         }
 
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "验证完成，发现错误：%zu个\n", errors_found);
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "====================\n");
 
         if (log != stderr) {

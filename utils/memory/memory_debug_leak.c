@@ -96,17 +96,12 @@ size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log)
             }
         }
 
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "=== 内存泄漏检测报告===\n");
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "时间%llu\n", (unsigned long long)memory_debug_get_timestamp());
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "泄漏块数%zu\n", leak_count);
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "泄漏字节数：%zu\n", total_leaked_bytes);
 
         if (g_debug_state.options.verbosity_level >= 2) {
-            /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
             fprintf(log, "泄漏详情：\n");
 
             memory_debug_block_t *current = g_debug_state.block_list_head;
@@ -116,39 +111,30 @@ size_t memory_debug_check_leaks(memory_leak_report_t *report, bool dump_to_log)
                 if (current->allocated) {
                     count++;
                     void *user_ptr = (uint8_t *)current + g_debug_state.options.redzone_size;
-                    /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                     fprintf(log, "  %p: %zu字节", user_ptr, current->size);
 
                     if (current->tag != NULL) {
-                        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                         fprintf(log, " [%s]", current->tag);
                     }
 
                     if (current->file != NULL) {
-                        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                         fprintf(log, " (%s:%d", current->file, current->line);
                         if (current->function != NULL) {
-                            /* BAN-70 EXEMPT: diagnostic report output to configurable
-                             * FILE* stream */
                             fprintf(log, " in %s", current->function);
                         }
-                        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                         fprintf(log, ")");
                     }
 
-                    /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                     fprintf(log, "\n");
                 }
                 current = current->next;
             }
 
             if (count >= 20) {
-                /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
                 fprintf(log, "  ...（更多泄漏，总计%zu个）\n", leak_count);
             }
         }
 
-        /* BAN-70 EXEMPT: diagnostic report output to configurable FILE* stream */
         fprintf(log, "========================\n");
 
         if (log != stderr) {
