@@ -34,7 +34,7 @@ set(SOURCES
     utils/logging/logging_control.c
     utils/logging/atomic_logging.c
     utils/logging/service_logging.c
-    # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
+    # memory 核心层按功能域拆分：状态机+分配 / 统计 / 调试核心
     utils/memory/memory_core.c
     utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
@@ -85,6 +85,7 @@ set(SOURCES
     utils/compat/airy_regex_parse.c
     utils/compat/airy_regex_compile.c
     utils/cognition/cognition_common.c
+    utils/cognition/agent_vocab.c
     utils/strategy/strategy_common.c
     # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
     utils/network/network_common.c
@@ -175,7 +176,7 @@ add_library(airy_common STATIC ${SOURCES})
 # 8.2.3 (SSoT): monotonic clock single source — corekern clock.c is compiled
 # into airy_common so every airy_common consumer resolves airy_time_ns/ms
 # without a reverse link edge to atoms (single-pass GNU ld ordering keeps
-# corekern members before commons; see atoms/CMakeLists.txt ARC-06 note).
+# corekern members before commons; see atoms/CMakeLists.txt note).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/src/time/clock.c")
     target_sources(airy_common PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../atoms/corekern/src/time/clock.c)
@@ -257,7 +258,7 @@ if(_inc_missing GREATER 0)
 endif()
 
 set_source_files_properties(
-    # memory 核心层按功能域拆分（0.1.6）：状态机+分配 / 统计 / 调试核心
+    # memory 核心层按功能域拆分：状态机+分配 / 统计 / 调试核心
     utils/memory/memory_core.c
     utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
@@ -338,7 +339,7 @@ endif()
 # 版本宏注入：airy_version_string()/airy_build_info() 随顶层
 # project(VERSION) 走，避免 compat.c 内硬编码版本与发行版漂移
 # （SSoT：顶层 CMakeLists 的 project(AgentRT VERSION x.y.z)）。
-# 显示版本字符串以 VERSION 文件为权威（支持 0.1.5a 后缀；CMake 不接受
+# 显示版本字符串以 VERSION 文件为权威（支持字母后缀；CMake 不接受
 # 字母后缀，PROJECT_VERSION 仅作数字基线供构建系统比较）。
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION" AIRY_RELEASE_VERSION LIMIT_COUNT 1)
 string(STRIP "${AIRY_RELEASE_VERSION}" AIRY_RELEASE_VERSION)
@@ -378,7 +379,7 @@ endif()
 
 install(TARGETS airy_common DESTINATION lib)
 install(DIRECTORY platform/include/ DESTINATION include/agentrt/platform)
-# 0.1.9 0d 扁平化：utils/<X>/ 平铺后仅安装公共头（*.h），排除 _internal.h
+# 扁平化：utils/<X>/ 平铺后仅安装公共头（*.h），排除 _internal.h
 install(DIRECTORY utils/token/ DESTINATION include/agentrt/utils/token
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/cost/ DESTINATION include/agentrt/utils/cost
