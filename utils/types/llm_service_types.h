@@ -9,7 +9,7 @@
  * crosses the atoms <-> llm_d boundary. atoms/coreloopthree builds the
  * request and interprets the response; daemons/llm_d implements the
  * service. Both sides MUST include this file instead of defining the
- * types locally (ARC-02: atoms must not include an upper-layer header
+ * types locally (atoms must not include an upper-layer header
  * directly).
  *
  * Only the boundary-crossing subset lives here. The service lifecycle
@@ -23,6 +23,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,10 +85,61 @@ typedef struct {
      * Zero when the upstream does not report it. */
     uint32_t reasoning_tokens;
     double cost_usd;
+    /* Completion outcome in the canonical vocabulary defined below.
+     * Every provider normalizes its native marker with
+     * llm_finish_reason_norm() before returning, so consumers
+     * (llm_d / gateway / cli) never branch on provider-specific strings. */
     char *finish_reason;
 } llm_response_t;
 
 typedef void (*llm_stream_callback_t)(const char *chunk, void *user_data);
+
+/* Canonical finish_reason vocabulary for the whole stack. Native upstream
+ * markers are mapped onto these four values at the provider edge. */
+#define LLM_FINISH_STOP "stop"                     /* natural end */
+#define LLM_FINISH_LENGTH "length"                 /* output token cap hit */
+#define LLM_FINISH_CONTENT_FILTER "content_filter" /* upstream safety block */
+#define LLM_FINISH_TOOL_CALLS "tool_calls"         /* turn yielded tool calls */
+
+/**
+ * @brief Normalize a provider-native completion marker to the canonical set.
+ *
+ * Markers already expressed in the canonical set pass through unchanged;
+ * unrecognized markers are returned as-is so no upstream signal is dropped.
+ *
+ * @param raw Native marker (may be NULL)
+ * @return Canonical marker (static storage), never NULL
+ */
+static inline const char *llm_finish_reason_norm(const char *raw)
+{
+    if (!raw || !raw[0])
+        return LLM_FINISH_STOP;
+    if (strcmp(raw, "STOP") == 0 || strcmp(raw, "end_turn") == 0 ||
+        strcmp(raw, "stop_sequence") == 0)
+        return LLM_FINISH_STOP;
+    if (strcmp(raw, "MAX_TOKENS") == 0 || strcmp(raw, "max_tokens") == 0)
+        return LLM_FINISH_LENGTH;
+    if (strcmp(raw, "SAFETY") == 0 || strcmp(raw, "refusal") == 0)
+        return LLM_FINISH_CONTENT_FILTER;
+    if (strcmp(raw, "tool_use") == 0)
+        return LLM_FINISH_TOOL_CALLS;
+    return raw;
+}
+
+/**
+ * @brief Whether the turn ended because the output token cap was reached.
+ *
+ * True means the received content is a prefix of the model's answer rather
+ * than a finished one. Single predicate for the whole stack — callers must
+ * not re-test the literal "length" on their own.
+ *
+ * @param finish_reason Canonical marker (may be NULL)
+ * @return 1 when truncated, otherwise 0
+ */
+static inline int llm_finish_is_truncated(const char *finish_reason)
+{
+    return finish_reason && strcmp(finish_reason, LLM_FINISH_LENGTH) == 0;
+}
 
 #ifdef __cplusplus
 }
