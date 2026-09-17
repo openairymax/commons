@@ -123,14 +123,9 @@ types/
 
 ### 记忆类型
 
-#### airy_memory_layer_t — 四层记忆层级
-
-| 枚举值 | 说明 |
-|------|------|
-| `AIRY_MEM_LAYER1_RAW` | Layer1: 原始记忆 |
-| `AIRY_MEM_LAYER2_WORKING` | Layer2: 工作记忆 |
-| `AIRY_MEM_LAYER3_EPISODIC` | Layer3: 情景记忆 |
-| `AIRY_MEM_LAYER4_SEMANTIC` | Layer4: 语义记忆 |
+记忆分层词汇（L1 原始 / L2 特征 / L3 结构 / L4 模式）的唯一权威是
+`atoms/memory/provider.h` 的 `airy_memory_capabilities_t` 能力位；
+本模块只定义记忆条目的载荷类型，不定义第二套分层命名。
 
 #### airy_memory_type_t — 记忆类型
 
@@ -140,29 +135,6 @@ types/
 | `AIRY_MEMTYPE_EMBEDDING` | 向量嵌入 |
 | `AIRY_MEMTYPE_STRUCTURED` | 结构化数据 |
 | `AIRY_MEMTYPE_BINARY` | 二进制 |
-
-#### airy_memory_entry_t — 记忆条目
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `memory_id` | `char *` | 记忆 ID |
-| `layer` | `airy_memory_layer_t` | 记忆层级 |
-| `type` | `airy_memory_type_t` | 记忆类型 |
-| `content` | `char *` | 记忆内容 |
-| `content_len` | `size_t` | 内容长度 |
-| `embedding` | `float *` | 向量嵌入（可选） |
-| `embedding_dim` | `size_t` | 嵌入维度 |
-| `importance` | `float` | 重要性分数（0-1） |
-| `decay_rate` | `float` | 衰减率 |
-| `access_count` | `uint32_t` | 访问次数 |
-| `created_at` | `airy_timestamp_t` | 创建时间 |
-| `last_access` | `airy_timestamp_t` | 最后访问时间 |
-| `session_id` | `char *` | 关联会话 ID |
-| `task_id` | `char *` | 关联任务 ID |
-| `tags` | `char **` | 标签列表 |
-| `tag_count` | `size_t` | 标签数量 |
-
-此外提供 `airy_memory_search_t`（检索配置：query、layer、top_k、threshold、tags）与 `airy_memory_result_t`（检索结果：entries、count、scores）。
 
 ### 会话类型
 
