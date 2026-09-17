@@ -161,7 +161,7 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
                                 airy_cancel_token_t *cancel_token)
 {
     (void)envp;
-    /* BAN-211/235: use CreateProcess + anonymous pipes instead of _popen
+    /* use CreateProcess + anonymous pipes instead of _popen
      * (eliminates cmd.exe injection risk). CreateProcess parses the command
      * line directly without a shell, aligning behavior with POSIX
      * fork/execvp. Consistent with the win_run_command secure pattern in

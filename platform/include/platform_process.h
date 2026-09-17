@@ -181,7 +181,7 @@ void airy_process_close_pipes(airy_process_info_t *proc);
  *
  * Internally completes the full start -> read merged stdout+stderr -> wait
  * -> close flow. The POSIX path uses fork + execvp (no shell, no command
- * injection risk, BAN-211/235 compliant).
+ * injection risk).
  *
  * @param executable executable file path (searched in PATH by execvp)
  * @param argv       argument array (NULL-terminated, argv[0] is usually the program name)

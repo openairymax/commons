@@ -9,7 +9,7 @@
  * crosses the atoms <-> tool_d boundary. atoms/coreloopthree builds the
  * execution request and interprets the result; daemons/tool_d implements
  * the service. Both sides MUST include this file instead of defining the
- * types locally (ARC-02: atoms must not include an upper-layer header
+ * types locally (atoms must not include an upper-layer header
  * directly).
  *
  * Only the boundary-crossing subset lives here. The service lifecycle

@@ -5,11 +5,11 @@
  * @file platform_compat.c
  * @brief 平台扩展实现（airy_dl_* / airy_sock_* / 进程 / 线程别名等）。
  *
- * 0.1.9 0c (IRON-6 归位)：实现从 daemons/common/src/util/ 迁入
+ * IRON-6 归位：实现从 daemons/common/src/util/ 迁入
  * commons/platform，声明见 platform/include/daemon_platform_ext.h。
  */
 
-/* _GNU_SOURCE: defined via CMakeLists.txt target_compile_definitions (BAN-182) */
+/* _GNU_SOURCE: defined via CMakeLists.txt target_compile_definitions */
 #include "atomic_compat.h"
 #include "daemon_platform_ext.h"
 #include "airy_memory.h"
@@ -303,7 +303,7 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
     int opt = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char *)&opt, sizeof(opt));
-    /* 0.1.6h：对外 TCP 长连接开内核 keepalive——半开连接（客户端崩溃/
+    /* 对外 TCP 长连接开内核 keepalive——半开连接（客户端崩溃/
      * 网络闪断）由内核探活回收，避免连接数只增不减。服务端 listen fd
      * 的 keepalive 会经 accept 继承到每个连接。 */
     setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&opt, sizeof(opt));
@@ -587,7 +587,7 @@ ssize_t airy_sock_send(airy_sock_t sock, const void *buf, size_t len)
  */
 #define AIRY_DAEMON_REQ_INITIAL_CAP (64 * 1024)
 #define AIRY_DAEMON_REQ_MAX_CAP (8 * 1024 * 1024)
-/* 0.1.6h：请求读取预算默认 5s 对慢客户端/gateway 转发链过紧，可经
+/* 请求读取预算默认 5s 对慢客户端/gateway 转发链过紧，可经
  * AIRY_DAEMON_REQ_TIMEOUT_MS 覆盖（1000..60000），默认保持 5s。 */
 #define AIRY_DAEMON_REQ_FIRST_POLL_MS 5000
 #define AIRY_DAEMON_REQ_SLICE_MS 200

@@ -72,8 +72,8 @@ cost/
 | `claude-3-opus` | 0.015 | 0.075 |
 | `claude-3-sonnet` | 0.003 | 0.015 |
 | `claude-3-haiku` | 0.00025 | 0.00125 |
-| `deepseek-chat` | 0.00014 | 0.00028 |
-| `deepseek-coder` | 0.00014 | 0.00028 |
+| `deepseek-flash` | 0.00015 | 0.0006 |
+| `deepseek-coder` | 0.00015 | 0.0006 |
 | 未匹配模型（兜底） | 0.001 | 0.002 |
 
 ## 用法示例
