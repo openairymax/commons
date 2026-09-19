@@ -111,17 +111,44 @@ static thread_error_state_t *get_thread_error_state(void)
     return state;
 }
 #else
-static AIRY_THREAD_LOCAL thread_error_state_t *g_tls_error_state = NULL;
+#include <pthread.h>
+
+/* POSIX：pthread_key 析构器在线程退出时自动回收错误状态（含链上 message
+ * 副本），库内全部线程入口无需逐一调用清理接口。析构器内不分配、不压
+ * 错误，避免 pthread 反复重跑析构。 */
+static pthread_key_t g_tls_error_key;
+static pthread_once_t g_tls_error_once = PTHREAD_ONCE_INIT;
+
+static void tls_state_destroy(void *p)
+{
+    thread_error_state_t *state = (thread_error_state_t *)p;
+    if (state == NULL)
+        return;
+    for (int i = 0; i < state->chain.depth; i++) {
+        AIRY_FREE((void *)state->chain.contexts[i].message);
+        state->chain.contexts[i].message = NULL;
+    }
+    AIRY_FREE(state);
+}
+
+static void tls_key_create(void)
+{
+    (void)pthread_key_create(&g_tls_error_key, tls_state_destroy);
+}
 
 static thread_error_state_t *get_thread_error_state(void)
 {
-    if (g_tls_error_state == NULL) {
-        g_tls_error_state = (thread_error_state_t *)AIRY_CALLOC(1, sizeof(thread_error_state_t));
-        if (g_tls_error_state != NULL) {
-            g_tls_error_state->initialized = 1;
+    (void)pthread_once(&g_tls_error_once, tls_key_create);
+    thread_error_state_t *state =
+        (thread_error_state_t *)pthread_getspecific(g_tls_error_key);
+    if (state == NULL) {
+        state = (thread_error_state_t *)AIRY_CALLOC(1, sizeof(thread_error_state_t));
+        if (state != NULL) {
+            state->initialized = 1;
+            (void)pthread_setspecific(g_tls_error_key, state);
         }
     }
-    return g_tls_error_state;
+    return state;
 }
 #endif
 
@@ -418,14 +445,12 @@ void airy_err_thread_cleanup(void)
         }
     }
 #else
-    if (g_tls_error_state != NULL) {
-
-        for (int i = 0; i < g_tls_error_state->chain.depth; i++) {
-            AIRY_FREE((void *)g_tls_error_state->chain.contexts[i].message);
-            g_tls_error_state->chain.contexts[i].message = NULL;
-        }
-        AIRY_FREE(g_tls_error_state);
-        g_tls_error_state = NULL;
+    (void)pthread_once(&g_tls_error_once, tls_key_create);
+    thread_error_state_t *state =
+        (thread_error_state_t *)pthread_getspecific(g_tls_error_key);
+    if (state != NULL) {
+        tls_state_destroy(state);
+        (void)pthread_setspecific(g_tls_error_key, NULL);
     }
 #endif
 }

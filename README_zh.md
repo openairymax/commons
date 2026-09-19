@@ -222,7 +222,7 @@ int main(void) {
 ## 文档
 
 项目文档位于 [openairymax/docs](https://atomgit.com/openairymax/docs) 的
-`docs/AirymaxRT/` 目录下，其中包含治理本仓库的工程标准规范手册。
+`docs/docs-workload/` 目录下，其中包含治理本仓库的工程标准规范手册。
 
 ## 许可
 

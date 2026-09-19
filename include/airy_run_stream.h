@@ -96,4 +96,9 @@
 #define AIRY_RS_K_CONTENT    "content"
 #define AIRY_RS_K_REASONING  "reasoning"
 
+/* run_end 分段耗时（与 duration_ms 总耗时并列，均为毫秒） */
+#define AIRY_RS_K_THINK_MS   "think_ms"
+#define AIRY_RS_K_LLM_MS     "llm_ms"
+#define AIRY_RS_K_TOOL_MS    "tool_ms"
+
 #endif /* AIRY_RT_RUN_STREAM_H */

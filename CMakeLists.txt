@@ -438,6 +438,8 @@ install(DIRECTORY include/airymax/ DESTINATION include/airymax)
 install(FILES include/airy_tool_schema.h DESTINATION include/agentrt)
 # M1-1d: agent.run_stream v1 事件帧协议 schema 单一权威（agent_d/gateway/sdk-rust 共引）
 install(FILES include/airy_run_stream.h DESTINATION include/agentrt)
+# B2: llm_d complete_stream 的 RS 分帧协议单一权威（llm_d/atoms/agent_d 共引）
+install(FILES include/airy_llm_stream.h DESTINATION include/agentrt)
 
 option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)

@@ -57,13 +57,21 @@ typedef struct {
 #define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04
 
 /**
+ * @brief Default token counting model name.
+ *
+ * Used when the caller has not declared an actual model; the name feeds the
+ * model→algorithm mapping in count_tokens_by_model() (generic = no scaling).
+ */
+#define AIRY_TOKEN_MODEL_NAME_DEFAULT "generic"
+
+/**
  * @brief Default token counting config.
  */
-#define AIRY_TOKEN_CONFIG_DEFAULT            \
-    {.model_type = AIRY_TOKEN_MODEL_GENERIC, \
-     .model_name = "generic",                \
-     .cjk_ratio = 0.3f,                      \
-     .alpha_ratio = 0.5f,                    \
+#define AIRY_TOKEN_CONFIG_DEFAULT                    \
+    {.model_type = AIRY_TOKEN_MODEL_GENERIC,         \
+     .model_name = AIRY_TOKEN_MODEL_NAME_DEFAULT,    \
+     .cjk_ratio = 0.3f,                              \
+     .alpha_ratio = 0.5f,                            \
      .flags = AIRY_TOKEN_FLAG_ESTIMATE}
 
 /**
