@@ -230,7 +230,7 @@ codes, keeping host and embedded sides of the runtime consistent.
 
 ## Documentation
 
-Project documentation lives under the `docs/AirymaxRT/` tree of
+Project documentation lives under the `docs/docs-workload/` tree of
 [openairymax/docs](https://atomgit.com/openairymax/docs), including the
 engineering-standards handbook that governs this repository.
 
