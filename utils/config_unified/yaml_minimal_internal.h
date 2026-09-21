@@ -62,6 +62,8 @@ struct parse_ctx {
 };
 
 void *yaml_safe_realloc(void *ptr, size_t size);
+struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries, size_t used,
+                                             size_t new_capacity);
 void set_error(struct parse_ctx *ctx, const char *fmt, ...);
 
 /* Lexer */
