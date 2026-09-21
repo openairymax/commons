@@ -32,6 +32,23 @@ void *yaml_safe_realloc(void *ptr, size_t size)
     return tmp;
 }
 
+struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries, size_t used,
+                                             size_t new_capacity)
+{
+    struct yaml_mapping_entry *grown = (struct yaml_mapping_entry *)yaml_safe_realloc(
+        entries, new_capacity * sizeof(struct yaml_mapping_entry));
+    if (!grown)
+        return NULL;
+
+    /* AIRY_REALLOC() leaves the new tail untouched, but both yaml_size()
+     * and free_node() walk a mapping until its first NULL key: without
+     * clearing, the freshly exposed slots keep whatever the previous
+     * owner left there and the mapping looks longer than it is, which
+     * makes free_node() release those stale pointers. */
+    AIRY_MEMSET(&grown[used], 0, (new_capacity - used) * sizeof(struct yaml_mapping_entry));
+    return grown;
+}
+
 char *parse_tag(struct parse_ctx *ctx)
 {
     if (peek(ctx) != '!')

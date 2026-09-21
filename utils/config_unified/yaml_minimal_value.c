@@ -327,8 +327,7 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
             v->scalar.value = AIRY_STRDUP("");
         if (msz >= cap) {
             cap *= 2;
-            map->mapping = (struct yaml_mapping_entry *)
-                yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
+            map->mapping = yaml_mapping_grow(map->mapping, msz, cap);
             if (!map->mapping)
                 return NULL;
         }

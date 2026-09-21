@@ -84,9 +84,7 @@ void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
     while (cap < tgt_sz + src_sz)
         cap *= 2;
 
-    target->mapping =
-        (struct yaml_mapping_entry *)yaml_safe_realloc(target->mapping,
-                                                       cap * sizeof(struct yaml_mapping_entry));
+    target->mapping = yaml_mapping_grow(target->mapping, tgt_sz, cap);
     if (!target->mapping)
         return;
 
@@ -103,8 +101,7 @@ void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
         if (!found) {
             if (tgt_current >= cap) {
                 cap *= 2;
-                target->mapping = (struct yaml_mapping_entry *)
-                    yaml_safe_realloc(target->mapping, cap * sizeof(struct yaml_mapping_entry));
+                target->mapping = yaml_mapping_grow(target->mapping, tgt_current, cap);
                 if (!target->mapping)
                     return;
             }
@@ -198,8 +195,7 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
                     }
                     if (map_size >= cap) {
                         cap *= 2;
-                        map->mapping = (struct yaml_mapping_entry *)yaml_safe_realloc(
-                            map->mapping, cap * sizeof(struct yaml_mapping_entry));
+                        map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
                         if (!map->mapping)
                             return NULL;
                     }
@@ -218,8 +214,7 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
                 null_node->scalar.value = AIRY_STRDUP("");
             if (map_size >= cap) {
                 cap *= 2;
-                map->mapping = (struct yaml_mapping_entry *)
-                    yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
+                map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
                 if (!map->mapping)
                     return NULL;
             }
@@ -255,8 +250,7 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
 
         if (map_size >= cap) {
             cap *= 2;
-            map->mapping = (struct yaml_mapping_entry *)
-                yaml_safe_realloc(map->mapping, cap * sizeof(struct yaml_mapping_entry));
+            map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
             if (!map->mapping)
                 return NULL;
         }
