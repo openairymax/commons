@@ -69,7 +69,7 @@ typedef struct {
      * "parameters":{...}}}]) */
     const char *tools_json;
     /* B5-3 缓存准入声明：仅当调用方显式声明 cacheable=1 时，
-     * 响应才允许写入语义缓存（缺省 0 = fail-closed）。 */
+     * 请求才允许读写语义缓存（读、写两侧同源同判，缺省 0 = fail-closed）。 */
     int cacheable;
     void *user_data;
 } llm_request_config_t;
