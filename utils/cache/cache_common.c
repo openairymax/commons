@@ -10,6 +10,7 @@
 
 #include "../memory/memory_common.h"
 #include "../sync/sync_common.h"
+#include "atomic_compat.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,9 @@ typedef struct cache_impl {
     size_t size;
     int ttl_sec;
     sync_mutex_t lru_lock;
+    atomic_uint64_t hits;
+    atomic_uint64_t misses;
+    atomic_uint64_t evictions;
     cache_config_t manager;
 } cache_impl_t;
 
@@ -193,6 +197,7 @@ static void evict_lru(cache_impl_t *cache)
     lru_remove(cache, victim);
     cache_entry_free(&cache->manager, victim);
     cache->size--;
+    atomic_fetch_add(&cache->evictions, 1);
 }
 
 cache_t cache_create(const cache_config_t *manager)
@@ -271,6 +276,7 @@ int cache_get(cache_t cache, const void *key, void **out_value)
 
     if (!entry) {
         sync_mutex_unlock(&impl->buckets[idx].lock);
+        atomic_fetch_add(&impl->misses, 1);
         return 0;
     }
 
@@ -299,6 +305,7 @@ int cache_get(cache_t cache, const void *key, void **out_value)
         sync_mutex_unlock(&impl->lru_lock);
 
         cache_entry_free(&impl->manager, entry);
+        atomic_fetch_add(&impl->misses, 1);
         return 0;
     }
 
@@ -321,6 +328,8 @@ int cache_get(cache_t cache, const void *key, void **out_value)
         lru_move_to_head(impl, entry);
         sync_mutex_unlock(&impl->lru_lock);
     }
+
+    atomic_fetch_add(&impl->hits, 1);
 
     sync_mutex_unlock(&impl->buckets[idx].lock);
     return 1;
@@ -458,6 +467,24 @@ size_t cache_get_capacity(cache_t cache)
 
     cache_impl_t *impl = (cache_impl_t *)cache;
     return impl->capacity;
+}
+
+void cache_get_stats(cache_t cache, cache_stats_t *out)
+{
+    if (!cache || !out) {
+        return;
+    }
+
+    cache_impl_t *impl = (cache_impl_t *)cache;
+    uint64_t hits = (uint64_t)atomic_load(&impl->hits);
+    uint64_t misses = (uint64_t)atomic_load(&impl->misses);
+
+    out->entries = impl->size;
+    out->capacity = impl->capacity;
+    out->hits = (size_t)hits;
+    out->misses = (size_t)misses;
+    out->evictions = (size_t)(uint64_t)atomic_load(&impl->evictions);
+    out->hit_rate = (hits + misses) > 0 ? (double)hits / (double)(hits + misses) : 0.0;
 }
 
 void cache_set_capacity(cache_t cache, size_t capacity)
