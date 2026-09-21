@@ -196,7 +196,6 @@ int line_indent(struct parse_ctx *ctx)
 bool is_plain_scalar_char(char c)
 {
     switch (c) {
-    case ':':
     case '{':
     case '}':
     case '[':
@@ -281,8 +280,13 @@ char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent)
     while (!at_end(ctx)) {
         char c = peek(ctx);
 
-        if (c == ':' && (ctx->pos + 1 < ctx->len &&
-                         (ctx->src[ctx->pos + 1] == ' ' || ctx->src[ctx->pos + 1] == '\n')))
+        /* ':' separates a key from its value only when followed by
+         * whitespace or the end of the input; anywhere else it is an
+         * ordinary scalar character, so plain scalars such as URLs
+         * ("https://host:port/path") survive intact. */
+        if (c == ':' && (ctx->pos + 1 >= ctx->len ||
+                         ctx->src[ctx->pos + 1] == ' ' || ctx->src[ctx->pos + 1] == '\t' ||
+                         ctx->src[ctx->pos + 1] == '\n' || ctx->src[ctx->pos + 1] == '\r'))
             break;
         if (c == '#' && len > 0 && buf[len - 1] == ' ')
             break;
