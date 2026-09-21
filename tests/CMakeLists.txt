@@ -33,6 +33,8 @@ set(UNIT_TEST_SOURCES
     unit/test_ime.c
     # 文件增删改查（CRUD）跨平台往返（coding 场景基础能力）
     unit/test_io.c
+    # 统一 LRU 缓存（B16-S6 表二 #1 下沉：实现+测试自 llm_d cache 收敛至此）
+    unit/test_cache_common.c
     # UTF-8 校验（RFC 3629）与非法序列清洗（U+FFFD 替换）
     unit/test_string_utf8.c
 )
@@ -84,6 +86,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/memory
         ${COMMONS_ROOT}/utils/print
         ${COMMONS_ROOT}/utils/sync
+        ${COMMONS_ROOT}/utils/cache
         ${COMMONS_ROOT}/utils/effect
         ${COMMONS_ROOT}/utils/ext
         ${COMMONS_ROOT}/utils/ime

@@ -50,6 +50,18 @@ typedef struct {
 typedef struct cache_impl *cache_t;
 
 /**
+ * @brief Cache statistics (same shape as the service-facing cache stats)
+ */
+typedef struct {
+    size_t entries;   /**< Current entry count */
+    size_t capacity;  /**< Entry capacity limit */
+    size_t hits;      /**< Cumulative hits */
+    size_t misses;    /**< Cumulative misses (lookup misses + TTL expirations) */
+    size_t evictions; /**< Cumulative LRU evictions */
+    double hit_rate;  /**< Hit rate hits/(hits+misses), 0 when no lookups */
+} cache_stats_t;
+
+/**
  * @brief Create the default cache configuration
  * @return Default cache configuration
  */
@@ -111,6 +123,13 @@ size_t cache_get_size(cache_t cache);
  * @return Cache capacity
  */
 size_t cache_get_capacity(cache_t cache);
+
+/**
+ * @brief Get the cache statistics
+ * @param cache Cache handle
+ * @param out Output statistics
+ */
+void cache_get_stats(cache_t cache, cache_stats_t *out);
 
 /**
  * @brief Set the cache capacity
