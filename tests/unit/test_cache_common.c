@@ -57,7 +57,7 @@ static void test_cache_put_get(void)
     assert(st.misses == 0);
     assert(st.hit_rate == 1.0);
 
-    free(retrieved);
+    cache_string_free(retrieved);
     cache_destroy(cache);
 
     printf("    PASSED\n");
@@ -154,9 +154,9 @@ static void test_cache_stats(void)
 
     char *retrieved = NULL;
     assert(cache_get_string(cache, "hit1", &retrieved) == 1);
-    free(retrieved);
+    cache_string_free(retrieved);
     assert(cache_get_string(cache, "hit2", &retrieved) == 1);
-    free(retrieved);
+    cache_string_free(retrieved);
     assert(cache_get_string(cache, "miss1", &retrieved) == 0);
     assert(cache_get_string(cache, "miss2", &retrieved) == 0);
 
@@ -211,7 +211,7 @@ static void test_cache_ttl(void)
     int ret = cache_get_string(cache, key, &retrieved);
     (void)ret; /* suppress unused warning when -Werror */
     if (retrieved != NULL) {
-        free(retrieved);
+        cache_string_free(retrieved);
         retrieved = NULL;
     }
 
