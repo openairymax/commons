@@ -10,14 +10,23 @@
 #include <string.h>
 
 #ifdef _WIN32
-#define malloc_usable_size(ptr) _msize(ptr)
+/*
+ * Windows 下 memory_safe 层的指针统一来自 memory_alloc（内部
+ * _aligned_malloc）；_msize() 仅对 malloc 系指针合法，对
+ * _aligned_malloc 指针取块大小是 UB，会破坏堆元数据并触发
+ * 0xc0000374 堆损坏检测。Windows 侧放弃按块字节记账（与
+ * AIRY_FREE 层"记次不记字节"口径一致），不在 free/realloc
+ * 前对指针调 _msize。
+ */
+#define memory_safe_block_size(ptr) ((size_t)0)
 #elif defined(__APPLE__)
 /* macOS 无 <malloc.h>/malloc_usable_size()，对应 API 是 malloc_size()
  * （<malloc/malloc.h>）。 */
 #include <malloc/malloc.h>
-#define malloc_usable_size(ptr) malloc_size(ptr)
+#define memory_safe_block_size(ptr) malloc_size(ptr)
 #else
 #include <malloc.h>
+#define memory_safe_block_size(ptr) malloc_usable_size(ptr)
 #endif
 
 static memory_stats_t g_memory_stats = {.total_allocated = 0,
@@ -63,7 +72,7 @@ void *memory_safe_realloc(void *ptr, size_t size)
         return NULL;
     }
 
-    size_t old_size = ptr ? malloc_usable_size(ptr) : 0;
+    size_t old_size = ptr ? memory_safe_block_size(ptr) : 0;
     void *new_ptr = AIRY_REALLOC(ptr, size);
     if (new_ptr) {
         if (old_size > 0) {
@@ -88,7 +97,7 @@ void memory_safe_free(void *ptr)
         return;
     }
 
-    size_t size = malloc_usable_size(ptr);
+    size_t size = memory_safe_block_size(ptr);
     AIRY_FREE(ptr);
 
     g_memory_stats.total_freed += size;
