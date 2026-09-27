@@ -105,7 +105,6 @@ error/
 | `airy_err_push_ex(code, file, line, func, fmt, ...)` | 推送错误上下文到错误链 |
 | `airy_err_print_chain(chain)` | 打印错误链（调试用） |
 | `airy_err_chain_to_json(chain)` | 将错误链转为 JSON 字符串（调用方释放） |
-| `airy_err_set_handler(handler)` | 设置全局错误回调 |
 
 ### 错误链迭代与查询
 

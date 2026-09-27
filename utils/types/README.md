@@ -354,10 +354,6 @@ types/
 | `AIRY_ALIGN_UP(x, align)` | 向上对齐 |
 | `AIRY_STRINGIFY(x)` / `AIRY_TOSTRING(x)` | 字符串化 |
 | `AIRY_CONCAT(a, b)` / `AIRY_CONCAT3(a, b, c)` | 符号连接 |
-| `AIRY_MAKE_VERSION(maj, min, pat)` | 版本号打包 |
-| `AIRY_VERSION_MAJOR(v)` | 提取主版本号 |
-| `AIRY_VERSION_MINOR(v)` | 提取次版本号 |
-| `AIRY_VERSION_PATCH(v)` | 提取补丁版本号 |
 | `AIRY_MS_TO_NS(ms)` | 毫秒转纳秒 |
 | `AIRY_SEC_TO_MS(s)` | 秒转毫秒 |
 | `AIRY_SEC_TO_NS(s)` | 秒转纳秒 |
@@ -394,9 +390,6 @@ airy_context_t ctx = {
 /* === 使用辅助宏 === */
 int items[] = {1, 2, 3, 4, 5};
 size_t count = AIRY_ARRAY_SIZE(items);  /* 5 */
-
-uint32_t version = AIRY_MAKE_VERSION(1, 2, 3);
-/* AIRY_VERSION_MAJOR(version) == 1，MINOR == 2，PATCH == 3 */
 
 /* === 使用规范类型 === */
 #include "sanitize_level.h"

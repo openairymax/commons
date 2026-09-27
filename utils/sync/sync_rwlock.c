@@ -25,12 +25,13 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
     }
 
     r->type = SYNC_TYPE_RWLOCK;
-    r->read_count = 0;
-    r->is_writer = false;
+#ifdef _WIN32
+    atomic_init(&r->writer_owner, (unsigned)0);
+#endif
     if (attr != NULL && attr->name != NULL) {
         r->name = sync_internal_strdup(attr->name);
     }
-    AIRY_MEMSET(&r->stats, 0, sizeof(sync_stats_t));
+    sync_internal_stats_reset(&r->stats);
 
 #ifdef _WIN32
     InitializeSRWLock(&r->rwlock);
@@ -148,8 +149,6 @@ sync_result_t sync_rwlock_read_lock_ex(sync_rwlock_t rwlock, const sync_timeout_
     }
 #endif
 
-    rwlock->read_count++;
-    rwlock->is_writer = false;
     int64_t elapsed = 0;
     if (start_time > 0) {
         elapsed = ((int64_t)clock() - start_time) * 1000 / CLOCKS_PER_SEC;
@@ -179,7 +178,6 @@ sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
     }
 #endif
 
-    rwlock->read_count++;
     sync_internal_update_stats_lock(&rwlock->stats, 0);
     return SYNC_SUCCESS;
 }
@@ -255,7 +253,9 @@ sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout
     }
 #endif
 
-    rwlock->is_writer = true;
+#ifdef _WIN32
+    atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
+#endif
     int64_t elapsed = 0;
     if (start_time > 0) {
         elapsed = ((int64_t)clock() - start_time) * 1000 / CLOCKS_PER_SEC;
@@ -285,6 +285,9 @@ sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)
     }
 #endif
 
+#ifdef _WIN32
+    atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
+#endif
     sync_internal_update_stats_lock(&rwlock->stats, 0);
     return SYNC_SUCCESS;
 }
@@ -296,8 +299,12 @@ sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock)
     }
 
 #ifdef _WIN32
-    if (rwlock->is_writer) {
+    /* SRWLock 释放方向必须与获取方向一致：仅当本线程是当前写者时以独占
+     * 模式释放，否则按共享模式释放。 */
+    unsigned tid = (unsigned)GetCurrentThreadId();
+    if (rwlock->writer_owner == tid) {
         ReleaseSRWLockExclusive(&rwlock->rwlock);
+        atomic_store(&rwlock->writer_owner, (unsigned)0);
     } else {
         ReleaseSRWLockShared(&rwlock->rwlock);
     }
@@ -308,9 +315,6 @@ sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock)
     }
 #endif
 
-    if (rwlock->read_count > 0) {
-        rwlock->read_count--;
-    }
-    rwlock->stats.unlock_count++;
+    atomic_fetch_add(&rwlock->stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }

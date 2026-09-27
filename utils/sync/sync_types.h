@@ -15,6 +15,7 @@
 #define AIRY_RT_SYNC_TYPES_H
 
 #include "airy_memory.h"
+#include "atomic_compat.h"
 #include "sync.h"
 #include "sync_platform.h"
 
@@ -22,11 +23,29 @@
 extern "C" {
 #endif
 
+/*
+ * 原子统计计数器镜像。
+ *
+ * 读者可在持有读锁期间并发上报统计（读锁本身即是共享的），因此计数器
+ * 必须是原子的，否则任何多读者路径天生构成 data race。对外快照类型
+ * sync_stats_t 保持纯值语义（便于打印与跨编译器传递），本镜像仅存在于
+ * 内部头；sync_get_stats() 负责在此镜像上取时点快照并转换为 sync_stats_t。
+ */
+typedef struct {
+    atomic_size_t lock_count;
+    atomic_size_t unlock_count;
+    atomic_size_t wait_count;
+    atomic_size_t timeout_count;
+    atomic_size_t deadlock_count;
+    atomic_uint64_t total_wait_time_ms;
+    atomic_uint64_t max_wait_time_ms;
+} sync_stats_ctr_t;
+
 struct sync_mutex {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     platform_mutex_t mutex;
 };
 
@@ -34,7 +53,7 @@ struct sync_recursive_mutex {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     size_t recursive_count;
     uint64_t owner_thread;
     platform_recursive_mutex_t mutex;
@@ -44,17 +63,20 @@ struct sync_rwlock {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
-    size_t read_count;
-    bool is_writer;
+    sync_stats_ctr_t stats;
     platform_rwlock_t rwlock;
+#ifdef _WIN32
+    /* SRWLock 的释放必须与获取方向一致，且只有以写模式获取的线程才以写模式
+     * 释放。记账写者线程 ID（0 表示当前无写者）；读者不触碰该域。 */
+    atomic_uint writer_owner;
+#endif
 };
 
 struct sync_spinlock {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     platform_spinlock_t lock;
 };
 
@@ -62,7 +84,7 @@ struct sync_semaphore {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     unsigned int max_value;
     platform_semaphore_t semaphore;
 };
@@ -71,7 +93,7 @@ struct sync_condition {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     platform_condition_t cond;
 };
 
@@ -79,7 +101,7 @@ struct sync_barrier {
     sync_type_t type;
     bool initialized;
     const char *name;
-    sync_stats_t stats;
+    sync_stats_ctr_t stats;
     unsigned int count;
     unsigned int current;
     unsigned int generation;

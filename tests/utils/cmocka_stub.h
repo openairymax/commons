@@ -50,6 +50,8 @@ struct CMUnitTest {
 #define assert_string_equal(a, b) _assert_string_equal((a), (b), #a, #b, __FILE__, __LINE__)
 #define assert_memory_equal(a, b, size) \
     _assert_memory_equal((a), (b), (size), #a, #b, __FILE__, __LINE__)
+#define assert_float_equal(a, b, epsilon) \
+    _assert_float_equal((a), (b), (epsilon), #a, #b, __FILE__, __LINE__)
 #define assert_in_set(value, set, size) \
     _assert_in_set((value), (set), (size), #value, __FILE__, __LINE__)
 
@@ -132,6 +134,20 @@ static inline void _assert_memory_equal(const void *a, const void *b, size_t siz
     if (memcmp(a, b, size) != 0) {
         fprintf(stderr, "ASSERTION FAILED: memory at %s != memory at %s at %s:%d\n", expr_a, expr_b,
                 file, line);
+        _exit(1);
+    }
+}
+
+static inline void _assert_float_equal(float a, float b, float epsilon, const char *expr_a,
+                                       const char *expr_b, const char *file, int line)
+{
+    float diff = a - b;
+
+    if (diff < 0.0f)
+        diff = -diff;
+    if (diff > epsilon) {
+        fprintf(stderr, "ASSERTION FAILED: %s (%f) != %s (%f) within %f at %s:%d\n", expr_a,
+                (double)a, expr_b, (double)b, (double)epsilon, file, line);
         _exit(1);
     }
 }

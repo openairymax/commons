@@ -16,8 +16,10 @@ set(UNIT_TEST_SOURCES
     unit/test_logger.c
     unit/test_token.c
     unit/test_cost.c
-    # unit/test_types.c  # 禁用：需要cmocka测试框架
-    # unit/test_network.c # 禁用：需要cmocka测试框架
+    # 统一类型定义（含 IPC 类型/错误码/宏契约）；已适配 cmocka_stub
+    unit/test_types.c
+    # 网络通信（连接/HTTP/连接池/DNS/工具）；network 实现全平台编译
+    unit/test_network.c
     unit/test_print.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链 + 跨线程唤醒）
     unit/test_cancel_token.c

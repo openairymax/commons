@@ -639,8 +639,6 @@ airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t c
     }
 
     if (g_i18n_entries != NULL) {
-        for (size_t i = 0; i < g_i18n_entry_count; i++) {
-        }
         AIRY_FREE(g_i18n_entries);
         g_i18n_entries = NULL;
         g_i18n_entry_count = 0;
@@ -783,7 +781,7 @@ airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
     return chain->contexts[0].error_code;
 }
 
-airy_err_t airy_err_ech_get_latest_error(const airy_err_chain_t *chain)
+airy_err_t airy_err_chain_get_latest_error(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
         return AIRY_OK;
@@ -819,18 +817,4 @@ char *airy_err_chain_format(const airy_err_chain_t *chain, airy_language_t lang)
     return buf;
 }
 
-void airy_err_set_handler(airy_err_handler_t handler)
-{
-    (void)handler;
-}
 
-void airy_err_stats_shutdown(void)
-{
-#ifdef _WIN32
-    if (g_error_stats_initialized) {
-        airy_mtx_destroy(&g_error_stats_mutex);
-        g_error_stats_initialized = 0;
-        AIRY_LOG_INFO("Error stats: mutex destroyed");
-    }
-#endif
-}

@@ -18,12 +18,22 @@
  * @date 2026-04-03
  */
 
-#include <cmocka.h>
-#include <network_common.h>
-#include <setjmp.h>
-#include <stdarg.h>
-#include <stddef.h>
+#include <stdio.h>
 #include <string.h>
+
+#include "../tests/utils/test_framework.h"
+#include <network_common.h>
+
+/* 本测试直接构造 sockaddr_in 并调用 inet_pton，需显式引入平台套接字头 */
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#endif
 
 /* ============================================================================
  * 基础连接 API 测试
@@ -498,5 +508,5 @@ int main(void)
         cmocka_unit_test(test_network_stats_structure),
     };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, sizeof(tests) / sizeof(tests[0]), NULL, NULL);
 }

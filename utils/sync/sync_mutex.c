@@ -28,7 +28,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
     if (attr != NULL && attr->name != NULL) {
         m->name = sync_internal_strdup(attr->name);
     }
-    AIRY_MEMSET(&m->stats, 0, sizeof(sync_stats_t));
+    sync_internal_stats_reset(&m->stats);
 
 #ifdef _WIN32
     InitializeCriticalSection(&m->mutex);
@@ -199,6 +199,6 @@ sync_result_t sync_mutex_unlock_ex(sync_mutex_t mutex)
     }
 #endif
 
-    mutex->stats.unlock_count++;
+    atomic_fetch_add(&mutex->stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }

@@ -70,7 +70,7 @@ sync/
 |------|-----------|
 | `sync_timeout_t` | `{ uint64_t timeout_ms; bool absolute; }`；接口传 `NULL` 表示无限等待 |
 | `sync_attr_t` | 创建属性 `{ type, flags, name, context }`，`name` 在创建时被复制 |
-| `sync_stats_t` | `{ lock_count, unlock_count, wait_count, timeout_count, deadlock_count, total_wait_time_ms, max_wait_time_ms }` |
+| `sync_stats_t` | `{ lock_count, unlock_count, wait_count, timeout_count, deadlock_count, total_wait_time_ms, max_wait_time_ms }`；计数以原子方式累加，读取得到调用时刻的时点快照 |
 | `sync_deadlock_info_t` | `{ thread_count, lock_count, detection_time, thread_names, lock_names }` |
 | `sync_error_callback_t` | `void (*)(sync_result_t, const char *lock_name, void *context)` |
 
@@ -88,7 +88,7 @@ sync/
 | `sync_get_timestamp_ms()` | 当前时间戳（毫秒） |
 | `sync_sleep(ms)` | 当前线程休眠 |
 | `sync_get_type(lock, lock_type)` | 按调用侧标识返回 `sync_type_t` |
-| `sync_get_stats(lock, stats)` / `sync_reset_stats(lock)` | 读取/清零统计（任何已命名类型的句柄均可） |
+| `sync_get_stats(lock, stats)` / `sync_reset_stats(lock)` | 读取时点统计快照 / 原子清零统计（任何已命名类型的句柄均可） |
 | `sync_set_name(lock, name)` / `sync_get_name(lock)` | 命名锁；命名同时把锁登记进全局注册表（上限 256 项），`name` 被复制 |
 | `sync_set_option(lock, option, value)` / `sync_get_option(...)` | 设置/读回 `NAME`/`TIMEOUT`/`PRIORITY_INHERIT`/`ROBUST` 选项 |
 | `sync_check_deadlock(info, max_info_size)` | 见下方说明 |
@@ -118,7 +118,8 @@ sync/
   超时值为相对毫秒时长按 `sync_timeout_t.absolute` 区分）；
 - 屏障超时仅 Windows 分支生效；POSIX `pthread_barrier_t` 无限时等待，
   `sync_barrier_wait_ex` 在该分支忽略 `timeout`；
-- 每次阻塞获取/等待都会更新对应句柄的 `sync_stats_t`。
+- 每次阻塞获取/等待都会原子累加对应句柄的统计计数器；`sync_get_stats` 返回
+  调用时刻的一致快照。读者可在持有读锁期间并发上报统计，不构成数据竞争。
 
 ### 原子操作
 

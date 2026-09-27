@@ -38,7 +38,7 @@ commons/utils/compat/
 | `AIRY_PATH_SEP` / `AIRY_PATH_SEP_STR` | `\` / `/` 与对应字符串 |
 | `AIRY_PATH_MAX` | Windows 260，其余 4096 |
 | `AIRY_THREAD_LOCAL` | `__declspec(thread)` / `__thread` |
-| `AIRY_VERSION_MAJOR/MINOR/PATCH/STRING` | 由构建系统注入实际版本，未注入时回退头文件默认值；`airy_version_string()` 返回版本串，`airy_build_info()` 返回含编译器/平台/构建时刻的静态信息串 |
+| `AIRYRT_VERSION` | AgentRT 版本 SSoT（定义于 `commons/include/airyrt_version.h`，由构建系统从根 `VERSION` 文件注入；未注入时回退 `"0.0.0-dev"` 标识非发布构建）。`airy_version_string()` 返回该串，`airy_build_info()` 返回含编译器/平台/构建时刻的静态信息串 |
 
 ## 属性与内建宏
 

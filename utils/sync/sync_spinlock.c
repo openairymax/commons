@@ -33,7 +33,7 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
     if (attr != NULL && attr->name != NULL) {
         s->name = sync_internal_strdup(attr->name);
     }
-    AIRY_MEMSET(&s->stats, 0, sizeof(sync_stats_t));
+    sync_internal_stats_reset(&s->stats);
 
 #if AIRY_SPINLOCK_CAS
     atomic_init(&s->lock, 0);
@@ -134,6 +134,6 @@ sync_result_t sync_spinlock_unlock_ex(sync_spinlock_t spinlock)
     }
 #endif
 
-    spinlock->stats.unlock_count++;
+    atomic_fetch_add(&spinlock->stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }

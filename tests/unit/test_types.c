@@ -7,72 +7,67 @@
  * @brief 统一类型定义模块单元测试
  *
  * @details
- * 测试 types.h 中所有类型定义的正确性，包括：
- * - 基础类型（错误码、时间戳、UUID、优先级）
- * - 任务类型（状态、配置、结果）
- * - 记忆类型（层级、条目、搜索、结果）
- * - 会话类型（配置、信息、上下文）
- * - Agent 类型（契约、能力、成本、信任）
- * - 可观测性类型（指标、跨度、遥测）
- * - IPC 类型（消息头、消息体、配置）
- * - 网络类型（连接、HTTP 请求/响应）
- * - 辅助宏（ARRAY_SIZE, MIN/MAX, ALIGN_UP 等）
+ * 锁定 types.h / airymax/error.h / airymax/ipc.h 的现行契约：
+ * - 错误码（用户态 POSIX errno 负值语义）与成功码
+ * - 基础类型（时间戳、UUID、优先级、结果结构体）
+ * - 任务类型（状态、类型枚举，任务配置结构体）
+ * - 会话类型（状态枚举、配置/上下文结构体）
+ * - Agent 类型（等级枚举、能力/契约结构体）
+ * - 可观测性类型（指标/跨度枚举与结构体）
+ * - IPC 类型（通道/标志枚举、配置结构体、128B 头契约常量）
+ * - 网络类型（协议/连接状态枚举、端点/连接/HTTP 结构体）
+ * - 辅助宏（ARRAY_SIZE, MIN/MAX, ALIGN_UP, 时间换算）
+ * - 版本 SSoT（airyrt_version.h 的 AIRYRT_VERSION + airy_version_string）
  *
  * @author SPHARX Ltd. - Airymax Team
- * @date 2026-04-02
+ * @date 2026-09-27
  */
+
+#include <stdio.h>
+#include <string.h>
 
 #include "../tests/utils/test_framework.h"
+#include "airyrt_version.h"
 #include "types.h"
-#include <airymax/ipc.h> /* AIRY_IPC_MAGIC (P0-05 convergence) */
-
-#include <cmocka.h>
-#include <setjmp.h>
-#include <stdarg.h>
-#include <stddef.h>
+#include <airymax/ipc.h>
 
 /* ============================================================================
- * 基础类型测试
+ * 基础类型
  * ============================================================================ */
 
-/**
- * @brief 测试错误码常量值正确性
- */
-static void test_error_codes_valid(void **state)
+static void test_err_codes(void **state)
 {
     (void)state;
 
     assert_int_equal(AIRY_SUCCESS, 0);
-    assert_true(AIRY_EINVAL < 0);
-    assert_true(AIRY_ENOMEM < 0);
+    assert_int_equal(AIRY_EOK, 0);
+
+    /* 用户态错误码为 POSIX errno 负值（airy_types.h 权威） */
+    assert_int_equal(AIRY_EINVAL, -22);
+    assert_int_equal(AIRY_ENOMEM, -12);
+    assert_int_equal(AIRY_EBUSY, -16);
     assert_true(AIRY_ETIMEDOUT < 0);
-    assert_true(AIRY_EOVERFLOW < 0);
-    assert_true(AIRY_EBUSY < 0);
-    assert_true(AIRY_ENOTCONN < 0);
     assert_true(AIRY_ECANCELLED < 0);
+    assert_true(AIRY_ENOTCONN < 0);
+    assert_true(AIRY_EOVERFLOW < 0);
 }
 
-/**
- * @brief 测试 airy_result_t 结构体大小和字段
- */
-static void test_airy_result_t_structure(void **state)
+static void test_result_struct(void **state)
 {
     (void)state;
 
     airy_result_t result = {0};
-    result.success = true;
-    result.error_code = AIRY_SUCCESS;
-    AIRY_STRNCPY_TERM(result.error_message, "Test error", sizeof(result.error_message));
 
-    assert_true(result.success);
-    assert_int_equal(result.error_code, AIRY_SUCCESS);
-    assert_string_equal(result.error_message, "Test error");
+    result.code = AIRY_SUCCESS;
+    result.message = "ok";
+    result.detail = NULL;
+
+    assert_int_equal(result.code, AIRY_SUCCESS);
+    assert_string_equal(result.message, "ok");
+    assert_null(result.detail);
 }
 
-/**
- * @brief 测试优先级枚举值连续性
- */
-static void test_priority_enums(void **state)
+static void test_prio_enums(void **state)
 {
     (void)state;
 
@@ -82,89 +77,98 @@ static void test_priority_enums(void **state)
     assert_int_equal(AIRY_PRIORITY_CRITICAL, 3);
 }
 
+static void test_id_types(void **state)
+{
+    (void)state;
+
+    assert_int_equal(sizeof(airy_timestamp_t), 8);
+    assert_int_equal(sizeof(airy_millis_t), 8);
+    assert_int_equal(sizeof(airy_uuid_t), 37);
+}
+
 /* ============================================================================
- * 任务类型测试
+ * 任务类型
  * ============================================================================ */
 
-/**
- * @brief 测试任务状态枚举
- */
-static void test_task_status_enums(void **state)
+static void test_task_status(void **state)
 {
     (void)state;
 
     assert_int_equal(AIRY_TASK_PENDING, 0);
     assert_int_equal(AIRY_TASK_RUNNING, 1);
-    assert_int_equal(AIRY_TASK_COMPLETED, 2);
+    assert_int_equal(AIRY_TASK_SUCCEEDED, 2);
     assert_int_equal(AIRY_TASK_FAILED, 3);
     assert_int_equal(AIRY_TASK_CANCELLED, 4);
     assert_int_equal(AIRY_TASK_TIMEOUT, 5);
+    assert_int_equal(AIRY_TASK_RETRYING, 6);
 }
 
-/**
- * @brief 测试任务配置结构体初始化
- */
-static void test_task_config_init(void **state)
+static void test_task_type(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_TASKTYPE_ONESHOT, 0);
+    assert_int_equal(AIRY_TASKTYPE_RECURRING, 1);
+    assert_int_equal(AIRY_TASKTYPE_CONDITIONAL, 2);
+}
+
+static void test_task_cfg(void **state)
 {
     (void)state;
 
     airy_task_config_t config = {0};
 
-    config.priority = AIRY_PRIORITY_NORMAL;
+    config.input = "hello";
+    config.input_len = 5;
     config.timeout_ms = 5000;
-    config.max_retries = 3;
-    config.retry_delay_ms = 1000;
+    config.priority = AIRY_PRIORITY_NORMAL;
+    config.type = AIRY_TASKTYPE_ONESHOT;
+    config.agent_id = "agent_001";
+    config.session_id = "session_abc";
+    config.parent_task_id = NULL;
 
-    assert_int_equal(config.priority, AIRY_PRIORITY_NORMAL);
+    assert_string_equal(config.input, "hello");
+    assert_int_equal(config.input_len, 5);
     assert_int_equal(config.timeout_ms, 5000);
-    assert_int_equal(config.max_retries, 3);
-    assert_int_equal(config.retry_delay_ms, 1000);
-}
-
-/**
- * @brief 测试任务结果结构体
- */
-static void test_task_result_structure(void **state)
-{
-    (void)state;
-
-    airy_task_result_t result = {0};
-
-    result.status = AIRY_TASK_COMPLETED;
-    result.exit_code = 0;
-    result.duration_ms = 1234;
-
-    assert_int_equal(result.status, AIRY_TASK_COMPLETED);
-    assert_int_equal(result.exit_code, 0);
-    assert_int_equal(result.duration_ms, 1234);
+    assert_int_equal(config.priority, AIRY_PRIORITY_NORMAL);
+    assert_int_equal(config.type, AIRY_TASKTYPE_ONESHOT);
+    assert_string_equal(config.agent_id, "agent_001");
+    assert_null(config.parent_task_id);
 }
 
 /* ============================================================================
- * 会话类型测试
+ * 会话类型
  * ============================================================================ */
 
-/**
- * @brief 测试会话配置结构体
- */
-static void test_session_config_structure(void **state)
+static void test_sess_status(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_SESSION_ACTIVE, 0);
+    assert_int_equal(AIRY_SESSION_IDLE, 1);
+    assert_int_equal(AIRY_SESSION_CLOSED, 2);
+    assert_int_equal(AIRY_SESSION_EXPIRED, 3);
+}
+
+static void test_sess_cfg(void **state)
 {
     (void)state;
 
     airy_session_config_t config = {0};
 
-    config.session_timeout_ms = 30000;
-    config.max_history_size = 100;
-    config.enable_persistence = true;
+    config.user_id = "user_1";
+    config.project_id = "proj_a";
+    config.context = "ctx";
+    config.ttl_seconds = 3600;
+    config.priority = AIRY_PRIORITY_HIGH;
 
-    assert_int_equal(config.session_timeout_ms, 30000);
-    assert_int_equal(config.max_history_size, 100);
-    assert_true(config.enable_persistence);
+    assert_string_equal(config.user_id, "user_1");
+    assert_string_equal(config.project_id, "proj_a");
+    assert_int_equal(config.ttl_seconds, 3600);
+    assert_int_equal(config.priority, AIRY_PRIORITY_HIGH);
 }
 
-/**
- * @brief 测试上下文结构体
- */
-static void test_context_structure(void **state)
+static void test_ctx_struct(void **state)
 {
     (void)state;
 
@@ -172,208 +176,305 @@ static void test_context_structure(void **state)
 
     ctx.agent_id = "agent_001";
     ctx.session_id = "session_abc";
-    ctx.current_priority = AIRY_PRIORITY_HIGH;
+    ctx.trace_id = "tr-0011223344556677";
+    ctx.parent_span_id = NULL;
+    ctx.timestamp = 1234567890ULL;
+    ctx.priority = AIRY_PRIORITY_CRITICAL;
 
     assert_string_equal(ctx.agent_id, "agent_001");
     assert_string_equal(ctx.session_id, "session_abc");
-    assert_int_equal(ctx.current_priority, AIRY_PRIORITY_HIGH);
+    assert_string_equal(ctx.trace_id, "tr-0011223344556677");
+    assert_null(ctx.parent_span_id);
+    assert_true(ctx.timestamp == 1234567890ULL);
+    assert_int_equal(ctx.priority, AIRY_PRIORITY_CRITICAL);
 }
 
 /* ============================================================================
- * Agent 类型测试
+ * Agent 类型
  * ============================================================================ */
 
-/**
- * @brief 测试 Agent 契约结构体
- */
-static void test_agent_contract_structure(void **state)
+static void test_agent_level(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_AGENT_COMMUNITY, 0);
+    assert_int_equal(AIRY_AGENT_VERIFIED, 1);
+    assert_int_equal(AIRY_AGENT_OFFICIAL, 2);
+}
+
+static void test_cap_struct(void **state)
+{
+    (void)state;
+
+    char cap_name[] = "tool_use";
+
+    airy_capability_t cap = {0};
+
+    cap.name = cap_name;
+    cap.estimated_tokens = 4096;
+    cap.avg_duration_ms = 250;
+
+    assert_string_equal(cap.name, "tool_use");
+    assert_int_equal(cap.estimated_tokens, 4096);
+    assert_int_equal(cap.avg_duration_ms, 250);
+}
+
+static void test_contract(void **state)
 {
     (void)state;
 
     airy_agent_contract_t contract = {0};
 
-    contract.agent_type = AIRY_AGENT_TYPE_ASSISTANT;
-    contract.max_concurrent_tasks = 5;
-    contract.memory_limit_mb = 256;
+    contract.agent_id = "agent_001";
+    contract.agent_name = "demo";
+    contract.capability_count = 3;
+    contract.models.system1 = "small";
+    contract.cost.token_per_task_avg = 1200;
+    contract.cost.level = AIRY_AGENT_VERIFIED;
+    contract.trust.verified_provider = true;
 
-    assert_int_equal(contract.agent_type, AIRY_AGENT_TYPE_ASSISTANT);
-    assert_int_equal(contract.max_concurrent_tasks, 5);
-    assert_int_equal(contract.memory_limit_mb, 256);
-}
-
-/**
- * @brief 测试 Agent 能力结构体
- */
-static void test_capability_structure(void **state)
-{
-    (void)state;
-
-    airy_capability_t caps = {0};
-
-    caps.has_tool_use = true;
-    caps.has_file_access = false;
-    caps.has_network_access = true;
-    caps.max_context_tokens = 4096;
-
-    assert_true(caps.has_tool_use);
-    assert_false(caps.has_file_access);
-    assert_true(caps.has_network_access);
-    assert_int_equal(caps.max_context_tokens, 4096);
+    assert_string_equal(contract.agent_id, "agent_001");
+    assert_string_equal(contract.agent_name, "demo");
+    assert_int_equal(contract.capability_count, 3);
+    assert_string_equal(contract.models.system1, "small");
+    assert_int_equal(contract.cost.token_per_task_avg, 1200);
+    assert_int_equal(contract.cost.level, AIRY_AGENT_VERIFIED);
+    assert_true(contract.trust.verified_provider);
 }
 
 /* ============================================================================
- * 可观测性类型测试
+ * 可观测性类型
  * ============================================================================ */
 
-/**
- * @brief 测试指标结构体
- */
-static void test_metric_structure(void **state)
+static void test_metric_type(void **state)
 {
     (void)state;
+
+    assert_int_equal(AIRY_METRIC_COUNTER_E, 0);
+    assert_int_equal(AIRY_METRIC_GAUGE_E, 1);
+    assert_int_equal(AIRY_METRIC_HISTOGRAM_E, 2);
+    assert_int_equal(AIRY_METRIC_SUMMARY_E, 3);
+}
+
+static void test_span_enums(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_SPAN_INTERNAL, 0);
+    assert_int_equal(AIRY_SPAN_CLIENT, 1);
+    assert_int_equal(AIRY_SPAN_SERVER, 2);
+    assert_int_equal(AIRY_SPAN_PRODUCER, 3);
+    assert_int_equal(AIRY_SPAN_CONSUMER, 4);
+
+    assert_int_equal(AIRY_SPAN_UNSET, 0);
+    assert_int_equal(AIRY_SPAN_OK, 1);
+    assert_int_equal(AIRY_SPAN_ERROR, 2);
+}
+
+static void test_metric_struct(void **state)
+{
+    (void)state;
+
+    char metric_name[] = "latency";
 
     airy_metric_t metric = {0};
 
-    metric.name = strdup("test_metric");
+    metric.name = metric_name;
+    metric.type = AIRY_METRIC_GAUGE_E;
+    metric.unit = "ms";
     metric.value = 42.5;
-    metric.unit = METRIC_UNIT_COUNT;
-    metric.metric_type = METRIC_TYPE_GAUGE;
+    metric.label_count = 2;
 
-    assert_string_equal(metric.name, "test_metric");
-    assert_float_within(0.001, 42.5, metric.value);
-    assert_int_equal(metric.unit, METRIC_UNIT_COUNT);
-    assert_int_equal(metric.metric_type, METRIC_TYPE_GAUGE);
+    assert_string_equal(metric.name, "latency");
+    assert_int_equal(metric.type, AIRY_METRIC_GAUGE_E);
+    assert_string_equal(metric.unit, "ms");
+    assert_float_equal(42.5f, (float)metric.value, 0.001f);
+    assert_int_equal(metric.label_count, 2);
 }
 
 /* ============================================================================
- * IPC 类型测试
+ * IPC 类型
  * ============================================================================ */
 
-/**
- * @brief 测试 IPC 配置结构体
- */
-static void test_ipc_config_structure(void **state)
+static void test_ipc_type(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_IPC_PIPE, 0);
+    assert_int_equal(AIRY_IPC_SOCKET, 1);
+    assert_int_equal(AIRY_IPC_SHM, 2);
+    assert_int_equal(AIRY_IPC_MQ, 3);
+    assert_int_equal(AIRY_IPC_RPC, 4);
+}
+
+static void test_ipc_flag(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_IPC_FLAG_NONE, 0);
+    assert_int_equal(AIRY_IPC_FLAG_NONBLOCK, 1);
+    assert_int_equal(AIRY_IPC_FLAG_PRIORITY, 2);
+    assert_int_equal(AIRY_IPC_FLAG_BROADCAST, 4);
+}
+
+static void test_ipc_cfg(void **state)
 {
     (void)state;
 
     airy_ipc_config_t config = {0};
 
-    config.ipc_type = AIRY_IPC_SOCKET;
+    config.type = AIRY_IPC_SOCKET;
+    config.name = "chan0";
     config.buffer_size = 8192;
     config.timeout_ms = 5000;
-    config.mode = AIRY_IPC_MODE_READ_WRITE;
+    config.nonblocking = true;
 
-    assert_int_equal(config.ipc_type, AIRY_IPC_SOCKET);
+    assert_int_equal(config.type, AIRY_IPC_SOCKET);
+    assert_string_equal(config.name, "chan0");
     assert_int_equal(config.buffer_size, 8192);
     assert_int_equal(config.timeout_ms, 5000);
-    assert_int_equal(config.mode, AIRY_IPC_MODE_READ_WRITE);
+    assert_true(config.nonblocking);
+}
+
+static void test_ipc_hdr(void **state)
+{
+    (void)state;
+
+    /* [SC] 128B 定长头契约（跨态字节级一致） */
+    assert_true(AIRY_IPC_MAGIC == 0x41524531u);
+    assert_int_equal(AIRY_IPC_HDR_SIZE, 128);
+    assert_int_equal(AIRY_IPC_OP_SEND, 0x0001);
+    assert_int_equal(AIRY_IPC_OP_CAP_RESPONSE, 0x0011);
+    assert_int_equal(AIRY_IPC_FLAG_ZEROCOPY, 0x0001);
+    assert_int_equal(AIRY_IPC_FLAG_RESERVED, 0xFFE0);
 }
 
 /* ============================================================================
- * 网络类型测试
+ * 网络类型
  * ============================================================================ */
 
-/**
- * @brief 测试连接配置结构体
- */
-static void test_conn_config_structure(void **state)
+static void test_proto_enums(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_PROTO_TCP, 0);
+    assert_int_equal(AIRY_PROTO_UDP, 1);
+    assert_int_equal(AIRY_PROTO_HTTP, 2);
+    assert_int_equal(AIRY_PROTO_HTTPS, 3);
+    assert_int_equal(AIRY_PROTO_WS, 4);
+    assert_int_equal(AIRY_PROTO_WSS, 5);
+}
+
+static void test_conn_state(void **state)
+{
+    (void)state;
+
+    assert_int_equal(AIRY_CONN_DISCONNECTED, 0);
+    assert_int_equal(AIRY_CONN_CONNECTING, 1);
+    assert_int_equal(AIRY_CONN_CONNECTED, 2);
+    assert_int_equal(AIRY_CONN_CLOSING, 3);
+    assert_int_equal(AIRY_CONN_ERROR, 4);
+}
+
+static void test_endpoint(void **state)
+{
+    (void)state;
+
+    char host[] = "localhost";
+
+    airy_endpoint_t ep = {0};
+
+    ep.host = host;
+    ep.port = 8080;
+    ep.protocol = AIRY_PROTO_HTTP;
+    ep.path = "/api";
+
+    assert_string_equal(ep.host, "localhost");
+    assert_int_equal(ep.port, 8080);
+    assert_int_equal(ep.protocol, AIRY_PROTO_HTTP);
+    assert_string_equal(ep.path, "/api");
+}
+
+static void test_conn_cfg(void **state)
 {
     (void)state;
 
     airy_conn_config_t config = {0};
 
-    config.remote.host = strdup("localhost");
-    config.port = 8080;
-    config.connect_timeout_ms = 5000;
+    config.timeout_ms = 5000;
     config.read_timeout_ms = 10000;
-    config.use_ssl = true;
+    config.max_retries = 3;
+    config.retry_delay_ms = 1000;
+    config.keepalive = true;
+    config.verify_ssl = true;
 
-    assert_string_equal(config.host, "localhost");
-    assert_int_equal(config.port, 8080);
-    assert_int_equal(config.connect_timeout_ms, 5000);
+    assert_int_equal(config.timeout_ms, 5000);
     assert_int_equal(config.read_timeout_ms, 10000);
-    assert_true(config.use_ssl);
+    assert_int_equal(config.max_retries, 3);
+    assert_int_equal(config.retry_delay_ms, 1000);
+    assert_true(config.keepalive);
+    assert_true(config.verify_ssl);
 }
 
-/**
- * @brief 测试 HTTP 请求结构体
- */
-static void test_http_request_structure(void **state)
+static void test_http_req(void **state)
 {
     (void)state;
 
-    airy_http_request_t request = {0};
+    airy_http_request_t req = {0};
 
-    request.method = strdup("GET");
-    request.path = strdup("http://api.example.com/data");
-    request.timeout_ms = 5000;
+    req.method = "GET";
+    req.path = "/data";
+    req.header_count = 1;
+    req.body_len = 0;
+    req.timeout_ms = 5000;
 
-    assert_string_equal(request.method, "GET");
-    assert_string_equal(request.url, "http://api.example.com/data");
-    assert_int_equal(request.timeout_ms, 5000);
+    assert_string_equal(req.method, "GET");
+    assert_string_equal(req.path, "/data");
+    assert_int_equal(req.header_count, 1);
+    assert_int_equal(req.body_len, 0);
+    assert_int_equal(req.timeout_ms, 5000);
 }
 
-/**
- * @brief 测试 HTTP 响应结构体
- */
-static void test_http_response_structure(void **state)
+static void test_http_resp(void **state)
 {
     (void)state;
 
-    airy_http_response_t response = {0};
+    airy_http_response_t resp = {0};
 
-    response.status_code = 200;
-    response.body = strdup("{\"status\":\"ok\"}");
-    response.body_length = strlen(response.body);
+    resp.status_code = 200;
+    resp.body_len = 15;
+    resp.error = AIRY_SUCCESS;
 
-    assert_int_equal(response.status_code, 200);
-    assert_string_equal(response.body, "{\"status\":\"ok\"}");
-    assert_int_equal(response.body_length, 15);
+    assert_int_equal(resp.status_code, 200);
+    assert_int_equal(resp.body_len, 15);
+    assert_int_equal(resp.error, AIRY_SUCCESS);
 }
 
 /* ============================================================================
- * 辅助宏测试
+ * 辅助宏
  * ============================================================================ */
 
-/**
- * @brief 测试 AIRY_ARRAY_SIZE 宏
- */
-static void test_macro_array_size(void **state)
+static void test_macro_size(void **state)
 {
     (void)state;
 
     int array[] = {1, 2, 3, 4, 5};
+
     assert_int_equal(AIRY_ARRAY_SIZE(array), 5);
 }
 
-/**
- * @brief 测试 AIRY_MIN 宏
- */
-static void test_macro_min(void **state)
+static void test_macro_minmax(void **state)
 {
     (void)state;
 
     assert_int_equal(AIRY_MIN(3, 7), 3);
     assert_int_equal(AIRY_MIN(-1, 5), -1);
-    assert_int_equal(AIRY_MIN(100, 100), 100);
-}
-
-/**
- * @brief 测试 AIRY_MAX 宏
- */
-static void test_macro_max(void **state)
-{
-    (void)state;
-
     assert_int_equal(AIRY_MAX(3, 7), 7);
     assert_int_equal(AIRY_MAX(-1, 5), 5);
     assert_int_equal(AIRY_MAX(100, 100), 100);
 }
 
-/**
- * @brief 测试 AIRY_ALIGN_UP 宏
- */
-static void test_macro_align_up(void **state)
+static void test_macro_align(void **state)
 {
     (void)state;
 
@@ -384,31 +485,31 @@ static void test_macro_align_up(void **state)
     assert_int_equal(AIRY_ALIGN_UP(31, 16), 32);
 }
 
-/**
- * @brief 测试 AIRY_VERSION_MAJOR/MINOR/PATCH 宏
- */
-static void test_macro_version(void **state)
+static void test_ver_ssot(void **state)
 {
     (void)state;
 
-    assert_int_equal(AIRY_VERSION_MAJOR(0x01020303), 1);
-    assert_int_equal(AIRY_VERSION_MINOR(0x01020303), 2);
-    assert_int_equal(AIRY_VERSION_PATCH(0x01020303), 3);
+    /*
+     * 版本 SSoT 为 AIRYRT_VERSION（airyrt_version.h），由构建系统从根
+     * VERSION 文件注入；未注入时回退 "0.0.0-dev" 标识非发布构建。
+     * 此处锁定两点契约：
+     *   1) 注入管线生效（AIRYRT_VERSION 非空且非 marker）；
+     *   2) airy_version_string() 与 AIRYRT_VERSION 同源（无第二副本）。
+     */
+    assert_true(AIRYRT_VERSION[0] != '\0');
+    assert_string_equal(AIRYRT_VERSION, airy_version_string());
+
+    /* 若构建未注入 VERSION，则退化为 marker，版本报告失真 → 大声失败 */
+    assert_true(strcmp(AIRYRT_VERSION, "0.0.0-dev") != 0);
 }
 
-/**
- * @brief 测试时间转换宏
- */
-static void test_macro_time_conversion(void **state)
+static void test_macro_time(void **state)
 {
     (void)state;
 
-    uint64_t ns = 1500000000ULL;
-
-    assert_int_equal(AIRY_NS_TO_MS(ns), 1500);
-    assert_int_equal(AIRY_MS_TO_NS(1500), ns);
-    assert_int_equal(AIRY_NS_TO_US(ns), 1500000);
-    assert_int_equal(AIRY_US_TO_NS(1500000), ns);
+    assert_true(AIRY_MS_TO_NS(1500) == 1500000000ULL);
+    assert_true(AIRY_SEC_TO_MS(2) == 2000ULL);
+    assert_true(AIRY_SEC_TO_NS(2) == 2000000000ULL);
 }
 
 /* ============================================================================
@@ -419,34 +520,45 @@ int main(void)
 {
     const struct CMUnitTest tests[] = {
 
-        cmocka_unit_test(test_error_codes_valid),
-        cmocka_unit_test(test_airy_result_t_structure),
-        cmocka_unit_test(test_priority_enums),
+        cmocka_unit_test(test_err_codes),
+        cmocka_unit_test(test_result_struct),
+        cmocka_unit_test(test_prio_enums),
+        cmocka_unit_test(test_id_types),
 
-        cmocka_unit_test(test_task_status_enums),
-        cmocka_unit_test(test_task_config_init),
-        cmocka_unit_test(test_task_result_structure),
+        cmocka_unit_test(test_task_status),
+        cmocka_unit_test(test_task_type),
+        cmocka_unit_test(test_task_cfg),
 
-        cmocka_unit_test(test_session_config_structure),
-        cmocka_unit_test(test_context_structure),
+        cmocka_unit_test(test_sess_status),
+        cmocka_unit_test(test_sess_cfg),
+        cmocka_unit_test(test_ctx_struct),
 
-        cmocka_unit_test(test_agent_contract_structure),
-        cmocka_unit_test(test_capability_structure),
+        cmocka_unit_test(test_agent_level),
+        cmocka_unit_test(test_cap_struct),
+        cmocka_unit_test(test_contract),
 
-        cmocka_unit_test(test_metric_structure),
-        cmocka_unit_test(test_ipc_config_structure),
+        cmocka_unit_test(test_metric_type),
+        cmocka_unit_test(test_span_enums),
+        cmocka_unit_test(test_metric_struct),
 
-        cmocka_unit_test(test_conn_config_structure),
-        cmocka_unit_test(test_http_request_structure),
-        cmocka_unit_test(test_http_response_structure),
+        cmocka_unit_test(test_ipc_type),
+        cmocka_unit_test(test_ipc_flag),
+        cmocka_unit_test(test_ipc_cfg),
+        cmocka_unit_test(test_ipc_hdr),
 
-        cmocka_unit_test(test_macro_array_size),
-        cmocka_unit_test(test_macro_min),
-        cmocka_unit_test(test_macro_max),
-        cmocka_unit_test(test_macro_align_up),
-        cmocka_unit_test(test_macro_version),
-        cmocka_unit_test(test_macro_time_conversion),
+        cmocka_unit_test(test_proto_enums),
+        cmocka_unit_test(test_conn_state),
+        cmocka_unit_test(test_endpoint),
+        cmocka_unit_test(test_conn_cfg),
+        cmocka_unit_test(test_http_req),
+        cmocka_unit_test(test_http_resp),
+
+        cmocka_unit_test(test_macro_size),
+        cmocka_unit_test(test_macro_minmax),
+        cmocka_unit_test(test_macro_align),
+        cmocka_unit_test(test_ver_ssot),
+        cmocka_unit_test(test_macro_time),
     };
 
-    return cmocka_run_group_tests(tests, NULL, NULL);
+    return cmocka_run_group_tests(tests, sizeof(tests) / sizeof(tests[0]), NULL, NULL);
 }

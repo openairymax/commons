@@ -661,22 +661,6 @@ typedef struct {
 #define AIRY_CONCAT3(a, b, c) a##b##c
 
 /**
- * @brief Version number parsing macros
- */
-#ifndef AIRY_VERSION_MAJOR
-#define AIRY_VERSION_MAJOR(v) (((v) >> 24) & 0xFF)
-#endif
-#ifndef AIRY_VERSION_MINOR
-#define AIRY_VERSION_MINOR(v) (((v) >> 16) & 0xFF)
-#endif
-#ifndef AIRY_VERSION_PATCH
-#define AIRY_VERSION_PATCH(v) (((v) >> 8) & 0xFF)
-#endif
-#ifndef AIRY_MAKE_VERSION
-#define AIRY_MAKE_VERSION(maj, min, pat) (((maj) << 24) | ((min) << 16) | ((pat) << 8))
-#endif
-
-/**
  * @brief Time conversion macros
  */
 #define AIRY_MS_TO_NS(ms) ((uint64_t)(ms) * 1000000ULL)
