@@ -145,11 +145,6 @@ static inline void airy_platform_explicit_bzero(void *s, size_t n)
 #endif
 
 
-#ifndef AIRY_UNUSED
-#define AIRY_UNUSED(x) ((void)(x))
-#endif
-
-
 /* ==================== OS system headers ==================== */
 
 #if AIRY_PLATFORM_WINDOWS

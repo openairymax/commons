@@ -164,7 +164,7 @@ static bool consume_from_ring_buffer(log_record_t *record)
     return true;
 }
 
-static void *flush_thread_func(void *arg __attribute__((unused)))
+static void *flush_thread_func(void *arg)
 {
 
     while (g_atomic_state.flush_thread_running) {

@@ -75,11 +75,6 @@ sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mu
         return SYNC_ERROR_INVALID;
     }
 
-    int64_t start_time __attribute__((unused)) = 0;
-    if (timeout != NULL && timeout->timeout_ms > 0) {
-        start_time = (int64_t)clock();
-    }
-
 #ifdef _WIN32
     DWORD wait_ms = (timeout == NULL) ? INFINITE : (DWORD)timeout->timeout_ms;
     BOOL result = SleepConditionVariableCS(&condition->cond, &mutex->mutex, wait_ms);

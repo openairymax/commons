@@ -32,10 +32,7 @@ memory/
 ├── memory_pool_internal.h                   # 池内部结构
 ├── memory_prealloc.h / memory_prealloc.c    # 低内存关键路径预分配缓冲
 │
-├── memory_debug.h                           # 调试 API
-├── memory_debug.c / memory_debug_core.c / memory_debug_leak.c
-│   / memory_debug_stats.c / memory_debug_track.c / memory_debug_validate.c
-├── memory_debug_internal.h                  # 调试子系统内部结构
+├── memory_debug_core.c                      # 调试核心：开/关、泄漏检查、转储、校验
 │
 ├── memory_stats_reporter.h / memory_stats_reporter.c  # 统计周期上报
 └── README.md
@@ -72,13 +69,6 @@ memory/
 `memory_pool_stats_t` 提供块水位（`total/allocated/free_blocks`）、字节用量
 （`total/used_memory`）、`allocation_count` / `free_count` 与命中率
 （`hit_count` / `miss_count`）。
-
-### memory_debug_options_t — 调试选项
-
-`enable_leak_check`、`enable_boundary_check`、`enable_use_after_free_check`、
-`enable_double_free_check`、`enable_invalid_free_check`、`track_allocations`、
-`fill_pattern_on_alloc`、`fill_pattern_on_free`、`redzone_size`、
-`verbosity_level`（0-3）。
 
 ### 扩展统计与水位监控
 
@@ -128,16 +118,6 @@ memory/
 为信号处理等低内存关键路径预留缓冲：`airy_prealloc_init` /
 `airy_prealloc_shutdown` / `airy_prealloc_acquire(category)` /
 `airy_prealloc_release(category)` / `airy_prealloc_is_initialized`。
-
-### 调试 API（`memory_debug.h`）
-
-初始化与开关（`memory_debug_init` / `enable` / `is_enabled` /
-`set_feature` / `set_callback` / `set_log_level`）、泄漏与校验
-（`memory_debug_check_leaks` / `validate` / `validate_all`）、分配信息查询
-（`get_allocation_info` / `set_tag` / `get_stats` / `reset_stats`）、堆栈跟踪
-（`enable_stack_trace` / `get_stack_trace`）、检查点对比
-（`checkpoint` / `compare_checkpoints`）、操作日志
-（`log_operation` / `dump_info`）。
 
 ### 扩展统计跟踪（`airy_memory_stats_ext.h`）
 

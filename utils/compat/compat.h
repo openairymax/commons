@@ -87,9 +87,6 @@ extern "C" {
 #define AIRY_INLINE static inline __attribute__((always_inline))
 #endif
 #define AIRY_NOINLINE __attribute__((noinline))
-#ifndef AIRY_UNUSED
-#define AIRY_UNUSED __attribute__((unused))
-#endif
 #define AIRY_USED __attribute__((used))
 #define AIRY_WEAK __attribute__((weak))
 #define AIRY_PACKED __attribute__((packed))
@@ -114,9 +111,6 @@ extern "C" {
 #define AIRY_INLINE static __forceinline
 #endif
 #define AIRY_NOINLINE __declspec(noinline)
-#ifndef AIRY_UNUSED
-#define AIRY_UNUSED
-#endif
 #define AIRY_USED
 #define AIRY_WEAK
 #define AIRY_PACKED
@@ -140,9 +134,6 @@ extern "C" {
 #define AIRY_INLINE static inline
 #endif
 #define AIRY_NOINLINE
-#ifndef AIRY_UNUSED
-#define AIRY_UNUSED
-#endif
 #define AIRY_USED
 #define AIRY_WEAK
 #define AIRY_PACKED
@@ -535,7 +526,7 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
 #define AIRY_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #elif defined(AIRY_COMPILER_GCC) || defined(AIRY_COMPILER_CLANG)
 #define AIRY_STATIC_ASSERT(cond, msg) \
-    typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1] __attribute__((unused))
+    typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1]
 #else
 #define AIRY_STATIC_ASSERT(cond, msg) typedef char airy_static_assert_##__LINE__[(cond) ? 1 : -1]
 #endif

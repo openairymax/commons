@@ -241,7 +241,7 @@ airy_msg_id_t airy_msg_id_from_string(const char *str);
  *
  * **Level 1: kernel-level IPC**
  * - Type: airy_kernel_ipc_message_t
- * - Location: corekern/include/ipc.h
+ * - Location: corekern/include/kern_ipc.h
  * - Purpose: inter-process communication inside the microkernel
  * - Features:
  *   ✓ Lightweight structure (40 bytes): code, data, size, fd, msg_id
