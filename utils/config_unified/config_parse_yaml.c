@@ -40,17 +40,6 @@ void yaml_ps_skip_ws(yaml_parse_state_t *s)
     }
 }
 
-__attribute__((unused)) static void yaml_ps_skip_ws_nl(yaml_parse_state_t *s)
-{
-    while (s->pos < s->len) {
-        int c = yaml_ps_peek(s);
-        if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
-            yaml_ps_advance(s);
-        else
-            break;
-    }
-}
-
 int yaml_ps_count_indent(yaml_parse_state_t *s)
 {
     int indent = 0;

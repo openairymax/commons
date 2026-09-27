@@ -262,11 +262,17 @@ types/
 
 ### sanitize_level.h — 输入净化级别
 
-| 枚举值 | 说明 |
-|------|------|
-| `SANITIZE_LEVEL_STRICT` | 最大净化，拒绝任何可疑内容 |
-| `SANITIZE_LEVEL_NORMAL` | 平衡净化，适用于典型 Agent 交互 |
-| `SANITIZE_LEVEL_RELAXED` | 最小净化，适用于受信任的内部通道 |
+净化级别的唯一权威定义（SSoT）。按净化强度递增排列，`level` 可直接用于数值比较。
+
+| 枚举值 | 值 | 说明 |
+|------|------|------|
+| `SANITIZE_LEVEL_NONE` | 0 | 不净化，输入原样透传 |
+| `SANITIZE_LEVEL_LOW` | 1 | 基础净化：转义特殊字符 |
+| `SANITIZE_LEVEL_MEDIUM` | 2 | 中等净化：基础转义 + 模式匹配规则（默认级别） |
+| `SANITIZE_LEVEL_HIGH` | 3 | 严格净化：白名单模式，非白名单输入拒绝 |
+| `SANITIZE_LEVEL_MAX` | 4 | 最高净化：拒绝全部输入 |
+
+权威来源：`docs/AirymaxRT/07-subsystem-specs/04-cupolas.md §4.3`
 
 ### cupolas_vault_cred_type.h — 凭据类型
 
@@ -394,7 +400,7 @@ uint32_t version = AIRY_MAKE_VERSION(1, 2, 3);
 
 /* === 使用规范类型 === */
 #include "sanitize_level.h"
-sanitize_level_t level = SANITIZE_LEVEL_NORMAL;
+sanitize_level_t level = SANITIZE_LEVEL_MEDIUM;
 ```
 
 ## 依赖关系

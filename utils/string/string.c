@@ -34,21 +34,6 @@
 #include <strings.h>
 #endif
 
-/**
- * @brief Whitespace character definition.
- */
-static const char *__attribute__((unused)) WHITESPACE_CHARS = " \t\n\r\v\f";
-
-/**
- * @brief Default string formatting options.
- */
-static const string_format_options_t
-    __attribute__((unused)) DEFAULT_FORMAT_OPTIONS = {.initial_buffer_size = 256,
-                                                      .max_buffer_size = 0,
-                                                      .locale_aware = false,
-                                                      .null_string = "(null)",
-                                                      .error_string = "(error)"};
-
 typedef struct {
     string_error_t last_error;
     char error_message[256];

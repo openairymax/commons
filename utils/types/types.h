@@ -510,7 +510,7 @@ typedef enum {
 /**
  * @brief IPC channel handle type
  * @note Kernel-level IPC channel type; full definition in
- *       corekern/include/ipc.h. Application layers should use
+ *       corekern/include/kern_ipc.h. Application layers should use
  *       ipc_channel_t from commons/utils/ipc/ipc_common.h
  */
 

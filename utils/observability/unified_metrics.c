@@ -624,7 +624,6 @@ AIRY_API void um_update_default_metrics(void)
     }
 #endif
 
-    uint64_t uptime __attribute__((unused)) = airy_time_ms() / 1000;
     um_increment("system", "process_uptime_seconds", 1);
 }
 
