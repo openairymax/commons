@@ -39,29 +39,69 @@ sync_result_t sync_internal_posix_error_to_result(int error_code)
     }
 }
 
-void sync_internal_update_stats_lock(sync_stats_t *stats, int64_t elapsed_ms)
+void sync_internal_stats_reset(sync_stats_ctr_t *stats)
 {
-    if (stats) {
-        stats->lock_count++;
-        stats->total_wait_time_ms += (uint64_t)elapsed_ms;
-        if ((uint64_t)elapsed_ms > stats->max_wait_time_ms)
-            stats->max_wait_time_ms = (uint64_t)elapsed_ms;
+    if (!stats)
+        return;
+
+    atomic_init(&stats->lock_count, (size_t)0);
+    atomic_init(&stats->unlock_count, (size_t)0);
+    atomic_init(&stats->wait_count, (size_t)0);
+    atomic_init(&stats->timeout_count, (size_t)0);
+    atomic_init(&stats->deadlock_count, (size_t)0);
+    atomic_init(&stats->total_wait_time_ms, (uint64_t)0);
+    atomic_init(&stats->max_wait_time_ms, (uint64_t)0);
+}
+
+void sync_internal_stats_snapshot(const sync_stats_ctr_t *stats, sync_stats_t *out)
+{
+    if (!stats || !out)
+        return;
+
+    /* 直接解引用即原子读取。不使用 atomic_load()：非 stdatomic 路径下其
+     * 8 字节分支会经 (int) 收窄，截断 64 位计数。 */
+    out->lock_count = (size_t)stats->lock_count;
+    out->unlock_count = (size_t)stats->unlock_count;
+    out->wait_count = (size_t)stats->wait_count;
+    out->timeout_count = (size_t)stats->timeout_count;
+    out->deadlock_count = (size_t)stats->deadlock_count;
+    out->total_wait_time_ms = (uint64_t)stats->total_wait_time_ms;
+    out->max_wait_time_ms = (uint64_t)stats->max_wait_time_ms;
+}
+
+static void stats_max_ms(atomic_uint64_t *dst, uint64_t value)
+{
+    uint64_t cur = (uint64_t)*dst;
+    while (value > cur) {
+        if (atomic_compare_exchange_weak(dst, &cur, value))
+            break;
     }
 }
 
-void sync_internal_update_stats_timeout(sync_stats_t *stats)
+void sync_internal_update_stats_lock(sync_stats_ctr_t *stats, int64_t elapsed_ms)
 {
-    if (stats) {
-        stats->timeout_count++;
-    }
+    if (!stats)
+        return;
+
+    atomic_fetch_add(&stats->lock_count, (size_t)1);
+    atomic_fetch_add(&stats->total_wait_time_ms, (uint64_t)elapsed_ms);
+    stats_max_ms(&stats->max_wait_time_ms, (uint64_t)elapsed_ms);
 }
 
-void sync_internal_update_stats_wait(sync_stats_t *stats, int64_t elapsed_ms)
+void sync_internal_update_stats_timeout(sync_stats_ctr_t *stats)
 {
-    if (stats) {
-        stats->wait_count++;
-        stats->total_wait_time_ms += (uint64_t)elapsed_ms;
-        if ((uint64_t)elapsed_ms > stats->max_wait_time_ms)
-            stats->max_wait_time_ms = (uint64_t)elapsed_ms;
-    }
+    if (!stats)
+        return;
+
+    atomic_fetch_add(&stats->timeout_count, (size_t)1);
+}
+
+void sync_internal_update_stats_wait(sync_stats_ctr_t *stats, int64_t elapsed_ms)
+{
+    if (!stats)
+        return;
+
+    atomic_fetch_add(&stats->wait_count, (size_t)1);
+    atomic_fetch_add(&stats->total_wait_time_ms, (uint64_t)elapsed_ms);
+    stats_max_ms(&stats->max_wait_time_ms, (uint64_t)elapsed_ms);
 }

@@ -21,26 +21,14 @@
 
 #include "error.h"
 #include "platform.h"
+/* SSoT: AIRY_STRNCPY_TERM 权威定义点为 airy_memory_inline.h（可移植，
+ * MSVC 走 CRT 分支），本头历史副本硬编码 __builtin_*（MSVC 不可编译），
+ * 已删除改为重导出。 */
+#include "../memory/airy_memory_inline.h"
 
 #include <logging.h>
 #include <stdbool.h>
 #include <stdio.h>
-
-/* P0.17 phase 2: AIRY_STRNCPY_TERM safe string-copy macro.
- * Originally defined in commons/utils/memory/airy_memory.h:607,
- * but fully including airy_memory.h would drag in the heavy error.h/
- * airy_memory.h dependency chain (circular-dependency conflicts with
- * AIRY_EINVAL/AIRY_ERR_BUSY/airy_time_ms). It is inlined here with an
- * ifndef guard to avoid duplicate definitions. */
-#ifndef AIRY_STRNCPY_TERM
-#define AIRY_STRNCPY_TERM(dst, src, size)                               \
-    do {                                                                \
-        size_t _len = __builtin_strlen(src);                            \
-        size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
-        __builtin_memcpy((dst), (src), _copy);                          \
-        (dst)[_copy] = '\0';                                            \
-    } while (0)
-#endif
 
 #ifdef __cplusplus
 extern "C" {

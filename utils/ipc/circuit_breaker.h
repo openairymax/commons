@@ -17,8 +17,9 @@
  *
  * P0.17 phase 5: migrated from daemons/common/include/circuit_breaker.h
  * into commons, removing the atoms->daemons compile-time reverse
- * dependency (IRON-6). The daemons copy is kept as a re-exporting
- * compatibility header.
+ * dependency (IRON-6). The daemons re-exporting copy has since been
+ * removed; this header is the sole circuit-breaker SSoT (the former
+ * cupolas same-name copy was deleted as dead code, 0.1.19 F6).
  *
  * Design principles:
  * 1. Fail fast: return errors immediately in the open state, avoiding

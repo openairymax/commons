@@ -554,22 +554,11 @@ AIRY_API airy_assert_handler_t airy_get_assert_handler(void);
  */
 AIRY_API void airy_debug_break(void);
 
-
-#ifndef AIRY_VERSION_MAJOR
-#define AIRY_VERSION_MAJOR 0
-#endif
-#ifndef AIRY_VERSION_MINOR
-#define AIRY_VERSION_MINOR 0
-#endif
-#ifndef AIRY_VERSION_PATCH
-#define AIRY_VERSION_PATCH 5
-#endif
-#ifndef AIRY_VERSION_STRING
-#define AIRY_VERSION_STRING "0.1.1"
-#endif
-
 /**
  * @brief Get the version string
+ *
+ * @return 指向 AIRYRT_VERSION（版本 SSoT，见 commons/include/airyrt_version.h）
+ *         的静态字符串，非 NULL。
  */
 AIRY_API const char *airy_version_string(void);
 

@@ -270,40 +270,6 @@ typedef struct airy_err_context {
 #endif /* AIRY_ERROR_CONTEXT_T_DEFINED */
 
 /**
- * @brief 错误处理回调函数类型
- * @deprecated 请使用新的错误链接口
- */
-typedef void (*airy_err_handler_t)(airy_err_t err, const airy_err_context_t *context);
-
-/**
- * @brief 设置错误处理回调（兼容旧代码）
- * @deprecated
- */
-void airy_err_set_handler(airy_err_handler_t handler);
-
-/**
- * @brief 兼容旧代码的错误处理宏
- * @deprecated 请使用 AIRY_ERROR
- */
-#define AIRY_ERROR_HANDLE(code, msg)                                         \
-    do {                                                                     \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-    } while (0)
-
-#define AIRY_ERROR_PUSH_EX(code, msg) AIRY_ERROR_HANDLE(code, msg)
-
-/**
- * @brief 兼容旧代码的错误处理宏（带上下文）
- * @deprecated
- */
-#define AIRY_ERROR_HANDLE_CONTEXT(code, user_data, msg)                      \
-    do {                                                                     \
-        airy_err_push_ex((code), __FILE__, __LINE__, __func__, "%s", (msg)); \
-        (void)(user_data);                                                   \
-    } while (0)
-
-
-/**
  * @brief 错误统计信息
  */
 typedef struct {
