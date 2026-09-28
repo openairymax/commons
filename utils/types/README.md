@@ -124,7 +124,7 @@ types/
 ### 记忆类型
 
 记忆分层词汇（L1 原始 / L2 特征 / L3 结构 / L4 模式）的唯一权威是
-`atoms/memory/provider.h` 的 `airy_memory_capabilities_t` 能力位；
+`atoms/memory/include/provider.h` 的 `airy_memory_capabilities_t` 能力位；
 本模块只定义记忆条目的载荷类型，不定义第二套分层命名。
 
 #### airy_memory_type_t — 记忆类型
