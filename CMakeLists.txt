@@ -149,6 +149,15 @@ set(SOURCES
     utils/resource/api_recovery.c
     # 0c A 类直搬：security 域（log_sanitizer）
     utils/security/log_sanitizer.c
+    # 0c A 类直搬：跨进程服务发现全家族（g14 补完 P0.17 phase 4 半程迁移，
+    # daemons src/discovery 权威实现落位，符号经 airy_common 提供）
+    utils/sd/service_discovery.c
+    utils/sd/service_discovery_lb.c
+    utils/sd/service_discovery_api.c
+    utils/sd/service_discovery_stats.c
+    utils/sd/service_discovery_backend_shm.c
+    utils/sd/service_discovery_backend_file.c
+    utils/sd/service_discovery_helper.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/ipc_common.c)
@@ -227,6 +236,7 @@ set(_inc_dirs
     utils/strategy
     utils/network
     utils/ipc
+    utils/sd
     utils/uuid
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson
@@ -299,6 +309,7 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/strategy
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/network
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/sd
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
@@ -390,6 +401,8 @@ install(DIRECTORY utils/compat/ DESTINATION include/agentrt/utils/compat
 install(DIRECTORY utils/network/ DESTINATION include/agentrt/utils/network
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/ipc/ DESTINATION include/agentrt/utils/ipc
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/sd/ DESTINATION include/agentrt/utils/sd
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/platform/ DESTINATION include/agentrt/utils/platform
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)

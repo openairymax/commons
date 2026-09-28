@@ -5,9 +5,10 @@
  * @file daemon_bootstrap_sd.h
  * @brief P1.7 C-L08: one-shot daemon ServiceDiscovery bootstrap module.
  *
- * P0.17 phase 4: migrated from daemons/common/include/ to commons,
- * removing the compile-time reverse dependency atoms->daemons (IRON-6).
- * The daemons version is kept as a re-export compat header.
+ * P0.17 phase 4: header migrated from daemons/common/include/ to
+ * commons, removing the compile-time reverse dependency atoms->daemons
+ * (IRON-6). g14 completed the migration: the authoritative sources live
+ * in this directory as well.
  *
  * A daemon calls this module at startup and it automatically performs:
  * 1. ServiceDiscovery initialization

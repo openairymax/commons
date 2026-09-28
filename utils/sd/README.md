@@ -1,8 +1,8 @@
-# sd — 跨进程服务发现契约头
+# sd — 跨进程服务发现
 
-**模块路径**: `commons/utils/sd/` · **版本**: 0.1.16
+**模块路径**: `commons/utils/sd/` · **版本**: 0.1.19
 
-基于共享内存的跨进程服务注册表接口定义：服务注册/发现、健康状态传播、负载均衡选择、依赖检查、心跳与自动过期。本目录只提供 header-only 的接口声明，实现位于 agentrt 守护进程公共库，供各 daemon 链接使用。
+基于共享内存的跨进程服务注册表：服务注册/发现、健康状态传播、负载均衡选择、依赖检查、心跳与自动过期。本目录为单一权威（头文件与实现同址），随 `airy_common` 全平台编译，符号经 PUBLIC 链接对所有消费方可用。
 
 ## 概述
 
@@ -15,9 +15,17 @@
 
 ```
 utils/sd/
-├── service_discovery.h          # 核心注册表接口（23 个 sd_* API）
-├── service_discovery_helper.h   # 便捷层（14 个 sd_helper_* API）
-├── daemon_bootstrap_sd.h        # daemon 一次性引导（5 个 API）
+├── service_discovery.h               # 核心注册表接口（23 个 sd_* API）
+├── service_discovery_helper.h        # 便捷层（14 个 sd_helper_* API）
+├── daemon_bootstrap_sd.h             # daemon 一次性引导（5 个 API）
+├── service_discovery.c               # 核心：生命周期/注册/发现/心跳
+├── service_discovery_lb.c            # 负载均衡选择（五策略）
+├── service_discovery_api.c           # 操作 API（统计转储/回调）
+├── service_discovery_stats.c         # 统计域
+├── service_discovery_backend_shm.c   # 共享内存后端
+├── service_discovery_backend_file.c  # 文件后端（AIRY_HAS_CJSON 守卫）
+├── service_discovery_helper.c        # 便捷层实现
+├── service_discovery_internal.h      # 模块私有共享声明
 └── README.md
 ```
 
@@ -70,8 +78,8 @@ utils/sd/
 
 ## 语义与约束
 
-- 本目录三个头文件均未注册进 `airy_common` 的构建（无源文件、无 PUBLIC include 条目、无安装规则）：消费方需自行把 `utils/sd/` 与 `utils/ipc/`（`svc_common.h`）加入头文件搜索路径。
-- 接口实现与生命周期行为以守护进程公共库为准；仅链接本仓 `airy_common` 不会得到 `sd_*` 符号。
+- 本目录为单一权威：头文件与实现同址，源文件随 `airy_common` 全平台编译，公开头经 PUBLIC include 与安装规则分发（`*_internal.h` 不安装）。
+- 消费方链接 `airy_common` 即得全部 `sd_*`/`sd_helper_*`/`daemon_bootstrap_sd_*` 符号；历史遗留的 `utils/ipc`（`svc_common.h`）手挂路径仍兼容，但已非必需。
 - 共享内存注册表为跨进程可变状态，`sd_*` 调用线程安全性由实现层决定；多实例进程应统一经心跳与过期机制收敛视图。
 - Windows / Linux / macOS 共享内存抽象由实现层提供，头文件本身平台中立。
 
@@ -115,7 +123,7 @@ int worker_main(int argc, char **argv)
 | commons `utils/ipc`（`svc_common.h`） | `airy_svc_state_t` 服务状态机与 `AIRY_API` 装饰宏（其自身携带 `error.h`） |
 | C 标准库 | `stdbool.h`、`stdint.h` |
 
-本模块为纯接口头，无编译单元。commons 测试套件不含本模块测试；行为测试（注册发现、过期清理、LB 选择、健康传播）随守护进程公共库的测试套件维护。
+实现随 `airy_common` 全平台编译（shm/file 后端与便捷层共用平台抽象 `daemon_platform_ext.h`；file 后端整体受 `AIRY_HAS_CJSON` 守卫）。单元测试住 `commons/tests/unit/`（`commons_test_test_service_discovery`，自含测试框架，按生命周期/发现/选择/健康/杂项五域拆分）。
 
 ---
 

@@ -39,6 +39,8 @@ set(UNIT_TEST_SOURCES
     unit/test_cache_common.c
     # UTF-8 校验（RFC 3629）与非法序列清洗（U+FFFD 替换）
     unit/test_string_utf8.c
+    # 跨进程服务发现（g14 随权威实现自 daemons 迁入；自含测试框架）
+    unit/test_service_discovery.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
@@ -67,6 +69,17 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         )
     endif()
 
+    # test_service_discovery.c 已按功能域拆分，需一并编译各域文件
+    if(test_source STREQUAL "unit/test_service_discovery.c")
+        target_sources(${test_name} PRIVATE
+            unit/test_service_discovery_lifecycle.c
+            unit/test_service_discovery_discover.c
+            unit/test_service_discovery_select.c
+            unit/test_service_discovery_health.c
+            unit/test_service_discovery_misc.c
+        )
+    endif()
+
     # 内置拼音输入法词典路径（源码树 data/，构建树分发）
     if(test_source STREQUAL "unit/test_ime.c")
         target_compile_definitions(${test_name} PRIVATE
@@ -84,6 +97,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/token
         ${COMMONS_ROOT}/utils/cost
         ${COMMONS_ROOT}/utils/ipc
+        ${COMMONS_ROOT}/utils/sd
         ${COMMONS_ROOT}/utils/network
         ${COMMONS_ROOT}/utils/memory
         ${COMMONS_ROOT}/utils/print
