@@ -6,9 +6,10 @@
  * @brief Cross-process service discovery mechanism (authoritative commons
  *        version).
  *
- * P0.17 phase 4: migrated from daemons/common/include/ into commons,
- * removing the atoms->daemons compile-time reverse dependency (IRON-6).
- * The daemons copy is kept as a re-exporting compatibility header.
+ * P0.17 phase 4: header migrated from daemons/common/include/ into
+ * commons, removing the atoms->daemons compile-time reverse dependency
+ * (IRON-6). g14 completed the migration: the authoritative sources live
+ * in this directory as well.
  *
  * A shared-memory based cross-process service registry, supporting:
  * - Cross-process service registration and discovery
