@@ -39,7 +39,7 @@ sync_result_t sync_internal_posix_error_to_result(int error_code)
     }
 }
 
-void sync_internal_stats_reset(sync_stats_ctr_t *stats)
+void sync_stats_reset(sync_stats_ctr_t *stats)
 {
     if (!stats)
         return;
@@ -53,7 +53,7 @@ void sync_internal_stats_reset(sync_stats_ctr_t *stats)
     atomic_init(&stats->max_wait_time_ms, (uint64_t)0);
 }
 
-void sync_internal_stats_snapshot(const sync_stats_ctr_t *stats, sync_stats_t *out)
+void sync_stats_snapshot(const sync_stats_ctr_t *stats, sync_stats_t *out)
 {
     if (!stats || !out)
         return;

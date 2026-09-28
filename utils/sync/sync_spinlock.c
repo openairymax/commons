@@ -33,7 +33,7 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
     if (attr != NULL && attr->name != NULL) {
         s->name = sync_internal_strdup(attr->name);
     }
-    sync_internal_stats_reset(&s->stats);
+    sync_stats_reset(&s->stats);
 
 #if AIRY_SPINLOCK_CAS
     atomic_init(&s->lock, 0);

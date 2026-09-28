@@ -31,7 +31,7 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
     if (attr != NULL && attr->name != NULL) {
         r->name = sync_internal_strdup(attr->name);
     }
-    sync_internal_stats_reset(&r->stats);
+    sync_stats_reset(&r->stats);
 
 #ifdef _WIN32
     InitializeSRWLock(&r->rwlock);

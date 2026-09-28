@@ -409,7 +409,7 @@ airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain);
  * @param[in] chain 错误链
  * @return 最新的错误码
  */
-airy_err_t airy_err_chain_get_latest_error(const airy_err_chain_t *chain);
+airy_err_t airy_err_latest(const airy_err_chain_t *chain);
 
 /**
  * @brief 将错误链格式化为可读字符串

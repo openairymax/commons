@@ -149,7 +149,7 @@ sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
         return SYNC_ERROR_INVALID;
     }
 
-    sync_internal_stats_snapshot(&base->stats, stats);
+    sync_stats_snapshot(&base->stats, stats);
 
     return SYNC_SUCCESS;
 }
@@ -165,7 +165,7 @@ sync_result_t sync_reset_stats(void *lock)
         return SYNC_ERROR_INVALID;
     }
 
-    sync_internal_stats_reset(&base->stats);
+    sync_stats_reset(&base->stats);
 
     return SYNC_SUCCESS;
 }
