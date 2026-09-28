@@ -158,6 +158,9 @@ set(SOURCES
     utils/sd/service_discovery_backend_shm.c
     utils/sd/service_discovery_backend_file.c
     utils/sd/service_discovery_helper.c
+    # g14b 补全：daemon_bootstrap_sd 一键引导实现归位（公开头 daemon_bootstrap_sd.h
+    # 同址），daemons 侧同名源删除，符号经 airy_common PUBLIC 提供
+    utils/sd/daemon_bootstrap_sd.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/ipc_common.c)
