@@ -29,7 +29,7 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
     if (attr != NULL && attr->name != NULL) {
         b->name = sync_internal_strdup(attr->name);
     }
-    sync_internal_stats_reset(&b->stats);
+    sync_stats_reset(&b->stats);
 
 #ifdef _WIN32
     InitializeCriticalSection(&b->barrier.cs);

@@ -28,7 +28,7 @@ sync_result_t sync_semaphore_create(sync_semaphore_t *semaphore, unsigned int in
     if (attr != NULL && attr->name != NULL) {
         s->name = sync_internal_strdup(attr->name);
     }
-    sync_internal_stats_reset(&s->stats);
+    sync_stats_reset(&s->stats);
 
 #ifdef _WIN32
     s->semaphore = CreateSemaphore(NULL, initial_value, max_value, NULL);

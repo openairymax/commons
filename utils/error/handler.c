@@ -781,7 +781,7 @@ airy_err_t airy_err_chain_get_root_error(const airy_err_chain_t *chain)
     return chain->contexts[0].error_code;
 }
 
-airy_err_t airy_err_chain_get_latest_error(const airy_err_chain_t *chain)
+airy_err_t airy_err_latest(const airy_err_chain_t *chain)
 {
     if (chain == NULL) {
         return AIRY_OK;

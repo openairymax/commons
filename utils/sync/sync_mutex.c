@@ -28,7 +28,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
     if (attr != NULL && attr->name != NULL) {
         m->name = sync_internal_strdup(attr->name);
     }
-    sync_internal_stats_reset(&m->stats);
+    sync_stats_reset(&m->stats);
 
 #ifdef _WIN32
     InitializeCriticalSection(&m->mutex);

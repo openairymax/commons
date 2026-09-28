@@ -115,7 +115,7 @@ error/
 | `airy_err_chain_iter_reset(iter)` | 重置迭代器 |
 | `airy_err_chain_get_depth(chain)` | 获取错误链深度 |
 | `airy_err_chain_get_root_error(chain)` | 获取最早的错误码 |
-| `airy_err_chain_get_latest_error(chain)` | 获取最新的错误码 |
+| `airy_err_latest(chain)` | 获取最新的错误码 |
 | `airy_err_chain_format(chain, lang)` | 格式化错误链为可读字符串 |
 
 ### 多语言支持（`airy_language_t`）
