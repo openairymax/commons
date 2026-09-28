@@ -192,16 +192,15 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
     void *ptr = NULL;
 
     /*
-     * On Windows use _aligned_malloc uniformly: alignment=0 falls back to
-     * sizeof(void*) default alignment, so every allocation goes through
-     * the _aligned_free/_aligned_realloc path, eliminating the mismatch
-     * where free() releases _aligned_malloc memory (C-5). On POSIX,
-     * posix_memalign-allocated memory can be freed with free(), keeping
-     * the original logic.
+     * Windows 普通通道一律 CRT malloc（x64 已保证 16 字节对齐），仅显式
+     * 对齐需求走 _aligned_malloc，其产物必须以 memory_aligned_free 释放。
+     * 历史方案曾统一走 _aligned_malloc/_aligned_free，但 CRT 跨界指针
+     * （strdup 等）经 memory_free 释放时读不到对齐头，free 出错误基址，
+     * 触发 0xc0000374 堆损坏（run 36381608450 windows cdb 栈实证）。
+     * 现与 corekern airy_mem_aligned_free 配对范式对齐。
      */
 #ifdef _WIN32
-    size_t effective_alignment = (alignment > 0) ? alignment : sizeof(void *);
-    ptr = _aligned_malloc(size, effective_alignment);
+    ptr = (alignment > 0) ? _aligned_malloc(size, alignment) : malloc(size);
 #else
     if (alignment > 0) {
         if (posix_memalign(&ptr, alignment, size) != 0) {
@@ -224,11 +223,7 @@ static void *memory_allocate_internal(size_t size, const char *tag, bool zero, s
     memory_update_stats_alloc(size);
 
     if (g_state.debug_enabled) {
-#ifdef _WIN32
-        memory_add_debug_info(ptr, size, effective_alignment, tag, __FILE__, __LINE__, __func__);
-#else
         memory_add_debug_info(ptr, size, alignment, tag, __FILE__, __LINE__, __func__);
-#endif
     }
 
     return ptr;
@@ -319,11 +314,7 @@ void memory_cleanup(void)
 void *memory_alloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
-#ifdef _WIN32
-        void *ptr = _aligned_malloc(size, sizeof(void *));
-#else
         void *ptr = malloc(size);
-#endif
         if (ptr != NULL) {
             __builtin_memset(ptr, 0, size);
         }
@@ -340,15 +331,11 @@ void *memory_alloc(size_t size, const char *tag)
 void *memory_calloc(size_t size, const char *tag)
 {
     if (!g_state.initialized) {
-#ifdef _WIN32
-        void *ptr = _aligned_malloc(size, sizeof(void *));
+        void *ptr = malloc(size);
         if (ptr != NULL) {
             __builtin_memset(ptr, 0, size);
         }
         return ptr;
-#else
-        return calloc(1, size);
-#endif
     }
 
     memory_lock();
@@ -361,6 +348,7 @@ void *memory_calloc(size_t size, const char *tag)
 void *memory_aligned_alloc(size_t alignment, size_t size, const char *tag)
 {
     if (!g_state.initialized) {
+        /* 对齐通道：产物必须以 memory_aligned_free 释放 */
 #ifdef _WIN32
         void *ptr = _aligned_malloc(size, alignment);
         if (ptr != NULL) {
@@ -398,11 +386,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     }
 
     if (!g_state.initialized) {
-#ifdef _WIN32
-        return _aligned_realloc(ptr, new_size, sizeof(void *));
-#else
         return realloc(ptr, new_size);
-#endif
     }
 
     memory_lock();
@@ -431,11 +415,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
         memory_remove_debug_info(old_ptr);
     }
 
-#ifdef _WIN32
-    void *new_ptr = _aligned_realloc(ptr, new_size, saved_alignment);
-#else
     void *new_ptr = realloc(ptr, new_size);
-#endif
     if (new_ptr == NULL) {
 
         if (debug_info_saved && g_state.debug_enabled) {
@@ -494,18 +474,28 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     return new_ptr;
 }
 
-void memory_free(void *ptr)
+static void memory_free_raw(void *ptr, bool aligned)
+{
+#ifdef _WIN32
+    if (aligned) {
+        _aligned_free(ptr);
+    } else {
+        free(ptr);
+    }
+#else
+    (void)aligned;
+    free(ptr);
+#endif
+}
+
+static void memory_release(void *ptr, bool aligned)
 {
     if (ptr == NULL) {
         return;
     }
 
     if (!g_state.initialized) {
-#ifdef _WIN32
-        _aligned_free(ptr);
-#else
-        free(ptr);
-#endif
+        memory_free_raw(ptr, aligned);
         return;
     }
 
@@ -519,21 +509,21 @@ void memory_free(void *ptr)
         memory_remove_debug_info(ptr);
     }
 
-    /*
-     * Free: on Windows every allocation (including alignment=0 regular
-     * ones) goes through _aligned_malloc, so always use _aligned_free
-     * (C-5). On POSIX, memory from posix_memalign/malloc can be freed
-     * with free().
-     */
-#ifdef _WIN32
-    _aligned_free(ptr);
-#else
-    free(ptr);
-#endif
+    memory_free_raw(ptr, aligned);
 
     if (size > 0) {
         memory_update_stats_free(size);
     }
 
     memory_unlock();
+}
+
+void memory_free(void *ptr)
+{
+    memory_release(ptr, false);
+}
+
+void memory_aligned_free(void *ptr)
+{
+    memory_release(ptr, true);
 }

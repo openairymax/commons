@@ -71,8 +71,20 @@ void *memory_calloc(size_t size, const char *tag);
  * @param[in] size 要分配的字节数
  * @param[in] tag 内存分配标签（用于调试，可为NULL）
  * @return 成功返回分配的内存指针，失败返回NULL
+ *
+ * @note 产物必须以 memory_aligned_free 释放；Windows 上对齐块与普通块
+ *       的堆元数据布局不同，与 memory_free 混用会触发堆损坏
  */
 void *memory_aligned_alloc(size_t alignment, size_t size, const char *tag);
+
+/**
+ * @brief 释放对齐内存
+ *
+ * @param[in] ptr memory_aligned_alloc 返回的指针
+ *
+ * @note 仅用于释放 memory_aligned_alloc 分配的内存
+ */
+void memory_aligned_free(void *ptr);
 
 /**
  * @brief 重新分配内存

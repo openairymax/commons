@@ -129,7 +129,7 @@ bool memory_pool_allocate_blocks(memory_pool_t *pool, size_t block_count)
                        "memory_pool_blocks");
 
     if (new_blocks == NULL) {
-        memory_free(pool->memory_area);
+        memory_aligned_free(pool->memory_area);
         pool->memory_area = NULL;
         return false;
     }
@@ -168,7 +168,7 @@ void memory_pool_free_blocks(memory_pool_t *pool)
     }
 
     if (pool->memory_area != NULL) {
-        memory_free(pool->memory_area);
+        memory_aligned_free(pool->memory_area);
         pool->memory_area = NULL;
         pool->memory_area_size = 0;
     }
@@ -177,7 +177,7 @@ void memory_pool_free_blocks(memory_pool_t *pool)
     while (region) {
         memory_region_node_t *next = region->next;
         if (region->region) {
-            memory_free(region->region);
+            memory_aligned_free(region->region);
         }
         memory_free(region);
         region = next;
