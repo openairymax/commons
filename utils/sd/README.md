@@ -25,6 +25,7 @@ utils/sd/
 ├── service_discovery_backend_shm.c   # 共享内存后端
 ├── service_discovery_backend_file.c  # 文件后端（AIRY_HAS_CJSON 守卫）
 ├── service_discovery_helper.c        # 便捷层实现
+├── daemon_bootstrap_sd.c             # 一次性引导实现（g14b 自 daemons 归位）
 ├── service_discovery_internal.h      # 模块私有共享声明
 └── README.md
 ```
