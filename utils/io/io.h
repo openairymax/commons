@@ -10,6 +10,9 @@
 #define AIRY_RT_UTILS_IO_H
 
 #include <stddef.h>
+#ifndef _WIN32
+#include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +34,20 @@ char *airy_io_read_file(const char *path, size_t *out_len);
  * @return 0 on success, negative error code on failure
  */
 int airy_io_write_file(const char *path, const void *data, size_t len);
+
+#ifndef _WIN32
+/**
+ * @brief Write the entire buffer to a file descriptor.
+ *
+ * Loops over partial writes and retries on EINTR, so a single call
+ * never silently truncates a frame (pipes, sockets, child stdin).
+ * @param fd File descriptor
+ * @param buf Data
+ * @param len Byte count
+ * @return Number of bytes written, or -1 on failure
+ */
+ssize_t airy_io_write_all(int fd, const void *buf, size_t len);
+#endif
 
 /**
  * @brief Ensure a directory exists (create it if missing).
