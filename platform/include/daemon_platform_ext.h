@@ -36,6 +36,9 @@
  * airy_cond_t, airy_thread_t, airy_sock_t, AIRY_PLATFORM_POSIX, ...) */
 #include <platform.h>
 
+#include <stddef.h> /* size_t */
+#include <stdint.h> /* uint8_t..uint64_t */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
