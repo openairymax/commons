@@ -327,13 +327,18 @@ static inline void airy_auto_free_impl(void *p)
  * @brief 安全字符串复制宏，确保目标缓冲区始终以 null 终止
  *
  * 全项目唯一定义点（SSoT，无条件定义：任何重定义副本将编译期报错）。
+ * dst/src 经局部指针绑定、各只求值一次：调用点可安全传入
+ * argv[++i] 这类带副作用表达式（2026-09-29 gateway_d CLI 冒烟实证
+ * 双重求值会跳过选项参数，宏层根除该卫生缺陷，全项目调用点受益）。
  */
 #define AIRY_STRNCPY_TERM(dst, src, size)                               \
     do {                                                                \
-        size_t _len = AIRY_IMPL_STRLEN(src);                            \
+        char *_airy_dst = (dst);                                        \
+        const char *_airy_src = (src);                                  \
+        size_t _len = AIRY_IMPL_STRLEN(_airy_src);                      \
         size_t _copy = ((_len) < ((size) - 1)) ? (_len) : ((size) - 1); \
-        AIRY_IMPL_MEMCPY((dst), (src), _copy);                          \
-        (dst)[_copy] = '\0';                                            \
+        AIRY_IMPL_MEMCPY(_airy_dst, _airy_src, _copy);                  \
+        _airy_dst[_copy] = '\0';                                        \
     } while (0)
 
 /** @} */ /* end of safe_memory_alloc */
