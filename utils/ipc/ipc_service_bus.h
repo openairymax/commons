@@ -246,14 +246,6 @@ AIRY_API void ipc_bus_message_free(ipc_bus_message_t *message);
 AIRY_API const char *ipc_bus_proto_to_string(ipc_bus_proto_t proto);
 
 /**
- * @brief Convert a string to a protocol type
- * @param str Protocol name
- * @return Protocol type
- */
-AIRY_API ipc_bus_proto_t ipc_bus_proto_from_string(const char *str);
-
-
-/**
  * @brief Get service bus statistics
  * @param bus Bus handle
  * @param stats [out] Statistics
