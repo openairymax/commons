@@ -3,307 +3,80 @@
 
 /**
  * @file config_parse_yaml.c
- * @brief Unified config module - YAML structural parsing.
+ * @brief Unified config module - YAML flattening onto config_context_t.
  *
- * 2026-08-27 域拆分（原 config_parse.c）：缩进感知 YAML 子集的
- * 状态机骨架、映射/序列递归结构与公共入口；标量细节见
- * config_parse_yaml_scalar.c。
+ * YAML 语法解析唯一实现为 yaml_minimal（锚点/别名/合并键/块标量等
+ * 全集支持）；本文件只承担「文档树 -> 点分键」语义拍平：映射展开为
+ * a.b.c 层级键，序列展开为 a.0/a.1 数字索引键，空容器与空标量落为
+ * 空字符串值。原独立缩进状态机（本文件 + config_parse_yaml_scalar.c）
+ * 已消解，行为对齐原拍平规则。
  */
 
-#include "config_parse_yaml.h"
+#include "config_parse_internal.h"
+#include "yaml_minimal.h"
 
-/* ==================== Parse state helpers ==================== */
-
-int yaml_ps_peek(yaml_parse_state_t *s)
+static void flatten_node(const struct yaml_node *node, const char *prefix, config_context_t *ctx)
 {
-    return (s->pos < s->len) ? (unsigned char)s->src[s->pos] : -1;
-}
+    if (!node)
+        return;
 
-int yaml_ps_advance(yaml_parse_state_t *s)
-{
-    if (s->pos >= s->len)
-        return AIRY_EINVAL;
-    int c = (unsigned char)s->src[s->pos++];
-    if (c == '\n')
-        s->line++;
-    return c;
-}
-
-void yaml_ps_skip_ws(yaml_parse_state_t *s)
-{
-    while (s->pos < s->len) {
-        int c = yaml_ps_peek(s);
-        if (c == ' ' || c == '\t')
-            yaml_ps_advance(s);
-        else
-            break;
+    if (node->type == YAML_NODE_SCALAR) {
+        const char *val = node->scalar.value ? node->scalar.value : "";
+        config_value_t *cv = config_value_create_string(val);
+        if (cv)
+            config_context_set(ctx, prefix, cv);
+        return;
     }
-}
 
-int yaml_ps_count_indent(yaml_parse_state_t *s)
-{
-    int indent = 0;
-    while (s->pos < s->len && yaml_ps_peek(s) == ' ') {
-        indent++;
-        yaml_ps_advance(s);
+    if (node->type == YAML_NODE_MAPPING && node->mapping == NULL) {
+        config_value_t *cv = config_value_create_string("");
+        if (cv)
+            config_context_set(ctx, prefix, cv);
+        return;
     }
-    return indent;
-}
 
-void yaml_ps_skip_to_eol(yaml_parse_state_t *s)
-{
-    while (s->pos < s->len) {
-        int c = yaml_ps_peek(s);
-        if (c == '\n' || c == '\r')
-            break;
-        yaml_ps_advance(s);
-    }
-}
-
-void yaml_ps_skip_eol(yaml_parse_state_t *s)
-{
-    if (s->pos < s->len && yaml_ps_peek(s) == '\r')
-        yaml_ps_advance(s);
-    if (s->pos < s->len && yaml_ps_peek(s) == '\n')
-        yaml_ps_advance(s);
-}
-
-/* ==================== Structural recursion ==================== */
-
-config_error_t yaml_parse_mapping(yaml_parse_state_t *s, int base_indent, const char *prefix,
-                                  config_context_t *ctx)
-{
-    char key_buf[768];
-    char full_key[1024];
-
-    while (s->pos < s->len) {
-        while (s->pos < s->len) {
-            if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-                yaml_ps_skip_eol(s);
-            } else {
-                break;
-            }
-        }
-        if (s->pos >= s->len)
-            break;
-
-        int ind = yaml_ps_count_indent(s);
-        if (ind <= base_indent)
-            break;
-
-        yaml_ps_skip_ws(s);
-        if (s->pos >= s->len)
-            break;
-
-        int c = yaml_ps_peek(s);
-        if (c == '#' || c == '\n' || c == '\r') {
-            yaml_ps_skip_to_eol(s);
-            yaml_ps_skip_eol(s);
-            continue;
-        }
-
-        if (c == '-' && s->pos + 1 < s->len) {
-            int next = (unsigned char)s->src[s->pos + 1];
-            if (next == '-' && s->pos + 2 < s->len && (unsigned char)s->src[s->pos + 2] == '-')
-                break;
-        }
-
-        if (c == '.' && s->pos + 2 < s->len && (unsigned char)s->src[s->pos + 1] == '.' &&
-            (unsigned char)s->src[s->pos + 2] == '.')
-            break;
-
-        size_t klen = 0;
-        while (s->pos < s->len) {
-            c = yaml_ps_peek(s);
-            if (c == ':' || c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '#')
-                break;
-            if (klen < sizeof(key_buf) - 1)
-                key_buf[klen++] = (char)yaml_ps_advance(s);
+    if (node->type == YAML_NODE_MAPPING) {
+        for (struct yaml_mapping_entry *e = node->mapping; e && e->key; e++) {
+            char full_key[1024];
+            if (prefix && prefix[0])
+                snprintf(full_key, sizeof(full_key), "%s.%s", prefix, e->key);
             else
-                yaml_ps_advance(s);
+                snprintf(full_key, sizeof(full_key), "%s", e->key);
+            flatten_node(e->value, full_key, ctx);
         }
-        key_buf[klen] = '\0';
+        return;
+    }
 
-        yaml_ps_skip_ws(s);
-        if (s->pos < s->len && yaml_ps_peek(s) == ':') {
-            yaml_ps_advance(s);
-            yaml_ps_skip_ws(s);
-        }
-
-        if (prefix && prefix[0]) {
-            snprintf(full_key, sizeof(full_key), "%s.%s", prefix, key_buf);
-        } else {
-            snprintf(full_key, sizeof(full_key), "%s", key_buf);
-        }
-
-        if (strcmp(key_buf, "<<") == 0) {
-            yaml_parse_value(s, ind, prefix, ctx);
-            continue;
-        }
-
-        if (s->pos >= s->len || yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-            yaml_ps_skip_eol(s);
-
-            while (s->pos < s->len) {
-                if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-                    yaml_ps_skip_eol(s);
-                } else {
-                    break;
-                }
-            }
-            if (s->pos < s->len) {
-                int next_ind = yaml_ps_count_indent(s);
-                if (next_ind > ind) {
-                    yaml_parse_value(s, ind, full_key, ctx);
-                    continue;
-                }
-            }
+    if (node->type == YAML_NODE_SEQUENCE) {
+        if (node->sequence.items == NULL || node->sequence.count == 0) {
             config_value_t *cv = config_value_create_string("");
             if (cv)
-                config_context_set(ctx, full_key, cv);
-            continue;
+                config_context_set(ctx, prefix, cv);
+            return;
         }
-
-        yaml_parse_value(s, ind, full_key, ctx);
-    }
-    return CONFIG_SUCCESS;
-}
-
-config_error_t yaml_parse_sequence(yaml_parse_state_t *s, int base_indent, const char *prefix,
-                                   config_context_t *ctx)
-{
-    int idx = 0;
-    while (s->pos < s->len) {
-        while (s->pos < s->len) {
-            if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-                yaml_ps_skip_eol(s);
-            } else {
-                break;
-            }
-        }
-        if (s->pos >= s->len)
-            break;
-
-        int ind = yaml_ps_count_indent(s);
-        if (ind <= base_indent)
-            break;
-
-        if (yaml_ps_peek(s) != '-')
-            break;
-        yaml_ps_advance(s);
-
-        int next_c = yaml_ps_peek(s);
-        if (next_c == '-' && s->pos + 1 < s->len && (unsigned char)s->src[s->pos + 1] == '-')
-            break;
-
-        yaml_ps_skip_ws(s);
-
-        char idx_key[1024];
-        snprintf(idx_key, sizeof(idx_key), "%s.%d", prefix, idx);
-
-        if (s->pos >= s->len || yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-            yaml_ps_skip_eol(s);
-
-            while (s->pos < s->len) {
-                if (yaml_ps_peek(s) == '\n' || yaml_ps_peek(s) == '\r') {
-                    yaml_ps_skip_eol(s);
-                } else {
-                    break;
-                }
-            }
-            if (s->pos < s->len) {
-                int next_ind = yaml_ps_count_indent(s);
-                if (next_ind > ind) {
-                    yaml_parse_value(s, ind, idx_key, ctx);
-                    idx++;
-                    continue;
-                }
-            }
-            config_value_t *cv = config_value_create_string("");
-            if (cv)
-                config_context_set(ctx, idx_key, cv);
-            idx++;
-            continue;
-        }
-
-        yaml_parse_value(s, ind, idx_key, ctx);
-        idx++;
-    }
-    return CONFIG_SUCCESS;
-}
-
-config_error_t yaml_parse_value(yaml_parse_state_t *s, int base_indent, const char *prefix,
-                                config_context_t *ctx)
-{
-    yaml_ps_skip_ws(s);
-    if (s->pos >= s->len)
-        return CONFIG_SUCCESS;
-
-    int c;
-    if (yaml_ps_skip_anchor_tag(s, &c))
-        return CONFIG_SUCCESS;
-
-    if (c == '"' || c == '\'')
-        return yaml_parse_quoted(s, c, prefix, ctx);
-
-    if (c == '|' || c == '>')
-        return yaml_parse_block_scalar(s, prefix, ctx);
-
-    if (c == '-') {
-        if (s->pos + 1 < s->len) {
-            int next = (unsigned char)s->src[s->pos + 1];
-            if (next == ' ' || next == '\t' || next == '\n' || next == '\r') {
-                return yaml_parse_sequence(s, base_indent, prefix, ctx);
-            }
+        for (size_t i = 0; i < node->sequence.count; i++) {
+            char idx_key[1024];
+            snprintf(idx_key, sizeof(idx_key), "%s.%zu", prefix, i);
+            flatten_node(node->sequence.items[i].item, idx_key, ctx);
         }
     }
-
-    if (c == '[')
-        return yaml_parse_inline_sequence(s, prefix, ctx);
-
-    if (c == '{')
-        return yaml_parse_inline_mapping(s, prefix, ctx);
-
-    return yaml_parse_plain_scalar_value(s, base_indent, prefix, ctx);
 }
-
-/* ==================== Public entry point ==================== */
 
 config_error_t config_parse_yaml(const char *data, size_t data_len, config_context_t *ctx)
 {
     if (!data || !ctx)
         return CONFIG_ERROR_INVALID_ARG;
 
-    yaml_parse_state_t state;
-    state.src = data;
-    state.len = data_len;
-    state.pos = 0;
-    state.line = 1;
+    yaml_document_t *doc = yaml_create();
+    if (!doc)
+        return CONFIG_ERROR_OUT_OF_MEMORY;
 
-    if (data_len >= 3 && (unsigned char)data[0] == 0xEF && (unsigned char)data[1] == 0xBB &&
-        (unsigned char)data[2] == 0xBF) {
-        state.pos = 3;
+    if (yaml_parse_string(doc, data, data_len) != 0) {
+        yaml_destroy(doc);
+        return CONFIG_ERROR_PARSE;
     }
 
-    while (state.pos < state.len) {
-        if (yaml_ps_peek(&state) == '%') {
-            yaml_ps_skip_to_eol(&state);
-            yaml_ps_skip_eol(&state);
-        } else if (yaml_ps_peek(&state) == ' ' || yaml_ps_peek(&state) == '\t' ||
-                   yaml_ps_peek(&state) == '\n' || yaml_ps_peek(&state) == '\r') {
-            yaml_ps_advance(&state);
-        } else
-            break;
-    }
-
-    if (state.pos + 3 <= state.len && memcmp(state.src + state.pos, "---", 3) == 0) {
-        char after = (state.pos + 3 < state.len) ? state.src[state.pos + 3] : '\0';
-        if (after == ' ' || after == '\t' || after == '\n' || after == '\r' || after == '\0') {
-            state.pos += 3;
-            yaml_ps_skip_to_eol(&state);
-            yaml_ps_skip_eol(&state);
-        }
-    }
-
-    return yaml_parse_value(&state, -1, "", ctx);
+    flatten_node(yaml_root(doc), "", ctx);
+    yaml_destroy(doc);
+    return CONFIG_SUCCESS;
 }
