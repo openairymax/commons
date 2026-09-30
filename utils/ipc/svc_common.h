@@ -30,7 +30,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h> /* time_t (airy_config_t.last_modified) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -489,77 +488,6 @@ AIRY_API airy_err_t airy_svc_set_user_data(airy_svc_t service, void *user_data);
  * @ownership service: BORROW, return: BORROW
  */
 AIRY_API void *airy_svc_get_user_data(airy_svc_t service);
-
-
-#define AIRY_CONFIG_CHECKSUM_LEN 65
-
-/**
- * @brief Configuration data structure
- */
-typedef struct {
-    char *raw_config;
-    size_t config_size;
-    uint64_t version;
-    time_t last_modified;
-    char checksum[AIRY_CONFIG_CHECKSUM_LEN];
-} airy_config_t;
-
-/**
- * @brief Configuration change callback function type
- * @param service_name [in] Service name (BORROW - valid for callback scope only).
- * @param old_config [in] Old configuration (BORROW - valid for callback scope only, do not free).
- * @param new_config [in] New configuration (BORROW - valid for callback scope only, do not free).
- * @param user_data [in] User data (BORROW - caller retains ownership).
- *
- * @ownership service_name: BORROW, old_config: BORROW, new_config: BORROW, user_data: BORROW
- */
-typedef void (*airy_config_change_callback_t)(const char *service_name,
-                                              const airy_config_t *old_config,
-                                              const airy_config_t *new_config, void *user_data);
-
-/**
- * @brief Load service configuration
- * @param service_name [in] Service name (BORROW - not stored, copied internally).
- * @param config [out] Configuration output (OWNER - caller must call airy_config_free).
- * @return 0 on success, non-zero on failure
- * @threadsafe Yes
- *
- * @ownership service_name: BORROW, config: OWNER
- */
-AIRY_API airy_err_t airy_config_load(const char *service_name, airy_config_t **config);
-
-/**
- * @brief Watch for configuration changes
- * @param service_name [in] Service name (BORROW - not stored, copied internally).
- * @param callback [in] Change callback (BORROW - stored by reference, must remain valid until unwatched).
- * @param user_data [in] User data (BORROW - caller retains ownership, must remain valid until unwatched).
- * @return 0 on success, non-zero on failure
- * @threadsafe Yes
- *
- * @ownership service_name: BORROW, callback: BORROW, user_data: BORROW
- */
-AIRY_API airy_err_t airy_config_watch(const char *service_name,
-                                      airy_config_change_callback_t callback, void *user_data);
-
-/**
- * @brief Cancel configuration watching
- * @param service_name [in] Service name (BORROW - not stored, copied internally).
- * @param callback [in] Callback to remove, NULL removes all (BORROW - used for identification only, not stored).
- * @return 0 on success, non-zero on failure
- * @threadsafe Yes
- *
- * @ownership service_name: BORROW, callback: BORROW
- */
-AIRY_API airy_err_t airy_config_unwatch(const char *service_name,
-                                        airy_config_change_callback_t callback);
-
-/**
- * @brief Free configuration resources
- * @param config [in] Configuration pointer (TRANSFER - function takes ownership and frees).
- *
- * @ownership config: TRANSFER
- */
-AIRY_API void airy_config_free(airy_config_t *config);
 
 #ifdef __cplusplus
 }
