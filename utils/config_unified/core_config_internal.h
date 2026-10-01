@@ -9,7 +9,6 @@
  * the shared object layouts and cross-file helper declarations:
  *   - core_config.c          config context domain
  *   - core_config_value.c    config value object domain
- *   - core_config_strings.c  error/type stringification and debug dump
  */
 
 #ifndef AIRY_RT_CORE_CONFIG_INTERNAL_H
@@ -71,8 +70,6 @@ struct config_context {
     size_t count;
 
     size_t capacity;
-
-    bool locked;
 
     airy_mtx_t mutex;
 
