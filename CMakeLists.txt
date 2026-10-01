@@ -45,16 +45,8 @@ set(SOURCES
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
     utils/memory/memory_prealloc.c
-    utils/string/string_common.c
-    utils/string/string.c
-    utils/string/string_find.c
-    utils/string/string_split.c
-    utils/string/string_classify.c
-    utils/string/string_format.c
-    utils/string/string_buffer.c
-    utils/string/string_view.c
-    utils/string/string_encode.c
     utils/string/safe_string_utils.c
+    utils/string/safe_utf8.c
     utils/sync/sync.c
     utils/sync/sync_platform.c
     utils/sync/sync_internal.c

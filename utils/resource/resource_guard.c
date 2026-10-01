@@ -9,7 +9,6 @@
 #include "resource_guard.h"
 
 #include "../memory/airy_memory.h"
-#include "../string/airy_string.h"
 #include "../sync/sync.h"
 #include "atomic_compat.h"
 
