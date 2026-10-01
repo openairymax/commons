@@ -41,6 +41,8 @@ set(UNIT_TEST_SOURCES
     unit/test_string_utf8.c
     # 跨进程服务发现（g14 随权威实现自 daemons 迁入；自含测试框架）
     unit/test_service_discovery.c
+    # 任务大厅事件磁盘格式 SSoT（§60 hall 事件写侧契约：命名/gseq 续接/prev_file/ACL）
+    unit/test_hall_event.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
@@ -107,6 +109,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/ext
         ${COMMONS_ROOT}/utils/ime
         ${COMMONS_ROOT}/utils/io
+        ${COMMONS_ROOT}/utils/hall
         ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
