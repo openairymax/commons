@@ -92,7 +92,6 @@ set(SOURCES
     utils/config_unified/config_source_env.c
     utils/config_unified/config_source_args.c
     utils/config_unified/config_source_memory.c
-    utils/config_unified/config_source_manager.c
     # config_parse 按格式域拆分：INI（本文件）/JSON/YAML 拍平（YAML 语法唯一实现为 yaml_minimal）
     utils/config_unified/config_parse.c
     utils/config_unified/config_parse_json.c
