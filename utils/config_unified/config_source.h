@@ -132,14 +132,6 @@ config_source_t *config_source_create_args(const config_args_source_options_t *o
 config_source_t *config_source_create_memory(const config_memory_source_options_t *options);
 
 /**
- * @brief Create a default-value configuration source
- * @param default_values Default value map (key-value array)
- * @param count Number of key-value pairs
- * @return Configuration source object, NULL on failure
- */
-config_source_t *config_source_create_defaults(const char *const *default_values, size_t count);
-
-/**
  * @brief Create a remote configuration source
  * @param url Configuration center URL
  * @param token Authentication token (may be NULL)

@@ -112,7 +112,7 @@ config_unified/
 | 常用路径 | `CONFIG_PATH` / `DB_PATH` / `LOG_PATH` / `NETWORK_PATH` / `SECURITY_PATH` |
 | 校验 | `CONFIG_VALID_STRING` / `VALID_INT` / `VALID_BOOL` / `VALID_DOUBLE` |
 | 错误处理 | `CONFIG_SUCCESS(err)`、`CONFIG_FAILED(err)`、`RETURN_IF_FAILED`、`GOTO_IF_FAILED` |
-| 初始化/转换 | `CONFIG_INIT_WITH_DEFAULTS`、`CONFIG_AS_STRING/INT/BOOL/DOUBLE` |
+| 转换 | `CONFIG_AS_STRING/INT/BOOL/DOUBLE` |
 
 注意宏 `CONFIG_SUCCESS(err)`（判定宏）与枚举值 `CONFIG_SUCCESS`（0）同名不同用法。
 
@@ -122,8 +122,9 @@ config_unified/
 
 `CONFIG_SOURCE_FILE`(0)、`ENV`(1)、`ARGS`(2)、`MEMORY`(3)、`NETWORK`(4)、
 `DATABASE`(5)、`DEFAULT`(6)。当前提供实现的创建入口为文件、环境变量、命令行
-参数、内存、默认值五类，远程配置经 `config_source_create_remote()` 创建并归入
-NETWORK 类型；DATABASE 为枚举占位。
+参数、内存四类，远程配置经 `config_source_create_remote()` 创建并归入 NETWORK
+类型；DATABASE、DEFAULT 为枚举占位（默认值统一经 schema 默认值机制施加，见
+`config_schema_apply_defaults()`）。
 
 每个源携带属性 `config_source_attr_t`：`type`、`name`、`priority`（整型优先级，
 数值语义由各源约定）、`read_only`、`watchable`、`timestamp`、`version`。
@@ -136,7 +137,6 @@ NETWORK 类型；DATABASE 为枚举占位。
 | `config_source_create_env` | `config_env_source_options_t{prefix, case_sensitive, separator, expand_vars}`；prefix 为可选前缀（NULL 表示不加前缀），separator 默认 `"_"`；env 源只读、不可 save |
 | `config_source_create_args` | `config_args_source_options_t{argc, argv, prefix, assign_char, allow_positional}` |
 | `config_source_create_memory` | `config_memory_source_options_t{data, data_len, format}` |
-| `config_source_create_defaults` | `key=value` 字符串数组默认值表 |
 | `config_source_create_remote(url, token, ns, poll_interval_ms)` | 远程配置源：url 必需，token 可选，namespace 默认 `"default"`，轮询间隔默认 30000 ms；只读、可监听，响应按 JSON 解析并以 ETag/内容哈希判定变更 |
 
 源对象统一接口：`config_source_load/save/has_changed/get_attributes/get_type/destroy`，

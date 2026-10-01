@@ -93,12 +93,6 @@ typedef struct {
     bool owns_data;
 } memory_source_priv_t;
 
-typedef struct {
-    char **keys;
-    char **vals;
-    size_t num_entries;
-} defaults_source_priv_t;
-
 /** remote source private data */
 typedef struct {
     char *url;

@@ -580,7 +580,9 @@ config_error_t config_schema_apply_defaults(config_schema_t *schema, config_cont
                 }
 
                 if (default_value) {
-                    config_value_destroy(default_value);
+                    config_error_t err = config_context_set(ctx, item->key, default_value);
+                    if (err != CONFIG_SUCCESS)
+                        return err;
                 }
             }
         }
