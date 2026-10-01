@@ -5,12 +5,8 @@
  * @file config_service.h
  * @brief Unified configuration module: service-layer interface.
  *
- * The service layer provides advanced configuration features:
- * 1. Configuration validation and schema definition
- * 2. Hot reload and change notification
- * 3. Configuration encryption and secure storage
- * 4. Configuration versioning and rollback
- * 5. Configuration templates and variable expansion
+ * The service layer provides schema-driven default value application
+ * and the config service lifecycle (create/load).
  */
 
 #ifndef AIRY_RT_CONFIG_SERVICE_H
@@ -27,45 +23,6 @@
 extern "C" {
 #endif
 
-
-/**
- * @brief Configuration validator callback function
- * @param key Configuration key
- * @param value Configuration value
- * @param user_data User data
- * @return Validation result (true: valid, false: invalid)
- */
-typedef bool (*config_validator_cb_t)(const char *key, const config_value_t *value,
-                                      void *user_data);
-
-/**
- * @brief Configuration validator
- */
-typedef struct config_validator config_validator_t;
-
-/**
- * @brief Validator types
- */
-typedef enum {
-    VALIDATOR_TYPE_RANGE = 0,
-    VALIDATOR_TYPE_REGEX = 1,
-    VALIDATOR_TYPE_ENUM = 2,
-    VALIDATOR_TYPE_CUSTOM = 3
-} validator_type_t;
-
-/**
- * @brief Validator options
- */
-typedef struct {
-    validator_type_t type;
-    const char *pattern;
-    const char **enum_values;
-    size_t enum_count;
-    config_validator_cb_t custom_cb;
-    void *user_data;
-} validator_options_t;
-
-
 /**
  * @brief Configuration schema item
  */
@@ -75,7 +32,6 @@ typedef struct {
     bool required;
     const char *description;
     const char *default_value;
-    config_validator_t *validator;
 } config_schema_item_t;
 
 /**
@@ -141,53 +97,6 @@ typedef struct config_version_manager config_version_manager_t;
 
 
 /**
- * @brief Create a configuration validator
- * @param options Validator options
- * @return Validator object, NULL on failure
- */
-config_validator_t *config_validator_create(const validator_options_t *options);
-
-/**
- * @brief Destroy a configuration validator
- * @param validator Validator
- */
-void config_validator_destroy(config_validator_t *validator);
-
-/**
- * @brief Validate a configuration value
- * @param validator Validator
- * @param key Configuration key
- * @param value Configuration value
- * @return Validation result
- */
-bool config_validator_validate(config_validator_t *validator, const char *key,
-                               const config_value_t *value);
-
-/**
- * @brief Create a range validator
- * @param min Minimum value (string form)
- * @param max Maximum value (string form)
- * @return Validator object, NULL on failure
- */
-config_validator_t *config_validator_create_range(const char *min, const char *max);
-
-/**
- * @brief Create a regular-expression validator
- * @param pattern Regular expression
- * @return Validator object, NULL on failure
- */
-config_validator_t *config_validator_create_regex(const char *pattern);
-
-/**
- * @brief Create an enum-value validator
- * @param values Enum value array
- * @param count Number of enum values
- * @return Validator object, NULL on failure
- */
-config_validator_t *config_validator_create_enum(const char **values, size_t count);
-
-
-/**
  * @brief Create a configuration schema
  * @param name Schema name
  * @return Schema object, NULL on failure
@@ -207,23 +116,6 @@ void config_schema_destroy(config_schema_t *schema);
  * @return Error code
  */
 config_error_t config_schema_add_item(config_schema_t *schema, const config_schema_item_t *item);
-
-/**
- * @brief Validate a configuration context against a schema
- * @param schema Schema object
- * @param ctx Configuration context
- * @param strict Whether strict mode (checks for extra items)
- * @return Validation result (true: valid, false: invalid)
- */
-bool config_schema_validate(config_schema_t *schema, const config_context_t *ctx, bool strict);
-
-/**
- * @brief Get a schema validation error message
- * @param schema Schema object
- * @param index Error index
- * @return Error message, NULL if no error
- */
-const char *config_schema_get_error(config_schema_t *schema, int index);
 
 /**
  * @brief Apply schema defaults to a configuration context
