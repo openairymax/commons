@@ -85,7 +85,6 @@ set(SOURCES
     utils/config_unified/core_config.c
     # core_config 按功能域拆分：上下文/value 值对象/字符串化与调试（2026-08-27）
     utils/config_unified/core_config_value.c
-    utils/config_unified/core_config_strings.c
     utils/config_unified/config_service.c
     utils/config_unified/config_service_validator.c
     utils/config_unified/config_source.c
