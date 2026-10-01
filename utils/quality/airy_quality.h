@@ -492,89 +492,6 @@ static inline int safe_memset(void *dest, size_t dest_size, int value, size_t co
 }
 
 /**
- * @brief Safe string copy (with length limit)
- * @param[out] dest Destination buffer
- * @param[in] dest_size Destination buffer size (including terminator space)
- * @param[in] src Source string
- * @return 0 on success, -1 on invalid parameters or source too long
- */
-static inline int safe_strcpy(char *dest, size_t dest_size, const char *src)
-{
-    if (!dest || !src || dest_size == 0)
-        return AIRY_EINVAL;
-
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overread"
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
-    size_t src_len = strlen(src);
-    if (src_len >= dest_size)
-        return AIRY_EINVAL;
-
-    AIRY_MEMCPY(dest, src, src_len + 1);
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief Safe string concatenation (with length limit)
- * @param[in,out] dest Destination buffer
- * @param[in] dest_size Total destination buffer size
- * @param[in] src Source string
- * @return 0 on success, -1 on invalid parameters or out of range
- */
-static inline int safe_strcat(char *dest, size_t dest_size, const char *src)
-{
-    if (!dest || !src || dest_size == 0)
-        return AIRY_EINVAL;
-
-    size_t current_len = strlen(dest);
-    size_t src_len = strlen(src);
-
-    if (current_len + src_len >= dest_size)
-        return AIRY_EINVAL;
-
-    AIRY_MEMCPY(dest + current_len, src, src_len + 1);
-    return AIRY_SUCCESS;
-}
-
-/**
- * @brief Safe string length (with NULL protection)
- * @param[in] str String
- * @return String length, 0 for NULL
- */
-static inline size_t safe_strlen(const char *str)
-{
-    if (!str)
-        return AIRY_SUCCESS;
-    return strlen(str);
-}
-
-/**
- * @brief Safe string comparison (with NULL protection)
- * @param[in] str1 String 1
- * @param[in] str2 String 2
- * @return Comparison result; NULL is treated as an empty string
- */
-/* BAN-073 exempt: this function returns strcmp's three-state semantics
- * (negative/0/positive), not an error code. NULL participates as an empty
- * string; -1 means str1 < str2, not an AIRY_ERR_* error code. */
-static inline int safe_strcmp(const char *str1, const char *str2)
-{
-    if (!str1 && !str2)
-        return 0;
-    if (!str1)
-        return -1;
-    if (!str2)
-        return 1;
-    return strcmp(str1, str2);
-}
-
-
-/**
  * @brief Safe int-to-size_t conversion (checks for negatives)
  * @param[in] value Integer value
  * @param[out] result Conversion result
@@ -621,19 +538,6 @@ static inline int safe_double_to_int(double value, int *result)
     *result = (int)value;
     return AIRY_SUCCESS;
 }
-
-
-/**
- * @brief airy_safe_strcpy compatibility alias
- * @note Kept for compatibility with atoms/tests/test_common_utils.c
- */
-#define airy_safe_strcpy(dest, dest_size, src) safe_strcpy((dest), (dest_size), (src))
-
-/**
- * @brief airy_safe_strcat compatibility alias
- * @note Kept for compatibility with atoms/tests/test_common_utils.c
- */
-#define airy_safe_strcat(dest, dest_size, src) safe_strcat((dest), (dest_size), (src))
 
 /** @} */
 #ifdef __cplusplus

@@ -55,11 +55,11 @@ utils/quality/
 | 数值验证 | `airy_validate_non_negative` / `positive` / `percentage`（[0,100]）/ `probability`（[0,1]）/ `priority(min,max)`，返回 `bool` |
 | 溢出检测 | `safe_add_int` / `safe_mul_int` / `safe_add_size` / `safe_mul_size(a, b, result)`，成功 `AIRY_SUCCESS`，溢出或出参为 NULL 返回 `AIRY_EINVAL` |
 | 访问判定 | `is_safe_array_access(index, size)` / `is_safe_ptr_offset(ptr, offset, size)` / `is_safe_str_copy(src, dest, dest_size)`，返回 `bool` |
-| 内存/字符串 | `safe_memcpy` / `safe_memset` / `safe_strcpy` / `safe_strcat`（带边界检查，违规返回 `AIRY_EINVAL`）；`safe_strlen`（NULL 返回 0）；`safe_strcmp`（NULL 按空串参与比较，返回 strcmp 三态而非错误码） |
+| 内存 | `safe_memcpy` / `safe_memset`（带边界检查，违规返回 `AIRY_EINVAL`） |
 | 类型转换 | `safe_int_to_size` / `safe_size_to_int` / `safe_double_to_int(value, result)`，越界返回 `AIRY_EINVAL` |
 | 清零 | `airy_explicit_bzero(s, n)` |
 
-兼容别名：`airy_safe_strcpy` / `airy_safe_strcat` 分别展开为 `safe_strcpy` / `safe_strcat`。
+字符串安全操作（`safe_strcpy` / `safe_strcat` / `safe_strlen` / `safe_strcmp`）的唯一权威实现位于 `utils/string`（`safe_string_utils.h`），本模块不再重复提供。
 
 ## 语义与约束
 
