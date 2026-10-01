@@ -12,7 +12,10 @@
 
 #include "resource_quota.h"
 
-#include "../../../atoms/corekern/include/airy_rt.h"
+/* 层界归位：曾以仓内相对路径引入 atoms/corekern airy_rt.h，仅为取用
+ * AIRY_* 宏与 airy_err_t，属零符号贡献的反向边；这些符号均来自本文件
+ * 已含的 commons 自洽头（error.h / airy_memory.h / logger.h），故移除
+ * 该依赖，commons 不再反向引用上层原子模块。 */
 #include "../../utils/observability/logger.h"
 
 #include <stdlib.h>

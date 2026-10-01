@@ -191,9 +191,8 @@ int demo(void)
 | commons `utils/logging`（`svc_logger.h`） | api_recovery | `SVC_LOG_*` 事件日志 |
 | commons `utils/observability`（`logger.h`） | resource_quota | `AIRY_LOG_WARN` 超限告警 |
 | commons `include/airy_defaults.h` | api_recovery | 健康分/退避默认常量 |
-| agentrt `atoms/corekern`（`airy_rt.h`） | resource_quota | 以仓内相对路径 `../../../atoms/...` 引入，使 commons 反向依赖上层原子模块 |
 
-commons 测试套件中本模块暂无专项用例（`test_resource_guard.c` 已随孤立测试源码清理一并移除）；除 `resource_quota.c` 对 `atoms/corekern` 的头文件引用外，本模块其余组件无 agentrt 内部上游依赖。
+commons 测试套件中本模块暂无专项用例（`test_resource_guard.c` 已随孤立测试源码清理一并移除）；本模块组件无 agentrt 内部上游依赖（`resource_quota.c` 曾以仓内相对路径引入 `atoms/corekern/airy_rt.h`，属零符号贡献的反向边，已随层界归位移除，见 G21 门禁 `layer-check.sh`）。
 
 ---
 
