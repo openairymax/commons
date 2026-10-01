@@ -369,26 +369,6 @@ size_t config_version_get_diff(config_version_manager_t *manager, uint32_t versi
 
 
 /**
- * @brief Expand configuration template variables
- * @param ctx Configuration context
- * @param template_str Template string
- * @param result Result output buffer
- * @param result_size Buffer size
- * @return Error code
- */
-config_error_t config_expand_template(config_context_t *ctx, const char *template_str, char *result,
-                                      size_t result_size);
-
-/**
- * @brief Apply a configuration template to a context
- * @param ctx Configuration context
- * @param template_ctx Template configuration context
- * @return Error code
- */
-config_error_t config_apply_template(config_context_t *ctx, config_context_t *template_ctx);
-
-
-/**
  * @brief Create a complete configuration service
  * @param service_name Service name
  * @param schema Configuration schema (may be NULL)
@@ -408,24 +388,6 @@ config_context_t *config_service_create(const char *service_name, config_schema_
  */
 config_error_t config_service_load(config_context_t *ctx, config_source_t **sources,
                                    size_t source_count);
-
-/**
- * @brief Save a configuration service
- * @param ctx Configuration service context
- * @param primary_source Primary configuration source
- * @return Error code
- */
-config_error_t config_service_save(config_context_t *ctx, config_source_t *primary_source);
-
-/**
- * @brief Get the configuration service status
- * @param ctx Configuration service context
- * @param status_json Status JSON output buffer
- * @param status_size Buffer size
- * @return Error code
- */
-config_error_t config_service_get_status(config_context_t *ctx, char *status_json,
-                                         size_t status_size);
 
 #ifdef __cplusplus
 }
