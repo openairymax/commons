@@ -47,6 +47,8 @@ set(SOURCES
     utils/memory/memory_prealloc.c
     utils/string/safe_string_utils.c
     utils/string/safe_utf8.c
+    # 0.1.19 §60：任务大厅事件磁盘格式 SSoT（写侧机制件）
+    utils/hall/hall_event.c
     utils/sync/sync.c
     utils/sync/sync_platform.c
     utils/sync/sync_internal.c
@@ -232,6 +234,8 @@ set(_inc_dirs
     utils/ipc
     utils/sd
     utils/uuid
+    # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
+    utils/hall
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson
     utils/effect
@@ -305,6 +309,8 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/sd
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid
+    # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/hall
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson
@@ -385,6 +391,8 @@ install(DIRECTORY utils/resource/ DESTINATION include/agentrt/utils/resource
 install(DIRECTORY utils/memory/ DESTINATION include/agentrt/utils/memory
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/string/ DESTINATION include/agentrt/utils/string
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/hall/ DESTINATION include/agentrt/utils/hall
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/sync/ DESTINATION include/agentrt/utils/sync
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
