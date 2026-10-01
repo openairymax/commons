@@ -88,7 +88,6 @@ set(SOURCES
     utils/config_unified/core_config_strings.c
     utils/config_unified/config_service.c
     utils/config_unified/config_service_validator.c
-    utils/config_unified/config_service_hotreload.c
     utils/config_unified/config_source.c
     utils/config_unified/config_source_env.c
     utils/config_unified/config_source_args.c
