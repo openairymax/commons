@@ -5,8 +5,8 @@
  * @file config_parse_internal.h
  * @brief Unified config module - format parsing layer internal sharing.
  *
- * 2026-08-27 域拆分：config_parse.c（994 行）按格式拆为
- * config_parse_json.c / config_parse_ini.c / config_parse_yaml.c，
+ * 2026-08-27 域拆分：原单体 config_parse.c（994 行）按格式拆为
+ * config_parse.c（INI）/ config_parse_json.c / config_parse_yaml.c，
  * 本头承载三个翻译单元共享的 include 集合，保证行为与原单体一致。
  */
 

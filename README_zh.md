@@ -180,10 +180,12 @@ int main(void) {
     log_init(&log_cfg);
 
     config_context_t *ctx = config_context_create("myapp");
-    config_context_set(ctx, "server.host", CONFIG_STRING("0.0.0.0"));
+    config_context_set(ctx, "server.host",
+                       config_value_create_string("0.0.0.0"));
 
+    const config_value_t *host = config_context_get(ctx, "server.host");
     log_write(LOG_LEVEL_INFO, "demo", __LINE__, "host=%s",
-              CONFIG_GET_STRING_SAFE(ctx, "server.host", "localhost"));
+              config_value_get_string(host, "localhost"));
 
     config_context_destroy(ctx);
     log_cleanup();

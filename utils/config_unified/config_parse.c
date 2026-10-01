@@ -7,7 +7,7 @@
  *
  * 2026-08-27 域拆分：原 config_parse.c（994 行）按格式拆分，本文件
  * 保留 INI 解析；JSON 见 config_parse_json.c，YAML 见
- * config_parse_yaml.c / config_parse_yaml_scalar.c。
+ * config_parse_yaml.c。
  * 解析结果写入 config_context_t（点分键 -> config_value_t）。
  */
 
