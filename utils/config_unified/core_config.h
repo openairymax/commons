@@ -51,9 +51,8 @@ typedef enum {
     CONFIG_ERROR_IO = 5,
     CONFIG_ERROR_PARSE = 6,
     CONFIG_ERROR_VALIDATION = 7,
-    CONFIG_ERROR_LOCKED = 8,
-    CONFIG_ERROR_UNSUPPORTED = 9,
-    CONFIG_ERROR_THREAD = 10
+    CONFIG_ERROR_UNSUPPORTED = 8,
+    CONFIG_ERROR_THREAD = 9
 } config_error_t;
 
 
@@ -177,19 +176,6 @@ const char *config_value_get_string(const config_value_t *value, const char *def
 
 config_error_t config_value_array_append(config_value_t *array, config_value_t *item);
 
-typedef struct {
-    const char *key;
-    const config_value_t *value;
-} config_context_entry_t;
-
-typedef struct config_iterator config_iterator_t;
-
-const config_iterator_t *config_context_iterator(const config_context_t *ctx);
-void config_iterator_reset(const config_iterator_t *it);
-bool config_iterator_has_next(const config_iterator_t *it);
-const char *config_iterator_next_key(const config_iterator_t *it);
-
-
 /**
  * @brief Create a configuration context
  * @param name Context name (for debugging and logging)
@@ -222,14 +208,6 @@ config_error_t config_context_set(config_context_t *ctx, const char *key, config
 const config_value_t *config_context_get(const config_context_t *ctx, const char *key);
 
 /**
- * @brief Delete a config entry
- * @param ctx Configuration context
- * @param key Configuration key
- * @return Error code
- */
-config_error_t config_context_delete(config_context_t *ctx, const char *key);
-
-/**
  * @brief Check whether a config entry exists
  * @param ctx Configuration context
  * @param key Configuration key
@@ -250,55 +228,15 @@ void config_context_clear(config_context_t *ctx);
  */
 size_t config_context_count(const config_context_t *ctx);
 
-/**
- * @brief Lock the configuration context (prevent modification)
- * @param ctx Configuration context
- * @return Error code
- */
-config_error_t config_context_lock(config_context_t *ctx);
-
-/**
- * @brief Unlock the configuration context
- * @param ctx Configuration context
- * @return Error code
- */
-config_error_t config_context_unlock(config_context_t *ctx);
-
 config_context_t *config_context_clone(const config_context_t *ctx);
 
 config_error_t config_context_copy(config_context_t *dst, const config_context_t *src);
-
-const char *config_context_get_key_at(const config_context_t *ctx, size_t index);
-
-const config_value_t *config_context_get_value_at(const config_context_t *ctx, size_t index);
 
 typedef struct config_schema config_schema_t;
 
 void config_context_set_schema(config_context_t *ctx, config_schema_t *schema);
 void config_context_set_hot_reload(config_context_t *ctx, bool enabled, uint32_t interval_ms);
 void config_context_set_encryption(config_context_t *ctx, bool enabled);
-
-
-/**
- * @brief Get an error code description
- * @param error Error code
- * @return Error description string
- */
-const char *config_error_to_string(config_error_t error);
-
-/**
- * @brief Get a config value type description
- * @param type Config value type
- * @return Type description string
- */
-const char *config_type_to_string(config_value_type_t type);
-
-/**
- * @brief Print a config value (for debugging)
- * @param value Config value
- * @param indent Indent level
- */
-void config_value_print(const config_value_t *value, int indent);
 
 #ifdef __cplusplus
 }

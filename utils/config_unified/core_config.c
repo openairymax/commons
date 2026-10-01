@@ -5,11 +5,9 @@
  * @file core_config.c
  * @brief Unified config module - core layer (config context domain).
  *
- * Implements the config context: create/destroy, thread-safe
- * set/get/delete/has/clear/count, lock/unlock, clone/copy, indexed
- * access and iteration. The typed value model, error/type
- * stringification and debug dump live in core_config_value.c /
- * core_config_strings.c (single responsibility per file).
+ * Implements the config context: create/destroy and thread-safe
+ * set/get/has/clear/count plus clone/copy. The typed value model
+ * lives in core_config_value.c (single responsibility per file).
  */
 
 #include "core_config.h"
@@ -87,7 +85,6 @@ config_context_t *config_context_create(const char *name)
     }
 
     ctx->count = 0;
-    ctx->locked = false;
     airy_mtx_init(&ctx->mutex);
 
     return ctx;
@@ -113,7 +110,7 @@ void config_context_destroy(config_context_t *ctx)
 
 config_error_t config_context_set(config_context_t *ctx, const char *key, config_value_t *value)
 {
-    if (!ctx || !key || !value || ctx->locked) {
+    if (!ctx || !key || !value) {
         if (value) {
             config_value_destroy(value);
         }
@@ -175,36 +172,6 @@ const config_value_t *config_context_get(const config_context_t *ctx, const char
     return result;
 }
 
-config_error_t config_context_delete(config_context_t *ctx, const char *key)
-{
-    if (!ctx || !key) {
-        return CONFIG_ERROR_INVALID_ARG;
-    }
-
-    if (ctx->locked) {
-        return CONFIG_ERROR_LOCKED;
-    }
-
-    airy_mtx_lock(&ctx->mutex);
-
-    int index = find_item_index(ctx, key);
-    if (index < 0) {
-        airy_mtx_unlock(&ctx->mutex);
-        return CONFIG_ERROR_NOT_FOUND;
-    }
-
-    AIRY_FREE(ctx->items[index].key);
-    config_value_destroy(ctx->items[index].value);
-
-    for (size_t i = index + 1; i < ctx->count; i++) {
-        ctx->items[i - 1] = ctx->items[i];
-    }
-
-    ctx->count--;
-    airy_mtx_unlock(&ctx->mutex);
-    return CONFIG_SUCCESS;
-}
-
 bool config_context_has(const config_context_t *ctx, const char *key)
 {
     if (!ctx || !key)
@@ -218,9 +185,6 @@ bool config_context_has(const config_context_t *ctx, const char *key)
 void config_context_clear(config_context_t *ctx)
 {
     if (!ctx)
-        return;
-
-    if (ctx->locked)
         return;
 
     airy_mtx_lock(&ctx->mutex);
@@ -242,26 +206,6 @@ size_t config_context_count(const config_context_t *ctx)
     size_t result = ctx->count;
     airy_mtx_unlock((airy_mtx_t *)&ctx->mutex);
     return result;
-}
-
-config_error_t config_context_lock(config_context_t *ctx)
-{
-    if (!ctx) {
-        return CONFIG_ERROR_INVALID_ARG;
-    }
-
-    ctx->locked = true;
-    return CONFIG_SUCCESS;
-}
-
-config_error_t config_context_unlock(config_context_t *ctx)
-{
-    if (!ctx) {
-        return CONFIG_ERROR_INVALID_ARG;
-    }
-
-    ctx->locked = false;
-    return CONFIG_SUCCESS;
 }
 
 config_context_t *config_context_clone(const config_context_t *ctx)
@@ -299,7 +243,6 @@ config_context_t *config_context_clone(const config_context_t *ctx)
         clone->count++;
     }
 
-    clone->locked = ctx->locked;
     return clone;
 }
 
@@ -307,8 +250,6 @@ config_error_t config_context_copy(config_context_t *dst, const config_context_t
 {
     if (!dst || !src)
         return CONFIG_ERROR_INVALID_ARG;
-    if (dst->locked)
-        return CONFIG_ERROR_LOCKED;
 
     config_context_clear(dst);
 
@@ -335,60 +276,6 @@ config_error_t config_context_copy(config_context_t *dst, const config_context_t
     }
 
     return CONFIG_SUCCESS;
-}
-
-const char *config_context_get_key_at(const config_context_t *ctx, size_t index)
-{
-    if (!ctx || index >= ctx->count)
-        return NULL;
-    return ctx->items[index].key;
-}
-
-const config_value_t *config_context_get_value_at(const config_context_t *ctx, size_t index)
-{
-    if (!ctx || index >= ctx->count)
-        return NULL;
-    return ctx->items[index].value;
-}
-
-struct config_iterator {
-    const config_context_t *ctx;
-    size_t pos;
-};
-
-const config_iterator_t *config_context_iterator(const config_context_t *ctx)
-{
-    if (!ctx)
-        return NULL;
-    config_iterator_t *it = (config_iterator_t *)AIRY_CALLOC(1, sizeof(config_iterator_t));
-    if (!it)
-        return NULL;
-    it->ctx = ctx;
-    it->pos = 0;
-    return it;
-}
-
-void config_iterator_reset(const config_iterator_t *it)
-{
-    if (!it)
-        return;
-    ((config_iterator_t *)it)->pos = 0;
-}
-
-bool config_iterator_has_next(const config_iterator_t *it)
-{
-    if (!it || !it->ctx)
-        return false;
-    return it->pos < it->ctx->count;
-}
-
-const char *config_iterator_next_key(const config_iterator_t *it)
-{
-    if (!it || !it->ctx || it->pos >= it->ctx->count)
-        return NULL;
-    const char *key = it->ctx->items[it->pos].key;
-    ((config_iterator_t *)it)->pos++;
-    return key;
 }
 
 void config_context_set_schema(config_context_t *ctx, config_schema_t *schema)
