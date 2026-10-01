@@ -3,11 +3,10 @@
 
 /**
  * @file config_source_memory.c
- * @brief Unified config module - memory/default/remote config sources.
+ * @brief Unified config module - memory/remote config sources.
  *
- * Implements three read-only direct-read config sources: the memory
- * source, the default-value source and the remote source (polling change
- * detection), single responsibility.
+ * Implements two read-only direct-read config sources: the memory source
+ * and the remote source (polling change detection), single responsibility.
  */
 
 #include "config_source.h"
@@ -100,81 +99,6 @@ static const config_source_adapter_t memory_source_adapter = {.load = memory_sou
                                                               .get_attributes =
                                                                   memory_source_get_attributes,
                                                               .destroy = memory_source_destroy};
-
-static config_error_t defaults_source_load(config_source_t *source, config_context_t *ctx)
-{
-    if (!source || !ctx)
-        return CONFIG_ERROR_INVALID_ARG;
-    defaults_source_priv_t *priv = (defaults_source_priv_t *)source->priv_data;
-    if (!priv)
-        return CONFIG_ERROR_INVALID_ARG;
-    for (size_t idx = 0; idx < priv->num_entries; idx++) {
-        if (priv->keys[idx] && priv->vals[idx]) {
-            config_value_t *cv = config_value_create_string(priv->vals[idx]);
-            if (cv)
-                config_context_set(ctx, priv->keys[idx], cv);
-        }
-    }
-    return CONFIG_SUCCESS;
-}
-
-static config_error_t defaults_source_save(config_source_t *source, const config_context_t *ctx)
-{
-    (void)source;
-    (void)ctx;
-    AIRY_LOG_WARN("默认值配置源为只读，不支持保存操作");
-    return CONFIG_ERROR_UNSUPPORTED;
-}
-
-static bool defaults_source_has_changed(config_source_t *source)
-{
-    (void)source;
-    return false;
-}
-
-static const config_source_attr_t *defaults_source_get_attributes(config_source_t *source)
-{
-    if (!source)
-        return NULL;
-    return &source->attributes;
-}
-
-static void defaults_source_destroy(config_source_t *source)
-{
-    if (!source)
-        return;
-
-    defaults_source_priv_t *priv = (defaults_source_priv_t *)source->priv_data;
-    if (priv) {
-        if (priv->keys) {
-            for (size_t i = 0; i < priv->num_entries; i++) {
-                if (priv->keys[i])
-                    AIRY_FREE(priv->keys[i]);
-            }
-            AIRY_FREE(priv->keys);
-        }
-        if (priv->vals) {
-            for (size_t i = 0; i < priv->num_entries; i++) {
-                if (priv->vals[i])
-                    AIRY_FREE(priv->vals[i]);
-            }
-            AIRY_FREE(priv->vals);
-        }
-        AIRY_FREE(priv);
-    }
-
-    config_source_free_base(source);
-}
-
-static const config_source_adapter_t defaults_source_adapter = {.load = defaults_source_load,
-                                                                .save = defaults_source_save,
-                                                                .has_changed =
-                                                                    defaults_source_has_changed,
-                                                                .get_attributes =
-                                                                    defaults_source_get_attributes,
-                                                                .destroy = defaults_source_destroy};
-
-/** remote source private data */
 
 static config_error_t remote_source_load(config_source_t *source, config_context_t *ctx)
 {
@@ -291,50 +215,6 @@ config_source_t *config_source_create_memory(const config_memory_source_options_
     source->attributes.read_only = true;
     source->attributes.watchable = false;
 
-    return source;
-}
-
-config_source_t *config_source_create_defaults(const char *const *default_values, size_t count)
-{
-    if (!default_values || count == 0)
-        return NULL;
-
-    config_source_t *source =
-        config_source_create_base(CONFIG_SOURCE_DEFAULT, "defaults", &defaults_source_adapter);
-    if (!source)
-        return NULL;
-
-    defaults_source_priv_t *priv =
-        (defaults_source_priv_t *)AIRY_CALLOC(1, sizeof(defaults_source_priv_t));
-    if (!priv) {
-        config_source_free_base(source);
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-
-    priv->keys = (char **)AIRY_CALLOC(count, sizeof(char *));
-    priv->vals = (char **)AIRY_CALLOC(count, sizeof(char *));
-    if (!priv->keys || !priv->vals) {
-        if (priv->keys)
-            AIRY_FREE(priv->keys);
-        if (priv->vals)
-            AIRY_FREE(priv->vals);
-        AIRY_FREE(priv);
-        config_source_free_base(source);
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-
-    priv->num_entries = count / 2;
-    for (size_t i = 0; i < count; i += 2) {
-        if (i + 1 < count) {
-            priv->keys[i / 2] = default_values[i] ? duplicate_string(default_values[i]) : NULL;
-            priv->vals[i / 2] =
-                default_values[i + 1] ? duplicate_string(default_values[i + 1]) : NULL;
-        }
-    }
-
-    source->priv_data = priv;
-    source->attributes.read_only = true;
-    source->attributes.watchable = false;
     return source;
 }
 

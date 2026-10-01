@@ -43,6 +43,8 @@ set(UNIT_TEST_SOURCES
     unit/test_service_discovery.c
     # 任务大厅事件磁盘格式 SSoT（§60 hall 事件写侧契约：命名/gseq 续接/prev_file/ACL）
     unit/test_hall_event.c
+    # 统一配置（§72 schema 默认值施加契约：按类型填充/幂等/既有键保持/服务接线）
+    unit/test_config_unified.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
@@ -110,6 +112,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/ime
         ${COMMONS_ROOT}/utils/io
         ${COMMONS_ROOT}/utils/hall
+        ${COMMONS_ROOT}/utils/config_unified
         ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}
     )

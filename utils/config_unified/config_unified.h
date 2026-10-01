@@ -250,28 +250,6 @@
 
 
 /**
- * @brief Initialize a config context and set defaults
- * @param ctx_name Context name
- * @param defaults Default value array
- * @param count Number of defaults
- * @return Configuration context
- */
-#define CONFIG_INIT_WITH_DEFAULTS(ctx_name, defaults, count)                         \
-    __extension__({                                                                  \
-        config_context_t *ctx = config_context_create(ctx_name);                     \
-        if (ctx) {                                                                   \
-            for (size_t i = 0; i < (count); i += 2) {                                \
-                config_value_t *val = config_value_create_string((defaults)[i + 1]); \
-                if (val) {                                                           \
-                    config_context_set(ctx, (defaults)[i], val);                     \
-                }                                                                    \
-            }                                                                        \
-        }                                                                            \
-        ctx;                                                                         \
-    })
-
-
-/**
  * @brief Safely convert a config value to a string
  * @param value Config value
  * @param default_value Default value
