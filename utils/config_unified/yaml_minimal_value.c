@@ -263,6 +263,7 @@ struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_in
     seq->sequence.count = 0;
     skip_ws(ctx);
     while (!at_end(ctx) && peek(ctx) != ']') {
+        size_t iter_start = ctx->pos;
         if (seq->sequence.count > 0) {
             if (peek(ctx) == ',')
                 advance(ctx);
@@ -280,9 +281,19 @@ struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_in
             seq->sequence.items[seq->sequence.count++].item = item;
         }
         skip_ws(ctx);
+        /* A malformed flow sequence (e.g. an unclosed '[') can make
+         * parse_value() return a node without consuming any input. Bail out
+         * instead of looping forever and exhausting memory. */
+        if (ctx->pos == iter_start) {
+            set_error(ctx, "line %d: unterminated flow sequence", ctx->line);
+            break;
+        }
     }
-    if (peek(ctx) == ']')
+    if (!at_end(ctx) && peek(ctx) == ']') {
         advance(ctx);
+    } else if (!ctx->doc->error_msg) {
+        set_error(ctx, "line %d: unterminated flow sequence", ctx->line);
+    }
     if (anchor_name)
         register_anchor(ctx, anchor_name, seq);
     if (tag) {
@@ -306,6 +317,7 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
     size_t msz = 0;
     skip_ws(ctx);
     while (!at_end(ctx) && peek(ctx) != '}') {
+        size_t iter_start = ctx->pos;
         if (msz > 0) {
             if (peek(ctx) == ',')
                 advance(ctx);
@@ -335,9 +347,18 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
         map->mapping[msz].value = v;
         msz++;
         skip_ws(ctx);
+        /* See parse_inline_sequence_value(): guard against a malformed flow
+         * mapping (e.g. an unclosed '{') that makes no forward progress. */
+        if (ctx->pos == iter_start) {
+            set_error(ctx, "line %d: unterminated flow mapping", ctx->line);
+            break;
+        }
     }
-    if (peek(ctx) == '}')
+    if (!at_end(ctx) && peek(ctx) == '}') {
         advance(ctx);
+    } else if (!ctx->doc->error_msg) {
+        set_error(ctx, "line %d: unterminated flow mapping", ctx->line);
+    }
     if (anchor_name)
         register_anchor(ctx, anchor_name, map);
     if (tag) {
