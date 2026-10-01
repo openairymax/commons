@@ -6,12 +6,11 @@
  * @brief Unified config module - source adapter main entry.
  *
  * Keeps the source adapter base class and common API: config source
- * object create/release, generic load/save/change-detection/attribute
- * access and utility functions.
+ * object create/release and generic load/save/change-detection/
+ * attribute access.
  *
- * The per-type config sources and the manager are split into
- * config_source_file.c / config_source_env.c / config_source_args.c /
- * config_source_memory.c / config_source_manager.c.
+ * The per-type config sources are split into config_source_env.c and
+ * config_source_memory.c.
  */
 
 #include "config_source.h"
@@ -19,14 +18,10 @@
 #include "config_source_internal.h"
 #include "core_config.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 /* Unified base library compatibility layer */
 #include "airy_memory.h"
-#include "string_compat.h"
 #include "error.h"
 
 config_source_t *config_source_create_base(config_source_type_t type, const char *name,
@@ -109,18 +104,6 @@ const config_source_attr_t *config_source_get_attributes(config_source_t *source
     return source->adapter->get_attributes(source);
 }
 
-config_source_type_t config_source_get_type(config_source_t *source)
-{
-    if (!source)
-        return CONFIG_SOURCE_DEFAULT;
-
-    const config_source_attr_t *attr = config_source_get_attributes(source);
-    if (!attr)
-        return CONFIG_SOURCE_DEFAULT;
-
-    return attr->type;
-}
-
 const char *config_source_type_to_string(config_source_type_t type)
 {
     switch (type) {
@@ -141,45 +124,4 @@ const char *config_source_type_to_string(config_source_type_t type)
     default:
         return "unknown";
     }
-}
-
-const char *config_parse_file_format(const char *file_path)
-{
-    if (!file_path)
-        return "unknown";
-
-    const char *dot = strrchr(file_path, '.');
-    if (!dot)
-        return "unknown";
-
-    const char *ext = dot + 1;
-    if (strcasecmp(ext, "json") == 0)
-        return "json";
-    if (strcasecmp(ext, "yaml") == 0 || strcasecmp(ext, "yml") == 0)
-        return "yaml";
-    if (strcasecmp(ext, "toml") == 0)
-        return "toml";
-    if (strcasecmp(ext, "ini") == 0 || strcasecmp(ext, "cfg") == 0)
-        return "ini";
-    if (strcasecmp(ext, "xml") == 0)
-        return "xml";
-
-    return "unknown";
-}
-
-char *config_source_create_name(config_source_type_t type, const char *identifier)
-{
-    if (!identifier)
-        return NULL;
-
-    const char *type_str = config_source_type_to_string(type);
-    size_t type_len = strlen(type_str);
-    size_t id_len = strlen(identifier);
-
-    char *name = (char *)AIRY_MALLOC(type_len + id_len + 2); // +2 for ':' and null terminator
-    if (!name)
-        return NULL;
-
-    snprintf(name, type_len + id_len + 2, "%s:%s", type_str, identifier);
-    return name;
 }
