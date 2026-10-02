@@ -5,6 +5,11 @@
  * @file network_common_internal.h
  * @brief Network module internal shared definitions: connection/connection
  * pool structs and cross-file helper declarations.
+ *
+ * Also serves as the family prelude: the shared socket/system headers and
+ * the platform shims (Winsock init, strdup mapping) live here so each
+ * split unit (common/dns/http/pool) keeps only its own doc block plus this
+ * single include.
  */
 
 #ifndef AIRY_NETWORK_COMMON_INTERNAL_H
@@ -22,14 +27,27 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define _CRT_NONSTDC_NO_DEPRECATE
+#ifdef _WIN32
+#define strdup _strdup
+#endif
+#include <stdarg.h>
+#include "atomic_compat.h"
+
+#include "error.h"
 
 #ifndef _WIN32
 #include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
-
-#include "error.h"
 
 struct network_connection {
     network_config_t config;
