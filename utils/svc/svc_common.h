@@ -7,11 +7,11 @@
  *
  * Provides definitions and interfaces shared by all services.
  *
- * P0.17 phase 3: migrated from daemons/common/include/svc_common.h into
- * commons, removing the atoms->daemons compile-time reverse dependency
- * (IRON-6). The daemons copy is kept as a re-exporting compatibility
- * header (it additionally provides daemon_errors.h with the daemons
- * extended error codes).
+ * Originally migrated from daemons/common/include into commons (P0.17
+ * phase 3, IRON-6: atoms->daemons compile-time reverse dependency); the
+ * lifecycle implementation followed in 0.1.19 (S74), so header and
+ * implementation now share the commons/utils/svc domain. The former
+ * daemons re-export copy no longer exists.
  *
  * Design principles (architecture design principle K-2, interface
  * contract):
@@ -19,8 +19,7 @@
  * 2. Explicit lifecycle management
  * 3. Standardized error handling
  *
- * @see agentrt/daemons/common/include/svc_common.h (daemons re-export
- *      compatibility header)
+ * @see agentrt/commons/utils/svc/svc_common_internal.h
  */
 
 #ifndef AIRY_RT_SVC_COMMON_H
