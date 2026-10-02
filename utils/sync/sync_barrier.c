@@ -8,10 +8,6 @@
  */
 
 #include "sync_internal.h"
-#include "sync_platform.h"
-
-#include <string.h>
-#include <time.h>
 
 sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
                                   const sync_attr_t *attr)

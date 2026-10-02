@@ -12,6 +12,7 @@
 
 #include "sync_platform.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,7 +20,6 @@
 #include <synchapi.h>
 #include <windows.h>
 #else
-#include <errno.h>
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
@@ -37,6 +37,21 @@
 #define AIRY_SPINLOCK_CAS 1
 #else
 #define AIRY_SPINLOCK_CAS 0
+#endif
+
+/* POSIX 绝对超时时刻的唯一构造点：Linux/其它 POSIX 的 timed 原语共用。
+ * Windows 无 timespec、macOS 无 timed 原语（走轮询），故不参与编译。 */
+#if !defined(_WIN32) && !(defined(__APPLE__) && defined(__MACH__))
+static void make_deadline(uint32_t timeout_ms, struct timespec *ts)
+{
+    clock_gettime(CLOCK_REALTIME, ts);
+    ts->tv_sec += (time_t)(timeout_ms / 1000);
+    ts->tv_nsec += (long)((timeout_ms % 1000) * 1000000L);
+    if (ts->tv_nsec >= 1000000000L) {
+        ts->tv_sec += 1;
+        ts->tv_nsec -= 1000000000L;
+    }
+}
 #endif
 
 int platform_mutex_init(platform_mutex_t *mutex)
@@ -85,6 +100,38 @@ int platform_mutex_trylock(platform_mutex_t *mutex)
     return TryEnterCriticalSection(mutex) ? 0 : -1;
 #else
     return pthread_mutex_trylock(mutex);
+#endif
+}
+
+/* Windows 无 pthread_mutex_timedlock：GetTickCount 轮询 TryEnterCriticalSection；
+ * macOS 同样无 timed 版本，以 trylock + 1ms 短眠轮询近似；Linux 走原生
+ * pthread_mutex_timedlock。超时统一返回 ETIMEDOUT。 */
+int platform_mtx_timed(platform_mutex_t *mutex, uint32_t timeout_ms)
+{
+#ifdef _WIN32
+    DWORD start_tick = GetTickCount();
+    while (!TryEnterCriticalSection(mutex)) {
+        if (GetTickCount() - start_tick >= (DWORD)timeout_ms) {
+            return ETIMEDOUT;
+        }
+        Sleep(1);
+    }
+    return 0;
+#elif defined(__APPLE__) && defined(__MACH__)
+    int rc = EBUSY;
+    int64_t remaining_ms = (int64_t)timeout_ms;
+    while (rc == EBUSY && remaining_ms-- > 0) {
+        rc = pthread_mutex_trylock(mutex);
+        if (rc == EBUSY) {
+            struct timespec nap = {0, 1000000L};
+            nanosleep(&nap, NULL);
+        }
+    }
+    return (rc == EBUSY) ? ETIMEDOUT : rc;
+#else
+    struct timespec ts;
+    make_deadline(timeout_ms, &ts);
+    return pthread_mutex_timedlock(mutex, &ts);
 #endif
 }
 
@@ -188,6 +235,35 @@ int platform_rwlock_trywrlock(platform_rwlock_t *rwlock)
     return TryAcquireSRWLockExclusive(rwlock) ? 0 : -1;
 #else
     return pthread_rwlock_trywrlock(rwlock);
+#endif
+}
+
+/* read（write=false）与 write（write=true）两条 timed 路径共用的唯一实现。
+ * Windows SRWLock 无 timed 等待，沿用既有语义仅尝试一次；macOS 无 timed
+ * 原语，try + 1ms 短眠轮询近似；Linux 走 pthread_rwlock_timed{rd,wr}lock。
+ * 超时统一返回 ETIMEDOUT。 */
+int platform_rw_timed(platform_rwlock_t *rwlock, bool write, uint32_t timeout_ms)
+{
+#ifdef _WIN32
+    (void)timeout_ms;
+    BOOL ok = write ? TryAcquireSRWLockExclusive(rwlock) : TryAcquireSRWLockShared(rwlock);
+    return ok ? 0 : ETIMEDOUT;
+#elif defined(__APPLE__) && defined(__MACH__)
+    int rc = EBUSY;
+    int64_t remaining_ms = (int64_t)timeout_ms;
+    while (rc == EBUSY && remaining_ms-- > 0) {
+        rc = write ? pthread_rwlock_trywrlock(rwlock) : pthread_rwlock_tryrdlock(rwlock);
+        if (rc == EBUSY) {
+            struct timespec nap = {0, 1000000L};
+            nanosleep(&nap, NULL);
+        }
+    }
+    return (rc == EBUSY) ? ETIMEDOUT : rc;
+#else
+    struct timespec ts;
+    make_deadline(timeout_ms, &ts);
+    return write ? pthread_rwlock_timedwrlock(rwlock, &ts)
+                 : pthread_rwlock_timedrdlock(rwlock, &ts);
 #endif
 }
 

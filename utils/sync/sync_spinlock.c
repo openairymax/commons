@@ -9,9 +9,6 @@
 
 #include "check.h"
 #include "sync_internal.h"
-#include "sync_platform.h"
-
-#include <string.h>
 
 /* macOS 无 pthread_spinlock_t，与 Windows 一样使用 C11 原子 CAS 自旋。 */
 #if defined(__APPLE__) && defined(__MACH__)
