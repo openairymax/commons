@@ -15,38 +15,7 @@
  * - E-6 Traceable errors: unified error code system
  */
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#endif
-
-#include "../memory/airy_memory.h"
-#include "network_common.h"
 #include "network_common_internal.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#define _CRT_NONSTDC_NO_DEPRECATE
-#ifdef _WIN32
-#define strdup _strdup
-#endif
-#include "atomic_compat.h"
-
-#include <stdarg.h>
-#include "error.h"
-
-#ifndef _WIN32
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 int network_init_winsock(void)
 {
