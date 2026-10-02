@@ -24,28 +24,7 @@
  * svc_logger.h and daemon_errors.h dependencies were removed.
  */
 
-#include "checkpoint.h"
 #include "checkpoint_internal.h"
-
-#include <logging.h> /* LOG_ERROR/LOG_INFO/LOG_WARN/LOG_DEBUG → log_write() */
-#include <types.h> /* AIRY_SUCCESS */
-#include <platform.h> /* AIRY_HOME 权威路径：airy_data_dir() 收敛 checkpoint 落盘；airy_time_ns/airy_mtx_* */
-#include "error.h" /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include "airy_dirent.h"
-
-#include <sys/stat.h>
-#endif
-
-#include "atomic_compat.h"
-#include "airy_memory.h"
 
 char g_checkpoint_storage_path[MAX_CHECKPOINT_PATH] = {0};
 atomic_int g_checkpoint_initialized = 0;
