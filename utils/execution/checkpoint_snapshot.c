@@ -10,28 +10,7 @@
  * from a snapshot file.
  */
 
-#include "checkpoint.h"
 #include "checkpoint_internal.h"
-
-#include <logging.h> /* LOG_ERROR/LOG_INFO/LOG_WARN/LOG_DEBUG → log_write() */
-#include <types.h> /* AIRY_SUCCESS */
-#include "platform.h" /* airy_time_ns/airy_mtx_* */
-#include "error.h" /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include "airy_dirent.h"
-
-#include <sys/stat.h>
-#endif
-
-#include "atomic_compat.h"
-#include "airy_memory.h"
 
 static void fprintf_sanitized(FILE *fp, const char *label, const char *str)
 {
