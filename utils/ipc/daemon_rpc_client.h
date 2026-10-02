@@ -36,6 +36,21 @@ extern "C" {
 #endif
 
 /**
+ * @brief Build a JSON-RPC 2.0 request body (mechanism shared by all
+ *        transports).
+ *
+ * The exact wire form both the socket path (rpc_connect_send) and the L2
+ * bridge (daemon_l2_rpc_transact) put on the wire: id=1; params embedded
+ * when params_json parses as JSON, stringified otherwise, {} when empty.
+ *
+ * @param method       JSON-RPC method name (non-NULL)
+ * @param params_json  Serialized params object (NULL/empty = empty params)
+ * @return PrintUnformatted buffer (cJSON default allocator,
+ *         AIRY_FREE-compatible) or NULL on OOM
+ */
+char *daemon_rpc_json_req(const char *method, const char *params_json);
+
+/**
  * @brief Call a JSON-RPC method on a daemon (Unix socket, synchronous).
  *
  * @param socket_path  Daemon Unix socket path (non-NULL)

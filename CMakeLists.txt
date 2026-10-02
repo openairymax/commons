@@ -122,6 +122,9 @@ set(SOURCES
     utils/ipc/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
     utils/ipc/method_dispatcher.c  # 方法分发器（注册表模式）
     utils/ipc/param_validator.c    # JSON-RPC 参数校验
+    # 0.1.19 §80: daemon JSON-RPC 请求线格式构建单点（socket 路径与 L2 桥
+    # 共用；分属不同静态库，机制件居公共下游，符号经 airy_common 提供）
+    utils/ipc/daemon_rpc_req.c
     # 0c A 类直搬：airy_event_loop 全家族（三后端各自 #if 守卫，全平台编译）
     utils/sync/airy_event_loop.c
     utils/sync/airy_event_loop_epoll.c
