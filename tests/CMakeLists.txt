@@ -45,6 +45,9 @@ set(UNIT_TEST_SOURCES
     unit/test_hall_event.c
     # 统一配置（§72 schema 默认值施加契约：按类型填充/幂等/既有键保持/服务接线）
     unit/test_config_unified.c
+    # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
+    unit/test_svc_common.c
+    unit/test_svc_stop.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
@@ -102,6 +105,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/cost
         ${COMMONS_ROOT}/utils/ipc
         ${COMMONS_ROOT}/utils/sd
+        ${COMMONS_ROOT}/utils/svc
         ${COMMONS_ROOT}/utils/network
         ${COMMONS_ROOT}/utils/memory
         ${COMMONS_ROOT}/utils/print

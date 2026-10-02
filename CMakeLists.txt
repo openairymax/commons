@@ -147,6 +147,11 @@ set(SOURCES
     # g14b 补全：daemon_bootstrap_sd 一键引导实现归位（公开头 daemon_bootstrap_sd.h
     # 同址），daemons 侧同名源删除，符号经 airy_common PUBLIC 提供
     utils/sd/daemon_bootstrap_sd.c
+    # 0c A 类直搬：svc 生命周期机制族归位（0.1.19 S74 层界错置回位，
+    # daemons src/svc 同名三源删除，符号经 airy_common PUBLIC 提供）
+    utils/svc/svc_common.c
+    utils/svc/svc_common_registry.c
+    utils/svc/svc_common_ops.c
 )
 if(NOT WIN32)
     list(APPEND SOURCES utils/ipc/ipc_common.c)
@@ -226,6 +231,7 @@ set(_inc_dirs
     utils/network
     utils/ipc
     utils/sd
+    utils/svc
     utils/uuid
     # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
     utils/hall
@@ -301,6 +307,7 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/network
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/sd
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/svc
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid
     # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/hall
@@ -398,6 +405,8 @@ install(DIRECTORY utils/network/ DESTINATION include/agentrt/utils/network
 install(DIRECTORY utils/ipc/ DESTINATION include/agentrt/utils/ipc
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/sd/ DESTINATION include/agentrt/utils/sd
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/svc/ DESTINATION include/agentrt/utils/svc
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/platform/ DESTINATION include/agentrt/utils/platform
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
