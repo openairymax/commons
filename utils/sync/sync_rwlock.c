@@ -8,10 +8,6 @@
  */
 
 #include "sync_internal.h"
-#include "sync_platform.h"
-
-#include <string.h>
-#include <time.h>
 
 sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
 {
@@ -84,77 +80,7 @@ sync_result_t sync_rwlock_read_lock_ex(sync_rwlock_t rwlock, const sync_timeout_
         return SYNC_ERROR_INVALID;
     }
 
-    int64_t start_time = 0;
-    if (timeout != NULL && timeout->timeout_ms > 0) {
-        start_time = (int64_t)clock();
-    }
-
-#ifdef _WIN32
-    if (timeout == NULL) {
-        AcquireSRWLockShared(&rwlock->rwlock);
-    } else {
-        if (!TryAcquireSRWLockShared(&rwlock->rwlock)) {
-            sync_internal_update_stats_timeout(&rwlock->stats);
-            return SYNC_ERROR_TIMEOUT;
-        }
-    }
-#elif defined(__APPLE__) && defined(__MACH__)
-    /* macOS 无 pthread_rwlock_timedrdlock：tryrdlock + 1ms 睡眠轮询
-     * 至 deadline，与 Windows 分支 TryAcquire 同范式。 */
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_rwlock_rdlock(&rwlock->rwlock);
-    } else {
-        int64_t remaining_ms = (int64_t)timeout->timeout_ms;
-        rc = EBUSY;
-        while (rc == EBUSY && remaining_ms-- > 0) {
-            rc = pthread_rwlock_tryrdlock(&rwlock->rwlock);
-            if (rc == EBUSY) {
-                struct timespec nap = {0, 1000000L};
-                nanosleep(&nap, NULL);
-            }
-        }
-        if (rc == EBUSY) {
-            rc = ETIMEDOUT;
-        }
-    }
-    if (rc == ETIMEDOUT) {
-        sync_internal_update_stats_timeout(&rwlock->stats);
-        return SYNC_ERROR_TIMEOUT;
-    }
-    if (rc != 0) {
-        return sync_internal_posix_error_to_result(rc);
-    }
-#else
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_rwlock_rdlock(&rwlock->rwlock);
-    } else {
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += timeout->timeout_ms / 1000;
-        ts.tv_nsec += (timeout->timeout_ms % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
-            ts.tv_sec++;
-            ts.tv_nsec -= 1000000000;
-        }
-        rc = pthread_rwlock_timedrdlock(&rwlock->rwlock, &ts);
-        if (rc == ETIMEDOUT) {
-            sync_internal_update_stats_timeout(&rwlock->stats);
-            return SYNC_ERROR_TIMEOUT;
-        }
-        if (rc != 0) {
-            return sync_internal_posix_error_to_result(rc);
-        }
-    }
-#endif
-
-    int64_t elapsed = 0;
-    if (start_time > 0) {
-        elapsed = ((int64_t)clock() - start_time) * 1000 / CLOCKS_PER_SEC;
-    }
-    sync_internal_update_stats_lock(&rwlock->stats, elapsed);
-    return SYNC_SUCCESS;
+    return sync_rw_lock(&rwlock->rwlock, false, timeout, &rwlock->stats);
 }
 
 sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
@@ -188,80 +114,13 @@ sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout
         return SYNC_ERROR_INVALID;
     }
 
-    int64_t start_time = 0;
-    if (timeout != NULL && timeout->timeout_ms > 0) {
-        start_time = (int64_t)clock();
-    }
-
+    sync_result_t result = sync_rw_lock(&rwlock->rwlock, true, timeout, &rwlock->stats);
 #ifdef _WIN32
-    if (timeout == NULL) {
-        AcquireSRWLockExclusive(&rwlock->rwlock);
-    } else {
-        if (!TryAcquireSRWLockExclusive(&rwlock->rwlock)) {
-            sync_internal_update_stats_timeout(&rwlock->stats);
-            return SYNC_ERROR_TIMEOUT;
-        }
-    }
-#elif defined(__APPLE__) && defined(__MACH__)
-    /* macOS 无 pthread_rwlock_timedwrlock：trywrlock + 1ms 睡眠轮询
-     * 至 deadline，与 Windows 分支 TryAcquire 同范式。 */
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_rwlock_wrlock(&rwlock->rwlock);
-    } else {
-        int64_t remaining_ms = (int64_t)timeout->timeout_ms;
-        rc = EBUSY;
-        while (rc == EBUSY && remaining_ms-- > 0) {
-            rc = pthread_rwlock_trywrlock(&rwlock->rwlock);
-            if (rc == EBUSY) {
-                struct timespec nap = {0, 1000000L};
-                nanosleep(&nap, NULL);
-            }
-        }
-        if (rc == EBUSY) {
-            rc = ETIMEDOUT;
-        }
-    }
-    if (rc == ETIMEDOUT) {
-        sync_internal_update_stats_timeout(&rwlock->stats);
-        return SYNC_ERROR_TIMEOUT;
-    }
-    if (rc != 0) {
-        return sync_internal_posix_error_to_result(rc);
-    }
-#else
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_rwlock_wrlock(&rwlock->rwlock);
-    } else {
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += timeout->timeout_ms / 1000;
-        ts.tv_nsec += (timeout->timeout_ms % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
-            ts.tv_sec++;
-            ts.tv_nsec -= 1000000000;
-        }
-        rc = pthread_rwlock_timedwrlock(&rwlock->rwlock, &ts);
-        if (rc == ETIMEDOUT) {
-            sync_internal_update_stats_timeout(&rwlock->stats);
-            return SYNC_ERROR_TIMEOUT;
-        }
-        if (rc != 0) {
-            return sync_internal_posix_error_to_result(rc);
-        }
+    if (result == SYNC_SUCCESS) {
+        atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
     }
 #endif
-
-#ifdef _WIN32
-    atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
-#endif
-    int64_t elapsed = 0;
-    if (start_time > 0) {
-        elapsed = ((int64_t)clock() - start_time) * 1000 / CLOCKS_PER_SEC;
-    }
-    sync_internal_update_stats_lock(&rwlock->stats, elapsed);
-    return SYNC_SUCCESS;
+    return result;
 }
 
 sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)

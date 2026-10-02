@@ -9,10 +9,6 @@
 
 #include "check.h"
 #include "sync_internal.h"
-#include "sync_platform.h"
-
-#include <string.h>
-#include <time.h>
 
 sync_result_t sync_semaphore_create(sync_semaphore_t *semaphore, unsigned int initial_value,
                                     unsigned int max_value, const sync_attr_t *attr)

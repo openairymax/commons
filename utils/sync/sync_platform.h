@@ -9,8 +9,8 @@
  * the synchronization primitives. Supports Windows and POSIX systems.
  */
 
-#ifndef SYNC_PLATFORM_H
-#define SYNC_PLATFORM_H
+#ifndef AIRY_RT_SYNC_PLATFORM_H
+#define AIRY_RT_SYNC_PLATFORM_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -147,6 +147,14 @@ int platform_mutex_unlock(platform_mutex_t *mutex);
 int platform_mutex_trylock(platform_mutex_t *mutex);
 
 /**
+ * @brief Lock a platform mutex with timeout
+ * @param[in] mutex Mutex pointer
+ * @param[in] timeout_ms Timeout in milliseconds
+ * @return 0 on success, ETIMEDOUT on timeout, other non-zero on failure
+ */
+int platform_mtx_timed(platform_mutex_t *mutex, uint32_t timeout_ms);
+
+/**
  * @brief Initialize a platform recursive mutex
  * @return 0 on success, non-zero on failure
  */
@@ -213,6 +221,15 @@ int platform_rwlock_tryrdlock(platform_rwlock_t *rwlock);
  * @return 0 on success, non-zero on failure/busy
  */
 int platform_rwlock_trywrlock(platform_rwlock_t *rwlock);
+
+/**
+ * @brief Acquire a platform read or write lock with timeout
+ * @param[in] rwlock Read-write lock pointer
+ * @param[in] write true for write lock, false for read lock
+ * @param[in] timeout_ms Timeout in milliseconds
+ * @return 0 on success, ETIMEDOUT on timeout, other non-zero on failure
+ */
+int platform_rw_timed(platform_rwlock_t *rwlock, bool write, uint32_t timeout_ms);
 
 /**
  * @brief Unlock a platform read-write lock
@@ -376,4 +393,4 @@ uint64_t platform_get_thread_id(void);
 }
 #endif
 
-#endif /* SYNC_PLATFORM_H */
+#endif /* AIRY_RT_SYNC_PLATFORM_H */

@@ -8,10 +8,6 @@
  */
 
 #include "sync_internal.h"
-#include "sync_platform.h"
-
-#include <string.h>
-#include <time.h>
 
 sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
 {
@@ -81,82 +77,7 @@ sync_result_t sync_mutex_lock_ex(sync_mutex_t mutex, const sync_timeout_t *timeo
         return SYNC_ERROR_INVALID;
     }
 
-    int64_t start_time = 0;
-    if (timeout != NULL && timeout->timeout_ms > 0) {
-        start_time = (int64_t)clock();
-    }
-
-#ifdef _WIN32
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        EnterCriticalSection(&mutex->mutex);
-    } else {
-        DWORD wait_ms = (DWORD)timeout->timeout_ms;
-        DWORD start_tick = GetTickCount();
-        while (!TryEnterCriticalSection(&mutex->mutex)) {
-            if (GetTickCount() - start_tick >= wait_ms) {
-                sync_internal_update_stats_timeout(&mutex->stats);
-                return SYNC_ERROR_TIMEOUT;
-            }
-            Sleep(1);
-        }
-    }
-#elif defined(__APPLE__) && defined(__MACH__)
-    /* macOS 无 pthread_mutex_timedlock：trylock + 1ms 睡眠轮询至
-     * deadline，与 Windows 分支 TryEnterCriticalSection 同范式。 */
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_mutex_lock(&mutex->mutex);
-    } else {
-        int64_t remaining_ms = (int64_t)timeout->timeout_ms;
-        rc = EBUSY;
-        while (rc == EBUSY && remaining_ms-- > 0) {
-            rc = pthread_mutex_trylock(&mutex->mutex);
-            if (rc == EBUSY) {
-                struct timespec nap = {0, 1000000L};
-                nanosleep(&nap, NULL);
-            }
-        }
-        if (rc == EBUSY) {
-            rc = ETIMEDOUT;
-        }
-    }
-    if (rc == ETIMEDOUT) {
-        sync_internal_update_stats_timeout(&mutex->stats);
-        return SYNC_ERROR_TIMEOUT;
-    }
-    if (rc != 0) {
-        return sync_internal_posix_error_to_result(rc);
-    }
-#else
-    int rc;
-    if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = pthread_mutex_lock(&mutex->mutex);
-    } else {
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += timeout->timeout_ms / 1000;
-        ts.tv_nsec += (timeout->timeout_ms % 1000) * 1000000;
-        if (ts.tv_nsec >= 1000000000) {
-            ts.tv_sec++;
-            ts.tv_nsec -= 1000000000;
-        }
-        rc = pthread_mutex_timedlock(&mutex->mutex, &ts);
-        if (rc == ETIMEDOUT) {
-            sync_internal_update_stats_timeout(&mutex->stats);
-            return SYNC_ERROR_TIMEOUT;
-        }
-        if (rc != 0) {
-            return sync_internal_posix_error_to_result(rc);
-        }
-    }
-#endif
-
-    int64_t elapsed = 0;
-    if (start_time > 0) {
-        elapsed = ((int64_t)clock() - start_time) * 1000 / CLOCKS_PER_SEC;
-    }
-    sync_internal_update_stats_lock(&mutex->stats, elapsed);
-    return SYNC_SUCCESS;
+    return sync_mtx_lock(&mutex->mutex, timeout, &mutex->stats);
 }
 
 sync_result_t sync_mutex_try_lock(sync_mutex_t mutex)
