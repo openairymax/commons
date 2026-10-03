@@ -14,61 +14,7 @@
  * - String and error helpers
  */
 
-#include <time.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#if defined(_WIN32) || defined(_WIN64)
-/* WIN32_LEAN_AND_MEAN 先行定义：避免 windows.h 默认拉入 winsock.h 与
- * platform.h 引入的 winsock2.h 冲突（MSVC C2011 结构体重定义）。 */
-#define WIN32_LEAN_AND_MEAN
-#include <bcrypt.h>
-#include <direct.h>
-#include <io.h>
-#include <process.h>
-#include <sys/stat.h>
-#include <windows.h>
-#ifndef EEXIST
-#define EEXIST 17
-#endif
-#pragma comment(lib, "bcrypt.lib")
-#elif defined(__APPLE__) && defined(__MACH__)
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/sysctl.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#else
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <sys/wait.h>
-#endif
-
-#include "error.h"
-#include "platform.h"
-#include "cancel_token.h"
-
-#include "airy_memory.h"
+#include "platform_internal.h"
 
 int airy_network_init(void)
 {

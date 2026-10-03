@@ -16,25 +16,7 @@
  * - 不依赖高层模块（无 logger / 无 cJSON），纯平台原语实现。
  */
 
-#include <time.h>
-
-#ifndef _WIN32
-#include <netdb.h>
-#include <sys/time.h>
-#endif
-
-#include <stdatomic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "error.h"
-#include "platform.h"
-#include "platform_time.h"
-#include "airy_memory.h"
+#include "platform_internal.h"
 
 /* ==================== 内部常量 ==================== */
 

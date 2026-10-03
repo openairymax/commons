@@ -12,47 +12,7 @@
 #define _GNU_SOURCE
 #endif
 
-#include <time.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <bcrypt.h>
-#include <direct.h>
-#include <io.h>
-#include <process.h>
-#include <sys/stat.h>
-#define strdup _strdup
-#define access _access /* flawfinder: ignore */
-#ifndef EEXIST
-#define EEXIST 17
-#endif
-#pragma comment(lib, "bcrypt.lib")
-#else
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#endif
-
-#include "error.h"
-#include "platform.h"
-#include "cancel_token.h"
-
-#include "airy_memory.h"
+#include "platform_internal.h"
 
 #if AIRY_PLATFORM_WINDOWS
 
