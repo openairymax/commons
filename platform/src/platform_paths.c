@@ -7,56 +7,8 @@
  * directory creation and environment variable compatibility.
  */
 
-#include <time.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#if defined(_WIN32) || defined(_WIN64)
-/* WIN32_LEAN_AND_MEAN 先行定义：避免 windows.h 默认拉入 winsock.h 与
- * platform.h 引入的 winsock2.h 冲突（MSVC C2011 结构体重定义）。 */
-#define WIN32_LEAN_AND_MEAN
-#include <bcrypt.h>
-#include <direct.h>
-#include <io.h>
-#include <process.h>
-#include <windows.h>
-#include <sys/stat.h>
-#ifndef EEXIST
-#define EEXIST 17
-#endif
-/* MSVC 未提供 S_ISDIR；以 _S_IFMT 宏补齐（对齐 utils/io file_utils.c）。 */
-#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
-#pragma comment(lib, "bcrypt.lib")
-#elif defined(__APPLE__)
-#include <errno.h>
-#include <fcntl.h>
-#include <mach-o/dyld.h>
-#include <pthread.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#else
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#endif
+#include "platform_internal.h"
+#include "airy_dirent.h"
 
 /* stat 类型/调用按平台封装（文件级，所有平台可见）：
  * Windows 用 struct _stat + _stat()（MSVC 无 POSIX struct stat），
@@ -68,13 +20,6 @@
 #define PLATFORM_STAT_STRUCT struct stat
 #define PLATFORM_STAT(p, st) stat((p), (st))
 #endif
-
-#include "error.h"
-#include "platform.h"
-#include "cancel_token.h"
-#include "airy_dirent.h"
-
-#include "airy_memory.h"
 
 /* ==================== AIRY_HOME path system ====================
  *
