@@ -8,8 +8,8 @@
  * 原三份复刻（daemons/common/src/util/hall_writer.c 已消解、
  * gateway/src/gateway/gateway_hall_store.c 写侧、
  * atoms/coreloopthree/src/work_hall/hall_store.c）的磁盘格式语义收敛到此：
- * gseq 续接、seq 续接、prev_file 决策链、write_roles 策略、目录创建、
- * 原子写与写后回读断言均在此单点定义。磁盘契约见 hall_event.h。
+ * gseq 水位线预留与续接、seq 续接、prev_file 决策链、write_roles 策略、
+ * 目录创建、原子写与写后回读断言均在此单点定义。磁盘契约见 hall_event.h。
  */
 
 #include "hall_event.h"
@@ -47,10 +47,21 @@
 #define EVT_GSEQ_SKIP  7
 #define EVT_READBACK   1024
 
+/* gseq 水位线：<root>/.gseq 记录「已预留上界」，锁文件 <root>/.gseq.lck
+ * 串行化跨进程预留。点前缀使全部读侧（evt_max_gseq 跳过 '.' 条目、
+ * hall_scan_rebuild 与 gw_hall_watch_walk 对普通文件 opendir 失败即跳过）
+ * 自动忽略这两个文件，无需各自加白名单。 */
+#define EVT_WM_FILE  ".gseq"
+#define EVT_WM_LOCK  ".gseq.lck"
+#define EVT_WM_BLOCK 1024u
+#define EVT_WM_BUF   32
+
 /* 惰性一次性初始化三态：0=未初始化，2=初始化中，1=就绪。 */
 static atomic_int g_evt_ready = 0;
 static airy_mtx_t g_evt_lock;
-static atomic_uint_fast64_t g_evt_gseq;
+/* gseq 仅在 g_evt_lock 内访问：g_evt_gseq=最近已分配，g_evt_limit=已预留上界。 */
+static uint64_t g_evt_gseq;
+static uint64_t g_evt_limit;
 static char g_evt_root[HALL_EVT_PATH_MAX];
 
 int hall_comp_valid(const char *s)
@@ -169,7 +180,21 @@ int hall_evt_build(const hall_evt_t *evt, char *out, size_t out_sz)
     return (n < 0 || (size_t)n >= out_sz) ? -1 : 0;
 }
 
-/* 手工解析 header 中 "gseq":N（sscanf 禁用，与既有实现同规则）。 */
+/* 取 p 处前导十进制数（sscanf 禁用）；首字符非数字返回 -1。 */
+static int evt_digits(const char *p, uint64_t *out)
+{
+    if (*p < '0' || *p > '9')
+        return -1;
+    uint64_t v = 0;
+    while (*p >= '0' && *p <= '9') {
+        v = v * 10 + (uint64_t)(*p - '0');
+        p++;
+    }
+    *out = v;
+    return 0;
+}
+
+/* 手工解析 header 中 "gseq":N（与既有实现同规则）。 */
 static uint64_t evt_gseq_parse(const char *hdr)
 {
     if (!hdr)
@@ -180,14 +205,8 @@ static uint64_t evt_gseq_parse(const char *hdr)
     p += EVT_GSEQ_SKIP;
     while (*p == ' ' || *p == '\t')
         p++;
-    if (*p < '0' || *p > '9')
-        return 0;
     uint64_t v = 0;
-    while (*p >= '0' && *p <= '9') {
-        v = v * 10 + (uint64_t)(*p - '0');
-        p++;
-    }
-    return v;
+    return evt_digits(p, &v) == 0 ? v : 0;
 }
 
 /* 递归扫描 hall 根目录，返回全部事件文件中的最大 gseq（无事件返回 0）。 */
@@ -230,8 +249,80 @@ static uint64_t evt_max_gseq(const char *dir)
     return max_g;
 }
 
-/* 惰性初始化：解析并缓存根目录，把本进程 gseq 计数器续接到磁盘最大
- * gseq（跨写者进程全局因果序不撞号），失败则根目录置空、写入 fail-closed。 */
+/* 拼接 <root>/<leaf>；截断返回 -1。 */
+static int evt_root_path(char *out, size_t sz, const char *leaf)
+{
+    int n = snprintf(out, sz, "%s/%s", g_evt_root, leaf);
+    return (n < 0 || (size_t)n >= sz) ? -1 : 0;
+}
+
+/* 读取水位线文本的十进制值；文件缺失或内容损坏一律返回 -1，调用方据此
+ * 回退全树扫描——损坏的水位线绝不能静默当 0，否则会与磁盘既有事件撞号。 */
+static int evt_wm_load(uint64_t *out)
+{
+    char path[HALL_EVT_PATH_MAX];
+    if (evt_root_path(path, sizeof(path), EVT_WM_FILE) != 0)
+        return -1;
+    char *buf = NULL;
+    if (airy_io_read_file(path, &buf, NULL) != 0)
+        return -1;
+    const char *p = buf;
+    while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+        p++;
+    uint64_t v = 0;
+    int rc = evt_digits(p, &v);
+    AIRY_FREE(buf);
+    if (rc == 0)
+        *out = v;
+    return rc;
+}
+
+/* 落盘新的预留上界（原子写：tmp+fsync+rename）。 */
+static void evt_wm_store(uint64_t v)
+{
+    char path[HALL_EVT_PATH_MAX];
+    if (evt_root_path(path, sizeof(path), EVT_WM_FILE) != 0)
+        return;
+    char buf[EVT_WM_BUF];
+    int n = snprintf(buf, sizeof(buf), "%llu\n", (unsigned long long)v);
+    if (n > 0 && (size_t)n < sizeof(buf))
+        (void)airy_io_write_file(path, buf, (size_t)n);
+}
+
+#if defined(_WIN32)
+#define EVT_FILENO(fp) _fileno(fp)
+#else
+#define EVT_FILENO(fp) fileno(fp)
+#endif
+
+/* 跨进程串行化预留：持 root 级排他锁读水位线，缺失/损坏时回退一次全树
+ * 扫描，再落盘 base+BLOCK 并解锁。取锁失败不写盘、仅按进程内 floor 续接，
+ * 保证写路径永不因锁争用而阻塞。 */
+static uint64_t evt_reserve(uint64_t floor)
+{
+    char lpath[HALL_EVT_PATH_MAX];
+    if (evt_root_path(lpath, sizeof(lpath), EVT_WM_LOCK) != 0)
+        return floor;
+    FILE *lf = fopen(lpath, "a");
+    if (!lf)
+        return floor;
+    int locked = (airy_file_lock(EVT_FILENO(lf), 1, 1) == 0);
+    uint64_t base = 0;
+    if (!locked || evt_wm_load(&base) != 0)
+        base = evt_max_gseq(g_evt_root);
+    if (base < floor)
+        base = floor;
+    if (locked) {
+        evt_wm_store(base + EVT_WM_BLOCK);
+        (void)airy_file_unlock(EVT_FILENO(lf));
+    }
+    fclose(lf);
+    return base;
+}
+
+/* 惰性初始化：缓存根目录并确保其存在；gseq 水位线在首次写入时按需预留
+ * （见 evt_reserve），初始化阶段不做全树扫描。失败则根目录置空、写入
+ * fail-closed。 */
 static int evt_ensure(void)
 {
     while (atomic_load_explicit(&g_evt_ready, memory_order_acquire) != 1) {
@@ -239,17 +330,29 @@ static int evt_ensure(void)
         if (atomic_compare_exchange_strong_explicit(&g_evt_ready, &expected, 2,
                                                     memory_order_acq_rel, memory_order_acquire)) {
             airy_mtx_init(&g_evt_lock);
+            g_evt_gseq = 0;
+            g_evt_limit = 0;
             int n = snprintf(g_evt_root, sizeof(g_evt_root), "%s/%s", airy_data_dir(),
                              HALL_EVT_ROOT_REL);
-            if (n > 0 && (size_t)n < sizeof(g_evt_root))
-                atomic_store_explicit(&g_evt_gseq, evt_max_gseq(g_evt_root), memory_order_relaxed);
-            else
+            if (n <= 0 || (size_t)n >= sizeof(g_evt_root) ||
+                airy_io_mkdir_p(g_evt_root, 0755) != 0)
                 g_evt_root[0] = '\0';
             atomic_store_explicit(&g_evt_ready, 1, memory_order_release);
             break;
         }
     }
     return atomic_load_explicit(&g_evt_ready, memory_order_acquire) == 1 ? 0 : -1;
+}
+
+/* 分配下一个 gseq；仅在 g_evt_lock 内调用。预留区间耗尽时向磁盘续领一块。 */
+static uint64_t evt_next_gseq(void)
+{
+    if (g_evt_gseq >= g_evt_limit) {
+        uint64_t base = evt_reserve(g_evt_gseq);
+        g_evt_limit = base + EVT_WM_BLOCK;
+        g_evt_gseq = base;
+    }
+    return ++g_evt_gseq;
 }
 
 /* 扫描单个 (task, category) 目录，返回下一个可用 seq（磁盘 max(seq)+1），
@@ -328,7 +431,7 @@ int hall_evt_write(const char *task_id, const char *category, const char *node_i
     evt.node = node_id;
     evt.owner = EVT_OWNER;
     evt.content = content_json;
-    evt.gseq = (unsigned long long)atomic_fetch_add_explicit(&g_evt_gseq, 1, memory_order_relaxed) + 1;
+    evt.gseq = (unsigned long long)evt_next_gseq();
 
     char ts[HALL_EVT_TS_LEN];
     hall_clock_utc(ts, sizeof(ts));
