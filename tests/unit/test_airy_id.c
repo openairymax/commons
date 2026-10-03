@@ -3,14 +3,15 @@
 
 /**
  * @file test_airy_id.c
- * @brief 品牌化 ID 单元测试（阶段 3）：trace_id / msg_id 结构化命名。
+ * @brief 品牌化 ID 单元测试（阶段 3）：trace_id / msg_id / oid 结构化命名。
  *
  * 验证：
  * - 生成非零 / 两次生成不相同（64 位熵 + 原子序列）
  * - 类型相等性 / *_NULL 判空
- * - to_string 结构化命名格式（"tr-<16 hex>" / "msg-<ts>-<seq>"）
+ * - to_string 结构化命名格式（"tr-<16 hex>" / "msg-<ts>-<seq>" / 32hex）
  * - from_string 解析往返（含大写 hex / 非法格式返回 *_NULL）
  * - msg_id 高 32 位秒时间戳字段 / 低 32 位单调序列
+ * - oid 进程内单调唯一 / 32 hex 渲染 / 秒时间戳字段
  * - 输出缓冲 NULL / 容量不足安全截断
  */
 
@@ -167,6 +168,68 @@ static int test_to_string_buffer_safety(void)
     return 0;
 }
 
+static int test_oid_generate_unique(void)
+{
+    /* 进程内单调唯一：同秒内 hi 低 32 位序列递增，批量生成无重复 */
+    enum { N = 256 };
+    airy_oid_t ids[N];
+    char prev[AIRY_OID_STR_MAX];
+
+    for (int i = 0; i < N; i++)
+        ids[i] = airy_oid_gen();
+
+    for (int i = 0; i < N; i++) {
+        airy_oid_str(ids[i], prev, sizeof(prev));
+        for (int j = i + 1; j < N; j++) {
+            char cur[AIRY_OID_STR_MAX];
+            airy_oid_str(ids[j], cur, sizeof(cur));
+            CHECK(strcmp(prev, cur) != 0);
+        }
+    }
+
+    /* 序列严格递增：hi 低 32 位逐次 +1 */
+    for (int i = 0; i + 1 < N; i++)
+        CHECK((uint32_t)(ids[i + 1].hi & 0xFFFFFFFFu) ==
+              (uint32_t)(ids[i].hi & 0xFFFFFFFFu) + 1u);
+    return 0;
+}
+
+static int test_oid_string_format(void)
+{
+    airy_oid_t id = airy_oid_gen();
+    char buf[AIRY_OID_STR_MAX];
+    airy_oid_str(id, buf, sizeof(buf));
+
+    /* 格式：32 hex + NUL，总长 32 */
+    CHECK(strlen(buf) == 32);
+    CHECK(is_hex_str(buf, 32));
+
+    /* 前 8 位为秒时间戳：与当前时间相近（±120s 容差） */
+    unsigned ts = 0;
+    CHECK(sscanf(buf, "%8x", &ts) == 1);
+    unsigned now = (unsigned)time(NULL);
+    CHECK(ts <= now && now - ts <= 120);
+    return 0;
+}
+
+static int test_oid_str_buffer_safety(void)
+{
+    airy_oid_t id = airy_oid_gen();
+
+    /* NULL 缓冲 / 零容量：不崩溃且不写入 */
+    airy_oid_str(id, NULL, 0);
+    char one = 'x';
+    airy_oid_str(id, &one, 0);
+    CHECK(one == 'x');
+
+    /* 容量不足：安全截断（snprintf 保证 NUL） */
+    char small[5];
+    airy_oid_str(id, small, sizeof(small));
+    CHECK(strlen(small) == 4);
+    CHECK(is_hex_str(small, 4));
+    return 0;
+}
+
 /* ================================================================
  * main
  * ================================================================ */
@@ -181,6 +244,9 @@ int main(void)
     rc |= test_msg_id_string_roundtrip();
     rc |= test_from_string_invalid();
     rc |= test_to_string_buffer_safety();
+    rc |= test_oid_generate_unique();
+    rc |= test_oid_string_format();
+    rc |= test_oid_str_buffer_safety();
     if (rc == 0) {
         printf("ALL PASS\n");
     } else {

@@ -9,6 +9,8 @@
  *   命名 "tr-<16 hex>"（W3C 风格）。
  * - msg_id：高 32 位秒时间戳 | 低 32 位进程内单调序列（C11 原子），
  *   命名 "msg-<ts:08x>-<seq:08x>"。
+ * - oid：32 hex 不透明对象 ID（daemon 实体标识），
+ *   命名 "<ts:08x><seq:08x><entropy:016x>"。
  *
  * 类型声明见 commons/include/airy_types.h（品牌化 ID 段）。
  */
@@ -78,6 +80,41 @@ airy_msg_id_t airy_msg_id_generate(void)
 int airy_msg_id_eq(airy_msg_id_t a, airy_msg_id_t b)
 {
     return a.value == b.value;
+}
+
+/* ================================================================
+ * oid：32 hex 不透明对象 ID
+ * ================================================================ */
+
+static atomic_uint_fast32_t g_oid_seq = 0;
+
+/* 进程内单调序列：首次以秒时间戳打底（最低位置 1 保证非零，仅首个
+ * 线程完成播种），避免进程重启后序列从 0 回绕与上一次运行重叠。 */
+static uint32_t airy_oid_next_seq(void)
+{
+    uint_fast32_t cur = atomic_load_explicit(&g_oid_seq, memory_order_relaxed);
+    if (cur == 0) {
+        uint_fast32_t seed = ((uint_fast32_t)time(NULL) & 0xFFFFFFFFu) | 1u;
+        atomic_compare_exchange_strong_explicit(&g_oid_seq, &cur, seed, memory_order_relaxed,
+                                                memory_order_relaxed);
+    }
+    return (uint32_t)atomic_fetch_add_explicit(&g_oid_seq, 1u, memory_order_relaxed);
+}
+
+airy_oid_t airy_oid_gen(void)
+{
+    airy_oid_t id;
+    id.hi = ((uint64_t)(uint32_t)time(NULL) << 32) | (uint64_t)airy_oid_next_seq();
+    id.lo = airy_id_entropy64();
+    return id;
+}
+
+void airy_oid_str(airy_oid_t id, char *out, size_t out_cap)
+{
+    if (!out || out_cap == 0)
+        return;
+    snprintf(out, out_cap, "%08x%08x%016llx", (uint32_t)(id.hi >> 32),
+             (uint32_t)(id.hi & 0xFFFFFFFFu), (unsigned long long)id.lo);
 }
 
 /* ================================================================
