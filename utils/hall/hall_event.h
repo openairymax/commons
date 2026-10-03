@@ -14,7 +14,11 @@
  *   layout    {tenant}/{task}/{category}/{tenant}.{task}.{category}.{ts}.{seq:04u}.json
  *   ts_utc    YYYYMMDDThhmmssmmm（UTC，定宽，可直接字典序比较）
  *   seq       (task, category) 目录内 max(seq)+1，跨写者进程不撞号
- *   gseq      进程内单调递增；首次写入续接到磁盘最大 gseq，跨写者全局不撞号
+ *   gseq      由水位线 <root>/.gseq 预留驱动的全局单调序：进程首次写入持
+ *             root 级排他锁（<root>/.gseq.lck）预留 [W+1, W+1024] 区块并
+ *             落盘新上界，区块内进程内原子递增；水位线缺失或损坏时回退
+ *             一次全树扫描以续接磁盘最大 gseq。跨写者进程（runtime/
+ *             gateway/CLI）不撞号，且稳态写路径为 O(1)、不做全树扫描
  *   prev_file 同 (task, category) 目录内 max(seq) 事件，决策链可仅凭磁盘重建
  *   body      {"file":{...},"access":{...},"content":{...}}
  *
@@ -120,9 +124,9 @@ int hall_evt_build(const hall_evt_t *evt, char *out, size_t out_sz);
 /**
  * @brief 写入一条 hall 事件（完整写路径）。
  *
- * 内部完成：路径穿越校验 → gseq 续接与递增 → 目录递归创建 → seq 续接与
- * prev_file 解析 → envelope 组装 → 原子写（tmp+fsync+rename）→ debug
- * 构建下写后回读断言。
+ * 内部完成：路径穿越校验 → gseq 水位线预留与递增 → 目录递归创建 → seq
+ * 续接与 prev_file 解析 → envelope 组装 → 原子写（tmp+fsync+rename）→
+ * debug 构建下写后回读断言。
  *
  * @return 0 成功；-1 失败（best-effort 契约，调用方不因此中断自身流程）
  */
