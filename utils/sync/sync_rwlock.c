@@ -20,14 +20,14 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
         return SYNC_ERROR_MEMORY;
     }
 
-    r->type = SYNC_TYPE_RWLOCK;
+    r->hdr.type = SYNC_TYPE_RWLOCK;
 #ifdef _WIN32
     atomic_init(&r->writer_owner, (unsigned)0);
 #endif
     if (attr != NULL && attr->name != NULL) {
-        r->name = sync_internal_strdup(attr->name);
+        r->hdr.name = sync_internal_strdup(attr->name);
     }
-    sync_stats_reset(&r->stats);
+    sync_stats_reset(&r->hdr.stats);
 
 #ifdef _WIN32
     InitializeSRWLock(&r->rwlock);
@@ -40,13 +40,13 @@ sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
     int result = pthread_rwlock_init(&r->rwlock, &attr_rwlock);
     pthread_rwlockattr_destroy(&attr_rwlock);
     if (result != 0) {
-        AIRY_FREE(r->name);
+        AIRY_FREE(r->hdr.name);
         AIRY_FREE(r);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
 
-    r->initialized = true;
+    r->hdr.initialized = true;
     *rwlock = r;
     return SYNC_SUCCESS;
 }
@@ -57,8 +57,8 @@ sync_result_t sync_rwlock_free(sync_rwlock_t rwlock)
         return SYNC_ERROR_INVALID;
     }
 
-    if (!rwlock->initialized) {
-        AIRY_FREE(rwlock->name);
+    if (!rwlock->hdr.initialized) {
+        AIRY_FREE(rwlock->hdr.name);
         AIRY_FREE(rwlock);
         return SYNC_SUCCESS;
     }
@@ -69,23 +69,23 @@ sync_result_t sync_rwlock_free(sync_rwlock_t rwlock)
     pthread_rwlock_destroy(&rwlock->rwlock);
 #endif
 
-    AIRY_FREE(rwlock->name);
+    AIRY_FREE(rwlock->hdr.name);
     AIRY_FREE(rwlock);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_rwlock_read_lock_ex(sync_rwlock_t rwlock, const sync_timeout_t *timeout)
 {
-    if (rwlock == NULL || !rwlock->initialized) {
+    if (rwlock == NULL || !rwlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    return sync_rw_lock(&rwlock->rwlock, false, timeout, &rwlock->stats);
+    return sync_rw_lock(&rwlock->rwlock, false, timeout, &rwlock->hdr.stats);
 }
 
 sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
 {
-    if (rwlock == NULL || !rwlock->initialized) {
+    if (rwlock == NULL || !rwlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -104,17 +104,17 @@ sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
     }
 #endif
 
-    sync_internal_update_stats_lock(&rwlock->stats, 0);
+    sync_internal_update_stats_lock(&rwlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout_t *timeout)
 {
-    if (rwlock == NULL || !rwlock->initialized) {
+    if (rwlock == NULL || !rwlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    sync_result_t result = sync_rw_lock(&rwlock->rwlock, true, timeout, &rwlock->stats);
+    sync_result_t result = sync_rw_lock(&rwlock->rwlock, true, timeout, &rwlock->hdr.stats);
 #ifdef _WIN32
     if (result == SYNC_SUCCESS) {
         atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
@@ -125,7 +125,7 @@ sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout
 
 sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)
 {
-    if (rwlock == NULL || !rwlock->initialized) {
+    if (rwlock == NULL || !rwlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -147,13 +147,13 @@ sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)
 #ifdef _WIN32
     atomic_store(&rwlock->writer_owner, (unsigned)GetCurrentThreadId());
 #endif
-    sync_internal_update_stats_lock(&rwlock->stats, 0);
+    sync_internal_update_stats_lock(&rwlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock)
 {
-    if (rwlock == NULL || !rwlock->initialized) {
+    if (rwlock == NULL || !rwlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -174,6 +174,6 @@ sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock)
     }
 #endif
 
-    atomic_fetch_add(&rwlock->stats.unlock_count, (size_t)1);
+    atomic_fetch_add(&rwlock->hdr.stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }

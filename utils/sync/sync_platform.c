@@ -54,14 +54,30 @@ static void make_deadline(uint32_t timeout_ms, struct timespec *ts)
 }
 #endif
 
-int platform_mutex_init(platform_mutex_t *mutex)
+/* 平台互斥量初始化的唯一入口：非递归与递归两种形态由 recursive 选择，
+ * 使 sync 家族各具锁无需触碰底层原语。 */
+int platform_mtx_init(platform_mutex_t *mutex, bool recursive)
 {
 #ifdef _WIN32
+    (void)recursive;
     InitializeCriticalSection(mutex);
     return 0;
 #else
-    return pthread_mutex_init(mutex, NULL);
+    if (!recursive) {
+        return pthread_mutex_init(mutex, NULL);
+    }
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    int ret = pthread_mutex_init(mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+    return ret;
 #endif
+}
+
+int platform_mutex_init(platform_mutex_t *mutex)
+{
+    return platform_mtx_init(mutex, false);
 }
 
 int platform_mutex_destroy(platform_mutex_t *mutex)
@@ -97,7 +113,7 @@ int platform_mutex_unlock(platform_mutex_t *mutex)
 int platform_mutex_trylock(platform_mutex_t *mutex)
 {
 #ifdef _WIN32
-    return TryEnterCriticalSection(mutex) ? 0 : -1;
+    return TryEnterCriticalSection(mutex) ? 0 : EBUSY;
 #else
     return pthread_mutex_trylock(mutex);
 #endif
@@ -132,51 +148,6 @@ int platform_mtx_timed(platform_mutex_t *mutex, uint32_t timeout_ms)
     struct timespec ts;
     make_deadline(timeout_ms, &ts);
     return pthread_mutex_timedlock(mutex, &ts);
-#endif
-}
-
-int platform_recursive_mutex_init(platform_recursive_mutex_t *mutex)
-{
-#ifdef _WIN32
-    InitializeCriticalSection(mutex);
-    return 0;
-#else
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    int ret = pthread_mutex_init(mutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-    return ret;
-#endif
-}
-
-int platform_recursive_mutex_destroy(platform_recursive_mutex_t *mutex)
-{
-#ifdef _WIN32
-    DeleteCriticalSection(mutex);
-    return 0;
-#else
-    return pthread_mutex_destroy(mutex);
-#endif
-}
-
-int platform_recursive_mutex_lock(platform_recursive_mutex_t *mutex)
-{
-#ifdef _WIN32
-    EnterCriticalSection(mutex);
-    return 0;
-#else
-    return pthread_mutex_lock(mutex);
-#endif
-}
-
-int platform_recursive_mutex_unlock(platform_recursive_mutex_t *mutex)
-{
-#ifdef _WIN32
-    LeaveCriticalSection(mutex);
-    return 0;
-#else
-    return pthread_mutex_unlock(mutex);
 #endif
 }
 

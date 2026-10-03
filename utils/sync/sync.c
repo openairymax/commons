@@ -115,24 +115,24 @@ const char *sync_get_name(void *lock)
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
 
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return NULL;
     }
 
-    switch (base->type) {
+    switch (base->hdr.type) {
     case SYNC_TYPE_MUTEX:
     case SYNC_TYPE_RECURSIVE_MUTEX:
-        return ((struct sync_mutex *)lock)->name;
+        return ((struct sync_mutex *)lock)->hdr.name;
     case SYNC_TYPE_RWLOCK:
-        return ((struct sync_rwlock *)lock)->name;
+        return ((struct sync_rwlock *)lock)->hdr.name;
     case SYNC_TYPE_SPINLOCK:
-        return ((struct sync_spinlock *)lock)->name;
+        return ((struct sync_spinlock *)lock)->hdr.name;
     case SYNC_TYPE_SEMAPHORE:
-        return ((struct sync_semaphore *)lock)->name;
+        return ((struct sync_semaphore *)lock)->hdr.name;
     case SYNC_TYPE_CONDITION:
-        return ((struct sync_condition *)lock)->name;
+        return ((struct sync_condition *)lock)->hdr.name;
     case SYNC_TYPE_BARRIER:
-        return ((struct sync_barrier *)lock)->name;
+        return ((struct sync_barrier *)lock)->hdr.name;
     default:
         return NULL;
     }
@@ -145,11 +145,11 @@ sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    sync_stats_snapshot(&base->stats, stats);
+    sync_stats_snapshot(&base->hdr.stats, stats);
 
     return SYNC_SUCCESS;
 }
@@ -161,11 +161,11 @@ sync_result_t sync_reset_stats(void *lock)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    sync_stats_reset(&base->stats);
+    sync_stats_reset(&base->hdr.stats);
 
     return SYNC_SUCCESS;
 }
@@ -215,7 +215,7 @@ sync_result_t sync_set_option(void *lock, int option, void *value)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -262,14 +262,14 @@ sync_result_t sync_get_option(void *lock, int option, void *value)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
     switch (option) {
     case SYNC_OPTION_NAME: {
         const char **out = (const char **)value;
-        *out = base->name;
+        *out = base->hdr.name;
         return SYNC_SUCCESS;
     }
     case SYNC_OPTION_TIMEOUT: {
@@ -313,8 +313,8 @@ sync_result_t sync_debug(void *lock)
 
     AIRY_LOG_DEBUG("[SYNC DEBUG] ====================");
     AIRY_LOG_DEBUG("[SYNC DEBUG] Lock at: %p", (void *)lock);
-    AIRY_LOG_DEBUG("[SYNC DEBUG] Type: %d", base->type);
-    AIRY_LOG_DEBUG("[SYNC DEBUG] Initialized: %s", base->initialized ? "true" : "false");
+    AIRY_LOG_DEBUG("[SYNC DEBUG] Type: %d", base->hdr.type);
+    AIRY_LOG_DEBUG("[SYNC DEBUG] Initialized: %s", base->hdr.initialized ? "true" : "false");
 
     const char *name = sync_get_name(lock);
     if (name != NULL) {
@@ -467,7 +467,7 @@ static void registry_unregister(void *lock)
 static bool registry_lock_is_held(void *lock, sync_type_t type)
 {
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized)
+    if (!base->hdr.initialized)
         return false;
 
     switch (type) {
@@ -565,11 +565,11 @@ sync_result_t sync_set_name(void *lock, const char *name)
     }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->initialized) {
+    if (!base->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    sync_type_t type = base->type;
+    sync_type_t type = base->hdr.type;
 
     const char *old_name = sync_get_name(lock);
 
@@ -585,43 +585,43 @@ sync_result_t sync_set_name(void *lock, const char *name)
     case SYNC_TYPE_RECURSIVE_MUTEX: {
         struct sync_mutex *m = (struct sync_mutex *)lock;
         if (old_name)
-            AIRY_FREE((void *)m->name);
-        m->name = new_name;
+            AIRY_FREE((void *)m->hdr.name);
+        m->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_RWLOCK: {
         struct sync_rwlock *rw = (struct sync_rwlock *)lock;
         if (old_name)
-            AIRY_FREE((void *)rw->name);
-        rw->name = new_name;
+            AIRY_FREE((void *)rw->hdr.name);
+        rw->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_SPINLOCK: {
         struct sync_spinlock *sp = (struct sync_spinlock *)lock;
         if (old_name)
-            AIRY_FREE((void *)sp->name);
-        sp->name = new_name;
+            AIRY_FREE((void *)sp->hdr.name);
+        sp->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_SEMAPHORE: {
         struct sync_semaphore *sem = (struct sync_semaphore *)lock;
         if (old_name)
-            AIRY_FREE((void *)sem->name);
-        sem->name = new_name;
+            AIRY_FREE((void *)sem->hdr.name);
+        sem->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_CONDITION: {
         struct sync_condition *c = (struct sync_condition *)lock;
         if (old_name)
-            AIRY_FREE((void *)c->name);
-        c->name = new_name;
+            AIRY_FREE((void *)c->hdr.name);
+        c->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_BARRIER: {
         struct sync_barrier *b = (struct sync_barrier *)lock;
         if (old_name)
-            AIRY_FREE((void *)b->name);
-        b->name = new_name;
+            AIRY_FREE((void *)b->hdr.name);
+        b->hdr.name = new_name;
         break;
     }
     default:
@@ -662,7 +662,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
 
         struct sync_mutex *base = (struct sync_mutex *)s_lock_registry[i].lock;
 
-        if (base == NULL || !base->initialized) {
+        if (base == NULL || !base->hdr.initialized) {
             if (s_lock_registry[i].name)
                 AIRY_FREE(s_lock_registry[i].name);
             s_lock_registry[i].in_use = false;

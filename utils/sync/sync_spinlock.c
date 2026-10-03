@@ -26,24 +26,24 @@ sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t 
     struct sync_spinlock *s = (struct sync_spinlock *)AIRY_CALLOC(1, sizeof(struct sync_spinlock));
     CHECK_NULL_RET(s, SYNC_ERROR_MEMORY);
 
-    s->type = SYNC_TYPE_SPINLOCK;
+    s->hdr.type = SYNC_TYPE_SPINLOCK;
     if (attr != NULL && attr->name != NULL) {
-        s->name = sync_internal_strdup(attr->name);
+        s->hdr.name = sync_internal_strdup(attr->name);
     }
-    sync_stats_reset(&s->stats);
+    sync_stats_reset(&s->hdr.stats);
 
 #if AIRY_SPINLOCK_CAS
     atomic_init(&s->lock, 0);
 #else
     int result = pthread_spin_init(&s->lock, PTHREAD_PROCESS_PRIVATE);
     if (result != 0) {
-        AIRY_FREE(s->name);
+        AIRY_FREE(s->hdr.name);
         AIRY_FREE(s);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
 
-    s->initialized = true;
+    s->hdr.initialized = true;
     *spinlock = s;
     return SYNC_SUCCESS;
 }
@@ -52,8 +52,8 @@ sync_result_t sync_spinlock_free(sync_spinlock_t spinlock)
 {
     CHECK_NULL_RET(spinlock, SYNC_ERROR_INVALID);
 
-    if (!spinlock->initialized) {
-        AIRY_FREE(spinlock->name);
+    if (!spinlock->hdr.initialized) {
+        AIRY_FREE(spinlock->hdr.name);
         AIRY_FREE(spinlock);
         return SYNC_SUCCESS;
     }
@@ -62,14 +62,14 @@ sync_result_t sync_spinlock_free(sync_spinlock_t spinlock)
     pthread_spin_destroy(&spinlock->lock);
 #endif
 
-    AIRY_FREE(spinlock->name);
+    AIRY_FREE(spinlock->hdr.name);
     AIRY_FREE(spinlock);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_spinlock_lock_ex(sync_spinlock_t spinlock)
 {
-    if (spinlock == NULL || !spinlock->initialized) {
+    if (spinlock == NULL || !spinlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -86,13 +86,13 @@ sync_result_t sync_spinlock_lock_ex(sync_spinlock_t spinlock)
     }
 #endif
 
-    sync_internal_update_stats_lock(&spinlock->stats, 0);
+    sync_internal_update_stats_lock(&spinlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_spinlock_try_lock(sync_spinlock_t spinlock)
 {
-    if (spinlock == NULL || !spinlock->initialized) {
+    if (spinlock == NULL || !spinlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -112,13 +112,13 @@ sync_result_t sync_spinlock_try_lock(sync_spinlock_t spinlock)
     }
 #endif
 
-    sync_internal_update_stats_lock(&spinlock->stats, 0);
+    sync_internal_update_stats_lock(&spinlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_spinlock_unlock_ex(sync_spinlock_t spinlock)
 {
-    if (spinlock == NULL || !spinlock->initialized) {
+    if (spinlock == NULL || !spinlock->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -131,6 +131,6 @@ sync_result_t sync_spinlock_unlock_ex(sync_spinlock_t spinlock)
     }
 #endif
 
-    atomic_fetch_add(&spinlock->stats.unlock_count, (size_t)1);
+    atomic_fetch_add(&spinlock->hdr.stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }
