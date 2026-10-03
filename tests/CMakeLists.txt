@@ -43,6 +43,8 @@ set(UNIT_TEST_SOURCES
     unit/test_service_discovery.c
     # 任务大厅事件磁盘格式 SSoT（§60 hall 事件写侧契约：命名/gseq 续接/prev_file/ACL）
     unit/test_hall_event.c
+    # 字符串→下标哈希索引 SSoT（§130 djb2 + 墓碑删除 + 压实；含探测链回归）
+    unit/test_hindex.c
     # 统一配置（§72 schema 默认值施加契约：按类型填充/幂等/既有键保持/服务接线）
     unit/test_config_unified.c
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
@@ -116,6 +118,7 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/ime
         ${COMMONS_ROOT}/utils/io
         ${COMMONS_ROOT}/utils/hall
+        ${COMMONS_ROOT}/utils/ds
         ${COMMONS_ROOT}/utils/config_unified
         ${COMMONS_ROOT}/tests/utils
         ${CMAKE_CURRENT_SOURCE_DIR}

@@ -49,6 +49,8 @@ set(SOURCES
     utils/string/safe_utf8.c
     # 0.1.19 §60：任务大厅事件磁盘格式 SSoT（写侧机制件）
     utils/hall/hall_event.c
+    # 0.1.19 §130：字符串→下标开放寻址哈希索引 SSoT（djb2 + 墓碑）
+    utils/ds/hindex.c
     utils/sync/sync.c
     utils/sync/sync_platform.c
     utils/sync/sync_internal.c
@@ -238,6 +240,8 @@ set(_inc_dirs
     utils/uuid
     # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
     utils/hall
+    # 0.1.19 §130: 字符串→下标哈希索引 SSoT
+    utils/ds
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson
     utils/effect
@@ -314,6 +318,8 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/uuid
     # 0.1.19 §60: 任务大厅事件磁盘格式 SSoT
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/hall
+    # 0.1.19 §130: 字符串→下标哈希索引 SSoT
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ds
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/print
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson
@@ -396,6 +402,8 @@ install(DIRECTORY utils/memory/ DESTINATION include/agentrt/utils/memory
 install(DIRECTORY utils/string/ DESTINATION include/agentrt/utils/string
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/hall/ DESTINATION include/agentrt/utils/hall
+        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
+install(DIRECTORY utils/ds/ DESTINATION include/agentrt/utils/ds
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/sync/ DESTINATION include/agentrt/utils/sync
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
