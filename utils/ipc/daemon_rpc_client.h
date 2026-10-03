@@ -8,8 +8,8 @@
  *
  * P0.17 phase 5 (WS8-04): migrated from daemons/common/include/ into
  * commons/utils/ipc/, removing the atoms->daemons compile-time reverse
- * dependency (IRON-6). The daemons copy is kept as a re-exporting
- * compatibility header.
+ * dependency (IRON-6). The short-lived daemons re-export copy has since
+ * been removed; this header is the sole declaration point.
  *
  * Phase-3 executor consolidation refactor: a thin client for migrating
  * syscall_router.c in gateway_d from in-process implementation to daemon
@@ -39,8 +39,8 @@ extern "C" {
  * @brief Build a JSON-RPC 2.0 request body (mechanism shared by all
  *        transports).
  *
- * The exact wire form both the socket path (rpc_connect_send) and the L2
- * bridge (daemon_l2_rpc_transact) put on the wire: id=1; params embedded
+ * The exact wire form both the socket transport and the L2 bridge
+ * (daemon_l2_rpc_transact) put on the wire: id=1; params embedded
  * when params_json parses as JSON, stringified otherwise, {} when empty.
  *
  * @param method       JSON-RPC method name (non-NULL)
@@ -62,7 +62,7 @@ char *daemon_rpc_json_req(const char *method, const char *params_json);
  * @return AIRY_SUCCESS on success; other codes on failure
  *
  * @note On failure *out_result_json is not set (stays NULL).
- *       Available on POSIX only; returns AIRY_ERR_NOT_SUPPORTED on Windows.
+ *       POSIX rides AF_UNIX; Windows rides TCP loopback (host:port).
  */
 int daemon_rpc_call(const char *socket_path, const char *method, const char *params_json,
                     char **out_result_json, uint32_t timeout_ms);
@@ -124,7 +124,7 @@ typedef void (*daemon_rpc_stream_cb_t)(const char *data, size_t len, void *user_
  * @param timeout_ms   Timeout in ms, 0 = default 30000ms
  * @return AIRY_SUCCESS on stream completion (EOF); other codes on failure
  *
- * @note Available on POSIX only; returns AIRY_ERR_NOT_SUPPORTED on Windows.
+ * @note POSIX rides AF_UNIX; Windows rides TCP loopback (host:port).
  */
 int daemon_rpc_call_stream(const char *socket_path, const char *method, const char *params_json,
                            daemon_rpc_stream_cb_t on_chunk, void *user_data, uint32_t timeout_ms);
