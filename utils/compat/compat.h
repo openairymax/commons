@@ -24,6 +24,7 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include "atomic_compat.h"
+#include "../../include/export.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -31,21 +32,6 @@ typedef SSIZE_T ssize_t;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-#ifndef AIRY_API
-#ifdef _WIN32
-#ifdef AIRY_BUILD_SHARED
-#define AIRY_API __declspec(dllexport)
-#elif defined(AIRY_USE_SHARED)
-#define AIRY_API __declspec(dllimport)
-#else
-#define AIRY_API
-#endif
-#else
-#define AIRY_API __attribute__((visibility("default")))
-#endif
-#endif /* AIRY_API */
 
 
 #if defined(__GNUC__)
