@@ -49,6 +49,45 @@ struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries,
     return grown;
 }
 
+/* Make room for one more byte plus the trailing NUL.  yaml_safe_realloc()
+ * releases the old block when it fails, so a false result leaves no live
+ * allocation behind and the caller simply propagates the failure. */
+static bool buf_reserve(char **buf, size_t *cap, size_t len)
+{
+    if (len + 2 < *cap)
+        return true;
+    size_t next = *cap * 2;
+    char *grown = (char *)yaml_safe_realloc(*buf, next);
+    if (!grown)
+        return false;
+    *buf = grown;
+    *cap = next;
+    return true;
+}
+
+/* Tags and anchors share one character class: everything up to the first
+ * separator.  Only the leading sigil differs, and the caller consumes it
+ * before handing control here. */
+static char *name_scan(struct parse_ctx *ctx)
+{
+    size_t cap = 64;
+    size_t len = 0;
+    char *buf = (char *)AIRY_MALLOC(cap);
+    if (!buf)
+        return NULL;
+    while (!at_end(ctx)) {
+        char c = peek(ctx);
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ':')
+            break;
+        advance(ctx);
+        if (!buf_reserve(&buf, &cap, len))
+            return NULL;
+        buf[len++] = c;
+    }
+    buf[len] = '\0';
+    return buf;
+}
+
 char *parse_tag(struct parse_ctx *ctx)
 {
     if (peek(ctx) != '!')
@@ -56,50 +95,12 @@ char *parse_tag(struct parse_ctx *ctx)
     advance(ctx);
     if (peek(ctx) == '!')
         advance(ctx);
-    size_t cap = 64;
-    size_t len = 0;
-    char *buf = (char *)AIRY_MALLOC(cap);
-    if (!buf)
-        return NULL;
-    while (!at_end(ctx)) {
-        char c = peek(ctx);
-        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ':')
-            break;
-        advance(ctx);
-        if (len + 2 >= cap) {
-            cap *= 2;
-            buf = (char *)yaml_safe_realloc(buf, cap);
-            if (!buf)
-                return NULL;
-        }
-        buf[len++] = c;
-    }
-    buf[len] = '\0';
-    return buf;
+    return name_scan(ctx);
 }
 
 char *parse_anchor_name(struct parse_ctx *ctx)
 {
-    size_t cap = 64;
-    size_t len = 0;
-    char *buf = (char *)AIRY_MALLOC(cap);
-    if (!buf)
-        return NULL;
-    while (!at_end(ctx)) {
-        char c = peek(ctx);
-        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ':')
-            break;
-        advance(ctx);
-        if (len + 2 >= cap) {
-            cap *= 2;
-            buf = (char *)yaml_safe_realloc(buf, cap);
-            if (!buf)
-                return NULL;
-        }
-        buf[len++] = c;
-    }
-    buf[len] = '\0';
-    return buf;
+    return name_scan(ctx);
 }
 
 void set_error(struct parse_ctx *ctx, const char *fmt, ...)
@@ -274,12 +275,8 @@ char *parse_quoted_string(struct parse_ctx *ctx, char quote)
                 break;
             }
         }
-        if (len + 2 >= cap) {
-            cap *= 2;
-            buf = (char *)yaml_safe_realloc(buf, cap);
-            if (!buf)
-                return NULL;
-        }
+        if (!buf_reserve(&buf, &cap, len))
+            return NULL;
         buf[len++] = c;
     }
     buf[len] = '\0';
@@ -313,12 +310,8 @@ char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent)
             break;
 
         advance(ctx);
-        if (len + 2 >= cap) {
-            cap *= 2;
-            buf = (char *)yaml_safe_realloc(buf, cap);
-            if (!buf)
-                return NULL;
-        }
+        if (!buf_reserve(&buf, &cap, len))
+            return NULL;
         buf[len++] = c;
     }
 
