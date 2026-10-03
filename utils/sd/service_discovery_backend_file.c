@@ -10,6 +10,7 @@
  */
 
 #include "service_discovery_internal.h"
+#include "io.h"
 
 #ifdef AIRY_HAS_CJSON
 #include <cjson/cJSON.h>
@@ -125,33 +126,11 @@ static airy_err_t sd_file_read_service(const char *name, sd_service_entry_t *out
 {
     char path[512];
     sd_file_path(name, path, sizeof(path));
-    FILE *f = fopen(path, "r");
-    if (!f)
-        return AIRY_ENOENT;
 
-    long sz;
-    if (fseek(f, 0, SEEK_END) != 0) {
-        fclose(f);
-        return AIRY_ERR_SYS_FILE;
-    }
-    sz = ftell(f);
-    if (sz < 0) {
-        fclose(f);
-        return AIRY_ERR_SYS_FILE;
-    }
-    if (fseek(f, 0, SEEK_SET) != 0) {
-        fclose(f);
-        return AIRY_ERR_SYS_FILE;
-    }
-
-    char *buf = (char *)AIRY_CALLOC(1, (size_t)sz + 1);
-    if (!buf) {
-        fclose(f);
-        return AIRY_ENOMEM;
-    }
-    size_t rd = fread(buf, 1, (size_t)sz, f);
-    fclose(f);
-    buf[rd] = '\0';
+    char *buf = NULL;
+    airy_err_t rc = (airy_err_t)airy_io_read_file(path, &buf, NULL);
+    if (rc != AIRY_SUCCESS)
+        return rc;
 
     cJSON *root = cJSON_Parse(buf);
     AIRY_FREE(buf);

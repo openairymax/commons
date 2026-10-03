@@ -7,7 +7,7 @@
 ## 概述
 
 - **原子写入**：`airy_io_write_file` 先写同目录 `<path>.tmp` 临时文件、`fflush` + `fsync`（Windows 为 `_commit`）落盘，再原子改名覆盖目标（Windows 经 `MoveFileExA` 允许替换已存在目标）；中途失败不会在目标路径留下截断/半写文件。
-- **整读便捷**：`airy_io_read_file` 一次读出全部字节并补 NUL 终止符，结果既可按二进制长度使用也可按 C 字符串使用。
+- **整读便捷**：`airy_io_read_file` 一次读出全部字节并补 NUL 终止符，结果既可按二进制长度使用也可按 C 字符串使用；文件不存在返回 `AIRY_ENOENT`，与其它失败原因区分。
 - **幂等删除**：删除不存在的文件/目录按成功处理，适合清理临时工作区。
 - **跨平台**：POSIX 走 `dirent`/`unistd`，Windows 走 Win32 API；目录遍历经 compat 层的 `airy_dirent.h` 统一。
 
@@ -26,7 +26,7 @@ utils/io/
 
 | 函数 | 语义 |
 |---|---|
-| `airy_io_read_file(path, out_len)` | 读取文件全部内容，返回以内存分配器分配的缓冲区（末字节补 `'\0'`），`out_len` 可选输出长度；失败返回 `NULL` 并把错误压入 commons 错误栈（可经 `airy_err_last()` 获取） |
+| `airy_io_read_file(path, out_buf, out_len)` | 读取文件全部内容，成功时经 `out_buf` 返回以内存分配器分配的缓冲区（末字节补 `'\0'`），`out_len` 可选输出长度；成功返回 0，文件不存在返回 `AIRY_ENOENT`，其它失败返回 `AIRY_ENOMEM`/`AIRY_ERR_IO`/`AIRY_EINVAL` 并把错误压入 commons 错误栈（可经 `airy_err_last()` 获取） |
 | `airy_io_write_file(path, data, len)` | 原子写入（见「概述」）；`len` 传 `(size_t)-1` 时按 C 字符串自动计算长度；成功返回 0，失败返回负值 |
 
 ### 目录操作
@@ -49,7 +49,7 @@ utils/io/
 
 - 参数非法（NULL 路径、NULL 数据等）返回 `AIRY_EINVAL`；原子写过程失败（含路径过长导致临时文件名无法构造）返回 `-1`。
 - 实现内部使用固定 1024 字节路径缓冲（临时文件拼接、逐级创建、子路径拼接），路径应控制在 1023 字符以内。
-- `airy_io_read_file` 的返回值来自 commons 内存分配器，用 `AIRY_FREE` / `memory_free` 释放，不要直接 `free`。
+- `airy_io_read_file` 经 `out_buf` 输出的缓冲区来自 commons 内存分配器，用 `AIRY_FREE` / `memory_free` 释放，不要直接 `free`。
 - 模块不持有全局状态，可对不同路径并发调用；对同一路径并发写入时，原子性仅保证「目标文件内容为某一次完整写入」，不保证多次写入的先后顺序。
 
 ## 用法示例
@@ -70,8 +70,8 @@ void config_roundtrip(void)
     }
 
     size_t len = 0;
-    char *text = airy_io_read_file("/var/lib/app/conf/settings.json", &len);
-    if (text != NULL) {
+    char *text = NULL;
+    if (airy_io_read_file("/var/lib/app/conf/settings.json", &text, &len) == 0) {
         /* text[0..len) 为文件内容，末尾另有 NUL */
         AIRY_FREE(text);
     }
@@ -87,7 +87,7 @@ void config_roundtrip(void)
 | 依赖 | 用途 |
 |---|---|
 | commons `utils/memory` | 读文件缓冲区与列表项的分配/释放（`memory_alloc`、`AIRY_STRDUP`、`AIRY_FREE`） |
-| commons `utils/error` | `airy_io_read_file` 失败路径经错误栈宏 `AIRY_ERROR_NULL` 上报 |
+| commons `utils/error` | `airy_io_read_file` 失败路径经错误栈宏 `AIRY_ERROR` 上报，并以 `AIRY_ENOENT` 区分「文件不存在」 |
 | commons `utils/compat` | `airy_dirent.h` 目录遍历兼容层 |
 | 平台 CRT | POSIX（`stdio`/`dirent`/`unistd`）与 Windows（Win32 `MoveFileExA` 等） |
 
