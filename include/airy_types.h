@@ -220,6 +220,31 @@ void airy_msg_id_to_string(airy_msg_id_t id, char *out, size_t out_cap);
 airy_trace_id_t airy_trace_id_from_string(const char *str);
 airy_msg_id_t airy_msg_id_from_string(const char *str);
 
+/* ---------------- oid：不透明对象 ID（daemon 实体标识） ----------------
+ *
+ * 渲染为 32 hex："<ts:8hex><seq:8hex><entropy:16hex>"。前 8 位秒级时间戳
+ * 便于粗略排序，中 8 位进程内单调序列保证同秒不冲突，后 16 位
+ * splitmix64 熵提供跨进程随机性。daemon 的 agent_id / record_id 等实体
+ * 标识统一由此原子件产出，避免各 daemon 重复实现同一算法。
+ * -------------------------------------------------------------------- */
+
+typedef struct airy_oid {
+    uint64_t hi; /* (ts:32 << 32) | seq:32 */
+    uint64_t lo; /* splitmix64 熵 */
+} airy_oid_t;
+
+#define AIRY_OID_STR_MAX 33 /* 32 hex + NUL */
+
+/**
+ * @brief 生成不透明 oid（线程安全，进程内单调唯一）。
+ */
+airy_oid_t airy_oid_gen(void);
+
+/**
+ * @brief 渲染 32 hex 到 out（须 >= AIRY_OID_STR_MAX；不足安全截断）。
+ */
+void airy_oid_str(airy_oid_t id, char *out, size_t out_cap);
+
 
 /*
  * The following types are defined in platform.h and only referenced here:
