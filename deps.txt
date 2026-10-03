@@ -22,13 +22,13 @@
 cache:
 cjson:
 cognition:
-compat:
+compat: include
 compliance:
 config_unified:
 cost:
 effect: include
 error: types
-execution: error platform
+execution: error include platform
 ext: error include
 id:
 ime:
@@ -39,7 +39,7 @@ logging: compat error memory observability platform
 memory: error
 network: error types
 observability:
-platform: compat
+platform: compat include
 print: logging
 quality: error
 resource: error memory

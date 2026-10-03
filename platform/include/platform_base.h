@@ -58,7 +58,7 @@ extern "C" {
 #endif
 
 
-#include "export.h"
+#include "../include/export.h"
 
 
 /* ==================== CPU architecture detection ==================== */

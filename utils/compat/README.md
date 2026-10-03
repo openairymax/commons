@@ -44,13 +44,16 @@ commons/utils/compat/
 
 | 宏 | GCC/Clang | MSVC | 其余编译器 |
 |----|-----------|------|------------|
-| `AIRY_API` | `visibility("default")` | `dllexport`/`dllimport`（按 `AIRY_BUILD_SHARED`/`AIRY_USE_SHARED`），静态库时为空 | 空 |
+| `AIRY_API` | `visibility("default")` | `dllexport`（按 `AIRY_BUILDING_DLL`），静态库时为空 | 空 |
 | `AIRY_INLINE` | `static inline __attribute__((always_inline))` | `static __forceinline` | `static inline` |
 | `AIRY_NOINLINE` / `AIRY_USED` / `AIRY_WEAK` / `AIRY_PACKED` / `AIRY_ALIGNED(x)` / `AIRY_DEPRECATED` / `AIRY_FALLTHROUGH` | 对应 `__attribute__` | `__declspec` 系或空操作 | 全部空操作 |
 | `AIRY_PRINTF_FORMAT(fmt,args)` / `AIRY_SCANF_FORMAT` | `format` 属性检查 | 空 | 空 |
 | `AIRY_LIKELY(x)` / `AIRY_UNLIKELY(x)` | `__builtin_expect` | 恒等 | 恒等 |
 | `AIRY_PREFETCH(x)` / `AIRY_UNREACHABLE()` / `AIRY_ASSUME(x)` | 内建函数 | `__assume` 系 | 空 |
 | `AIRY_ATOMIC_FETCH_ADD(ptr,val)` / `_ADD64` | C11 原子 relaxed 加（采样计数等近似场景，基于 `atomic_compat.h`） | 同左 | 同左 |
+
+> `AIRY_API` 本文件不再自带定义，转发自 `commons/include/export.h`
+>（全仓单一权威源，契约层）；`AIRY_BUILD_SHARED`/`AIRY_USE_SHARED` 已随死配置面移除。
 
 ## 通用工具
 

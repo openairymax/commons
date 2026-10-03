@@ -3,10 +3,11 @@
 
 /**
  * @file export.h
- * @brief AgentRT symbol export management (commons platform layer copy).
+ * @brief AgentRT symbol export management.
  *
- * @note Defines cross-platform symbol export macros for Windows and POSIX.
- * This is one of the authoritative definition sources of AIRY_API.
+ * @note Defines cross-platform symbol export macros for Windows and
+ * POSIX. This is the single authoritative source of AIRY_API；
+ * atoms/corekern 与 compat 均转发至此。
  */
 
 #ifndef AIRY_RT_EXPORT_H
@@ -41,14 +42,6 @@ extern "C" {
 #ifndef AIRY_API
 #define AIRY_API
 #endif
-#endif
-
-#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
-#define AIRY_INTERNAL
-#elif defined(__GNUC__) || defined(__clang__)
-#define AIRY_INTERNAL __attribute__((visibility("hidden")))
-#else
-#define AIRY_INTERNAL
 #endif
 
 #ifdef __cplusplus
