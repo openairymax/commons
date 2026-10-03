@@ -95,6 +95,20 @@ typedef struct {
     char *finish_reason;
 } llm_response_t;
 
+/**
+ * @brief Release an llm_response_t and every field it owns.
+ *
+ * The response object crosses the atoms <-> llm_d boundary, so its
+ * destructor is part of the boundary contract rather than a private
+ * detail of one side: llm_d's rpc edge, the provider adapters and the
+ * atoms-side consumers all release through this one entry point instead
+ * of hand-rolling the field walk. The single definition lives in
+ * daemons/llm_d/src/rpc/service.c.
+ *
+ * @param resp Response to release (NULL is a no-op)
+ */
+void llm_response_free(llm_response_t *resp);
+
 typedef void (*llm_stream_callback_t)(const char *chunk, void *user_data);
 
 /* Canonical finish_reason vocabulary for the whole stack. Native upstream
