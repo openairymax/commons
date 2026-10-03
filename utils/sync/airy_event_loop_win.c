@@ -81,8 +81,8 @@ static uint32_t wsa_to_events(long wsa_events)
     return ev;
 }
 
-static int add_fd_internal(airy_event_loop_t *loop, int fd, uint32_t events,
-                           airy_event_callback_t cb, void *user_data, bool level_triggered)
+int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
+                       airy_event_callback_t cb, void *user_data, bool level_triggered)
 {
     if (!loop || fd < 0 || !cb)
         return AIRY_ERR_INVALID_PARAM;
@@ -147,13 +147,9 @@ static int add_fd_internal(airy_event_loop_t *loop, int fd, uint32_t events,
 
 airy_event_loop_t *airy_event_loop_create(int max_events)
 {
-    airy_event_loop_t *loop = (airy_event_loop_t *)AIRY_CALLOC(1, sizeof(airy_event_loop_t));
-    if (!loop) {
-        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "validation failed");
-    }
-
-    if (max_events <= 0)
-        max_events = AIRY_EVENT_LOOP_MAX_EVENTS;
+    airy_event_loop_t *loop = airy_evloop_alloc(sizeof(airy_event_loop_t), &max_events);
+    if (!loop)
+        return NULL;
 
     loop->max_events = max_events;
     loop->fd_capacity = max_events;
@@ -190,18 +186,6 @@ void airy_event_loop_destroy(airy_event_loop_t *loop)
         CloseHandle(loop->wakeup_event);
     AIRY_FREE(loop->fd_entries);
     AIRY_FREE(loop);
-}
-
-int airy_event_loop_add_fd(airy_event_loop_t *loop, int fd, uint32_t events,
-                           airy_event_callback_t cb, void *user_data)
-{
-    return add_fd_internal(loop, fd, events, cb, user_data, false);
-}
-
-int airy_event_loop_add_fd_lt(airy_event_loop_t *loop, int fd, uint32_t events,
-                              airy_event_callback_t cb, void *user_data)
-{
-    return add_fd_internal(loop, fd, events, cb, user_data, true);
 }
 
 int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
