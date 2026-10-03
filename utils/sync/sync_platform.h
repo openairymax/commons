@@ -36,9 +36,6 @@ extern "C" {
 typedef CRITICAL_SECTION platform_mutex_t;
 
 
-typedef CRITICAL_SECTION platform_recursive_mutex_t;
-
-
 typedef SRWLOCK platform_rwlock_t;
 
 
@@ -75,9 +72,6 @@ typedef struct {
 typedef pthread_mutex_t platform_mutex_t;
 
 
-typedef pthread_mutex_t platform_recursive_mutex_t;
-
-
 typedef pthread_rwlock_t platform_rwlock_t;
 
 
@@ -112,6 +106,14 @@ typedef pthread_barrier_t platform_barrier_t;
 
 
 #endif /* _WIN32 */
+/**
+ * @brief Initialize a platform mutex, optionally recursive
+ * @param[in] mutex Mutex pointer
+ * @param[in] recursive true to initialize a recursive mutex
+ * @return 0 on success, non-zero on failure
+ */
+int platform_mtx_init(platform_mutex_t *mutex, bool recursive);
+
 /**
  * @brief Initialize a platform mutex
  * @return 0 on success, non-zero on failure
@@ -153,33 +155,6 @@ int platform_mutex_trylock(platform_mutex_t *mutex);
  * @return 0 on success, ETIMEDOUT on timeout, other non-zero on failure
  */
 int platform_mtx_timed(platform_mutex_t *mutex, uint32_t timeout_ms);
-
-/**
- * @brief Initialize a platform recursive mutex
- * @return 0 on success, non-zero on failure
- */
-int platform_recursive_mutex_init(platform_recursive_mutex_t *mutex);
-
-/**
- * @brief Destroy a platform recursive mutex
- * @param[in] mutex Recursive mutex pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_recursive_mutex_destroy(platform_recursive_mutex_t *mutex);
-
-/**
- * @brief Lock a platform recursive mutex
- * @param[in] mutex Recursive mutex pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_recursive_mutex_lock(platform_recursive_mutex_t *mutex);
-
-/**
- * @brief Unlock a platform recursive mutex
- * @param[in] mutex Recursive mutex pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_recursive_mutex_unlock(platform_recursive_mutex_t *mutex);
 
 /**
  * @brief Initialize a platform read-write lock

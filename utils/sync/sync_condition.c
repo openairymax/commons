@@ -21,24 +21,24 @@ sync_result_t sync_condition_create(sync_condition_t *condition, const sync_attr
         return SYNC_ERROR_MEMORY;
     }
 
-    c->type = SYNC_TYPE_CONDITION;
+    c->hdr.type = SYNC_TYPE_CONDITION;
     if (attr != NULL && attr->name != NULL) {
-        c->name = sync_internal_strdup(attr->name);
+        c->hdr.name = sync_internal_strdup(attr->name);
     }
-    sync_stats_reset(&c->stats);
+    sync_stats_reset(&c->hdr.stats);
 
 #ifdef _WIN32
     InitializeConditionVariable(&c->cond);
 #else
     int result = pthread_cond_init(&c->cond, NULL);
     if (result != 0) {
-        AIRY_FREE(c->name);
+        AIRY_FREE(c->hdr.name);
         AIRY_FREE(c);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
 
-    c->initialized = true;
+    c->hdr.initialized = true;
     *condition = c;
     return SYNC_SUCCESS;
 }
@@ -49,8 +49,8 @@ sync_result_t sync_condition_free(sync_condition_t condition)
         return SYNC_ERROR_INVALID;
     }
 
-    if (!condition->initialized) {
-        AIRY_FREE(condition->name);
+    if (!condition->hdr.initialized) {
+        AIRY_FREE(condition->hdr.name);
         AIRY_FREE(condition);
         return SYNC_SUCCESS;
     }
@@ -59,7 +59,7 @@ sync_result_t sync_condition_free(sync_condition_t condition)
     pthread_cond_destroy(&condition->cond);
 #endif
 
-    AIRY_FREE(condition->name);
+    AIRY_FREE(condition->hdr.name);
     AIRY_FREE(condition);
     return SYNC_SUCCESS;
 }
@@ -67,7 +67,7 @@ sync_result_t sync_condition_free(sync_condition_t condition)
 sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mutex,
                                      const sync_timeout_t *timeout)
 {
-    if (condition == NULL || mutex == NULL || !condition->initialized) {
+    if (condition == NULL || mutex == NULL || !condition->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -76,7 +76,7 @@ sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mu
     BOOL result = SleepConditionVariableCS(&condition->cond, &mutex->mutex, wait_ms);
     if (!result) {
         if (GetLastError() == ERROR_TIMEOUT) {
-            sync_internal_update_stats_timeout(&condition->stats);
+            sync_internal_update_stats_timeout(&condition->hdr.stats);
             return SYNC_ERROR_TIMEOUT;
         }
         return SYNC_ERROR_UNKNOWN;
@@ -96,7 +96,7 @@ sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mu
         }
         rc = pthread_cond_timedwait(&condition->cond, &mutex->mutex, &ts);
         if (rc == ETIMEDOUT) {
-            sync_internal_update_stats_timeout(&condition->stats);
+            sync_internal_update_stats_timeout(&condition->hdr.stats);
             return SYNC_ERROR_TIMEOUT;
         }
         if (rc != 0) {
@@ -105,13 +105,13 @@ sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mu
     }
 #endif
 
-    sync_internal_update_stats_lock(&condition->stats, 0);
+    sync_internal_update_stats_lock(&condition->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_condition_signal_ex(sync_condition_t condition)
 {
-    if (condition == NULL || !condition->initialized) {
+    if (condition == NULL || !condition->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -129,7 +129,7 @@ sync_result_t sync_condition_signal_ex(sync_condition_t condition)
 
 sync_result_t sync_condition_broadcast_ex(sync_condition_t condition)
 {
-    if (condition == NULL || !condition->initialized) {
+    if (condition == NULL || !condition->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 

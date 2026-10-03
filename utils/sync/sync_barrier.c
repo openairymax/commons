@@ -21,11 +21,11 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
         return SYNC_ERROR_MEMORY;
     }
 
-    b->type = SYNC_TYPE_BARRIER;
+    b->hdr.type = SYNC_TYPE_BARRIER;
     if (attr != NULL && attr->name != NULL) {
-        b->name = sync_internal_strdup(attr->name);
+        b->hdr.name = sync_internal_strdup(attr->name);
     }
-    sync_stats_reset(&b->stats);
+    sync_stats_reset(&b->hdr.stats);
 
 #ifdef _WIN32
     InitializeCriticalSection(&b->barrier.cs);
@@ -36,13 +36,13 @@ sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
 #else
     int result = platform_barrier_init(&b->barrier, count);
     if (result != 0) {
-        AIRY_FREE(b->name);
+        AIRY_FREE(b->hdr.name);
         AIRY_FREE(b);
         return sync_internal_posix_error_to_result(result);
     }
 #endif
 
-    b->initialized = true;
+    b->hdr.initialized = true;
     *barrier = b;
     return SYNC_SUCCESS;
 }
@@ -53,8 +53,8 @@ sync_result_t sync_barrier_free(sync_barrier_t barrier)
         return SYNC_ERROR_INVALID;
     }
 
-    if (!barrier->initialized) {
-        AIRY_FREE(barrier->name);
+    if (!barrier->hdr.initialized) {
+        AIRY_FREE(barrier->hdr.name);
         AIRY_FREE(barrier);
         return SYNC_SUCCESS;
     }
@@ -65,14 +65,14 @@ sync_result_t sync_barrier_free(sync_barrier_t barrier)
     platform_barrier_destroy(&barrier->barrier);
 #endif
 
-    AIRY_FREE(barrier->name);
+    AIRY_FREE(barrier->hdr.name);
     AIRY_FREE(barrier);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_barrier_wait_ex(sync_barrier_t barrier, const sync_timeout_t *timeout)
 {
-    if (barrier == NULL || !barrier->initialized) {
+    if (barrier == NULL || !barrier->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -116,7 +116,7 @@ sync_result_t sync_barrier_wait_ex(sync_barrier_t barrier, const sync_timeout_t 
 
 sync_result_t sync_barrier_reset(sync_barrier_t barrier, unsigned int new_count)
 {
-    if (barrier == NULL || !barrier->initialized) {
+    if (barrier == NULL || !barrier->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 

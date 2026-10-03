@@ -41,29 +41,33 @@ typedef struct {
     atomic_uint64_t max_wait_time_ms;
 } sync_stats_ctr_t;
 
-struct sync_mutex {
+/*
+ * 家族公共头：各具锁结构体的首个成员，承载类型标签、初始化态、命名与
+ * 统计。以下各 struct 以本类型为首成员（C11 6.7.2.1p15），故
+ * sync_internal 的生命周期单源可经首成员指针安全访问，不依赖公共前驱
+ * 序列的别名灰区。
+ */
+typedef struct {
     sync_type_t type;
     bool initialized;
     const char *name;
     sync_stats_ctr_t stats;
+} sync_lock_hdr_t;
+
+struct sync_mutex {
+    sync_lock_hdr_t hdr;
     platform_mutex_t mutex;
 };
 
 struct sync_recursive_mutex {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     size_t recursive_count;
     uint64_t owner_thread;
-    platform_recursive_mutex_t mutex;
+    platform_mutex_t mutex;
 };
 
 struct sync_rwlock {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     platform_rwlock_t rwlock;
 #ifdef _WIN32
     /* SRWLock 的释放必须与获取方向一致，且只有以写模式获取的线程才以写模式
@@ -73,35 +77,23 @@ struct sync_rwlock {
 };
 
 struct sync_spinlock {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     platform_spinlock_t lock;
 };
 
 struct sync_semaphore {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     unsigned int max_value;
     platform_semaphore_t semaphore;
 };
 
 struct sync_condition {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     platform_condition_t cond;
 };
 
 struct sync_barrier {
-    sync_type_t type;
-    bool initialized;
-    const char *name;
-    sync_stats_ctr_t stats;
+    sync_lock_hdr_t hdr;
     unsigned int count;
     unsigned int current;
     unsigned int generation;

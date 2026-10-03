@@ -15,35 +15,20 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_mutex *m = (struct sync_mutex *)AIRY_CALLOC(1, sizeof(struct sync_mutex));
+    struct sync_mutex *m =
+        (struct sync_mutex *)sync_lock_new(sizeof(struct sync_mutex), SYNC_TYPE_MUTEX, attr);
     if (m == NULL) {
         return SYNC_ERROR_MEMORY;
     }
 
-    m->type = SYNC_TYPE_MUTEX;
-    if (attr != NULL && attr->name != NULL) {
-        m->name = sync_internal_strdup(attr->name);
-    }
-    sync_stats_reset(&m->stats);
-
-#ifdef _WIN32
-    InitializeCriticalSection(&m->mutex);
-#else
-    pthread_mutexattr_t attr_mutex;
-    pthread_mutexattr_init(&attr_mutex);
-    if (attr != NULL && (attr->flags & SYNC_FLAG_RECURSIVE)) {
-        pthread_mutexattr_settype(&attr_mutex, PTHREAD_MUTEX_RECURSIVE);
-    }
-    int result = pthread_mutex_init(&m->mutex, &attr_mutex);
-    pthread_mutexattr_destroy(&attr_mutex);
+    bool recursive = (attr != NULL) && (attr->flags & SYNC_FLAG_RECURSIVE) != 0;
+    int result = platform_mtx_init(&m->mutex, recursive);
     if (result != 0) {
-        AIRY_FREE(m->name);
-        AIRY_FREE(m);
+        sync_lock_free((sync_lock_hdr_t *)m, &m->mutex);
         return sync_internal_posix_error_to_result(result);
     }
-#endif
 
-    m->initialized = true;
+    m->hdr.initialized = true;
     *mutex = m;
     return SYNC_SUCCESS;
 }
@@ -54,72 +39,38 @@ sync_result_t sync_mutex_free(sync_mutex_t mutex)
         return SYNC_ERROR_INVALID;
     }
 
-    if (!mutex->initialized) {
-        AIRY_FREE(mutex->name);
-        AIRY_FREE(mutex);
-        return SYNC_SUCCESS;
-    }
-
-#ifdef _WIN32
-    DeleteCriticalSection(&mutex->mutex);
-#else
-    pthread_mutex_destroy(&mutex->mutex);
-#endif
-
-    AIRY_FREE(mutex->name);
-    AIRY_FREE(mutex);
-    return SYNC_SUCCESS;
+    return sync_lock_free((sync_lock_hdr_t *)mutex, &mutex->mutex);
 }
 
 sync_result_t sync_mutex_lock_ex(sync_mutex_t mutex, const sync_timeout_t *timeout)
 {
-    if (mutex == NULL || !mutex->initialized) {
+    if (mutex == NULL || !mutex->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-    return sync_mtx_lock(&mutex->mutex, timeout, &mutex->stats);
+    return sync_mtx_lock(&mutex->mutex, timeout, &mutex->hdr.stats);
 }
 
 sync_result_t sync_mutex_try_lock(sync_mutex_t mutex)
 {
-    if (mutex == NULL || !mutex->initialized) {
+    if (mutex == NULL || !mutex->hdr.initialized) {
         return SYNC_ERROR_INVALID;
     }
 
-#ifdef _WIN32
-    BOOL result = TryEnterCriticalSection(&mutex->mutex);
-    if (!result) {
-        return SYNC_ERROR_BUSY;
-    }
-#else
-    int rc = pthread_mutex_trylock(&mutex->mutex);
-    if (rc == EBUSY) {
-        return SYNC_ERROR_BUSY;
-    }
+    int rc = platform_mutex_trylock(&mutex->mutex);
     if (rc != 0) {
         return sync_internal_posix_error_to_result(rc);
     }
-#endif
 
-    sync_internal_update_stats_lock(&mutex->stats, 0);
+    sync_internal_update_stats_lock(&mutex->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
 sync_result_t sync_mutex_unlock_ex(sync_mutex_t mutex)
 {
-    if (mutex == NULL || !mutex->initialized) {
+    if (mutex == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
-#ifdef _WIN32
-    LeaveCriticalSection(&mutex->mutex);
-#else
-    int rc = pthread_mutex_unlock(&mutex->mutex);
-    if (rc != 0) {
-        return sync_internal_posix_error_to_result(rc);
-    }
-#endif
-
-    atomic_fetch_add(&mutex->stats.unlock_count, (size_t)1);
-    return SYNC_SUCCESS;
+    return sync_lock_unlock((sync_lock_hdr_t *)mutex, &mutex->mutex);
 }

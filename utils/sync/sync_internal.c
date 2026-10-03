@@ -168,3 +168,44 @@ sync_result_t sync_rw_lock(platform_rwlock_t *rwlock, bool write, const sync_tim
 
     return sync_finish_lock(rc, start_time, stats);
 }
+
+sync_lock_hdr_t *sync_lock_new(size_t size, sync_type_t type, const sync_attr_t *attr)
+{
+    sync_lock_hdr_t *hdr = (sync_lock_hdr_t *)AIRY_CALLOC(1, size);
+    if (hdr == NULL)
+        return NULL;
+
+    hdr->type = type;
+    if (attr != NULL && attr->name != NULL)
+        hdr->name = sync_internal_strdup(attr->name);
+    sync_stats_reset(&hdr->stats);
+    return hdr;
+}
+
+sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, platform_mutex_t *prim)
+{
+    if (hdr == NULL)
+        return SYNC_ERROR_INVALID;
+
+    /* initialized 未置位意味着平台原语尚未成功初始化（如 create 失败路径），
+     * 此时只回收内存，不对原语调用 destroy。 */
+    if (hdr->initialized)
+        platform_mutex_destroy(prim);
+
+    AIRY_FREE(hdr->name);
+    AIRY_FREE(hdr);
+    return SYNC_SUCCESS;
+}
+
+sync_result_t sync_lock_unlock(sync_lock_hdr_t *hdr, platform_mutex_t *prim)
+{
+    if (hdr == NULL || !hdr->initialized)
+        return SYNC_ERROR_INVALID;
+
+    int rc = platform_mutex_unlock(prim);
+    if (rc != 0)
+        return sync_internal_posix_error_to_result(rc);
+
+    atomic_fetch_add(&hdr->stats.unlock_count, (size_t)1);
+    return SYNC_SUCCESS;
+}

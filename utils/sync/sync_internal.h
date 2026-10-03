@@ -35,4 +35,12 @@ sync_result_t sync_mtx_lock(platform_mutex_t *mtx, const sync_timeout_t *timeout
 sync_result_t sync_rw_lock(platform_rwlock_t *rwlock, bool write, const sync_timeout_t *timeout,
                            sync_stats_ctr_t *stats);
 
+/* 生命周期单源：sync_types.h 定义家族公共头 sync_lock_hdr_t（各具锁结构
+ * 体首成员），本组函数以之为视图承载对象分配、命名、统计与释放/解锁的
+ * 公共逻辑，使各实现文件不再各自复制同一段生命周期代码。prim 指向各
+ * 结构体自身持有的平台互斥量字段。 */
+sync_lock_hdr_t *sync_lock_new(size_t size, sync_type_t type, const sync_attr_t *attr);
+sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, platform_mutex_t *prim);
+sync_result_t sync_lock_unlock(sync_lock_hdr_t *hdr, platform_mutex_t *prim);
+
 #endif
