@@ -19,12 +19,17 @@ extern "C" {
 #endif
 
 /**
- * @brief Read the full contents of a file.
+ * @brief Read the full contents of a file into a heap buffer.
+ *
+ * The buffer carries one extra NUL byte past the content, so it can be
+ * used both as raw bytes (via @p out_len) and as a C string.
  * @param path File path
+ * @param out_buf Output buffer (caller frees with AIRY_FREE); set on success
  * @param out_len Output content length (optional)
- * @return Allocated memory, caller must free; NULL on failure
+ * @return 0 on success; AIRY_ENOENT if the file does not exist; otherwise a
+ *         negative error code (AIRY_EINVAL/AIRY_ENOMEM/AIRY_ERR_IO)
  */
-char *airy_io_read_file(const char *path, size_t *out_len);
+int airy_io_read_file(const char *path, char **out_buf, size_t *out_len);
 
 /**
  * @brief Write data to a file.

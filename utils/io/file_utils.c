@@ -32,39 +32,44 @@ int _commit(int fd);
 #endif
 
 /**
- * @brief Read the full contents of a file.
+ * @brief Read the full contents of a file into a heap buffer.
  */
-char *airy_io_read_file(const char *path, size_t *out_len)
+int airy_io_read_file(const char *path, char **out_buf, size_t *out_len)
 {
-    if (!path) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    if (!path || !out_buf) {
+        AIRY_ERROR(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
     FILE *f = fopen(path, "rb");
     if (!f) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+        if (errno == ENOENT)
+            AIRY_ERROR(AIRY_ENOENT, "file not found");
+        AIRY_ERROR(AIRY_ERR_IO, "open failed");
     }
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (size < 0) {
+    if (fseek(f, 0, SEEK_END) != 0) {
         fclose(f);
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR(AIRY_ERR_IO, "seek failed");
     }
-    char *buf = (char *)memory_alloc(size + 1, "file_read_buffer");
+    long size = ftell(f);
+    if (size < 0 || fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        AIRY_ERROR(AIRY_ERR_IO, "seek failed");
+    }
+    char *buf = (char *)memory_alloc((size_t)size + 1, "file_read_buffer");
     if (!buf) {
         fclose(f);
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+        AIRY_ERROR(AIRY_ENOMEM, "alloc failed");
     }
-    size_t read = fread(buf, 1, size, f);
+    size_t rd = fread(buf, 1, (size_t)size, f);
     fclose(f);
-    if (read != (size_t)size) {
+    if (rd != (size_t)size) {
         memory_free(buf);
-        AIRY_ERROR_NULL(AIRY_ERR_IO, "io operation failed");
+        AIRY_ERROR(AIRY_ERR_IO, "io operation failed");
     }
-    buf[size] = '\0';
+    buf[rd] = '\0';
+    *out_buf = buf;
     if (out_len)
-        *out_len = size;
-    return buf;
+        *out_len = rd;
+    return 0;
 }
 
 int airy_io_write_file(const char *path, const void *data, size_t len)

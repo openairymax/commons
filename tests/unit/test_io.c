@@ -49,7 +49,8 @@ static int test_file_crud_roundtrip(void)
 
     /* read */
     size_t len = 0;
-    char *buf = airy_io_read_file(path, &len);
+    char *buf = NULL;
+    CHECK(airy_io_read_file(path, &buf, &len) == 0);
     CHECK(buf != NULL);
     CHECK(len == strlen(v1));
     CHECK(memcmp(buf, v1, len) == 0);
@@ -58,7 +59,8 @@ static int test_file_crud_roundtrip(void)
 
     /* update（覆盖写） */
     CHECK(airy_io_write_file(path, v2, strlen(v2)) == 0);
-    buf = airy_io_read_file(path, &len);
+    buf = NULL;
+    CHECK(airy_io_read_file(path, &buf, &len) == 0);
     CHECK(buf != NULL);
     CHECK(len == strlen(v2));
     CHECK(memcmp(buf, v2, len) == 0);
@@ -70,8 +72,10 @@ static int test_file_crud_roundtrip(void)
     /* 幂等：删除不存在的文件视为成功 */
     CHECK(airy_io_remove_file(path) == 0);
 
-    /* 删除后读不到 */
-    CHECK(airy_io_read_file(path, NULL) == NULL);
+    /* 删除后读不到：文件不存在返回 AIRY_ENOENT */
+    buf = NULL;
+    CHECK(airy_io_read_file(path, &buf, NULL) == AIRY_ENOENT);
+    CHECK(buf == NULL);
 
     return 0;
 }
@@ -83,7 +87,8 @@ static int test_file_crud_auto_len(void)
 
     CHECK(airy_io_write_file(path, data, (size_t)-1) == 0);
     size_t len = 0;
-    char *buf = airy_io_read_file(path, &len);
+    char *buf = NULL;
+    CHECK(airy_io_read_file(path, &buf, &len) == 0);
     CHECK(buf != NULL);
     CHECK(len == strlen(data));
     CHECK(memcmp(buf, data, strlen(data)) == 0);
@@ -129,7 +134,7 @@ static int test_error_paths(void)
     /* 空参（失败返回负错误码） */
     CHECK(airy_io_write_file(NULL, "x", 1) < 0);
     CHECK(airy_io_write_file("x", NULL, 1) < 0);
-    CHECK(airy_io_read_file(NULL, NULL) == NULL);
+    CHECK(airy_io_read_file(NULL, NULL, NULL) < 0);
     CHECK(airy_io_ensure_dir(NULL) < 0);
     CHECK(airy_io_remove_file(NULL) < 0);
     CHECK(airy_io_remove_file("") < 0);
