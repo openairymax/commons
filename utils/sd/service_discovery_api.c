@@ -266,36 +266,65 @@ AIRY_API airy_err_t sd_select_instance(service_discovery_t sd_handle, const char
     return err;
 }
 
+/* Resolve a service instance under the registry mutex. On AIRY_SUCCESS the
+ * mutex is held and the reference points at the locked instance, so the caller
+ * must commit the change and unlock; on failure the mutex is already released
+ * and only err is meaningful. */
+typedef struct {
+    sd_internal_t *sd;
+    sd_service_entry_t *svc;
+    sd_instance_t *inst;
+    airy_err_t err;
+} sd_ref_t;
+
+static sd_ref_t sd_lock_ref(service_discovery_t sd_handle, const char *service_name,
+                            const char *instance_id)
+{
+    sd_ref_t ref = {0};
+
+    if (!sd_handle || !service_name || !instance_id) {
+        ref.err = AIRY_EINVAL;
+        return ref;
+    }
+
+    ref.sd = (sd_internal_t *)sd_handle;
+    airy_mtx_lock(&ref.sd->mutex);
+    ref.sd->backend->refresh(ref.sd, service_name);
+
+    int32_t svc_idx = find_service_index(ref.sd, service_name);
+    if (svc_idx < 0) {
+        airy_mtx_unlock(&ref.sd->mutex);
+        ref.err = AIRY_ENOENT;
+        return ref;
+    }
+
+    ref.svc = &ref.sd->services[svc_idx];
+
+    int32_t inst_idx = find_instance_index(ref.svc, instance_id);
+    if (inst_idx < 0) {
+        airy_mtx_unlock(&ref.sd->mutex);
+        ref.err = AIRY_ENOENT;
+        return ref;
+    }
+
+    ref.inst = &ref.svc->instances[inst_idx];
+    ref.err = AIRY_SUCCESS;
+
+    return ref;
+}
+
 AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd_handle, const char *service_name,
                                  const char *instance_id)
 {
-    if (!sd_handle || !service_name || !instance_id)
-        return AIRY_EINVAL;
+    sd_ref_t ref = sd_lock_ref(sd_handle, service_name, instance_id);
+    if (ref.err != AIRY_SUCCESS)
+        return ref.err;
 
-    sd_internal_t *sd = (sd_internal_t *)sd_handle;
+    ref.inst->last_heartbeat = airy_time_ms();
+    ref.sd->stats.heartbeats++;
 
-    airy_mtx_lock(&sd->mutex);
-
-    sd->backend->refresh(sd, service_name);
-
-    int32_t svc_idx = find_service_index(sd, service_name);
-    if (svc_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    sd_service_entry_t *entry = &sd->services[svc_idx];
-    int32_t inst_idx = find_instance_index(entry, instance_id);
-    if (inst_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    entry->instances[inst_idx].last_heartbeat = airy_time_ms();
-    sd->stats.heartbeats++;
-
-    sd->backend->commit(sd, service_name);
-    airy_mtx_unlock(&sd->mutex);
+    ref.sd->backend->commit(ref.sd, service_name);
+    airy_mtx_unlock(&ref.sd->mutex);
 
     return AIRY_SUCCESS;
 }
@@ -303,41 +332,23 @@ AIRY_API airy_err_t sd_heartbeat(service_discovery_t sd_handle, const char *serv
 AIRY_API airy_err_t sd_update_health(service_discovery_t sd_handle, const char *service_name,
                                      const char *instance_id, bool healthy)
 {
-    if (!sd_handle || !service_name || !instance_id)
-        return AIRY_EINVAL;
+    sd_ref_t ref = sd_lock_ref(sd_handle, service_name, instance_id);
+    if (ref.err != AIRY_SUCCESS)
+        return ref.err;
 
-    sd_internal_t *sd = (sd_internal_t *)sd_handle;
+    bool was_healthy = ref.inst->healthy;
+    ref.inst->healthy = healthy;
+    ref.inst->last_heartbeat = airy_time_ms();
+    ref.svc->last_updated = airy_time_ms();
 
-    airy_mtx_lock(&sd->mutex);
+    sd_instance_t snapshot = *ref.inst;
 
-    sd->backend->refresh(sd, service_name);
-
-    int32_t svc_idx = find_service_index(sd, service_name);
-    if (svc_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    sd_service_entry_t *entry = &sd->services[svc_idx];
-    int32_t inst_idx = find_instance_index(entry, instance_id);
-    if (inst_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    bool was_healthy = entry->instances[inst_idx].healthy;
-    entry->instances[inst_idx].healthy = healthy;
-    entry->instances[inst_idx].last_heartbeat = airy_time_ms();
-    entry->last_updated = airy_time_ms();
-
-    sd_instance_t snapshot = entry->instances[inst_idx];
-
-    sd->backend->commit(sd, service_name);
-    airy_mtx_unlock(&sd->mutex);
+    ref.sd->backend->commit(ref.sd, service_name);
+    airy_mtx_unlock(&ref.sd->mutex);
 
     if (was_healthy != healthy) {
         sd_event_type_t event = healthy ? SD_EVENT_INSTANCE_UP : SD_EVENT_INSTANCE_DOWN;
-        notify_event(sd, event, service_name, &snapshot);
+        notify_event(ref.sd, event, service_name, &snapshot);
 
         if (!healthy) {
             SD_LOG_WARN("UNHEALTHY instance='%s' service='%s'", instance_id, service_name);
@@ -352,32 +363,14 @@ AIRY_API airy_err_t sd_update_health(service_discovery_t sd_handle, const char *
 AIRY_API airy_err_t sd_update_connections(service_discovery_t sd_handle, const char *service_name,
                                           const char *instance_id, uint32_t active_connections)
 {
-    if (!sd_handle || !service_name || !instance_id)
-        return AIRY_EINVAL;
+    sd_ref_t ref = sd_lock_ref(sd_handle, service_name, instance_id);
+    if (ref.err != AIRY_SUCCESS)
+        return ref.err;
 
-    sd_internal_t *sd = (sd_internal_t *)sd_handle;
+    ref.inst->active_connections = active_connections;
 
-    airy_mtx_lock(&sd->mutex);
-
-    sd->backend->refresh(sd, service_name);
-
-    int32_t svc_idx = find_service_index(sd, service_name);
-    if (svc_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    sd_service_entry_t *entry = &sd->services[svc_idx];
-    int32_t inst_idx = find_instance_index(entry, instance_id);
-    if (inst_idx < 0) {
-        airy_mtx_unlock(&sd->mutex);
-        return AIRY_ENOENT;
-    }
-
-    entry->instances[inst_idx].active_connections = active_connections;
-
-    sd->backend->commit(sd, service_name);
-    airy_mtx_unlock(&sd->mutex);
+    ref.sd->backend->commit(ref.sd, service_name);
+    airy_mtx_unlock(&ref.sd->mutex);
 
     return AIRY_SUCCESS;
 }
