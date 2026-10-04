@@ -73,6 +73,19 @@ int airy_io_read_file(const char *path, char **out_buf, size_t *out_len)
     return 0;
 }
 
+/* Durability checkpoint for a stream: fsync (POSIX) / _commit (Windows).
+ * Callers flush buffered data with fflush() before calling this. */
+int airy_io_sync(FILE *f)
+{
+#ifndef _WIN32
+    int fd = fileno(f);
+    return fd >= 0 && fsync(fd) == 0 ? 0 : -1;
+#else
+    int fd = _fileno(f);
+    return fd >= 0 && _commit(fd) == 0 ? 0 : -1;
+#endif
+}
+
 int airy_io_write_file(const char *path, const void *data, size_t len)
 {
     if (!path || !data)
@@ -95,21 +108,8 @@ int airy_io_write_file(const char *path, const void *data, size_t len)
     size_t written = fwrite(data, 1, len, f);
     if (written != len)
         failed = 1;
-    if (!failed && fflush(f) != 0)
+    if (!failed && (fflush(f) != 0 || airy_io_sync(f) != 0))
         failed = 1;
-#ifndef _WIN32
-    if (!failed) {
-        int fd = fileno(f);
-        if (fd >= 0 && fsync(fd) != 0)
-            failed = 1;
-    }
-#else
-    if (!failed) {
-        int fd = _fileno(f);
-        if (fd >= 0 && _commit(fd) != 0)
-            failed = 1;
-    }
-#endif
     if (fclose(f) != 0)
         failed = 1;
 

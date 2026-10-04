@@ -10,6 +10,7 @@
 #define AIRY_RT_UTILS_IO_H
 
 #include <stddef.h>
+#include <stdio.h>
 #ifndef _WIN32
 #include <sys/types.h>
 #endif
@@ -39,6 +40,16 @@ int airy_io_read_file(const char *path, char **out_buf, size_t *out_len);
  * @return 0 on success, negative error code on failure
  */
 int airy_io_write_file(const char *path, const void *data, size_t len);
+
+/**
+ * @brief Durably sync a stream's underlying file descriptor to storage.
+ *
+ * fsync() on POSIX, _commit() on Windows. fflush() first to push any
+ * buffered data down before syncing.
+ * @param f Stream opened for writing
+ * @return 0 on success, -1 on invalid descriptor or sync failure
+ */
+int airy_io_sync(FILE *f);
 
 #ifndef _WIN32
 /**
