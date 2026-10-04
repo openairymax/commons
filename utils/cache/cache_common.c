@@ -226,14 +226,11 @@ cache_t cache_create(const cache_config_t *manager)
     return (cache_t)cache;
 }
 
-void cache_destroy(cache_t cache)
+/**
+ * @brief Lock, free and empty every bucket chain (shared by destroy/clear).
+ */
+static void cache_bucket_drain(cache_impl_t *impl)
 {
-    if (!cache) {
-        return;
-    }
-
-    cache_impl_t *impl = (cache_impl_t *)cache;
-
     for (int i = 0; i < HASH_SIZE; i++) {
         sync_mutex_lock(&impl->buckets[i].lock);
 
@@ -246,6 +243,20 @@ void cache_destroy(cache_t cache)
 
         impl->buckets[i].head = NULL;
         sync_mutex_unlock(&impl->buckets[i].lock);
+    }
+}
+
+void cache_destroy(cache_t cache)
+{
+    if (!cache) {
+        return;
+    }
+
+    cache_impl_t *impl = (cache_impl_t *)cache;
+
+    cache_bucket_drain(impl);
+
+    for (int i = 0; i < HASH_SIZE; i++) {
         sync_mutex_destroy(&impl->buckets[i].lock);
     }
 
@@ -426,19 +437,7 @@ void cache_clear(cache_t cache)
 
     cache_impl_t *impl = (cache_impl_t *)cache;
 
-    for (int i = 0; i < HASH_SIZE; i++) {
-        sync_mutex_lock(&impl->buckets[i].lock);
-
-        cache_entry_t *entry = impl->buckets[i].head;
-        while (entry) {
-            cache_entry_t *next = entry->hnext;
-            cache_entry_free(&impl->manager, entry);
-            entry = next;
-        }
-
-        impl->buckets[i].head = NULL;
-        sync_mutex_unlock(&impl->buckets[i].lock);
-    }
+    cache_bucket_drain(impl);
 
     sync_mutex_lock(&impl->lru_lock);
     impl->lru_head = impl->lru_tail = NULL;
