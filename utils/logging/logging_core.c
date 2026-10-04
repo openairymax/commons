@@ -232,7 +232,8 @@ int log_set_default_config(const log_config_t *manager)
 
 /* ==================== Write path ==================== */
 
-void log_write(log_level_t level, const char *module, int line, const char *fmt, ...)
+static void log_write_core(log_level_t level, const char *module, int line,
+                           const char *fmt, va_list args)
 {
     if (!g_logging_state.initialized) {
         log_init(NULL);
@@ -246,11 +247,8 @@ void log_write(log_level_t level, const char *module, int line, const char *fmt,
     const char *span_id = log_get_span_id();
 
     char message_buffer[MAX_MESSAGE_LEN];
-    va_list args;
-    va_start(args, fmt);
     vsnprintf(message_buffer, sizeof(message_buffer), fmt,
               args); /* flawfinder: ignore - variadic logging wrapper */
-    va_end(args);
 
     uint64_t now_sec = (uint64_t)(get_current_timestamp() / 1000);
     if (log_internal_throttle_suppress(module, line, message_buffer, now_sec)) {
@@ -283,46 +281,17 @@ void log_write(log_level_t level, const char *module, int line, const char *fmt,
     }
 }
 
+void log_write(log_level_t level, const char *module, int line, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    log_write_core(level, module, line, fmt, args);
+    va_end(args);
+}
+
 void log_write_va(log_level_t level, const char *module, int line, const char *fmt, va_list args)
 {
-    if (!g_logging_state.initialized) {
-        log_init(NULL);
-    }
-
-    if (!should_log(level, module)) {
-        return;
-    }
-
-    const char *trace_id = log_get_trace_id();
-    const char *span_id = log_get_span_id();
-
-    char message_buffer[MAX_MESSAGE_LEN];
-    vsnprintf(message_buffer, sizeof(message_buffer), fmt,
-              args); /* flawfinder: ignore - variadic logging wrapper */
-    log_record_t record = {.timestamp = get_current_timestamp(),
-                           .level = level,
-                           .module = module,
-                           .line = line,
-                           .trace_id = trace_id,
-                           .span_id = span_id,
-                           .message = message_buffer,
-                           .thread_id = get_current_thread_id(),
-                           .process_id = get_current_process_id()};
-
-    char formatted_buffer[MAX_MESSAGE_LEN * 2];
-    size_t formatted_len =
-        log_internal_format_message(&record, formatted_buffer, sizeof(formatted_buffer));
-
-    if (formatted_len > 0) {
-        FILE *stream = stderr;
-        (void)level;
-        fwrite(formatted_buffer, 1, formatted_len, stream);
-        fflush(stream);
-    }
-
-    if (g_logging_state.manager.outputs & (1 << LOG_OUTPUT_FILE)) {
-        log_internal_file_write(&record, formatted_buffer, formatted_len);
-    }
+    log_write_core(level, module, line, fmt, args);
 }
 
 /* ==================== Trace / span ID (TLS) ==================== */
