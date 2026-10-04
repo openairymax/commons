@@ -3,14 +3,18 @@
 
 /**
  * @file airy_event_loop_win.c
- * @brief Event loop Windows backend: WSAEventSelect multiplexing and dispatch.
+ * @brief Event loop Windows backend: WSAEventSelect multiplexing and wakeup.
  *
- * Windows 平台后端（IO 多路复用域）：fd 注册表、WSAEventSelect 订阅与
- * run 主循环内的回调分发。事件循环核心门面见 airy_event_loop.c；定时器
- * 管理见 airy_event_timer.c（本后端仅在每轮等待后推进定时器）。
+ * Windows 平台后端（纯机制域）：WSAEventSelect 实例的创建/销毁、fd 订阅与
+ * 修改、一次 poll 的等待与就绪分发（airy_evloop_wait / dispatch）、唤醒
+ * （airy_evloop_notify）。
  *
  * 每个 fd 绑定一个 WSAEVENT；wakeup 复用 CreateEventW 自动复位事件，
- * stop_async 内仅 SetEvent 一个调用，保持 async-signal-safe。
+ * notify 内仅 SetEvent 一个调用，保持 async-signal-safe。等待镜像
+ * （wait_events / fd_map）上收至实例，避免每轮循环在栈上重建。
+ *
+ * run 主循环脚手架与 stop 控制见核心 airy_event_loop.c；定时器管理见
+ * airy_event_timer.c（核心在每轮等待后推进）。
  */
 
 #include "airy_event_loop.h"
@@ -34,23 +38,19 @@ typedef struct {
     void *user_data;
     bool level_triggered;
     bool in_use;
-} fd_entry_t;
+} win_fd_t;
 
 struct airy_event_loop {
-    fd_entry_t *fd_entries;
+    airy_evloop_head_t head;
+    win_fd_t *fd_entries;
     int fd_count;
     int fd_capacity;
-    int max_events;
     HANDLE wakeup_event;
-    airy_timer_state_t timers;
-    volatile bool running;
-    volatile bool stop_requested;
+    WSAEVENT wait_events[WSA_MAXIMUM_WAIT_EVENTS];
+    int fd_map[WSA_MAXIMUM_WAIT_EVENTS];
+    int event_count;
+    int start_idx;
 };
-
-airy_timer_state_t *airy_event_loop_timers(airy_event_loop_t *loop)
-{
-    return loop ? &loop->timers : NULL;
-}
 
 static int find_fd_entry(airy_event_loop_t *loop, SOCKET sock)
 {
@@ -151,9 +151,9 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
     if (!loop)
         return NULL;
 
-    loop->max_events = max_events;
+    loop->head.max_events = max_events;
     loop->fd_capacity = max_events;
-    loop->fd_entries = (fd_entry_t *)AIRY_CALLOC((size_t)max_events, sizeof(fd_entry_t));
+    loop->fd_entries = (win_fd_t *)AIRY_CALLOC((size_t)max_events, sizeof(win_fd_t));
     if (!loop->fd_entries) {
         AIRY_FREE(loop);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
@@ -166,7 +166,7 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    airy_timer_init(&loop->timers);
+    airy_timer_init(&loop->head.timers);
 
     AIRY_LOG_DEBUG("Event loop created (max_events=%d)", max_events);
     return loop;
@@ -218,107 +218,79 @@ void airy_event_loop_remove_fd(airy_event_loop_t *loop, int fd)
 
     WSAEventSelect(sock, loop->fd_entries[idx].wsa_event, 0);
     WSACloseEvent(loop->fd_entries[idx].wsa_event);
-    __builtin_memset(&loop->fd_entries[idx], 0, sizeof(fd_entry_t));
+    __builtin_memset(&loop->fd_entries[idx], 0, sizeof(win_fd_t));
     loop->fd_count--;
 }
 
-int airy_event_loop_run(airy_event_loop_t *loop)
+int airy_evloop_wait(airy_event_loop_t *loop, int timeout_ms)
 {
-    if (!loop)
-        return AIRY_ERR_INVALID_PARAM;
+    loop->event_count = 0;
+    loop->wait_events[loop->event_count] = (WSAEVENT)loop->wakeup_event;
+    loop->fd_map[loop->event_count] = -1;
+    loop->event_count++;
 
-    loop->running = true;
-    loop->stop_requested = false;
-    AIRY_LOG_INFO("Event loop started (max_events=%d)", loop->max_events);
-
-    while (!loop->stop_requested) {
-        WSAEVENT wait_events[WSA_MAXIMUM_WAIT_EVENTS];
-        int fd_map[WSA_MAXIMUM_WAIT_EVENTS];
-        int event_count = 0;
-
-        wait_events[event_count] = (WSAEVENT)loop->wakeup_event;
-        fd_map[event_count] = -1;
-        event_count++;
-
-        for (int i = 0; i < loop->fd_capacity && event_count < WSA_MAXIMUM_WAIT_EVENTS; i++) {
-            if (loop->fd_entries[i].in_use) {
-                wait_events[event_count] = loop->fd_entries[i].wsa_event;
-                fd_map[event_count] = i;
-                event_count++;
-            }
-        }
-
-        DWORD wait_result =
-            WSAWaitForMultipleEvents((DWORD)event_count, wait_events, FALSE, 100, FALSE);
-
-        airy_timer_process(&loop->timers);
-
-        if (wait_result == WSA_WAIT_FAILED) {
-            AIRY_LOG_DEBUG("WSAWaitForMultipleEvents failed: %d", WSAGetLastError());
-            continue;
-        }
-        if (wait_result == WSA_WAIT_TIMEOUT)
-            continue;
-
-        int start_idx = (int)(wait_result - WSA_WAIT_EVENT_0);
-        for (int ei = start_idx; ei < event_count; ei++) {
-            if (WaitForSingleObject(wait_events[ei], 0) != WAIT_OBJECT_0)
-                continue;
-
-            if (fd_map[ei] < 0) {
-                ResetEvent(loop->wakeup_event);
-                continue;
-            }
-
-            int fi = fd_map[ei];
-            if (!loop->fd_entries[fi].in_use)
-                continue;
-
-            WSANETWORKEVENTS net_events;
-            if (WSAEnumNetworkEvents(loop->fd_entries[fi].fd, loop->fd_entries[fi].wsa_event,
-                                     &net_events) != 0) {
-                AIRY_LOG_DEBUG("WSAEnumNetworkEvents failed for fd=%d: %d", (int)loop->fd_entries[fi].fd,
-                          WSAGetLastError());
-                continue;
-            }
-
-            uint32_t user_events = wsa_to_events(net_events.lNetworkEvents);
-            if (net_events.lNetworkEvents & FD_CLOSE)
-                user_events |= AIRY_EVENT_TYPE_READ;
-
-            if (user_events && loop->fd_entries[fi].cb) {
-                loop->fd_entries[fi].cb((int)loop->fd_entries[fi].fd, user_events,
-                                        loop->fd_entries[fi].user_data);
-            }
+    for (int i = 0; i < loop->fd_capacity && loop->event_count < WSA_MAXIMUM_WAIT_EVENTS; i++) {
+        if (loop->fd_entries[i].in_use) {
+            loop->wait_events[loop->event_count] = loop->fd_entries[i].wsa_event;
+            loop->fd_map[loop->event_count] = i;
+            loop->event_count++;
         }
     }
 
-    loop->running = false;
-    AIRY_LOG_INFO("Event loop stopped");
-    return 0;
+    DWORD wait_result = WSAWaitForMultipleEvents((DWORD)loop->event_count, loop->wait_events, FALSE,
+                                                 (DWORD)timeout_ms, FALSE);
+    if (wait_result == WSA_WAIT_FAILED) {
+        AIRY_LOG_DEBUG("WSAWaitForMultipleEvents failed: %d", WSAGetLastError());
+        return AIRY_ERR_IO;
+    }
+    if (wait_result == WSA_WAIT_TIMEOUT)
+        return 0;
+
+    loop->start_idx = (int)(wait_result - WSA_WAIT_EVENT_0);
+    return loop->event_count - loop->start_idx;
 }
 
-/**
- * @brief Async-safe stop of the event loop (safe in signal handlers).
- *
- * Only sets stop_requested and SetEvent-wakes; no logging, no locks.
- */
-void airy_event_loop_stop_async(airy_event_loop_t *loop)
+void airy_evloop_dispatch(airy_event_loop_t *loop, int ready_n)
 {
-    if (!loop)
-        return;
-    loop->stop_requested = true;
-    if (loop->wakeup_event)
-        SetEvent(loop->wakeup_event);
+    (void)ready_n;
+    for (int ei = loop->start_idx; ei < loop->event_count; ei++) {
+        if (WaitForSingleObject(loop->wait_events[ei], 0) != WAIT_OBJECT_0)
+            continue;
+
+        if (loop->fd_map[ei] < 0) {
+            ResetEvent(loop->wakeup_event);
+            continue;
+        }
+
+        int fi = loop->fd_map[ei];
+        if (!loop->fd_entries[fi].in_use)
+            continue;
+
+        WSANETWORKEVENTS net_events;
+        if (WSAEnumNetworkEvents(loop->fd_entries[fi].fd, loop->fd_entries[fi].wsa_event,
+                                 &net_events) != 0) {
+            AIRY_LOG_DEBUG("WSAEnumNetworkEvents failed for fd=%d: %d", (int)loop->fd_entries[fi].fd,
+                           WSAGetLastError());
+            continue;
+        }
+
+        uint32_t user_events = wsa_to_events(net_events.lNetworkEvents);
+        if (net_events.lNetworkEvents & FD_CLOSE)
+            user_events |= AIRY_EVENT_TYPE_READ;
+
+        if (user_events && loop->fd_entries[fi].cb) {
+            loop->fd_entries[fi].cb((int)loop->fd_entries[fi].fd, user_events,
+                                    loop->fd_entries[fi].user_data);
+        }
+    }
 }
 
-int airy_event_loop_wakeup(airy_event_loop_t *loop)
+int airy_evloop_notify(airy_event_loop_t *loop)
 {
     if (!loop || !loop->wakeup_event)
         return AIRY_ERR_INVALID_PARAM;
-    if (!SetEvent(loop->wakeup_event)) {
-        AIRY_ERROR(AIRY_ERR_IO, "wakeup SetEvent failed");
-    }
+    if (!SetEvent(loop->wakeup_event))
+        return AIRY_ERR_IO;
     return 0;
 }
 

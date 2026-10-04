@@ -3,15 +3,17 @@
 
 /**
  * @file airy_event_loop_epoll.c
- * @brief Event loop Linux backend: epoll multiplexing and callback dispatch.
+ * @brief Event loop Linux backend: epoll multiplexing and wakeup.
  *
- * Linux 平台后端（IO 多路复用域）：fd 注册表、epoll 订阅与 run 主循环
- * 内的回调分发。事件循环核心门面见 airy_event_loop.c；定时器管理见
- * airy_event_timer.c（本后端仅在每轮 poll 后推进定时器）。
+ * Linux 平台后端（纯机制域）：epoll 实例的创建/销毁、fd 订阅与修改、
+ * 一次 poll 的等待与就绪归一化（airy_evloop_wait）、唤醒（airy_evloop_notify）。
  *
- * fd 直接作为 fd_entries 数组索引（fd < max_events）；wakeup 用 eventfd
- * （EFD_NONBLOCK），stop_async 内仅 write 一个 syscall，保持
- * async-signal-safe。
+ * fd 直接作为 posix.fd_entries 数组索引（fd < max_events）；wakeup 用 eventfd
+ * （EFD_NONBLOCK），notify 内仅 write 一个 syscall，保持 async-signal-safe。
+ *
+ * fd 注册表、就绪分发与 fd 计数由 POSIX 共享机制 TU
+ * airy_event_loop_posix.c 提供；run 主循环脚手架与 stop 控制见核心
+ * airy_event_loop.c。
  */
 
 #include "airy_event_loop.h"
@@ -33,37 +35,21 @@
 
 #include "svc_logger.h"
 
-typedef struct {
-    int fd;
-    uint32_t events;
-    airy_event_callback_t cb;
-    void *user_data;
-    bool level_triggered;
-} fd_entry_t;
-
 struct airy_event_loop {
+    airy_evloop_posix_t posix;
     int epoll_fd;
     int wakeup_fd;
-    int max_events;
     struct epoll_event *epoll_events;
-    fd_entry_t *fd_entries;
-    airy_timer_state_t timers;
-    volatile bool running;
-    volatile bool stop_requested;
 };
-
-airy_timer_state_t *airy_event_loop_timers(airy_event_loop_t *loop)
-{
-    return loop ? &loop->timers : NULL;
-}
 
 int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
                        airy_event_callback_t cb, void *user_data, bool level_triggered)
 {
     if (!loop || fd < 0 || !cb)
         return AIRY_ERR_INVALID_PARAM;
-    if (fd >= loop->max_events) {
-        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd, loop->max_events);
+    if (fd >= loop->posix.head.max_events) {
+        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd,
+                       loop->posix.head.max_events);
         return AIRY_ERR_INVALID_PARAM;
     }
 
@@ -90,11 +76,11 @@ int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
         }
     }
 
-    loop->fd_entries[fd].fd = fd;
-    loop->fd_entries[fd].events = events;
-    loop->fd_entries[fd].cb = cb;
-    loop->fd_entries[fd].user_data = user_data;
-    loop->fd_entries[fd].level_triggered = level_triggered;
+    loop->posix.fd_entries[fd].fd = fd;
+    loop->posix.fd_entries[fd].events = events;
+    loop->posix.fd_entries[fd].cb = cb;
+    loop->posix.fd_entries[fd].user_data = user_data;
+    loop->posix.fd_entries[fd].level_triggered = level_triggered;
 
     return 0;
 }
@@ -111,15 +97,16 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    loop->max_events = max_events;
     loop->epoll_events =
         (struct epoll_event *)AIRY_CALLOC((size_t)max_events, sizeof(struct epoll_event));
-    loop->fd_entries = (fd_entry_t *)AIRY_CALLOC((size_t)max_events, sizeof(fd_entry_t));
-
-    if (!loop->epoll_events || !loop->fd_entries) {
+    if (!loop->epoll_events) {
+        close(loop->epoll_fd);
+        AIRY_FREE(loop);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    if (airy_evloop_tbl_init(loop, max_events) != 0) {
         close(loop->epoll_fd);
         AIRY_FREE(loop->epoll_events);
-        AIRY_FREE(loop->fd_entries);
         AIRY_FREE(loop);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -139,10 +126,10 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
     }
 #endif
 
-    airy_timer_init(&loop->timers);
+    airy_timer_init(&loop->posix.head.timers);
 
     AIRY_LOG_DEBUG("Event loop created (epoll_fd=%d, wakeup_fd=%d, max_events=%d)", loop->epoll_fd,
-              loop->wakeup_fd, max_events);
+                   loop->wakeup_fd, max_events);
     return loop;
 }
 
@@ -154,13 +141,13 @@ void airy_event_loop_destroy(airy_event_loop_t *loop)
         close(loop->wakeup_fd);
     close(loop->epoll_fd);
     AIRY_FREE(loop->epoll_events);
-    AIRY_FREE(loop->fd_entries);
+    airy_evloop_tbl_fini(loop);
     AIRY_FREE(loop);
 }
 
 int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
 {
-    if (!loop || fd < 0 || fd >= loop->max_events)
+    if (!loop || fd < 0 || fd >= loop->posix.head.max_events)
         return AIRY_ERR_INVALID_PARAM;
 
     struct epoll_event ev;
@@ -172,112 +159,66 @@ int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
     if (events & AIRY_EVENT_TYPE_WRITE)
         ev.events |= EPOLLOUT;
 
-    if (fd < loop->max_events && !loop->fd_entries[fd].level_triggered) {
+    if (!loop->posix.fd_entries[fd].level_triggered)
         ev.events |= EPOLLET;
-    }
 
     if (epoll_ctl(loop->epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0) {
         AIRY_ERROR(AIRY_ERR_IO, "epoll_ctl MOD failed");
     }
 
-    loop->fd_entries[fd].events = events;
+    loop->posix.fd_entries[fd].events = events;
     return 0;
 }
 
 void airy_event_loop_remove_fd(airy_event_loop_t *loop, int fd)
 {
-    if (!loop || fd < 0 || fd >= loop->max_events)
+    if (!loop || fd < 0 || fd >= loop->posix.head.max_events)
         return;
     epoll_ctl(loop->epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-    __builtin_memset(&loop->fd_entries[fd], 0, sizeof(fd_entry_t));
+    __builtin_memset(&loop->posix.fd_entries[fd], 0, sizeof(airy_evloop_fd_t));
 }
 
-int airy_event_loop_run(airy_event_loop_t *loop)
+int airy_evloop_wait(airy_event_loop_t *loop, int timeout_ms)
 {
-    if (!loop)
-        return AIRY_ERR_INVALID_PARAM;
+    airy_evloop_posix_t *posix = airy_evloop_posix(loop);
 
-    loop->running = true;
-    loop->stop_requested = false;
-    AIRY_LOG_INFO("Event loop started (max_events=%d)", loop->max_events);
+    int nfds = epoll_wait(loop->epoll_fd, loop->epoll_events, posix->head.max_events, timeout_ms);
+    if (nfds <= 0)
+        return nfds;
 
-    while (!loop->stop_requested) {
-        int timeout_ms = 100;
-        int nfds = epoll_wait(loop->epoll_fd, loop->epoll_events, loop->max_events, timeout_ms);
+    int ready_n = 0;
+    for (int i = 0; i < nfds; i++) {
+        int fd = loop->epoll_events[i].data.fd;
+        uint32_t revents = loop->epoll_events[i].events;
 
-        airy_timer_process(&loop->timers);
-
-        for (int i = 0; i < nfds; i++) {
-            int fd = loop->epoll_events[i].data.fd;
-            uint32_t revents = loop->epoll_events[i].events;
-
-            if (loop->wakeup_fd >= 0 && fd == loop->wakeup_fd) {
-                uint64_t val;
-                while (read(loop->wakeup_fd, &val, sizeof(val)) > 0) {
-                }
-                continue;
+        if (loop->wakeup_fd >= 0 && fd == loop->wakeup_fd) {
+            uint64_t val;
+            while (read(loop->wakeup_fd, &val, sizeof(val)) > 0) {
             }
-
-            uint32_t user_events = 0;
-            if (revents & (EPOLLIN | EPOLLHUP | EPOLLERR))
-                user_events |= AIRY_EVENT_TYPE_READ;
-            if (revents & EPOLLOUT)
-                user_events |= AIRY_EVENT_TYPE_WRITE;
-
-            if (fd >= 0 && fd < loop->max_events && loop->fd_entries[fd].cb) {
-                loop->fd_entries[fd].cb(fd, user_events, loop->fd_entries[fd].user_data);
-            } else if (fd >= loop->max_events) {
-                AIRY_LOG_DEBUG("epoll event for fd=%d >= max_events=%d, dropping", fd, loop->max_events);
-            }
+            continue;
         }
-    }
 
-    loop->running = false;
-    AIRY_LOG_INFO("Event loop stopped");
-    return 0;
+        uint32_t user_events = 0;
+        if (revents & (EPOLLIN | EPOLLHUP | EPOLLERR))
+            user_events |= AIRY_EVENT_TYPE_READ;
+        if (revents & EPOLLOUT)
+            user_events |= AIRY_EVENT_TYPE_WRITE;
+
+        posix->ready[ready_n].fd = fd;
+        posix->ready[ready_n].events = user_events;
+        ready_n++;
+    }
+    return ready_n;
 }
 
-/**
- * @brief Async-safe stop of the event loop (safe in signal handlers).
- *
- * Only sets stop_requested and writes the wakeup eventfd; no logging, no
- * locks, satisfying async-signal-safe (write() is an async-safe syscall).
- */
-void airy_event_loop_stop_async(airy_event_loop_t *loop)
-{
-    if (!loop)
-        return;
-    loop->stop_requested = true;
-    if (loop->wakeup_fd >= 0) {
-        uint64_t val = 1;
-        /* eventfd wakeup is best-effort: a failed write leaves the loop
-         * waiting until the next poll tick, never deadlocks. */
-        ssize_t n = write(loop->wakeup_fd, &val, sizeof(val));
-        (void)n;
-    }
-}
-
-int airy_event_loop_wakeup(airy_event_loop_t *loop)
+int airy_evloop_notify(airy_event_loop_t *loop)
 {
     if (!loop || loop->wakeup_fd < 0)
         return AIRY_ERR_INVALID_PARAM;
     uint64_t val = 1;
-    if (write(loop->wakeup_fd, &val, sizeof(val)) < 0) {
-        AIRY_ERROR(AIRY_ERR_IO, "wakeup write failed");
-    }
+    if (write(loop->wakeup_fd, &val, sizeof(val)) < 0)
+        return AIRY_ERR_IO;
     return 0;
-}
-
-int airy_event_loop_get_fd_count(airy_event_loop_t *loop)
-{
-    if (!loop)
-        return 0;
-    int count = 0;
-    for (int i = 0; i < loop->max_events; i++) {
-        if (loop->fd_entries[i].fd > 0)
-            count++;
-    }
-    return count;
 }
 
 #else

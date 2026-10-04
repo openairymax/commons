@@ -59,10 +59,13 @@ int airy_timer_cancel(airy_timer_state_t *ts, uint64_t timer_id);
 /**
  * @brief Refresh current_time_ms and fire all due timers.
  *
- * The backend calls this after each poll/kevent/WSAWait iteration.
- * The get_time_ms callback supplies the platform monotonic clock.
+ * The core run loop calls this after each poll/kevent/WSAWait iteration.
+ * @p loop is passed through to each timer callback as its first argument,
+ * fulfilling the public callback contract
+ * (void (*)(airy_event_loop_t *, uint64_t, void *)) so a timer may act on
+ * the loop (e.g. stop it or reschedule).
  */
-void airy_timer_process(airy_timer_state_t *ts);
+void airy_timer_process(airy_timer_state_t *ts, airy_event_loop_t *loop);
 
 #ifdef __cplusplus
 }
