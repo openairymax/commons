@@ -189,6 +189,19 @@ static void write_json_escaped_str(FILE *fp, const char *str)
     }
 }
 
+/* JSON 字符串值写出机制件：转义串外包引号构成完整 JSON 值，NULL
+ * 写出 null 字面量。转义本体复用 write_json_escaped_str。 */
+static void write_json_value(FILE *fp, const char *str)
+{
+    if (!str) {
+        fputs("null", fp);
+        return;
+    }
+    fputc('"', fp);
+    write_json_escaped_str(fp, str);
+    fputc('"', fp);
+}
+
 static char *json_extract_string(const char *json, const char *key)
 {
 
@@ -343,34 +356,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     fputs(_cp_buf, fp);
 
     fputs("  \"state_json\": ", fp);
-    if (cp->state_json) {
-        fputc('"', fp);
-        for (const char *p = cp->state_json; *p; p++) {
-            switch (*p) {
-            case '"':
-                fputs("\\\"", fp);
-                break;
-            case '\\':
-                fputs("\\\\", fp);
-                break;
-            case '\n':
-                fputs("\\n", fp);
-                break;
-            case '\r':
-                fputs("\\r", fp);
-                break;
-            case '\t':
-                fputs("\\t", fp);
-                break;
-            default:
-                fputc(*p, fp);
-                break;
-            }
-        }
-        fputc('"', fp);
-    } else {
-        fputs("null", fp);
-    }
+    write_json_value(fp, cp->state_json);
     fputs(",\n", fp);
 
     snprintf(_cp_buf, sizeof(_cp_buf), "  \"completed_count\": %zu,\n", cp->completed_count);
