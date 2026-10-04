@@ -16,6 +16,25 @@
 extern "C" {
 #endif
 
+/* 0.1.19 §164: UTF-8 词流扫描机制件（scan.c），词法唯一实现 */
+#define AIRY_WORD_MAX 64
+
+/**
+ * @brief Word stream callback.
+ * @param ud User context
+ * @param word NUL-terminated word (ASCII lowercase / single UTF-8 char)
+ */
+typedef void (*airy_word_fn)(void *ud, const char *word);
+
+/**
+ * @brief Scan a text buffer into a word stream.
+ * @param text Text buffer
+ * @param len Buffer length in bytes (NUL terminates early)
+ * @param fn Callback invoked per word
+ * @param ud User context passed through to fn
+ */
+void airy_words_scan(const char *text, size_t len, airy_word_fn fn, void *ud);
+
 typedef struct airy_token_counter airy_token_counter_t;
 
 /**
