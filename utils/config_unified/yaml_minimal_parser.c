@@ -126,6 +126,22 @@ static bool current_line_has_dash(struct parse_ctx *ctx, int ind)
            (ctx->src[content + 1] == ' ' || ctx->src[content + 1] == '\t');
 }
 
+/* 复合键（<<）合并机制件：序列值逐项并入目标映射，其余值整体并
+ * 入，随后释放键串。val 已注册于 doc->all_nodes，其生命周期由
+ * yaml_destroy() 统一回收（merge_mapping_into 深拷贝并入后不再
+ * 引用 val）。 */
+static void apply_merge_key(struct parse_ctx *ctx, struct yaml_node *map, char *key,
+                            struct yaml_node *val)
+{
+    if (val->type == YAML_NODE_SEQUENCE) {
+        for (size_t si = 0; si < val->sequence.count; si++)
+            merge_mapping_into(ctx->doc, map, val->sequence.items[si].item);
+    } else {
+        merge_mapping_into(ctx->doc, map, val);
+    }
+    AIRY_FREE(key);
+}
+
 struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
 {
     struct yaml_node *map = alloc_node(ctx->doc, YAML_NODE_MAPPING);
@@ -182,26 +198,12 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
                 struct yaml_node *val = parse_value(ctx, ind);
                 if (val) {
                     if (strcmp(key, "<<") == 0) {
-                        if (val->type == YAML_NODE_SEQUENCE) {
-                            for (size_t si = 0; si < val->sequence.count; si++) {
-                                merge_mapping_into(ctx->doc, map, val->sequence.items[si].item);
-                            }
-                        } else {
-                            merge_mapping_into(ctx->doc, map, val);
-                        }
-                        AIRY_FREE(key);
+                        apply_merge_key(ctx, map, key, val);
                         map_size = yaml_size(map);
                         continue;
                     }
-                    if (map_size >= cap) {
-                        cap *= 2;
-                        map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
-                        if (!map->mapping)
-                            return NULL;
-                    }
-                    map->mapping[map_size].key = key;
-                    map->mapping[map_size].value = val;
-                    map_size++;
+                    if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, val) != 0)
+                        return NULL;
                     continue;
                 }
             }
@@ -212,15 +214,8 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
             struct yaml_node *null_node = alloc_node(ctx->doc, YAML_NODE_SCALAR);
             if (null_node)
                 null_node->scalar.value = AIRY_STRDUP("");
-            if (map_size >= cap) {
-                cap *= 2;
-                map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
-                if (!map->mapping)
-                    return NULL;
-            }
-            map->mapping[map_size].key = key;
-            map->mapping[map_size].value = null_node;
-            map_size++;
+            if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, null_node) != 0)
+                return NULL;
             continue;
         }
 
@@ -233,30 +228,13 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
             val->scalar.value = AIRY_STRDUP("");
 
         if (strcmp(key, "<<") == 0) {
-            if (val->type == YAML_NODE_SEQUENCE) {
-                for (size_t si = 0; si < val->sequence.count; si++) {
-                    merge_mapping_into(ctx->doc, map, val->sequence.items[si].item);
-                }
-            } else {
-                merge_mapping_into(ctx->doc, map, val);
-            }
-            AIRY_FREE(key);
-            /* val stays registered in doc->all_nodes; yaml_destroy() frees it
-             * together with every other node (merge_mapping_into deep-copies
-             * the merged content, so nothing references val afterwards). */
+            apply_merge_key(ctx, map, key, val);
             map_size = yaml_size(map);
             continue;
         }
 
-        if (map_size >= cap) {
-            cap *= 2;
-            map->mapping = yaml_mapping_grow(map->mapping, map_size, cap);
-            if (!map->mapping)
-                return NULL;
-        }
-        map->mapping[map_size].key = key;
-        map->mapping[map_size].value = val;
-        map_size++;
+        if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, val) != 0)
+            return NULL;
     }
 
     return map;
