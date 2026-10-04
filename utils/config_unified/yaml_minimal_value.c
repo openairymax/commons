@@ -337,15 +337,8 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
             v->type = YAML_NODE_SCALAR;
         if (v && v->type == YAML_NODE_SCALAR && !v->scalar.value)
             v->scalar.value = AIRY_STRDUP("");
-        if (msz >= cap) {
-            cap *= 2;
-            map->mapping = yaml_mapping_grow(map->mapping, msz, cap);
-            if (!map->mapping)
-                return NULL;
-        }
-        map->mapping[msz].key = k;
-        map->mapping[msz].value = v;
-        msz++;
+        if (yaml_mapping_append(&map->mapping, &msz, &cap, k, v) != 0)
+            return NULL;
         skip_ws(ctx);
         /* See parse_inline_sequence_value(): guard against a malformed flow
          * mapping (e.g. an unclosed '{') that makes no forward progress. */

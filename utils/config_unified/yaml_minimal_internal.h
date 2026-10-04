@@ -66,6 +66,23 @@ struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries,
                                              size_t new_capacity);
 void set_error(struct parse_ctx *ctx, const char *fmt, ...);
 
+/* 映射装配机制件：容量不足时倍增扩容，随后写入键值并推进长度。
+ * 扩容失败返回 -1（键值所有权留在调用方，按各自失败路径收尾）。 */
+static inline int yaml_mapping_append(struct yaml_mapping_entry **entries, size_t *count,
+                                      size_t *cap, char *key, struct yaml_node *value)
+{
+    if (*count >= *cap) {
+        *cap *= 2;
+        *entries = yaml_mapping_grow(*entries, *count, *cap);
+        if (!*entries)
+            return -1;
+    }
+    (*entries)[*count].key = key;
+    (*entries)[*count].value = value;
+    (*count)++;
+    return 0;
+}
+
 /* Lexer */
 char peek(struct parse_ctx *ctx);
 char advance(struct parse_ctx *ctx);
