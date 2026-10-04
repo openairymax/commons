@@ -266,6 +266,23 @@ void airy_sock_cleanup(void)
 #endif
 }
 
+#if AIRY_PLATFORM_POSIX
+/* 新建/接受套接字的统一调优：SOCK_NONBLOCK 在 macOS/BSD 上为空定义，
+ * 且 accept() 不继承监听 fd 的非阻塞标志，故此处以 fcntl 统一补齐；
+ * SO_NOSIGPIPE 存在时抑制对端关闭引发的 SIGPIPE。 */
+static void airy_sock_tune(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags >= 0)
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#ifdef SO_NOSIGPIPE
+    int nosig_on = 1;
+    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE,
+               (const char *)&nosig_on, sizeof(nosig_on));
+#endif
+}
+#endif
+
 airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
 {
     if (!host)
@@ -283,21 +300,7 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
     int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
     if (fd < 0)
         return AIRY_ERR_IO;
-#ifndef __linux__
-
-    {
-        int nb_flags = fcntl(fd, F_GETFL, 0);
-        if (nb_flags >= 0)
-            fcntl(fd, F_SETFL, nb_flags | O_NONBLOCK);
-    }
-#endif
-#ifdef SO_NOSIGPIPE
-
-    {
-        int nosig_on = 1;
-        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (const char *)&nosig_on, sizeof(nosig_on));
-    }
-#endif
+    airy_sock_tune(fd);
 #endif
 
     int opt = 1;
@@ -391,21 +394,7 @@ airy_sock_t airy_sock_create_unix_server(const char *path)
     int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (fd < 0)
         return AIRY_ERR_IO;
-#ifndef __linux__
-
-    {
-        int nb_flags = fcntl(fd, F_GETFL, 0);
-        if (nb_flags >= 0)
-            fcntl(fd, F_SETFL, nb_flags | O_NONBLOCK);
-    }
-#endif
-#ifdef SO_NOSIGPIPE
-
-    {
-        int nosig_on = 1;
-        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, (const char *)&nosig_on, sizeof(nosig_on));
-    }
-#endif
+    airy_sock_tune(fd);
 
     struct sockaddr_un addr;
     __builtin_memset(&addr, 0, sizeof(addr));
@@ -487,20 +476,8 @@ airy_sock_t airy_sock_accept(airy_sock_t server_fd, uint32_t timeout_ms)
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
-    if (client_fd >= 0) {
-        /* P2-2：F_GETFL 失败时 flags=-1，F_SETFL 会破坏 fd 标志位 */
-        int flags = fcntl(client_fd, F_GETFL, 0);
-        if (flags >= 0)
-            fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
-#ifdef SO_NOSIGPIPE
-
-        {
-            int nosig_on = 1;
-            setsockopt(client_fd, SOL_SOCKET, SO_NOSIGPIPE, (const char *)&nosig_on,
-                       sizeof(nosig_on));
-        }
-#endif
-    }
+    if (client_fd >= 0)
+        airy_sock_tune(client_fd);
 
     return client_fd;
 #endif
@@ -603,6 +580,34 @@ static uint32_t airy_daemon_req_timeout_ms(void)
     return AIRY_DAEMON_REQ_FIRST_POLL_MS;
 }
 
+/* 读取缓冲区按需翻倍扩容；达上限或分配失败时释放缓冲区并返回 -1
+ * （*err 置静态原因串）。buf/cap 为 in-out。 */
+static int airy_req_grow(char **buf, size_t *cap, size_t used,
+                         const char **err)
+{
+    if (used < *cap - 1)
+        return 0;
+    size_t new_cap = *cap * 2;
+    if (new_cap > AIRY_DAEMON_REQ_MAX_CAP)
+        new_cap = AIRY_DAEMON_REQ_MAX_CAP;
+    if (new_cap <= *cap) {
+        if (err)
+            *err = "Request too large";
+        AIRY_FREE(*buf);
+        return -1;
+    }
+    char *np = (char *)AIRY_REALLOC(*buf, new_cap);
+    if (!np) {
+        if (err)
+            *err = "Out of memory";
+        AIRY_FREE(*buf);
+        return -1;
+    }
+    *buf = np;
+    *cap = new_cap;
+    return 0;
+}
+
 char *airy_daemon_read_request(airy_sock_t client_fd, size_t *out_len, const char **err)
 {
     if (out_len)
@@ -642,26 +647,8 @@ char *airy_daemon_read_request(airy_sock_t client_fd, size_t *out_len, const cha
     uint32_t req_budget = airy_daemon_req_timeout_ms();
 
     for (;;) {
-        if (used >= cap - 1) {
-            size_t new_cap = cap * 2;
-            if (new_cap > AIRY_DAEMON_REQ_MAX_CAP)
-                new_cap = AIRY_DAEMON_REQ_MAX_CAP;
-            if (new_cap <= cap) {
-                if (err)
-                    *err = "Request too large";
-                AIRY_FREE(buf);
-                return NULL;
-            }
-            char *np = (char *)AIRY_REALLOC(buf, new_cap);
-            if (!np) {
-                if (err)
-                    *err = "Out of memory";
-                AIRY_FREE(buf);
-                return NULL;
-            }
-            buf = np;
-            cap = new_cap;
-        }
+        if (airy_req_grow(&buf, &cap, used, err) != 0)
+            return NULL;
 
         ssize_t n = airy_sock_recv(client_fd, buf + used, cap - used - 1);
         if (n < 0) {
@@ -742,26 +729,8 @@ char *airy_daemon_read_request(airy_sock_t client_fd, size_t *out_len, const cha
     uint32_t elapsed = 0;
 
     for (;;) {
-        if (used >= cap - 1) {
-            size_t new_cap = cap * 2;
-            if (new_cap > AIRY_DAEMON_REQ_MAX_CAP)
-                new_cap = AIRY_DAEMON_REQ_MAX_CAP;
-            if (new_cap <= cap) {
-                if (err)
-                    *err = "Request too large";
-                AIRY_FREE(buf);
-                return NULL;
-            }
-            char *np = (char *)AIRY_REALLOC(buf, new_cap);
-            if (!np) {
-                if (err)
-                    *err = "Out of memory";
-                AIRY_FREE(buf);
-                return NULL;
-            }
-            buf = np;
-            cap = new_cap;
-        }
+        if (airy_req_grow(&buf, &cap, used, err) != 0)
+            return NULL;
 
         ssize_t n = airy_sock_recv(client_fd, buf + used, cap - used - 1);
         if (n > 0) {
