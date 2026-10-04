@@ -51,13 +51,9 @@ struct airy_event_loop {
 int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
                        airy_event_callback_t cb, void *user_data, bool level_triggered)
 {
-    if (!loop || fd < 0 || !cb)
-        return AIRY_ERR_INVALID_PARAM;
-    if (fd >= loop->posix.head.max_events) {
-        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd,
-                       loop->posix.head.max_events);
-        return AIRY_ERR_INVALID_PARAM;
-    }
+    int rc = airy_evloop_fd_check(loop, fd, cb);
+    if (rc)
+        return rc;
 
     struct kevent kev[2];
     int n = 0;
@@ -81,13 +77,7 @@ int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
         }
     }
 
-    loop->posix.fd_entries[fd].fd = fd;
-    loop->posix.fd_entries[fd].events = events;
-    loop->posix.fd_entries[fd].cb = cb;
-    loop->posix.fd_entries[fd].user_data = user_data;
-    loop->posix.fd_entries[fd].level_triggered = level_triggered;
-
-    return 0;
+    return airy_evloop_fd_track(loop, fd, events, cb, user_data, level_triggered);
 }
 
 airy_event_loop_t *airy_event_loop_create(int max_events)

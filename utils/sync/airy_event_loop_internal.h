@@ -127,6 +127,13 @@ int airy_evloop_tbl_init(airy_event_loop_t *loop, int max_events);
 
 /** 释放 POSIX 共享注册表与就绪缓冲。 */
 void airy_evloop_tbl_fini(airy_event_loop_t *loop);
+
+/** fd 订阅参数校验：loop/fd/cb 非空与注册表容量检查（越界记 debug 日志）。 */
+int airy_evloop_fd_check(airy_event_loop_t *loop, int fd, airy_event_callback_t cb);
+
+/** fd 登记入注册表：填充 fd_entries 五字段并返回 0。 */
+int airy_evloop_fd_track(airy_event_loop_t *loop, int fd, uint32_t events,
+                         airy_event_callback_t cb, void *user_data, bool level_triggered);
 #endif
 
 /* --- 核心侧（airy_event_loop.c）导出的内部契约 ------------------------- */
