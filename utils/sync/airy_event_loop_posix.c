@@ -7,6 +7,7 @@
  *
  * epoll（Linux）与 kqueue（macOS/BSD）两后端共享的平台无关机制：
  *   - fd 注册表与就绪缓冲的分配/释放（最大容量 max_events）；
+ *   - fd 订阅的参数校验与注册表登记（airy_evloop_fd_check / _fd_track）；
  *   - 就绪事件回调分发（wait 归一化结果 → 用户回调）；
  *   - fd 计数（遍历注册表统计已登记 fd）。
  *
@@ -49,6 +50,31 @@ void airy_evloop_tbl_fini(airy_event_loop_t *loop)
     AIRY_FREE(posix->ready);
     posix->fd_entries = NULL;
     posix->ready = NULL;
+}
+
+int airy_evloop_fd_check(airy_event_loop_t *loop, int fd, airy_event_callback_t cb)
+{
+    if (!loop || fd < 0 || !cb)
+        return AIRY_ERR_INVALID_PARAM;
+    if (fd >= airy_evloop_posix(loop)->head.max_events) {
+        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd,
+                       airy_evloop_posix(loop)->head.max_events);
+        return AIRY_ERR_INVALID_PARAM;
+    }
+    return 0;
+}
+
+int airy_evloop_fd_track(airy_event_loop_t *loop, int fd, uint32_t events,
+                         airy_event_callback_t cb, void *user_data, bool level_triggered)
+{
+    airy_evloop_posix_t *posix = airy_evloop_posix(loop);
+
+    posix->fd_entries[fd].fd = fd;
+    posix->fd_entries[fd].events = events;
+    posix->fd_entries[fd].cb = cb;
+    posix->fd_entries[fd].user_data = user_data;
+    posix->fd_entries[fd].level_triggered = level_triggered;
+    return 0;
 }
 
 void airy_evloop_dispatch(airy_event_loop_t *loop, int ready_n)
