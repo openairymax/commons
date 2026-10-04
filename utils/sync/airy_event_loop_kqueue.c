@@ -3,19 +3,22 @@
 
 /**
  * @file airy_event_loop_kqueue.c
- * @brief Event loop macOS/BSD backend: kqueue multiplexing and dispatch.
+ * @brief Event loop macOS/BSD backend: kqueue multiplexing and wakeup.
  *
- * macOS / BSD kqueue 后端（Airymax 0.1.2 新增，替代原 #error 的
- * "macOS 支持未规划" 设计限制）。设计对齐 epoll 后端：
- *   - fd 直接作为 kevent.ident 与 fd_entries 数组索引（fd < max_events）；
- *   - 定时器沿用 process_timers 轮询模式（kevent 100ms timeout），不引入
- *     EVFILT_TIMER，保证与 Linux/Windows 后端行为完全一致；
- *   - wakeup 用 EVFILT_USER（macOS 10.6+）：stop_async 内仅 kevent 一个
- *     syscall，保持 async-signal-safe（对齐 epoll 后端 eventfd 语义）；
+ * macOS / BSD kqueue 后端（纯机制域，Airymax 0.1.2 新增）：kqueue 实例的
+ * 创建/销毁、fd 订阅与修改、一次 poll 的等待与就绪归一化（airy_evloop_wait）、
+ * 唤醒（airy_evloop_notify）。设计对齐 epoll 后端：
+ *   - fd 直接作为 kevent.ident 与 posix.fd_entries 数组索引（fd < max_events）；
+ *   - 定时器沿用 process_timers 轮询模式（kevent 超时），不引入 EVFILT_TIMER，
+ *     保证与 Linux/Windows 后端行为完全一致；
+ *   - wakeup 用 EVFILT_USER（macOS 10.6+）：notify 内仅 kevent 一个 syscall，
+ *     保持 async-signal-safe（对齐 epoll 后端 eventfd 语义）；
  *   - kqueue 天然 level-triggered；level_triggered=false 时加 EV_CLEAR
  *     获得 edge-triggered 语义（对齐 EPOLLET）。
  *
- * 事件循环核心门面见 airy_event_loop.c；定时器管理见 airy_event_timer.c。
+ * fd 注册表、就绪分发与 fd 计数由 POSIX 共享机制 TU
+ * airy_event_loop_posix.c 提供；run 主循环脚手架与 stop 控制见核心
+ * airy_event_loop.c。
  */
 
 #include "airy_event_loop.h"
@@ -39,36 +42,20 @@
  * 索引（[0, max_events)）冲突。 */
 #define AIRY_KQ_WAKEUP_IDENT 0x40000001u
 
-typedef struct {
-    int fd;
-    uint32_t events;
-    airy_event_callback_t cb;
-    void *user_data;
-    bool level_triggered;
-} fd_entry_t;
-
 struct airy_event_loop {
+    airy_evloop_posix_t posix;
     int kq;
-    int max_events;
     struct kevent *kq_events;
-    fd_entry_t *fd_entries;
-    airy_timer_state_t timers;
-    volatile bool running;
-    volatile bool stop_requested;
 };
-
-airy_timer_state_t *airy_event_loop_timers(airy_event_loop_t *loop)
-{
-    return loop ? &loop->timers : NULL;
-}
 
 int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
                        airy_event_callback_t cb, void *user_data, bool level_triggered)
 {
     if (!loop || fd < 0 || !cb)
         return AIRY_ERR_INVALID_PARAM;
-    if (fd >= loop->max_events) {
-        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd, loop->max_events);
+    if (fd >= loop->posix.head.max_events) {
+        AIRY_LOG_DEBUG("fd=%d exceeds max_events=%d, cannot track callback", fd,
+                       loop->posix.head.max_events);
         return AIRY_ERR_INVALID_PARAM;
     }
 
@@ -94,11 +81,11 @@ int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
         }
     }
 
-    loop->fd_entries[fd].fd = fd;
-    loop->fd_entries[fd].events = events;
-    loop->fd_entries[fd].cb = cb;
-    loop->fd_entries[fd].user_data = user_data;
-    loop->fd_entries[fd].level_triggered = level_triggered;
+    loop->posix.fd_entries[fd].fd = fd;
+    loop->posix.fd_entries[fd].events = events;
+    loop->posix.fd_entries[fd].cb = cb;
+    loop->posix.fd_entries[fd].user_data = user_data;
+    loop->posix.fd_entries[fd].level_triggered = level_triggered;
 
     return 0;
 }
@@ -115,14 +102,15 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
         AIRY_ERROR_NULL(AIRY_ERR_OVERFLOW, "limit exceeded");
     }
 
-    loop->max_events = max_events;
     loop->kq_events = (struct kevent *)AIRY_CALLOC((size_t)max_events, sizeof(struct kevent));
-    loop->fd_entries = (fd_entry_t *)AIRY_CALLOC((size_t)max_events, sizeof(fd_entry_t));
-
-    if (!loop->kq_events || !loop->fd_entries) {
+    if (!loop->kq_events) {
+        close(loop->kq);
+        AIRY_FREE(loop);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+    if (airy_evloop_tbl_init(loop, max_events) != 0) {
         close(loop->kq);
         AIRY_FREE(loop->kq_events);
-        AIRY_FREE(loop->fd_entries);
         AIRY_FREE(loop);
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
@@ -133,12 +121,12 @@ airy_event_loop_t *airy_event_loop_create(int max_events)
     if (kevent(loop->kq, &wake_kev, 1, NULL, 0, NULL) < 0) {
         close(loop->kq);
         AIRY_FREE(loop->kq_events);
-        AIRY_FREE(loop->fd_entries);
+        airy_evloop_tbl_fini(loop);
         AIRY_FREE(loop);
         AIRY_ERROR_NULL(AIRY_ERR_IO, "io error");
     }
 
-    airy_timer_init(&loop->timers);
+    airy_timer_init(&loop->posix.head.timers);
 
     AIRY_LOG_DEBUG("Event loop created (kq=%d, max_events=%d)", loop->kq, max_events);
     return loop;
@@ -150,13 +138,13 @@ void airy_event_loop_destroy(airy_event_loop_t *loop)
         return;
     close(loop->kq);
     AIRY_FREE(loop->kq_events);
-    AIRY_FREE(loop->fd_entries);
+    airy_evloop_tbl_fini(loop);
     AIRY_FREE(loop);
 }
 
 int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
 {
-    if (!loop || fd < 0 || fd >= loop->max_events)
+    if (!loop || fd < 0 || fd >= loop->posix.head.max_events)
         return AIRY_ERR_INVALID_PARAM;
 
     struct kevent kev[2];
@@ -167,7 +155,7 @@ int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
     if (events & AIRY_EVENT_TYPE_WRITE) {
         EV_SET(&kev[n++], (uintptr_t)fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
     }
-    if (n > 0 && !loop->fd_entries[fd].level_triggered) {
+    if (n > 0 && !loop->posix.fd_entries[fd].level_triggered) {
         for (int i = 0; i < n; i++)
             kev[i].flags |= EV_CLEAR;
     }
@@ -178,13 +166,13 @@ int airy_event_loop_mod_fd(airy_event_loop_t *loop, int fd, uint32_t events)
         }
     }
 
-    loop->fd_entries[fd].events = events;
+    loop->posix.fd_entries[fd].events = events;
     return 0;
 }
 
 void airy_event_loop_remove_fd(airy_event_loop_t *loop, int fd)
 {
-    if (!loop || fd < 0 || fd >= loop->max_events)
+    if (!loop || fd < 0 || fd >= loop->posix.head.max_events)
         return;
 
     struct kevent kev;
@@ -193,95 +181,53 @@ void airy_event_loop_remove_fd(airy_event_loop_t *loop, int fd)
     EV_SET(&kev, (uintptr_t)fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
     kevent(loop->kq, &kev, 1, NULL, 0, NULL);
 
-    __builtin_memset(&loop->fd_entries[fd], 0, sizeof(fd_entry_t));
+    __builtin_memset(&loop->posix.fd_entries[fd], 0, sizeof(airy_evloop_fd_t));
 }
 
-int airy_event_loop_run(airy_event_loop_t *loop)
+int airy_evloop_wait(airy_event_loop_t *loop, int timeout_ms)
 {
-    if (!loop)
-        return AIRY_ERR_INVALID_PARAM;
+    airy_evloop_posix_t *posix = airy_evloop_posix(loop);
 
-    loop->running = true;
-    loop->stop_requested = false;
-    AIRY_LOG_INFO("Event loop started (max_events=%d)", loop->max_events);
-
-    while (!loop->stop_requested) {
-        struct timespec timeout = {.tv_sec = 0, .tv_nsec = 100 * 1000000L};
-        int nev = kevent(loop->kq, NULL, 0, loop->kq_events, loop->max_events, &timeout);
-
-        airy_timer_process(&loop->timers);
-
-        if (nev < 0) {
-            if (errno == EINTR)
-                continue;
-            AIRY_ERROR(AIRY_ERR_IO, "kevent wait failed");
-        }
-
-        for (int i = 0; i < nev; i++) {
-            struct kevent *kev = &loop->kq_events[i];
-            uintptr_t ident = (uintptr_t)kev->ident;
-
-            if (ident == AIRY_KQ_WAKEUP_IDENT)
-                continue; /* wakeup 事件：仅用于打断 kevent 阻塞 */
-
-            int fd = (int)ident;
-            uint32_t user_events = 0;
-            if (kev->filter == EVFILT_READ)
-                user_events |= AIRY_EVENT_TYPE_READ;
-            if (kev->filter == EVFILT_WRITE)
-                user_events |= AIRY_EVENT_TYPE_WRITE;
-
-            if (fd >= 0 && fd < loop->max_events && loop->fd_entries[fd].cb) {
-                loop->fd_entries[fd].cb(fd, user_events, loop->fd_entries[fd].user_data);
-            } else if (fd >= loop->max_events) {
-                AIRY_LOG_DEBUG("kevent event for fd=%d >= max_events=%d, dropping", fd, loop->max_events);
-            }
-        }
+    struct timespec timeout = {.tv_sec = timeout_ms / 1000,
+                               .tv_nsec = (long)(timeout_ms % 1000) * 1000000L};
+    int nev = kevent(loop->kq, NULL, 0, loop->kq_events, posix->head.max_events, &timeout);
+    if (nev < 0) {
+        if (errno == EINTR)
+            return 0;
+        return AIRY_ERR_IO;
     }
 
-    loop->running = false;
-    AIRY_LOG_INFO("Event loop stopped");
-    return 0;
+    int ready_n = 0;
+    for (int i = 0; i < nev; i++) {
+        struct kevent *kev = &loop->kq_events[i];
+        uintptr_t ident = (uintptr_t)kev->ident;
+
+        if (ident == AIRY_KQ_WAKEUP_IDENT)
+            continue; /* wakeup 事件：仅用于打断 kevent 阻塞 */
+
+        int fd = (int)ident;
+        uint32_t user_events = 0;
+        if (kev->filter == EVFILT_READ)
+            user_events |= AIRY_EVENT_TYPE_READ;
+        if (kev->filter == EVFILT_WRITE)
+            user_events |= AIRY_EVENT_TYPE_WRITE;
+
+        posix->ready[ready_n].fd = fd;
+        posix->ready[ready_n].events = user_events;
+        ready_n++;
+    }
+    return ready_n;
 }
 
-/**
- * @brief Async-safe stop of the event loop (safe in signal handlers).
- *
- * Sets stop_requested and triggers the EVFILT_USER wakeup event; kevent()
- * is an async-safe syscall, no logging or locks involved.
- */
-void airy_event_loop_stop_async(airy_event_loop_t *loop)
-{
-    if (!loop)
-        return;
-    loop->stop_requested = true;
-    struct kevent kev;
-    EV_SET(&kev, AIRY_KQ_WAKEUP_IDENT, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
-    (void)kevent(loop->kq, &kev, 1, NULL, 0, NULL);
-}
-
-int airy_event_loop_wakeup(airy_event_loop_t *loop)
+int airy_evloop_notify(airy_event_loop_t *loop)
 {
     if (!loop)
         return AIRY_ERR_INVALID_PARAM;
     struct kevent kev;
     EV_SET(&kev, AIRY_KQ_WAKEUP_IDENT, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
-    if (kevent(loop->kq, &kev, 1, NULL, 0, NULL) < 0) {
-        AIRY_ERROR(AIRY_ERR_IO, "wakeup kevent failed");
-    }
+    if (kevent(loop->kq, &kev, 1, NULL, 0, NULL) < 0)
+        return AIRY_ERR_IO;
     return 0;
-}
-
-int airy_event_loop_get_fd_count(airy_event_loop_t *loop)
-{
-    if (!loop)
-        return 0;
-    int count = 0;
-    for (int i = 0; i < loop->max_events; i++) {
-        if (loop->fd_entries[i].fd > 0)
-            count++;
-    }
-    return count;
 }
 
 #else

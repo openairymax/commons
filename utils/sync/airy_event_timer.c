@@ -45,6 +45,7 @@ void airy_timer_init(airy_timer_state_t *ts)
     if (!ts)
         return;
     AIRY_MEMSET(ts, 0, sizeof(*ts));
+    ts->current_time_ms = get_time_ms();
     ts->next_timer_id = 1;
     for (int i = 0; i < AIRY_TIMER_MAX_TIMERS; i++)
         ts->timers[i].active = false;
@@ -92,7 +93,7 @@ int airy_timer_cancel(airy_timer_state_t *ts, uint64_t timer_id)
 /* Run-loop helper                                                     */
 /* ------------------------------------------------------------------ */
 
-void airy_timer_process(airy_timer_state_t *ts)
+void airy_timer_process(airy_timer_state_t *ts, airy_event_loop_t *loop)
 {
     if (!ts)
         return;
@@ -101,7 +102,7 @@ void airy_timer_process(airy_timer_state_t *ts)
 
     for (int i = 0; i < AIRY_TIMER_MAX_TIMERS; i++) {
         if (ts->timers[i].active && ts->current_time_ms >= ts->timers[i].next_fire_ms) {
-            ts->timers[i].cb(NULL, ts->timers[i].id, ts->timers[i].user_data);
+            ts->timers[i].cb(loop, ts->timers[i].id, ts->timers[i].user_data);
             if (ts->timers[i].active)
                 ts->timers[i].next_fire_ms = ts->current_time_ms + ts->timers[i].interval_ms;
         }

@@ -129,6 +129,8 @@ set(SOURCES
     utils/ipc/daemon_rpc_req.c
     # 0c A 类直搬：airy_event_loop 全家族（三后端各自 #if 守卫，全平台编译）
     utils/sync/airy_event_loop.c
+    # 0.1.19 §139: POSIX 两后端共享机制（epoll/kqueue fd 表 + 就绪分发 + 计数）
+    utils/sync/airy_event_loop_posix.c
     utils/sync/airy_event_loop_epoll.c
     utils/sync/airy_event_loop_win.c
     utils/sync/airy_event_loop_kqueue.c
