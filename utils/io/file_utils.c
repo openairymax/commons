@@ -10,6 +10,7 @@
 #include "io.h"
 #include "airy_memory.h"
 #include "airy_dirent.h"
+#include "platform_paths.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,7 +83,7 @@ int airy_io_write_file(const char *path, const void *data, size_t len)
     /* P2: atomic write - write to a temp file in the same directory, fsync,
      * then rename over the target, so a crash mid-write never leaves a
      * truncated/partial file at the destination. */
-    char tmppath[1024];
+    char tmppath[AIRY_PATH_MAX + 8];
     if (snprintf(tmppath, sizeof(tmppath), "%s.tmp", path) >= (int)sizeof(tmppath))
         return -1;
 
