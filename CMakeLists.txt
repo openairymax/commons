@@ -24,7 +24,6 @@ set(SOURCES
     utils/observability/trace.c
     utils/error/handler.c
     utils/io/file_utils.c
-    utils/security/input_validator.c
     utils/resource/resource_guard.c
     utils/resource/resource_quota.c
     # logging 核心按功能域拆分：核心/格式化/文件后端/运行时控制（2026-08-27）
