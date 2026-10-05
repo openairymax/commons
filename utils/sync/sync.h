@@ -40,8 +40,7 @@ typedef enum {
     SYNC_TYPE_RWLOCK,
     SYNC_TYPE_SPINLOCK,
     SYNC_TYPE_SEMAPHORE,
-    SYNC_TYPE_CONDITION,
-    SYNC_TYPE_BARRIER
+    SYNC_TYPE_CONDITION
 } sync_type_t;
 
 /**
@@ -53,8 +52,7 @@ typedef enum {
     SYNC_LOCK_RWLOCK,
     SYNC_LOCK_SPINLOCK,
     SYNC_LOCK_SEMAPHORE,
-    SYNC_LOCK_CONDITION,
-    SYNC_LOCK_BARRIER
+    SYNC_LOCK_CONDITION
 } sync_lock_type_t;
 
 /**
@@ -134,11 +132,6 @@ typedef struct sync_semaphore *sync_semaphore_t;
  * @brief Condition variable handle
  */
 typedef struct sync_condition *sync_condition_t;
-
-/**
- * @brief Barrier handle
- */
-typedef struct sync_barrier *sync_barrier_t;
 
 /**
  * @brief Lock attributes
@@ -480,43 +473,6 @@ sync_result_t sync_condition_signal_ex(sync_condition_t condition);
  * @return SYNC_SUCCESS on success, error code on failure
  */
 sync_result_t sync_condition_broadcast_ex(sync_condition_t condition);
-
-/**
- * @brief Create a barrier
- *
- * @param[out] barrier Barrier handle
- * @param[in] count Number of threads to wait for
- * @param[in] attr Barrier attributes (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_barrier_create(sync_barrier_t *barrier, unsigned int count,
-                                  const sync_attr_t *attr);
-
-/**
- * @brief Destroy a barrier
- *
- * @param[in] barrier Barrier handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_barrier_free(sync_barrier_t barrier);
-
-/**
- * @brief Wait at a barrier
- *
- * @param[in] barrier Barrier handle
- * @param[in] timeout Timeout setting (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_barrier_wait_ex(sync_barrier_t barrier, const sync_timeout_t *timeout);
-
-/**
- * @brief Reset a barrier
- *
- * @param[in] barrier Barrier handle
- * @param[in] new_count New thread count (0 keeps the current value)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_barrier_reset(sync_barrier_t barrier, unsigned int new_count);
 
 /**
  * @brief Get lock statistics
