@@ -105,9 +105,9 @@ static void transition_state(cb_internal_t *cb, cb_manager_internal_t *mgr, cb_s
     event.new_state = new_state;
     event.timestamp = cb->state_changed_at;
 
-    const char *state_names[] = {"CLOSED", "OPEN", "HALF_OPEN"};
     char msg[128];
-    snprintf(msg, sizeof(msg), "State: %s -> %s", state_names[old_state], state_names[new_state]);
+    snprintf(msg, sizeof(msg), "State: %s -> %s", cb_state_to_string(old_state),
+             cb_state_to_string(new_state));
     event.message = msg;
 
     AIRY_LOG_INFO("Circuit breaker '%s': %s", cb->name, msg);
@@ -142,6 +142,37 @@ static bool should_trip(cb_internal_t *cb)
     }
 
     return false;
+}
+
+/* Shared failure/timeout accounting: window bookkeeping, trip evaluation and
+ * OPEN transition. Caller must hold cb->mutex and have already bumped the
+ * type-specific counters (failed_calls / timeout_calls). */
+static void note_failure_locked(cb_internal_t *cb, const char *what, int32_t error_code)
+{
+    cb->stats.last_failure_time = airy_time_ms();
+    cb->stats.consecutive_failures++;
+    cb->stats.consecutive_successes = 0;
+
+    cb->window_calls++;
+    cb->window_failures++;
+    check_window_reset(cb);
+
+    if (cb->window_calls > 0) {
+        cb->stats.failure_rate = (double)cb->window_failures * 100.0 / cb->window_calls;
+    }
+
+    if (cb->state == CB_STATE_CLOSED) {
+        if (should_trip(cb)) {
+            SVC_LOG_WARN("cb_record_%s: breaker '%s' tripping to OPEN (consecutive_failures=%u, "
+                         "failure_rate=%.1f%%, error_code=%d)",
+                         what, cb->name, cb->stats.consecutive_failures, cb->stats.failure_rate,
+                         error_code);
+            transition_state(cb, cb->manager, CB_STATE_OPEN);
+        }
+    } else if (cb->state == CB_STATE_HALF_OPEN) {
+        SVC_LOG_WARN("cb_record_%s: breaker '%s' failed in HALF_OPEN, reopening", what, cb->name);
+        transition_state(cb, cb->manager, CB_STATE_OPEN);
+    }
 }
 
 AIRY_API cb_config_t cb_create_default_config(void)
@@ -425,31 +456,7 @@ AIRY_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code)
 
     cb->stats.total_calls++;
     cb->stats.failed_calls++;
-    cb->stats.last_failure_time = airy_time_ms();
-    cb->stats.consecutive_failures++;
-    cb->stats.consecutive_successes = 0;
-
-    cb->window_calls++;
-    cb->window_failures++;
-    check_window_reset(cb);
-
-    if (cb->window_calls > 0) {
-        cb->stats.failure_rate = (double)cb->window_failures * 100.0 / cb->window_calls;
-    }
-
-    if (cb->state == CB_STATE_CLOSED) {
-        if (should_trip(cb)) {
-            SVC_LOG_WARN("cb_record_failure: breaker '%s' threshold exceeded, tripping to OPEN "
-                         "(consecutive_failures=%u, failure_rate=%.1f%%)",
-                         cb->name, cb->stats.consecutive_failures, cb->stats.failure_rate);
-            transition_state(cb, cb->manager, CB_STATE_OPEN);
-        }
-    } else if (cb->state == CB_STATE_HALF_OPEN) {
-        SVC_LOG_WARN(
-            "cb_record_failure: breaker '%s' failed in HALF_OPEN, reopening (error_code=%d)",
-            cb->name, error_code);
-        transition_state(cb, cb->manager, CB_STATE_OPEN);
-    }
+    note_failure_locked(cb, "failure", error_code);
 
     airy_mtx_unlock(&cb->mutex);
 
@@ -476,29 +483,7 @@ AIRY_API void cb_record_timeout(circuit_breaker_t breaker)
     cb->stats.total_calls++;
     cb->stats.timeout_calls++;
     cb->stats.failed_calls++;
-    cb->stats.last_failure_time = airy_time_ms();
-    cb->stats.consecutive_failures++;
-    cb->stats.consecutive_successes = 0;
-
-    cb->window_calls++;
-    cb->window_failures++;
-    check_window_reset(cb);
-
-    if (cb->window_calls > 0) {
-        cb->stats.failure_rate = (double)cb->window_failures * 100.0 / cb->window_calls;
-    }
-
-    if (cb->state == CB_STATE_CLOSED) {
-        if (should_trip(cb)) {
-            SVC_LOG_WARN("cb_record_timeout: breaker '%s' threshold exceeded after timeout, "
-                         "tripping to OPEN (consecutive_failures=%u)",
-                         cb->name, cb->stats.consecutive_failures);
-            transition_state(cb, cb->manager, CB_STATE_OPEN);
-        }
-    } else if (cb->state == CB_STATE_HALF_OPEN) {
-        SVC_LOG_WARN("cb_record_timeout: breaker '%s' timed out in HALF_OPEN, reopening", cb->name);
-        transition_state(cb, cb->manager, CB_STATE_OPEN);
-    }
+    note_failure_locked(cb, "timeout", 0);
 
     airy_mtx_unlock(&cb->mutex);
 
