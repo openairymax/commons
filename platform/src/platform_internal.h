@@ -40,6 +40,7 @@
 #endif
 #include <bcrypt.h>
 #include <direct.h>
+#include <errno.h>
 #include <io.h>
 #include <process.h>
 #include <sys/stat.h>
@@ -53,9 +54,23 @@
 #ifndef access
 #define access _access /* flawfinder: ignore */
 #endif
-/* MSVC 未提供 S_ISDIR；以 _S_IFMT 宏补齐（对齐 utils/io file_utils.c）。 */
+/* MSVC 未提供 S_ISDIR/S_ISREG；以 _S_IFMT 宏补齐（对齐 utils/io file_utils.c）。 */
 #ifndef S_ISDIR
 #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#endif
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#endif
+/* 管道 fd 统一：_pipe 产出 lowio 描述符，读写关闭经 UCRT 映射，
+ * 消费代码在两平台共用同一套 read/write/close 调用形态。 */
+#ifndef read
+#define read _read /* flawfinder: ignore */
+#endif
+#ifndef write
+#define write _write /* flawfinder: ignore */
+#endif
+#ifndef close
+#define close _close /* flawfinder: ignore */
 #endif
 #pragma comment(lib, "bcrypt.lib")
 #elif defined(__APPLE__) && defined(__MACH__)

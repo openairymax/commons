@@ -127,6 +127,66 @@ airy_cond_t *airy_cond_create(void);
 void airy_cond_free(airy_cond_t *cond);
 
 
+/**
+ * @brief Initialize a read-write lock
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure
+ */
+int airy_rwlock_init(airy_rwlock_t *lock);
+
+/**
+ * @brief Destroy a read-write lock
+ * @param lock rwlock pointer
+ */
+void airy_rwlock_destroy(airy_rwlock_t *lock);
+
+/**
+ * @brief Acquire the lock for reading (shared; concurrent readers allowed)
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure
+ */
+int airy_rwlock_rdlock(airy_rwlock_t *lock);
+
+/**
+ * @brief Acquire the lock for writing (exclusive)
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure
+ */
+int airy_rwlock_wrlock(airy_rwlock_t *lock);
+
+/**
+ * @brief Try to acquire the lock for reading without blocking
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure or held by a writer
+ *         (POSIX: pthread raw code, EBUSY=16; Windows: -1)
+ */
+int airy_rwlock_tryrd(airy_rwlock_t *lock);
+
+/**
+ * @brief Try to acquire the lock for writing without blocking
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure or already locked
+ *         (POSIX: pthread raw code, EBUSY=16; Windows: -1)
+ */
+int airy_rwlock_trywr(airy_rwlock_t *lock);
+
+/**
+ * @brief Release a read or write lock (auto-dispatches by holder type)
+ * @param lock rwlock pointer
+ * @return 0 on success, non-zero on failure
+ */
+int airy_rwlock_unlock(airy_rwlock_t *lock);
+
+
+/**
+ * @brief Run func exactly once across threads (process-lifetime gate)
+ * @param once once-control (may be statically initialized with AIRY_ONCE_INIT)
+ * @param func callback invoked on the first caller only; other threads
+ *        block until it returns
+ */
+void airy_call_once(airy_once_t *once, void (*func)(void));
+
+
 /* d8 cleanup: migrated from sync_compat.h to platform.h (the RAII guard
  * depends on airy_mtx_lock/unlock, logically a helper of the platform.h
  * API). Removes sync_compat.h's compatibility-layer positioning. */

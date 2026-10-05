@@ -32,7 +32,6 @@
 #define AIRY_RT_TYPES_H
 
 #include "../../include/airy_types.h"
-#include "../../platform/include/platform.h"
 
 #include <stdbool.h>
 #include <stddef.h>

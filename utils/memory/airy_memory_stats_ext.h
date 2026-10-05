@@ -10,6 +10,7 @@
 #define AIRY_RT_MEMORY_STATS_EXT_H
 
 #include "airy_memory_inline.h"
+#include "platform_misc.h" /* airy_time_ms (commons facade, 8.2.3 SSoT) */
 
 /**
  * @brief 检查内存泄漏

@@ -184,6 +184,13 @@ typedef CONDITION_VARIABLE airy_cond_t;
 typedef DWORD airy_pid_t;
 typedef SOCKET airy_sock_t;
 typedef HANDLE airy_process_t;
+/* SRWLOCK 本体不持状态位，附带 LONG 状态字：正=读者数，-1=持写者，
+ * unlock 按符号分派读/写释放路径（Interlocked* 维护，见 platform_sync.c）。 */
+typedef struct {
+    SRWLOCK lock;
+    volatile LONG state;
+} airy_rwlock_t;
+typedef INIT_ONCE airy_once_t;
 #else
 typedef pthread_t airy_thread_t;
 typedef pthread_t airy_thread_id_t;
@@ -192,12 +199,20 @@ typedef pthread_cond_t airy_cond_t;
 typedef pid_t airy_pid_t;
 typedef int airy_sock_t;
 typedef pid_t airy_process_t;
+typedef pthread_rwlock_t airy_rwlock_t;
+typedef pthread_once_t airy_once_t;
 #endif
 
 #define AIRY_INVALID_THREAD ((airy_thread_t)0)
 #define AIRY_INVALID_MUTEX ((airy_mtx_t){0})
 #define AIRY_INVALID_SOCKET (-1)
 #define AIRY_INVALID_PROCESS ((airy_process_t)0)
+
+#if AIRY_PLATFORM_WINDOWS
+#define AIRY_ONCE_INIT INIT_ONCE_STATIC_INIT
+#else
+#define AIRY_ONCE_INIT PTHREAD_ONCE_INIT
+#endif
 
 
 #ifdef __cplusplus

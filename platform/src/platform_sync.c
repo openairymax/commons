@@ -545,3 +545,138 @@ void airy_cond_free(airy_cond_t *cond)
 }
 
 #endif
+
+#if AIRY_PLATFORM_WINDOWS
+
+int airy_rwlock_init(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return AIRY_EINVAL;
+    InitializeSRWLock(&lock->lock);
+    lock->state = 0;
+    return 0;
+}
+
+void airy_rwlock_destroy(airy_rwlock_t *lock)
+{
+    (void)lock;
+}
+
+int airy_rwlock_rdlock(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return AIRY_EINVAL;
+    AcquireSRWLockShared(&lock->lock);
+    InterlockedIncrement(&lock->state);
+    return 0;
+}
+
+int airy_rwlock_wrlock(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return AIRY_EINVAL;
+    AcquireSRWLockExclusive(&lock->lock);
+    InterlockedExchange(&lock->state, -1);
+    return 0;
+}
+
+int airy_rwlock_tryrd(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return -1;
+    if (!TryAcquireSRWLockShared(&lock->lock))
+        return -1;
+    InterlockedIncrement(&lock->state);
+    return 0;
+}
+
+int airy_rwlock_trywr(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return -1;
+    if (!TryAcquireSRWLockExclusive(&lock->lock))
+        return -1;
+    InterlockedExchange(&lock->state, -1);
+    return 0;
+}
+
+int airy_rwlock_unlock(airy_rwlock_t *lock)
+{
+    if (!lock)
+        return AIRY_EINVAL;
+    /* state 符号分派（正=读者数 / -1=写者）：本锁点的自身加锁操作经
+     * Interlocked 全屏障先行可见，故读者 unlock 必读到 >=1，写者必读到
+     * -1，不存在误分派窗口。 */
+    if (InterlockedExchangeAdd(&lock->state, 0) < 0) {
+        InterlockedExchange(&lock->state, 0);
+        ReleaseSRWLockExclusive(&lock->lock);
+    } else {
+        InterlockedDecrement(&lock->state);
+        ReleaseSRWLockShared(&lock->lock);
+    }
+    return 0;
+}
+
+/* InitOnce 回调固定 __stdcall（PINIT_ONCE_FN）；用户回调为默认 __cdecl，
+ * x86 上直接强转会调用约定不匹配（cupolas 平台层强转缺陷的根因修复）。
+ * 经 param 转发：trampoline 由系统以 __stdcall 调入，再以本机约定调用
+ * 用户回调。 */
+static BOOL CALLBACK airy_once_trampoline(PINIT_ONCE once, PVOID param, PVOID *context)
+{
+    (void)once;
+    (void)context;
+    void (*func)(void) = (void (*)(void))param;
+    if (func)
+        func();
+    return TRUE;
+}
+
+void airy_call_once(airy_once_t *once, void (*func)(void))
+{
+    InitOnceExecuteOnce(once, airy_once_trampoline, (PVOID)(void *)func, NULL);
+}
+
+#else
+
+int airy_rwlock_init(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_init(lock, NULL) : AIRY_EINVAL;
+}
+
+void airy_rwlock_destroy(airy_rwlock_t *lock)
+{
+    if (lock)
+        pthread_rwlock_destroy(lock);
+}
+
+int airy_rwlock_rdlock(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_rdlock(lock) : AIRY_EINVAL;
+}
+
+int airy_rwlock_wrlock(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_wrlock(lock) : AIRY_EINVAL;
+}
+
+int airy_rwlock_tryrd(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_tryrdlock(lock) : AIRY_EINVAL;
+}
+
+int airy_rwlock_trywr(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_trywrlock(lock) : AIRY_EINVAL;
+}
+
+int airy_rwlock_unlock(airy_rwlock_t *lock)
+{
+    return lock ? pthread_rwlock_unlock(lock) : AIRY_EINVAL;
+}
+
+void airy_call_once(airy_once_t *once, void (*func)(void))
+{
+    pthread_once(once, func);
+}
+
+#endif

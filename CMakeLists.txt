@@ -7,6 +7,8 @@ set(SOURCES
     platform/src/platform.c
     platform/src/platform_sync.c
     platform/src/platform_process.c
+    # 子进程沙箱（seccomp / seatbelt）（2026-09 §203 B2）
+    platform/src/platform_sandbox.c
     platform/src/platform_paths.c
     # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
     platform/src/platform_time.c

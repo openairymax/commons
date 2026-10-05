@@ -29,24 +29,33 @@ extern "C" {
 /* 8.2.3 (SSoT): facade declarations kept for consumer compatibility — the
  * authoritative declaration lives in atoms/corekern/include/airy_time.h and
  * the single implementation in corekern src/time/clock.c, source-shared
- * into libairy_common.a since 0.1.15. */
+ * into libairy_common.a since 0.1.15. Both declarations carry AIRY_API so
+ * the pair stays compatible whichever include order a TU uses (same-attr
+ * redeclaration is legal; mixed attr triggers GCC conflicting-types and
+ * MSVC C4273 — same rationale as airy_strlcpy below). */
 /**
  * @brief Get high-precision monotonic timestamp (nanoseconds)
  * @return timestamp
  */
-uint64_t airy_time_ns(void);
+AIRY_API uint64_t airy_time_ns(void);
 
 /**
  * @brief Get current monotonic timestamp (milliseconds)
  * @return timestamp
  */
-uint64_t airy_time_ms(void);
+AIRY_API uint64_t airy_time_ms(void);
 
 /**
  * @brief Sleep for the given number of milliseconds
  * @param ms milliseconds
  */
 void airy_sleep_ms(uint32_t ms);
+
+/**
+ * @brief Sleep for the given number of microseconds
+ * @param us microseconds
+ */
+void airy_sleep_us(uint32_t us);
 
 /**
  * @brief Thread-safe local time conversion (localtime_r/localtime_s unified)
@@ -129,6 +138,41 @@ int airy_file_lock(int fd, int exclusive, int block);
  * @return 0 on success, non-zero on failure
  */
 int airy_file_unlock(int fd);
+
+/**
+ * @brief File metadata probe result (airy_file_stat)
+ */
+typedef struct airy_file_stat {
+    uint64_t size;      /* bytes（常规文件有效） */
+    int64_t mtime_sec;  /* 最后修改时间，epoch 秒 */
+    int64_t mtime_nsec; /* 最后修改时间纳秒部分 */
+    bool is_dir;        /* 目录 */
+    bool is_regular;    /* 常规文件 */
+    bool exists;        /* 路径存在 */
+} airy_file_stat_t;
+
+/**
+ * @brief Query file metadata (size / mtime / type / existence)
+ * @param path file path
+ * @param st [out] metadata (must not be NULL; exists=false on failure)
+ * @return 0 on success (exists=true); non-zero on error (exists=false)
+ */
+int airy_file_stat(const char *path, airy_file_stat_t *st);
+
+/**
+ * @brief Remove a file (not directories)
+ * @param path file path
+ * @return 0 on success, non-zero on failure (errno-based)
+ */
+int airy_file_remove(const char *path);
+
+/**
+ * @brief Rename (move) a file within a filesystem
+ * @param old_path source path
+ * @param new_path destination path
+ * @return 0 on success, non-zero on failure (errno-based)
+ */
+int airy_file_rename(const char *old_path, const char *new_path);
 
 
 /* ==================== Network & signal ==================== */

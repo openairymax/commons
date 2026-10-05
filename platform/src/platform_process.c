@@ -9,7 +9,127 @@
 
 #include "platform_internal.h"
 
+/* ==================== Pipe API (platform-shared) ==================== */
+
+int airy_pipe_create(int fds[2])
+{
 #if AIRY_PLATFORM_WINDOWS
+    /* _pipe handles are inheritable by default; the child end must be
+     * inheritable for STARTF_USESTDHANDLES redirection. */
+    return _pipe(fds, 65536, _O_BINARY) == 0 ? 0 : -1;
+#else
+    return pipe(fds) == 0 ? 0 : -1;
+#endif
+}
+
+void airy_pipe_close(int *fd)
+{
+    if (fd && *fd >= 0) {
+        close(*fd);
+        *fd = -1;
+    }
+}
+
+long airy_pipe_read(int fd, void *buf, size_t len)
+{
+    if (fd < 0)
+        return -1;
+    long n = (long)read(fd, buf, len);
+    return n < 0 ? -1 : n;
+}
+
+int airy_pipe_write(int fd, const void *buf, size_t len)
+{
+    if (fd < 0)
+        return -1;
+    const char *p = (const char *)buf;
+    while (len > 0) {
+        long n = (long)write(fd, p, len);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            return -1;
+        }
+        p += n;
+        len -= (size_t)n;
+    }
+    return 0;
+}
+
+static void pipe_pair_close(int fds[2])
+{
+    airy_pipe_close(&fds[0]);
+    airy_pipe_close(&fds[1]);
+}
+
+#if AIRY_PLATFORM_WINDOWS
+
+/* Build a quoted Windows command line from argv (argv[0] is skipped; the
+ * executable is quoted separately), shared by start/run_capture/spawn. */
+static void win_build_cmdline(const char *executable, char *const argv[], char *cmdline, size_t cap)
+{
+    snprintf(cmdline, cap, "\"%s\"", executable);
+    for (int i = 1; argv && argv[i]; i++) {
+        size_t remaining = cap - strlen(cmdline);
+        if (remaining > 0)
+            snprintf(cmdline + strlen(cmdline), remaining, " \"%s\"", argv[i]);
+    }
+}
+
+/* CreateProcessA needs one contiguous block of NUL-separated "NAME=VALUE"
+ * strings terminated by an empty string; build it from the POSIX-style
+ * environment array. Caller frees the result. */
+static char *win_env_block(char *const env[])
+{
+    size_t total = 1;
+    for (int i = 0; env && env[i]; i++)
+        total += strlen(env[i]) + 1;
+    char *block = (char *)malloc(total);
+    if (!block)
+        return NULL;
+    char *p = block;
+    for (int i = 0; env && env[i]; i++) {
+        size_t len = strlen(env[i]) + 1;
+        memcpy(p, env[i], len);
+        p += len;
+    }
+    *p = '\0';
+    return block;
+}
+
+/* Wire stdio handles for CreateProcessA: inherit parent stdio by default,
+ * create/wire pipes for the requested redirections. Parent-side pipe ends
+ * get the inherit flag stripped (a leaked parent end would keep the pipe
+ * open in the child and suppress EOF). */
+static int win_spawn_stdio(const airy_process_opt_t *opt, STARTUPINFOA *si, int in_pipe[2],
+                           int out_pipe[2], int err_pipe[2])
+{
+    si->dwFlags = STARTF_USESTDHANDLES;
+    si->hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si->hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    si->hStdError = GetStdHandle(STD_ERROR_HANDLE);
+
+    if (opt && opt->redirect_stdin && airy_pipe_create(in_pipe) != 0)
+        return -1;
+    if (opt && opt->redirect_stdout && airy_pipe_create(out_pipe) != 0)
+        return -1;
+    if (opt && opt->redirect_stderr && airy_pipe_create(err_pipe) != 0)
+        return -1;
+
+    if (in_pipe[0] >= 0) {
+        si->hStdInput = (HANDLE)_get_osfhandle(in_pipe[0]);
+        SetHandleInformation((HANDLE)_get_osfhandle(in_pipe[1]), HANDLE_FLAG_INHERIT, 0);
+    }
+    if (out_pipe[1] >= 0) {
+        si->hStdOutput = (HANDLE)_get_osfhandle(out_pipe[1]);
+        SetHandleInformation((HANDLE)_get_osfhandle(out_pipe[0]), HANDLE_FLAG_INHERIT, 0);
+    }
+    if (err_pipe[1] >= 0) {
+        si->hStdError = (HANDLE)_get_osfhandle(err_pipe[1]);
+        SetHandleInformation((HANDLE)_get_osfhandle(err_pipe[0]), HANDLE_FLAG_INHERIT, 0);
+    }
+    return 0;
+}
 
 int airy_process_start(const char *executable, char *const argv[], char *const envp[],
                        airy_process_info_t *proc)
@@ -31,14 +151,8 @@ int airy_process_start(const char *executable, char *const argv[], char *const e
 
     AIRY_MEMSET(&pi, 0, sizeof(pi));
 
-    char cmdline[4096] = {0};
-    snprintf(cmdline, sizeof(cmdline), "\"%s\"", executable);
-    for (int i = 1; argv && argv[i]; i++) {
-        size_t remaining = sizeof(cmdline) - strlen(cmdline);
-        if (remaining > 0) {
-            snprintf(cmdline + strlen(cmdline), remaining, " \"%s\"", argv[i]);
-        }
-    }
+    char cmdline[4096];
+    win_build_cmdline(executable, argv, cmdline, sizeof(cmdline));
 
     BOOL success =
         CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
@@ -126,13 +240,8 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
      * line directly without a shell, aligning behavior with POSIX
      * fork/execvp. Consistent with the win_run_command secure pattern in
      * market_service_impl.c. */
-    char cmdline[4096] = {0};
-    snprintf(cmdline, sizeof(cmdline), "\"%s\"", executable);
-    for (int i = 1; argv && argv[i]; i++) {
-        size_t remaining = sizeof(cmdline) - strlen(cmdline);
-        if (remaining > 0)
-            snprintf(cmdline + strlen(cmdline), remaining, " \"%s\"", argv[i]);
-    }
+    char cmdline[4096];
+    win_build_cmdline(executable, argv, cmdline, sizeof(cmdline));
 
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -231,101 +340,198 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
     return timed_out ? -2 : (int)exit_code;
 }
 
-#else
-
-int airy_process_start(const char *executable, char *const argv[], char *const envp[],
-                       airy_process_info_t *proc)
+int airy_process_spawn(const char *executable, char *const argv[],
+                       const airy_process_opt_t *opt, airy_process_info_t *proc)
 {
-    if (!proc)
+    if (!executable || !argv || !proc)
         return AIRY_EINVAL;
     AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
     proc->stdin_fd = -1;
     proc->stdout_fd = -1;
     proc->stderr_fd = -1;
 
-    int stdout_pipe[2];
-    int stderr_pipe[2];
-    if (pipe(stdout_pipe) < 0)
-        return AIRY_EINVAL;
-    if (pipe(stderr_pipe) < 0) {
-        close(stdout_pipe[0]);
-        close(stdout_pipe[1]);
-        return AIRY_EINVAL;
+    int in_pipe[2] = {-1, -1};
+    int out_pipe[2] = {-1, -1};
+    int err_pipe[2] = {-1, -1};
+
+    STARTUPINFOA si;
+    AIRY_MEMSET(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    if (win_spawn_stdio(opt, &si, in_pipe, out_pipe, err_pipe) != 0) {
+        pipe_pair_close(in_pipe);
+        pipe_pair_close(out_pipe);
+        pipe_pair_close(err_pipe);
+        return AIRY_ERR_IO;
     }
 
-    pid_t pid = fork();
-    if (pid < 0) {
-        close(stdout_pipe[0]);
-        close(stdout_pipe[1]);
-        close(stderr_pipe[0]);
-        close(stderr_pipe[1]);
-        return AIRY_EINVAL;
-    }
+    char cmdline[4096];
+    win_build_cmdline(executable, argv, cmdline, sizeof(cmdline));
 
-    if (pid == 0) {
-
-        close(stdout_pipe[0]);
-        close(stderr_pipe[0]);
-        dup2(stdout_pipe[1], STDOUT_FILENO);
-        dup2(stderr_pipe[1], STDERR_FILENO);
-        close(stdout_pipe[1]);
-        close(stderr_pipe[1]);
-
-        /* R-3: airy_process_start launches external system tools (git, dig,
-         * docker/podman, ...). The airymaxrt launcher exports $AIRY_HOME/lib
-         * through LD_LIBRARY_PATH for the runtime's own binaries; leaking that
-         * into an external tool makes it load ABI-mismatched runtime .so files
-         * and fail (e.g. curl: "libcurl.so.4: no version information
-         * available"), which surfaces as "various tools unusable / cannot
-         * reach the network". Clear it before applying envp so an explicit
-         * caller-provided value still wins. The daemon process keeps its own
-         * LD_LIBRARY_PATH; only the child and its descendants are cleaned. */
-        unsetenv("LD_LIBRARY_PATH");
-        if (envp) {
-            for (int i = 0; envp[i]; i++) {
-                putenv(envp[i]);
-            }
+    char *env_block = NULL;
+    if (opt && opt->env) {
+        env_block = win_env_block(opt->env);
+        if (!env_block) {
+            pipe_pair_close(in_pipe);
+            pipe_pair_close(out_pipe);
+            pipe_pair_close(err_pipe);
+            return AIRY_ERR_IO;
         }
-        /* flawfinder: ignore - executable and argv are caller-controlled, not arbitrary user input
-         */
-        execvp(executable, argv);
-        /* macOS 实证（2026-09-04 tool_d exec 全 127）：execvp 失败原因不可见。
-         * fork 后子进程不可调 snprintf/strerror（多线程 malloc 锁），改纯
-         * write 手工格式化 errno 到 stderr，供上层 stderr 管道捕获。 */
-        {
-            static const char hdr[] = "[airy] execvp errno=";
-            char digits[12];
-            int d = 0;
-            int v = errno;
-            /* post-fork diagnostics path: write() results are intentionally
-             * ignored (best-effort, async-signal-safe); (void) does not
-             * silence warn_unused_result, so route through an ignored
-             * variable. */
-            ssize_t ignored;
-            ignored = write(STDERR_FILENO, hdr, sizeof(hdr) - 1);
-            (void)ignored;
-            if (v == 0)
-                digits[d++] = '0';
-            while (v > 0 && d < (int)sizeof(digits) - 1) {
-                digits[d++] = (char)('0' + (v % 10));
-                v /= 10;
-            }
-            while (d > 0) {
-                ignored = write(STDERR_FILENO, &digits[--d], 1);
-                (void)ignored;
-            }
-            ignored = write(STDERR_FILENO, "\n", 1);
-            (void)ignored;
-        }
-        _exit(127);
     }
 
-    close(stdout_pipe[1]);
-    close(stderr_pipe[1]);
-    proc->pid = pid;
-    proc->stdout_fd = stdout_pipe[0];
-    proc->stderr_fd = stderr_pipe[0];
+    PROCESS_INFORMATION pi;
+    AIRY_MEMSET(&pi, 0, sizeof(pi));
+    const char *workdir = (opt && opt->working_dir) ? opt->working_dir : NULL;
+    /* CREATE_NO_WINDOW keeps console-flash parity with start/run_capture;
+     * sandbox (opt->sandbox) is a no-op on Windows by design. */
+    BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW, env_block, workdir,
+                             &si, &pi);
+    if (env_block)
+        free(env_block);
+
+    /* Child ends are owned by the child now; parent keeps only its ends */
+    airy_pipe_close(&in_pipe[0]);
+    airy_pipe_close(&out_pipe[1]);
+    airy_pipe_close(&err_pipe[1]);
+
+    if (!ok) {
+        pipe_pair_close(in_pipe);
+        pipe_pair_close(out_pipe);
+        pipe_pair_close(err_pipe);
+        return AIRY_ERR_EXEC_FAIL;
+    }
+
+    proc->process_handle = (void *)pi.hProcess;
+    proc->thread_handle = (void *)pi.hThread;
+    proc->pid = pi.dwProcessId;
+    proc->stdin_fd = in_pipe[1];
+    proc->stdout_fd = out_pipe[0];
+    proc->stderr_fd = err_pipe[0];
     return 0;
+}
+
+int airy_process_reap(airy_process_info_t *proc, airy_exit_status_t *status)
+{
+    if (!proc || !proc->process_handle)
+        return AIRY_EINVAL;
+
+    HANDLE h_process = (HANDLE)proc->process_handle;
+    if (WaitForSingleObject(h_process, INFINITE) != WAIT_OBJECT_0)
+        return AIRY_EINVAL;
+
+    DWORD code = 1;
+    if (!GetExitCodeProcess(h_process, &code))
+        return AIRY_EINVAL;
+
+    if (status) {
+        status->code = (int)code;
+        status->signaled = false;
+        status->signal = 0;
+    }
+
+    CloseHandle(h_process);
+    proc->process_handle = NULL;
+    if (proc->thread_handle) {
+        CloseHandle((HANDLE)proc->thread_handle);
+        proc->thread_handle = NULL;
+    }
+    return 0;
+}
+
+#else
+
+/* post-fork exec failure diagnostics: snprintf/strerror are unsafe in the
+ * forked child of a multithreaded parent (malloc lock), so errno is
+ * hand-formatted with plain write() calls; the message is captured by the
+ * parent through the stderr pipe. */
+static void exec_fail_diag(void)
+{
+    static const char hdr[] = "[airy] execvp errno=";
+    char digits[12];
+    int d = 0;
+    int v = errno;
+    /* write() results are intentionally ignored (best-effort,
+     * async-signal-safe); (void) does not silence warn_unused_result,
+     * so route through an ignored variable. */
+    ssize_t ignored;
+    ignored = write(STDERR_FILENO, hdr, sizeof(hdr) - 1);
+    (void)ignored;
+    if (v == 0)
+        digits[d++] = '0';
+    while (v > 0 && d < (int)sizeof(digits) - 1) {
+        digits[d++] = (char)('0' + (v % 10));
+        v /= 10;
+    }
+    while (d > 0) {
+        ignored = write(STDERR_FILENO, &digits[--d], 1);
+        (void)ignored;
+    }
+    ignored = write(STDERR_FILENO, "\n", 1);
+    (void)ignored;
+}
+
+/* Child-side wiring between fork and exec; never returns (_exit).
+ * Exit codes: 126 = chdir/sandbox failure ("found but cannot run"),
+ * 127 = exec failure (errno diagnostic on stderr). */
+static void spawn_child(const char *executable, char *const argv[], const airy_process_opt_t *opt,
+                        int in_pipe[2], int out_pipe[2], int err_pipe[2])
+{
+    if (opt && opt->working_dir && chdir(opt->working_dir) != 0)
+        _exit(126);
+
+    if (in_pipe[0] >= 0) {
+        dup2(in_pipe[0], STDIN_FILENO);
+        close(in_pipe[0]);
+        close(in_pipe[1]);
+    }
+    if (out_pipe[1] >= 0) {
+        close(out_pipe[0]);
+        dup2(out_pipe[1], STDOUT_FILENO);
+        close(out_pipe[1]);
+    }
+    if (err_pipe[1] >= 0) {
+        close(err_pipe[0]);
+        dup2(err_pipe[1], STDERR_FILENO);
+        close(err_pipe[1]);
+    }
+
+    /* R-3: spawn/start launch external system tools (git, dig,
+     * docker/podman, ...). The airymaxrt launcher exports $AIRY_HOME/lib
+     * through LD_LIBRARY_PATH for the runtime's own binaries; leaking that
+     * into an external tool makes it load ABI-mismatched runtime .so files
+     * and fail (e.g. curl: "libcurl.so.4: no version information
+     * available"), which surfaces as "various tools unusable / cannot
+     * reach the network". Clear it before applying env so an explicit
+     * caller-provided value still wins. The daemon process keeps its own
+     * LD_LIBRARY_PATH; only the child and its descendants are cleaned. */
+    unsetenv("LD_LIBRARY_PATH");
+    if (opt && opt->env) {
+        for (int i = 0; opt->env[i]; i++)
+            putenv(opt->env[i]);
+    }
+
+    /* Native sandbox (Landlock + seccomp), applied just before exec;
+     * failure aborts the exec (exit 126). Non-Linux is a no-op. */
+    if (opt && opt->sandbox && opt->sandbox->enabled && airy_native_sandbox_apply(opt->sandbox) != 0)
+        _exit(126);
+
+    /* flawfinder: ignore - executable and argv are caller-controlled, not arbitrary user input
+     */
+    execvp(executable, argv);
+    exec_fail_diag();
+    _exit(127);
+}
+
+int airy_process_start(const char *executable, char *const argv[], char *const envp[],
+                       airy_process_info_t *proc)
+{
+    /* Thin wrapper over spawn: stdout+stderr piped, stdin inherited,
+     * no sandbox/working_dir (historical start contract). */
+    airy_process_opt_t opt;
+    AIRY_MEMSET(&opt, 0, sizeof(opt));
+    opt.env = envp;
+    opt.redirect_stdout = 1;
+    opt.redirect_stderr = 1;
+    return airy_process_spawn(executable, argv, &opt, proc);
 }
 
 int airy_process_wait(airy_process_info_t *proc, uint32_t timeout_ms, int *exit_code)
@@ -542,6 +748,70 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
     if (canceled)
         return AIRY_PROCESS_RC_CANCELED;
     return timed_out ? -2 : exit_code;
+}
+
+int airy_process_spawn(const char *executable, char *const argv[],
+                       const airy_process_opt_t *opt, airy_process_info_t *proc)
+{
+    if (!executable || !argv || !proc)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
+    proc->stdin_fd = -1;
+    proc->stdout_fd = -1;
+    proc->stderr_fd = -1;
+
+    int in_pipe[2] = {-1, -1};
+    int out_pipe[2] = {-1, -1};
+    int err_pipe[2] = {-1, -1};
+    if (opt && opt->redirect_stdin && airy_pipe_create(in_pipe) != 0)
+        return AIRY_ERR_IO;
+    if (opt && opt->redirect_stdout && airy_pipe_create(out_pipe) != 0)
+        goto fail;
+    if (opt && opt->redirect_stderr && airy_pipe_create(err_pipe) != 0)
+        goto fail;
+
+    pid_t pid = fork();
+    if (pid < 0)
+        goto fail;
+    if (pid == 0)
+        spawn_child(executable, argv, opt, in_pipe, out_pipe, err_pipe);
+
+    /* parent: drop child ends, keep parent ends */
+    airy_pipe_close(&in_pipe[0]);
+    airy_pipe_close(&out_pipe[1]);
+    airy_pipe_close(&err_pipe[1]);
+
+    proc->pid = pid;
+    proc->stdin_fd = in_pipe[1];
+    proc->stdout_fd = out_pipe[0];
+    proc->stderr_fd = err_pipe[0];
+    return 0;
+
+fail:
+    pipe_pair_close(in_pipe);
+    pipe_pair_close(out_pipe);
+    pipe_pair_close(err_pipe);
+    return AIRY_ERR_IO;
+}
+
+int airy_process_reap(airy_process_info_t *proc, airy_exit_status_t *status)
+{
+    if (!proc || proc->pid < 0)
+        return AIRY_EINVAL;
+    int s = 0;
+    pid_t ret;
+    do {
+        ret = waitpid(proc->pid, &s, 0);
+    } while (ret < 0 && errno == EINTR);
+    if (ret != proc->pid)
+        return AIRY_EINVAL;
+    if (status) {
+        status->signaled = WIFSIGNALED(s) ? true : false;
+        status->signal = WIFSIGNALED(s) ? WTERMSIG(s) : 0;
+        status->code = WIFEXITED(s) ? WEXITSTATUS(s) : 0;
+    }
+    proc->pid = (airy_pid_t)-1;
+    return 0;
 }
 
 #endif
