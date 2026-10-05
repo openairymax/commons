@@ -50,7 +50,8 @@ set(UNIT_TEST_SOURCES
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
     unit/test_svc_common.c
     unit/test_svc_stop.c
-    # 子进程沙箱配置契约（no-op 路径；真实 Landlock/seccomp 行为测试 §203 B3 迁入）
+    # 原生执行沙箱机制 SSoT（§204：global_read 双模式 + Landlock/seccomp
+    # fork 真实行为 + deny-list 网络拦截，全项目唯一沙箱机制测试）
     unit/test_platform_sandbox.c
 )
 

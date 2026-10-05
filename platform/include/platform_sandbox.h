@@ -37,6 +37,8 @@ extern "C" {
 typedef struct airy_native_sandbox {
     int enabled;                 /* 0 = disabled（默认，零开销 no-op） */
     int deny_network;            /* 1 = seccomp 拦截 network syscall 族 */
+    int global_read;             /* 1 = 默认 "/" 只读基线（白名单叠加写）；
+                                    0 = 无全局基线，仅 ro/rw_paths 白名单可达 */
     const char *const *ro_paths; /* Landlock 追加只读路径（NULL 结尾数组，可 NULL） */
     const char *const *rw_paths; /* Landlock 读写路径（NULL 结尾数组，可 NULL） */
 } airy_native_sandbox_t;
@@ -46,6 +48,13 @@ typedef struct airy_native_sandbox {
  * @param sb [in/out] sandbox config (must not be NULL)
  */
 void airy_native_sandbox_init(airy_native_sandbox_t *sb);
+
+/**
+ * @brief Probe Landlock availability (kernel >= 5.13 with UAPI header).
+ * @return 1 = available; 0 = unavailable（含非 Linux 平台）。调用方按
+ *         自身策略决定 fail-closed 或降级。
+ */
+int airy_native_sandbox_landlock_available(void);
 
 /**
  * @brief Apply the sandbox to the current process (fork child, pre-exec).
