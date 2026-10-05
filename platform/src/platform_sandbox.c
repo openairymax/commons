@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -78,8 +79,10 @@
 
 void airy_native_sandbox_init(airy_native_sandbox_t *sb)
 {
-    if (sb)
-        AIRY_MEMSET(sb, 0, sizeof(*sb));
+    if (!sb)
+        return;
+    AIRY_MEMSET(sb, 0, sizeof(*sb));
+    sb->global_read = 1; /* 默认 "/" 只读基线（历史行为兼容） */
 }
 
 /* ============================================================================
@@ -96,17 +99,36 @@ static int landlock_abi(void)
 
 static int landlock_add_path(int ruleset_fd, uint64_t allowed_access, const char *path)
 {
-    int dir_fd = open(path, O_PATH | O_CLOEXEC);
-    if (dir_fd < 0)
+    int fd = open(path, O_PATH | O_CLOEXEC);
+    if (fd < 0) {
+        /* 不存在的路径（架构/部署差异，如 /lib32）跳过：Landlock 对未
+         * 列出路径默认拒绝，缺规则不影响隔离正确性。 */
+        return errno == ENOENT ? 0 : -1;
+    }
+
+    /* 目录专属位（READ_DIR、REMOVE_DIR/FILE、MAKE_* 系列）挂在非目录
+     * 文件上会被内核以 EINVAL 拒绝（如 /dev/null 写规则），整个 ruleset
+     * 随之失效。按 fstat 裁剪：文件只保留文件级访问位。 */
+    uint64_t access = allowed_access;
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        close(fd);
         return -1;
+    }
+    if (!S_ISDIR(st.st_mode)) {
+        access &= (uint64_t)LANDLOCK_ACCESS_FS_EXECUTE |
+                  (uint64_t)LANDLOCK_ACCESS_FS_WRITE_FILE |
+                  (uint64_t)LANDLOCK_ACCESS_FS_READ_FILE |
+                  (uint64_t)LANDLOCK_ACCESS_FS_TRUNCATE;
+    }
 
     struct landlock_path_beneath_attr attr;
     AIRY_MEMSET(&attr, 0, sizeof(attr));
-    attr.allowed_access = allowed_access;
-    attr.parent_fd = dir_fd;
+    attr.allowed_access = access;
+    attr.parent_fd = fd;
 
     int rc = (int)syscall(SYS_landlock_add_rule, ruleset_fd, LANDLOCK_RULE_PATH_BENEATH, &attr, 0);
-    close(dir_fd);
+    close(fd);
     return rc;
 }
 
@@ -143,12 +165,13 @@ static int landlock_apply(const airy_native_sandbox_t *sb)
     if (ruleset_fd < 0)
         return -1;
 
-    /* 默认：全盘只读（读文件/读目录/执行）。Landlock 访问权 = 全部匹配
-     * 规则路径的并集，故 rw_paths 叠加读写后对应目录可写，系统其余保持只读。 */
+    /* global_read=1：全盘只读基线（读文件/读目录/执行），rw_paths 叠加
+     * 读写后对应目录可写，系统其余保持只读。global_read=0：无全局基线，
+     * 仅 ro_paths/rw_paths 白名单路径可达（STRICT 白名单模式）。 */
     const uint64_t read_access = (uint64_t)LANDLOCK_ACCESS_FS_READ_FILE |
                                  LANDLOCK_ACCESS_FS_READ_DIR | LANDLOCK_ACCESS_FS_EXECUTE;
 
-    if (landlock_add_path(ruleset_fd, read_access, "/") != 0) {
+    if (sb->global_read && landlock_add_path(ruleset_fd, read_access, "/") != 0) {
         close(ruleset_fd);
         return -1;
     }
@@ -194,7 +217,7 @@ static int landlock_apply(const airy_native_sandbox_t *sb)
 
 #if defined(AIRY_HAVE_SECCOMP)
 
-#define AIRY_SANDBOX_FILTER_MAX 128
+#define AIRY_SANDBOX_FILTER_MAX 192
 
 /* Linux >= 6.4 的 <linux/filter.h> 将 BPF_STMT/BPF_JUMP 改为 C++ 兼容的
  * 双重括号复合字面量，在纯 C 中不合法。此处自定义等价宏，使用位置
@@ -231,8 +254,11 @@ static int seccomp_apply(const airy_native_sandbox_t *sb)
                                         AIRY_SANDBOX_AUDIT_ARCH, 1, 0);
     filter[n++] = AIRY_SANDBOX_BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
 
-    /* 特权/危险 syscall deny-list（默认拒绝，返回 EPERM）。 */
+    /* 特权/危险 syscall deny-list（默认拒绝，返回 EPERM）。清单为
+     * 全项目统一口径（tool_d shell 沙箱旧清单并集，机制归位 SSoT）。 */
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_ptrace);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_bpf);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_perf_event_open);
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_init_module);
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_finit_module);
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_delete_module);
@@ -249,6 +275,13 @@ static int seccomp_apply(const airy_native_sandbox_t *sb)
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_umount2);
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_pivot_root);
     AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_acct);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_sethostname);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_setdomainname);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_open_by_handle_at);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_name_to_handle_at);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_keyctl);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_add_key);
+    AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_request_key);
 
     if (sb->deny_network) {
         AIRY_SANDBOX_DENY(filter, n, off_nr, __NR_socket);
@@ -297,6 +330,15 @@ static int seccomp_apply(const airy_native_sandbox_t *sb)
 
 #endif /* AIRY_HAVE_SECCOMP */
 
+int airy_native_sandbox_landlock_available(void)
+{
+#if defined(AIRY_HAVE_LANDLOCK)
+    return landlock_abi() >= 1;
+#else
+    return 0;
+#endif
+}
+
 int airy_native_sandbox_apply(const airy_native_sandbox_t *sb)
 {
     if (!sb || !sb->enabled)
@@ -316,8 +358,15 @@ int airy_native_sandbox_apply(const airy_native_sandbox_t *sb)
 
 void airy_native_sandbox_init(airy_native_sandbox_t *sb)
 {
-    if (sb)
-        AIRY_MEMSET(sb, 0, sizeof(*sb));
+    if (!sb)
+        return;
+    AIRY_MEMSET(sb, 0, sizeof(*sb));
+    sb->global_read = 1;
+}
+
+int airy_native_sandbox_landlock_available(void)
+{
+    return 0;
 }
 
 int airy_native_sandbox_apply(const airy_native_sandbox_t *sb)

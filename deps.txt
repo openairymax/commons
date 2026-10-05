@@ -28,7 +28,7 @@ config_unified:
 cost:
 effect: include
 error: types
-execution: error include platform
+execution: error include
 ext: error include
 id:
 ime:
@@ -36,19 +36,19 @@ include:
 io:
 ipc: error memory types include cjson compat sync platform
 logging: compat error memory observability platform
-memory: error
+memory: error platform
 network: error types
 observability:
 platform: compat include
 print: logging
 quality: error
 resource: error memory
-sd: ipc
-security: error
+sd: include
+security:
 strategy: memory string
 string:
 sync: platform memory
 task:
 token:
-types: include platform
+types: include
 uuid:
