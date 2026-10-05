@@ -24,6 +24,32 @@ static void skip_whitespace(const char **pp, const char *end)
         (*pp)++;
 }
 
+/* Decode a single-character JSON escape; '\0' means the escape either
+ * needs richer handling (\\u) or is unknown and must be dropped. */
+static char json_escape_char(char c)
+{
+    switch (c) {
+    case '"':
+        return '"';
+    case '\\':
+        return '\\';
+    case '/':
+        return '/';
+    case 'n':
+        return '\n';
+    case 'r':
+        return '\r';
+    case 't':
+        return '\t';
+    case 'b':
+        return '\b';
+    case 'f':
+        return '\f';
+    default:
+        return '\0';
+    }
+}
+
 static config_error_t parse_json_string(const char **pp, const char *end, char *buf,
                                         size_t buf_size)
 {
@@ -32,86 +58,53 @@ static config_error_t parse_json_string(const char **pp, const char *end, char *
     (*pp)++;
     size_t len = 0;
     while (*pp < end && **pp != '"') {
-        if (**pp == '\\') {
-            (*pp)++;
-            if (*pp >= end)
-                break;
-            switch (**pp) {
-            case '"':
-                if (len < buf_size - 1)
-                    buf[len++] = '"';
-                break;
-            case '\\':
-                if (len < buf_size - 1)
-                    buf[len++] = '\\';
-                break;
-            case '/':
-                if (len < buf_size - 1)
-                    buf[len++] = '/';
-                break;
-            case 'n':
-                if (len < buf_size - 1)
-                    buf[len++] = '\n';
-                break;
-            case 'r':
-                if (len < buf_size - 1)
-                    buf[len++] = '\r';
-                break;
-            case 't':
-                if (len < buf_size - 1)
-                    buf[len++] = '\t';
-                break;
-            case 'b':
-                if (len < buf_size - 1)
-                    buf[len++] = '\b';
-                break;
-            case 'f':
-                if (len < buf_size - 1)
-                    buf[len++] = '\f';
-                break;
-            case 'u': {
-                if (*pp + 4 < end) {
-                    unsigned int code = 0;
-                    for (int i = 0; i < 4; i++) {
-                        char h = *(*pp + 1 + (size_t)i);
-                        code <<= 4;
-                        if (h >= '0' && h <= '9')
-                            code |= (unsigned int)(h - '0');
-                        else if (h >= 'a' && h <= 'f')
-                            code |= (unsigned int)(h - 'a' + 10);
-                        else if (h >= 'A' && h <= 'F')
-                            code |= (unsigned int)(h - 'A' + 10);
-                        else
-                            return CONFIG_ERROR_PARSE;
-                    }
-                    *pp += 4;
-                    if (code < 0x80) {
-                        if (len < buf_size - 1)
-                            buf[len++] = (char)code;
-                    } else if (code < 0x800) {
-                        if (len < buf_size - 2) {
-                            buf[len++] = (char)(0xC0 | (code >> 6));
-                            buf[len++] = (char)(0x80 | (code & 0x3F));
-                        }
-                    } else {
-                        if (len < buf_size - 3) {
-                            buf[len++] = (char)(0xE0 | (code >> 12));
-                            buf[len++] = (char)(0x80 | ((code >> 6) & 0x3F));
-                            buf[len++] = (char)(0x80 | (code & 0x3F));
-                        }
-                    }
-                }
-                break;
-            }
-            default:
-                break;
-            }
-            (*pp)++;
-        } else {
+        if (**pp != '\\') {
             if (len < buf_size - 1)
                 buf[len++] = **pp;
             (*pp)++;
+            continue;
         }
+        (*pp)++;
+        if (*pp >= end)
+            break;
+        char esc = json_escape_char(**pp);
+        if (esc != '\0') {
+            if (len < buf_size - 1)
+                buf[len++] = esc;
+        } else if (**pp == 'u') {
+            if (*pp + 4 < end) {
+                unsigned int code = 0;
+                for (int i = 0; i < 4; i++) {
+                    char h = *(*pp + 1 + (size_t)i);
+                    code <<= 4;
+                    if (h >= '0' && h <= '9')
+                        code |= (unsigned int)(h - '0');
+                    else if (h >= 'a' && h <= 'f')
+                        code |= (unsigned int)(h - 'a' + 10);
+                    else if (h >= 'A' && h <= 'F')
+                        code |= (unsigned int)(h - 'A' + 10);
+                    else
+                        return CONFIG_ERROR_PARSE;
+                }
+                *pp += 4;
+                if (code < 0x80) {
+                    if (len < buf_size - 1)
+                        buf[len++] = (char)code;
+                } else if (code < 0x800) {
+                    if (len < buf_size - 2) {
+                        buf[len++] = (char)(0xC0 | (code >> 6));
+                        buf[len++] = (char)(0x80 | (code & 0x3F));
+                    }
+                } else {
+                    if (len < buf_size - 3) {
+                        buf[len++] = (char)(0xE0 | (code >> 12));
+                        buf[len++] = (char)(0x80 | ((code >> 6) & 0x3F));
+                        buf[len++] = (char)(0x80 | (code & 0x3F));
+                    }
+                }
+            }
+        }
+        (*pp)++;
     }
     buf[len] = '\0';
     if (*pp < end && **pp == '"')
