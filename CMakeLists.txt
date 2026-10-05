@@ -34,8 +34,6 @@ set(SOURCES
     utils/logging/logging_format.c
     utils/logging/logging_backend_file.c
     utils/logging/logging_control.c
-    utils/logging/atomic_logging.c
-    utils/logging/service_logging.c
     # memory 核心层按功能域拆分：状态机+分配 / 统计 / 调试核心
     utils/memory/memory_core.c
     utils/memory/memory_stats.c
@@ -283,8 +281,6 @@ set_source_files_properties(
     utils/logging/logging_format.c
     utils/logging/logging_backend_file.c
     utils/logging/logging_control.c
-    utils/logging/atomic_logging.c
-    utils/logging/service_logging.c
     PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"
 )
 

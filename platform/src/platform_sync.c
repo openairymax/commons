@@ -223,7 +223,7 @@ int airy_thread_set_name(const char *name)
  *
  * POSIX 端 pthread_mutex_t 全零 == PTHREAD_MUTEX_INITIALIZER（glibc 实证），
  * 既有代码大量以 `static airy_mtx_t lock;` / `= {0}` 声明互斥量后直接
- * airy_mtx_lock()（observability/atomic_logging/taskflow/heapstore 等全树
+ * airy_mtx_lock()（observability/taskflow/heapstore 等全树
  * 实证）。Windows 的 CRITICAL_SECTION 必须经 InitializeCriticalSection
  * 才能使用：对全零对象直接 EnterCriticalSection，单线程快路径碰巧可用，
  * 但首个竞争线程进入 RtlpWaitOnCriticalSection 会访问空 LockSemaphore →

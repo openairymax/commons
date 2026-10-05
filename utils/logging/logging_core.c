@@ -265,19 +265,26 @@ static void log_write_core(log_level_t level, const char *module, int line,
                            .thread_id = get_current_thread_id(),
                            .process_id = get_current_process_id()};
 
+    bool colored = log_internal_color_enabled();
     char formatted_buffer[MAX_MESSAGE_LEN * 2];
-    size_t formatted_len =
-        log_internal_format_message(&record, formatted_buffer, sizeof(formatted_buffer));
+    size_t formatted_len = log_internal_format_message(&record, formatted_buffer,
+                                                       sizeof(formatted_buffer), colored);
 
     if (formatted_len > 0) {
-        FILE *stream = stderr;
-        (void)level;
-        fwrite(formatted_buffer, 1, formatted_len, stream);
-        fflush(stream);
+        fwrite(formatted_buffer, 1, formatted_len, stderr);
+        fflush(stderr);
     }
 
     if (g_logging_state.manager.outputs & (1 << LOG_OUTPUT_FILE)) {
-        log_internal_file_write(&record, formatted_buffer, formatted_len);
+        const char *file_msg = formatted_buffer;
+        size_t file_len = formatted_len;
+        char plain_buffer[MAX_MESSAGE_LEN * 2];
+        if (colored) {
+            file_len = log_internal_format_message(&record, plain_buffer,
+                                                   sizeof(plain_buffer), false);
+            file_msg = plain_buffer;
+        }
+        log_internal_file_write(file_msg, file_len);
     }
 }
 

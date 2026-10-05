@@ -110,13 +110,9 @@ static void log_file_rotate_if_needed(void)
         AIRY_LOG_WARN("log rotation: some backup renames failed (path=%s)", path);
 }
 
-void log_internal_file_write(const log_record_t *record, const char *formatted_message,
-                             size_t formatted_len)
+void log_internal_file_write(const char *formatted_message, size_t formatted_len)
 {
-    (void)formatted_message;
-    (void)formatted_len;
-
-    if (!g_log_file_state.file || !g_log_file_state.mutex_init || !record)
+    if (!g_log_file_state.file || !g_log_file_state.mutex_init || !formatted_message)
         return;
 
     airy_mtx_lock(&g_log_file_state.mutex);
@@ -125,44 +121,11 @@ void log_internal_file_write(const log_record_t *record, const char *formatted_m
         return;
     }
 
-    char file_buffer[MAX_MESSAGE_LEN * 2];
-    time_t sec = record->timestamp / 1000;
-    int ms = (int)(record->timestamp % 1000);
-    struct tm tm_storage;
-    localtime_r(&sec, &tm_storage);
-    const char *level_name = log_level_to_string(record->level);
-
-    int len = snprintf(file_buffer, sizeof(file_buffer),
-                       "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [%s] [%s:%d]",
-                       tm_storage.tm_year + 1900, tm_storage.tm_mon + 1, tm_storage.tm_mday,
-                       tm_storage.tm_hour, tm_storage.tm_min, tm_storage.tm_sec, ms, level_name,
-                       record->module ? record->module : "?", record->line);
-    if (len < 0) {
-        airy_mtx_unlock(&g_log_file_state.mutex);
-        return;
-    }
-    if ((size_t)len >= sizeof(file_buffer))
-        len = (int)sizeof(file_buffer) - 1;
-
-    if (record->trace_id && record->trace_id[0]) {
-        int tlen = snprintf(file_buffer + len, sizeof(file_buffer) - (size_t)len, " [trace:%s]",
-                            record->trace_id);
-        if (tlen > 0)
-            len += tlen;
-        if ((size_t)len >= sizeof(file_buffer))
-            len = (int)sizeof(file_buffer) - 1;
-    }
-
     /* BAN-70 EXEMPT: logging module - direct FILE* output is the implementation mechanism */
-    fwrite(file_buffer, 1, (size_t)len, g_log_file_state.file);
-    fwrite(" ", 1, 1, g_log_file_state.file);
-    fwrite(record->message ? record->message : "", 1, record->message ? strlen(record->message) : 0,
-           g_log_file_state.file);
-    fwrite("\n", 1, 1, g_log_file_state.file);
+    fwrite(formatted_message, 1, formatted_len, g_log_file_state.file);
     fflush(g_log_file_state.file);
 
-    g_log_file_state.current_size +=
-        (size_t)len + 1 + (record->message ? strlen(record->message) : 0) + 1;
+    g_log_file_state.current_size += formatted_len;
 
     log_file_rotate_if_needed();
     airy_mtx_unlock(&g_log_file_state.mutex);
