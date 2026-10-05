@@ -130,6 +130,28 @@ airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***o
     return AIRY_SUCCESS;
 }
 
+airy_err_t airy_checkpoint_ids(char ***out_task_ids, size_t *out_count)
+{
+    if (!g_checkpoint_initialized)
+        return AIRY_ENOTINIT;
+    if (!out_task_ids || !out_count)
+        return AIRY_EINVAL;
+
+    *out_task_ids = NULL;
+    *out_count = 0;
+
+    size_t cnt = 0;
+    char **ids = collect_task_ids(&cnt);
+    if (!ids || cnt == 0) {
+        AIRY_FREE(ids);
+        return AIRY_SUCCESS;
+    }
+
+    *out_task_ids = ids;
+    *out_count = cnt;
+    return AIRY_SUCCESS;
+}
+
 airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
 {
     if (!g_checkpoint_initialized)
