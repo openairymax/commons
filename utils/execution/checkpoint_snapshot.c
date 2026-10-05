@@ -96,7 +96,7 @@ airy_err_t airy_snapshot_restore(const char *snap_path, char **tid)
     *tid = NULL;
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "TaskID: ", 8) == 0) {
-            *tid = safe_strdup(line + 8);
+            *tid = AIRY_STRDUP(line + 8);
             if (*tid) {
                 size_t tlen = strlen(*tid);
                 if (tlen > 0 && (*tid)[tlen - 1] == '\n')

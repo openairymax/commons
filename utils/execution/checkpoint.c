@@ -67,21 +67,6 @@ airy_checkpoint_state_t string_to_state(const char *s)
     return CHECKPOINT_STATE_INVALID;
 }
 
-char *safe_strdup(const char *src)
-{
-
-    if (!src) {
-        return NULL;
-    }
-    size_t len = strlen(src);
-    char *d = (char *)AIRY_MALLOC(len + 1);
-    if (d) {
-        __builtin_memcpy(d, src, len);
-        d[len] = '\0';
-    }
-    return d;
-}
-
 static char **safe_str_array_dup(char **src, size_t count)
 {
 
@@ -95,7 +80,7 @@ static char **safe_str_array_dup(char **src, size_t count)
     }
     __builtin_memset(dst, 0, sizeof(char *) * count);
     for (size_t i = 0; i < count; i++) {
-        dst[i] = safe_strdup(src[i]);
+        dst[i] = AIRY_STRDUP(src[i]);
         if (!dst[i] && src[i]) {
             AIRY_LOG_ERROR("C-L07: Checkpoint: ARRAY-DUP-FAIL — OOM at index=%zu", i);
             for (size_t j = 0; j < i; j++)
@@ -235,7 +220,7 @@ airy_err_t airy_checkpoint_create(const char *task_id, const char *session_id,
 
     init_fields(cp, task_id, session_id, sequence_num);
 
-    cp->state_json = safe_strdup(state_json);
+    cp->state_json = AIRY_STRDUP(state_json);
     if (!cp->state_json) {
         AIRY_FREE(cp);
         return AIRY_ENOMEM;

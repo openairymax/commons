@@ -65,8 +65,6 @@ const char *state_to_string(airy_checkpoint_state_t state);
 
 airy_checkpoint_state_t string_to_state(const char *s);
 
-char *safe_strdup(const char *src);
-
 void init_fields(airy_task_checkpoint_t *cp, const char *task_id, const char *session_id,
                  uint64_t seq);
 
