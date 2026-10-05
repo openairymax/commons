@@ -34,6 +34,7 @@
 #define AIRY_RT_SERVICE_DISCOVERY_H
 
 #include "svc_common.h"
+#include "export.h" /* AIRY_API */
 
 #include <stdbool.h>
 #include <stdint.h>

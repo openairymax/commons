@@ -16,6 +16,7 @@
 #define AIRY_RT_PLATFORM_PROCESS_H
 
 #include "platform_base.h"
+#include "platform_sandbox.h"
 
 
 #ifdef __cplusplus
@@ -218,6 +219,99 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
 
 
 #define AIRY_PROCESS_RC_CANCELED (-3)
+
+
+/* ==================== Extended spawn API (sandbox-aware) ==================== */
+
+/**
+ * @brief Child process exit status
+ */
+typedef struct {
+    int code;      /* exit code (valid when signaled == false) */
+    bool signaled; /* true = terminated by a signal */
+    int signal;    /* signal number (valid when signaled == true) */
+} airy_exit_status_t;
+
+/**
+ * @brief Extended spawn options
+ *
+ * opt == NULL: the child inherits the parent's stdio (no redirection)
+ * and environment, runs in the parent's working directory, no sandbox.
+ *
+ * Requested pipes are created internally by airy_process_spawn; their
+ * parent-side fds are stored in proc->stdin_fd / stdout_fd / stderr_fd
+ * (stdin keeps the write end, stdout/stderr keep the read end, unused
+ * fds stay -1). The caller owns these fds and closes them via
+ * airy_pipe_close or airy_process_close_pipes.
+ */
+typedef struct {
+    const char *working_dir;       /* NULL = inherit parent cwd */
+    char *const *env;              /* NULL-terminated, NULL = inherit */
+    int redirect_stdin;            /* 1 = wire a pipe to child stdin */
+    int redirect_stdout;           /* 1 = wire a pipe to child stdout */
+    int redirect_stderr;           /* 1 = wire a pipe to child stderr */
+    const airy_native_sandbox_t *sandbox; /* NULL = none; applied pre-exec on POSIX */
+} airy_process_opt_t;
+
+/**
+ * @brief Spawn a child process with stdio redirection and optional sandbox
+ *
+ * POSIX: fork + execvp (PATH search preserved even with a custom env).
+ * On Linux the sandbox (Landlock + seccomp, see platform_sandbox.h) is
+ * applied in the child before exec; sandbox failure exits 126.
+ *
+ * @param executable executable file path (searched in PATH)
+ * @param argv argument array (NULL-terminated, argv[0] is the program name)
+ * @param opt options (may be NULL)
+ * @param proc output process info
+ * @return 0 on success, non-zero on failure
+ */
+int airy_process_spawn(const char *executable, char *const argv[],
+                       const airy_process_opt_t *opt, airy_process_info_t *proc);
+
+/**
+ * @brief Reap a spawned process and decode its exit status
+ *
+ * Blocks until the child exits, then releases the process resources and
+ * resets proc so a double reap is rejected. Pipe fds are not touched.
+ *
+ * @param proc process info
+ * @param status output exit status (may be NULL)
+ * @return 0 on success, non-zero on failure
+ */
+int airy_process_reap(airy_process_info_t *proc, airy_exit_status_t *status);
+
+
+/* ==================== Pipe API ==================== */
+
+/**
+ * @brief Create an anonymous pipe
+ * @param fds receives two fds: fds[0] = read end, fds[1] = write end
+ * @return 0 on success, -1 on failure
+ */
+int airy_pipe_create(int fds[2]);
+
+/**
+ * @brief Close one pipe fd and set it to -1 (NULL-safe)
+ *
+ * A pipe fd is unidirectional, so closing the single fd is exactly the
+ * half-close of that direction.
+ *
+ * @param fd pointer to the fd
+ */
+void airy_pipe_close(int *fd);
+
+/**
+ * @brief Read from a pipe fd
+ * @return bytes read, 0 on EOF (all write ends closed), -1 on error
+ */
+long airy_pipe_read(int fd, void *buf, size_t len);
+
+/**
+ * @brief Write to a pipe fd (full write: retries until all bytes are written)
+ * @return 0 on success, -1 on error
+ */
+int airy_pipe_write(int fd, const void *buf, size_t len);
 
 
 #ifdef __cplusplus

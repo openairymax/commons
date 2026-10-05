@@ -33,6 +33,7 @@
 #define AIRY_RT_IPC_SERVICE_BUS_H
 
 #include "svc_common.h"
+#include "export.h" /* AIRY_API */
 
 #include <airymax/ipc.h> /* [SC] SSoT: AIRY_IPC_MAGIC (P0-05 convergence) */
 #include <stdbool.h>

@@ -243,6 +243,135 @@ static int test_run_capture_cancel(void)
     airy_cancel_token_destroy(&token);
     return 0;
 }
+
+/* ---- §203 B2：rwlock / once / sleep_us / file_stat / pipe / spawn ---- */
+
+static int once_counter;
+
+static void bump_once(void)
+{
+    once_counter++;
+}
+
+static int test_rwlock_once(void)
+{
+    airy_rwlock_t lock;
+    TEST_ASSERT(airy_rwlock_init(&lock) == 0, "rwlock init should succeed");
+    TEST_ASSERT(airy_rwlock_rdlock(&lock) == 0, "rdlock should succeed");
+    TEST_ASSERT(airy_rwlock_tryrd(&lock) == 0, "second reader should be allowed");
+    TEST_ASSERT(airy_rwlock_trywr(&lock) != 0, "writer must fail while readers hold");
+    TEST_ASSERT(airy_rwlock_unlock(&lock) == 0, "rd unlock should succeed");
+    TEST_ASSERT(airy_rwlock_unlock(&lock) == 0, "second rd unlock should succeed");
+    TEST_ASSERT(airy_rwlock_wrlock(&lock) == 0, "wrlock should succeed");
+    TEST_ASSERT(airy_rwlock_tryrd(&lock) != 0, "reader must fail while writer holds");
+    TEST_ASSERT(airy_rwlock_unlock(&lock) == 0, "wr unlock should succeed");
+    airy_rwlock_destroy(&lock);
+
+    static airy_once_t once = AIRY_ONCE_INIT;
+    airy_call_once(&once, bump_once);
+    airy_call_once(&once, bump_once);
+    TEST_ASSERT(once_counter == 1, "once routine must run exactly once");
+    return 0;
+}
+
+static int test_sleep_us(void)
+{
+    uint64_t t0 = airy_time_ns();
+    airy_sleep_us(2000);
+    uint64_t t1 = airy_time_ns();
+    TEST_ASSERT(t1 - t0 >= 1500000, "sleep_us(2ms) should block at least 1.5ms");
+    printf("  sleep_us(2000): %llu ns\n", (unsigned long long)(t1 - t0));
+    return 0;
+}
+
+static int test_file_stat(void)
+{
+    const char *path = "platform-stat-test.tmp";
+    FILE *f = fopen(path, "wb");
+    TEST_ASSERT(f != NULL, "tmp file create should succeed");
+    fputs("abcdef", f);
+    fclose(f);
+
+    airy_file_stat_t st;
+    TEST_ASSERT(airy_file_stat(path, &st) == 0, "file stat should succeed");
+    TEST_ASSERT(st.exists && st.is_regular, "regular file flags should be set");
+    TEST_ASSERT(st.size == 6, "file size should be 6");
+
+    TEST_ASSERT(airy_file_stat("no-such-file-xyz", &st) == 0,
+                "missing file stat is a valid query");
+    TEST_ASSERT(!st.exists, "missing file should report exists=false");
+
+    TEST_ASSERT(airy_file_rename(path, "platform-stat-test2.tmp") == 0,
+                "rename should succeed");
+    TEST_ASSERT(airy_file_remove("platform-stat-test2.tmp") == 0,
+                "remove should succeed");
+    TEST_ASSERT(airy_file_stat("platform-stat-test2.tmp", &st) == 0 && !st.exists,
+                "removed file should no longer exist");
+    return 0;
+}
+
+static int test_pipe_io(void)
+{
+    int fds[2] = {-1, -1};
+    TEST_ASSERT(airy_pipe_create(fds) == 0, "pipe create should succeed");
+    TEST_ASSERT(airy_pipe_write(fds[1], "ping", 4) == 0, "pipe write should succeed");
+    char buf[8] = {0};
+    TEST_ASSERT(airy_pipe_read(fds[0], buf, sizeof(buf)) == 4,
+                "pipe read should return 4 bytes");
+    TEST_ASSERT(memcmp(buf, "ping", 4) == 0, "pipe data should match");
+    airy_pipe_close(&fds[0]);
+    airy_pipe_close(&fds[1]);
+    TEST_ASSERT(fds[0] == -1 && fds[1] == -1, "close should reset fd to -1");
+    return 0;
+}
+
+static int test_spawn_reap(void)
+{
+    airy_process_info_t proc;
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c",
+                    (char *)"echo airy-spawn-ok", NULL};
+    airy_process_opt_t opt;
+    memset(&opt, 0, sizeof(opt));
+    opt.redirect_stdout = 1;
+    TEST_ASSERT(airy_process_spawn(argv[0], argv, &opt, &proc) == 0,
+                "spawn should succeed");
+
+    char buf[64] = {0};
+    TEST_ASSERT(airy_pipe_read(proc.stdout_fd, buf, sizeof(buf) - 1) > 0,
+                "stdout should be captured");
+    TEST_ASSERT(strstr(buf, "airy-spawn-ok") != NULL, "stdout content should match");
+
+    airy_exit_status_t st;
+    TEST_ASSERT(airy_process_reap(&proc, &st) == 0, "reap should succeed");
+    TEST_ASSERT(!st.signaled && st.code == 0, "child should exit 0");
+    TEST_ASSERT(airy_process_reap(&proc, &st) != 0, "double reap should fail");
+    return 0;
+}
+
+static int test_spawn_env_cwd(void)
+{
+    airy_process_info_t proc;
+    char *argv[] = {(char *)"/bin/sh", (char *)"-c",
+                    (char *)"pwd; test \"$T\" = on", NULL};
+    char *env[] = {(char *)"T=on", (char *)"PATH=/usr/bin:/bin", NULL};
+    airy_process_opt_t opt;
+    memset(&opt, 0, sizeof(opt));
+    opt.env = env;
+    opt.working_dir = "/tmp";
+    opt.redirect_stdout = 1;
+    TEST_ASSERT(airy_process_spawn(argv[0], argv, &opt, &proc) == 0,
+                "spawn with env/cwd should succeed");
+
+    char buf[256] = {0};
+    TEST_ASSERT(airy_pipe_read(proc.stdout_fd, buf, sizeof(buf) - 1) > 0,
+                "stdout should be captured");
+    TEST_ASSERT(strncmp(buf, "/tmp", 4) == 0, "child cwd should be /tmp");
+
+    airy_exit_status_t st;
+    TEST_ASSERT(airy_process_reap(&proc, &st) == 0, "reap should succeed");
+    TEST_ASSERT(!st.signaled && st.code == 0, "env should be visible to child");
+    return 0;
+}
 #endif /* !_WIN32 */
 
 /* 2026-08-24 强化测试：airy_get_sysinfo（含 CPU 型号）、线程命名、文件锁 */
@@ -319,6 +448,12 @@ int main(void)
     TEST_RUN(test_run_capture_exit);
     TEST_RUN(test_run_capture_timeout);
     TEST_RUN(test_run_capture_cancel);
+    TEST_RUN(test_rwlock_once);
+    TEST_RUN(test_sleep_us);
+    TEST_RUN(test_file_stat);
+    TEST_RUN(test_pipe_io);
+    TEST_RUN(test_spawn_reap);
+    TEST_RUN(test_spawn_env_cwd);
 #endif
 
     printf("\n===========================================\n");

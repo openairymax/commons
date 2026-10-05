@@ -29,6 +29,7 @@
 #include "../tests/utils/test_framework.h"
 #include "airyrt_version.h"
 #include "types.h"
+#include "compat.h"
 #include <airymax/ipc.h>
 
 /* ============================================================================

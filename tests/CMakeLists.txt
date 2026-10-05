@@ -50,6 +50,8 @@ set(UNIT_TEST_SOURCES
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
     unit/test_svc_common.c
     unit/test_svc_stop.c
+    # 子进程沙箱配置契约（no-op 路径；真实 Landlock/seccomp 行为测试 §203 B3 迁入）
+    unit/test_platform_sandbox.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——

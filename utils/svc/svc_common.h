@@ -26,6 +26,7 @@
 #define AIRY_RT_SVC_COMMON_H
 
 #include "error.h"
+#include "export.h" /* AIRY_API */
 
 #include <stdbool.h>
 #include <stdint.h>

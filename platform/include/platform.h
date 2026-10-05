@@ -20,10 +20,11 @@
  * `#include "platform.h"` 无需修改），实际声明按功能域分布到：
  *   - platform_base.h    平台检测 / 系统头 / 核心句柄类型
  *   - platform_sync.h    互斥锁 / 条件变量 / RAII 守卫 / 原子
- *   - platform_process.h 线程 / 套接字 / 子进程
+ *   - platform_process.h 线程 / 套接字 / 子进程 / 管道 / 沙箱
  *   - platform_paths.h   路径常量 / AIRY_HOME 路径系统
  *   - platform_misc.h    时间 / 随机数 / 文件 / 系统信息
  *   - platform_time.h    时间服务：逻辑墙钟 / 时区 / SNTP 校对（2026-08-30）
+ *   - platform_sandbox.h 子进程沙箱（seccomp / seatbelt）（2026-09）
  *
  * @note Thread safety: the platform abstraction layer itself does not
  *       involve thread safety
@@ -39,5 +40,6 @@
 #include "platform_paths.h"
 #include "platform_misc.h"
 #include "platform_time.h"
+#include "platform_sandbox.h"
 
 #endif /* AIRY_RT_PLATFORM_H */

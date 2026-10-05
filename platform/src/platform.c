@@ -14,6 +14,12 @@
  * - String and error helpers
  */
 
+/* st_mtim（POSIX 2008）/ clock_gettime 等 feature-gated 接口需在任何系统
+ * 头之前定义（与 platform_sync.c 同模式；项目 flags 可能已定义）。 */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "platform_internal.h"
 
 int airy_network_init(void)
@@ -137,6 +143,20 @@ void airy_sleep_ms(uint32_t ms)
     struct timespec ts;
     ts.tv_sec = ms / 1000;
     ts.tv_nsec = (ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+#endif
+}
+
+/* usleep 已被 POSIX 2008 废弃；统一 nanosleep（EINTR 不重试：睡眠中断
+ * 提前返回即达到 best-effort 等待目的，重试反而延长调用方截止期）。 */
+void airy_sleep_us(uint32_t us)
+{
+#ifdef _WIN32
+    Sleep(us < 1000 ? 1 : us / 1000);
+#else
+    struct timespec ts;
+    ts.tv_sec = us / 1000000u;
+    ts.tv_nsec = (long)(us % 1000000u) * 1000L;
     nanosleep(&ts, NULL);
 #endif
 }
@@ -422,6 +442,79 @@ int airy_file_unlock(int fd)
     fl.l_type = F_UNLCK;
     fl.l_whence = SEEK_SET;
     return fcntl(fd, F_SETLK, &fl) == 0 ? 0 : AIRY_EINVAL;
+#endif
+}
+
+int airy_file_stat(const char *path, airy_file_stat_t *st)
+{
+    if (!path || !st)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(st, 0, sizeof(*st));
+
+#if AIRY_PLATFORM_WINDOWS
+    WIN32_FILE_ATTRIBUTE_DATA fad;
+    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &fad)) {
+        DWORD err = GetLastError();
+        if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND)
+            return 0; /* 不存在是合法查询结果（st->exists=false） */
+        return -1;
+    }
+    st->exists = true;
+    st->is_dir = (fad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    st->is_regular = !st->is_dir;
+    st->size = ((uint64_t)fad.nFileSizeHigh << 32) | fad.nFileSizeLow;
+    ULARGE_INTEGER uli;
+    uli.LowPart = fad.ftLastWriteTime.dwLowDateTime;
+    uli.HighPart = fad.ftLastWriteTime.dwHighDateTime;
+    st->mtime_sec = (int64_t)(uli.QuadPart / 10000000ULL - 11644473600ULL);
+    st->mtime_nsec = (int64_t)(uli.QuadPart % 10000000ULL) * 100;
+    return 0;
+#else
+    struct stat sb;
+    if (stat(path, &sb) != 0)
+        return errno == ENOENT ? 0 : -1;
+    st->exists = true;
+    st->is_dir = S_ISDIR(sb.st_mode) != 0;
+    st->is_regular = S_ISREG(sb.st_mode) != 0;
+    st->size = (uint64_t)sb.st_size;
+#if defined(__APPLE__)
+    st->mtime_sec = (int64_t)sb.st_mtimespec.tv_sec;
+    st->mtime_nsec = (int64_t)sb.st_mtimespec.tv_nsec;
+#elif defined(st_mtim)
+    st->mtime_sec = (int64_t)sb.st_mtim.tv_sec;
+    st->mtime_nsec = (int64_t)sb.st_mtim.tv_nsec;
+#else
+    st->mtime_sec = (int64_t)sb.st_mtime;
+    st->mtime_nsec = 0;
+#endif
+    return 0;
+#endif
+}
+
+int airy_file_remove(const char *path)
+{
+    if (!path)
+        return AIRY_EINVAL;
+#if AIRY_PLATFORM_WINDOWS
+    DWORD attrs = GetFileAttributesA(path);
+    if (attrs == INVALID_FILE_ATTRIBUTES)
+        return -1;
+    if (attrs & FILE_ATTRIBUTE_DIRECTORY)
+        return RemoveDirectoryA(path) ? 0 : -1;
+    return DeleteFileA(path) ? 0 : -1;
+#else
+    return unlink(path) == 0 ? 0 : -1;
+#endif
+}
+
+int airy_file_rename(const char *old_path, const char *new_path)
+{
+    if (!old_path || !new_path)
+        return AIRY_EINVAL;
+#if AIRY_PLATFORM_WINDOWS
+    return MoveFileExA(old_path, new_path, MOVEFILE_REPLACE_EXISTING) ? 0 : -1;
+#else
+    return rename(old_path, new_path) == 0 ? 0 : -1;
 #endif
 }
 
