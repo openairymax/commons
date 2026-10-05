@@ -74,4 +74,6 @@ int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t
 
 uint64_t *collect_task_seqs(const char *task_id, size_t *out_count);
 
+char **collect_task_ids(size_t *out_count);
+
 #endif /* AIRY_CHECKPOINT_INTERNAL_H */

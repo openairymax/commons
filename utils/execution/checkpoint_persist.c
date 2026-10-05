@@ -27,119 +27,201 @@ int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t
     return (n > 0 && (size_t)n < size) ? 0 : AIRY_ERR_OVERFLOW;
 }
 
-/* File name format checkpoint_{task_id}_{seq}.json: the middle part must
- * be all digits, avoiding prefix overlap when task_id contains '_'. */
-static bool parse_seq_from_filename(const char *filename, const char *task_id, uint64_t *out_seq)
+/* File name format checkpoint_{task_id}_{seq}.json. task_id may itself
+ * contain '_', so the sequence number is the trailing segment after the
+ * last '_' and must be all digits; task_id is everything before it. This
+ * is the single SSoT parser shared by every directory scan below. */
+static bool parse_cp_name(const char *name, char *tid, size_t tid_sz, uint64_t *out_seq)
 {
-    if (!filename || !task_id || !out_seq)
+    if (!name || !tid || tid_sz == 0 || !out_seq)
         return false;
 
-    char prefix[MAX_CHECKPOINT_PATH];
-    int pn = snprintf(prefix, sizeof(prefix), "%s%s%s", CHECKPOINT_FILE_PREFIX, task_id, "_");
-    if (pn <= 0 || (size_t)pn >= sizeof(prefix))
+    const size_t pfx = sizeof(CHECKPOINT_FILE_PREFIX) - 1;
+    const size_t sfx = sizeof(CHECKPOINT_FILE_EXTENSION) - 1;
+    size_t nlen = strlen(name);
+    if (nlen < pfx + sfx + 2)
+        return false;
+    if (strncmp(name, CHECKPOINT_FILE_PREFIX, pfx) != 0)
+        return false;
+    if (strcmp(name + nlen - sfx, CHECKPOINT_FILE_EXTENSION) != 0)
         return false;
 
-    size_t prefix_len = (size_t)pn;
-    if (strncmp(filename, prefix, prefix_len) != 0)
+    const char *mid = name + pfx;
+    size_t mid_len = nlen - pfx - sfx;
+
+    size_t sep = mid_len;
+    while (sep > 0 && mid[sep - 1] != '_')
+        sep--;
+    if (sep == 0 || sep == mid_len)
         return false;
 
-    const char *suffix = CHECKPOINT_FILE_EXTENSION;
-    size_t suffix_len = strlen(suffix);
-    size_t flen = strlen(filename);
-    if (flen < prefix_len + suffix_len + 1)
+    size_t tlen = sep - 1;
+    if (tlen == 0 || tlen >= tid_sz)
         return false;
-    if (strcmp(filename + flen - suffix_len, suffix) != 0)
-        return false;
-
-    const char *mid = filename + prefix_len;
-    size_t mid_len = flen - prefix_len - suffix_len;
-    if (mid_len == 0)
-        return false;
-    for (size_t i = 0; i < mid_len; i++) {
-        if (mid[i] < '0' || mid[i] > '9')
-            return false;
-    }
 
     uint64_t seq = 0;
-    for (size_t i = 0; i < mid_len; i++) {
-        seq = seq * 10 + (uint64_t)(mid[i] - '0');
+    for (size_t i = sep; i < mid_len; i++) {
+        char c = mid[i];
+        if (c < '0' || c > '9')
+            return false;
+        seq = seq * 10 + (uint64_t)(c - '0');
     }
+
+    __builtin_memcpy(tid, mid, tlen);
+    tid[tlen] = '\0';
     *out_seq = seq;
     return true;
 }
 
-/* Scan the storage directory, collecting all sequence numbers for a task.
- * Returns an AIRY_MALLOC-allocated array (caller must AIRY_FREE) with
- * *out_count set; returns NULL and *out_count=0 when nothing matches.
- * Not locked: only reads the directory; stats are updated by the caller
- * under lock. */
+typedef bool (*cp_entry_fn)(const char *task_id, uint64_t seq, void *ctx);
+
+/* Single directory-scan底座 shared by all collectors: enumerate the
+ * checkpoint directory and hand each valid {task_id, seq} to fn. fn
+ * returns false to stop early (e.g. on allocation failure). */
+static void scan_cp_entries(cp_entry_fn fn, void *ctx)
+{
+#ifdef _WIN32
+    char pattern[MAX_CHECKPOINT_PATH];
+    snprintf(pattern, sizeof(pattern), "%s/%s*.json", g_checkpoint_storage_path,
+             CHECKPOINT_FILE_PREFIX);
+    WIN32_FIND_DATAA fd;
+    HANDLE h = FindFirstFileA(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE)
+        return;
+    do {
+        char tid[128];
+        uint64_t seq;
+        if (parse_cp_name(fd.cFileName, tid, sizeof(tid), &seq) && !fn(tid, seq, ctx))
+            break;
+    } while (FindNextFile(h, &fd));
+    FindClose(h);
+#else
+    DIR *dir = opendir(g_checkpoint_storage_path);
+    if (!dir)
+        return;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        char tid[128];
+        uint64_t seq;
+        if (parse_cp_name(entry->d_name, tid, sizeof(tid), &seq) && !fn(tid, seq, ctx))
+            break;
+    }
+    closedir(dir);
+#endif
+}
+
+/* 增长型收集器：SSoT 扩容机制件，seq/id 两个 collector 共用。 */
+typedef struct {
+    void *items;
+    size_t count;
+    size_t cap;
+    size_t item_size;
+} grow_t;
+
+static void *grow_push(grow_t *g)
+{
+    if (g->count == g->cap) {
+        size_t ncap = g->cap ? g->cap * 2 : 16;
+        void *ni = AIRY_REALLOC(g->items, ncap * g->item_size);
+        if (!ni)
+            return NULL;
+        g->items = ni;
+        g->cap = ncap;
+    }
+    return (char *)g->items + (g->count++) * g->item_size;
+}
+
+typedef struct {
+    const char *want;
+    grow_t buf;
+    bool failed;
+} seq_sink_t;
+
+static bool seq_visitor(const char *task_id, uint64_t seq, void *ctx)
+{
+    seq_sink_t *s = (seq_sink_t *)ctx;
+    if (s->failed)
+        return false;
+    if (strcmp(task_id, s->want) != 0)
+        return true;
+    uint64_t *slot = (uint64_t *)grow_push(&s->buf);
+    if (!slot) {
+        s->failed = true;
+        return false;
+    }
+    *slot = seq;
+    return true;
+}
+
+typedef struct {
+    grow_t buf;
+    bool failed;
+} id_sink_t;
+
+static bool id_visitor(const char *task_id, uint64_t seq, void *ctx)
+{
+    id_sink_t *s = (id_sink_t *)ctx;
+    (void)seq;
+    if (s->failed)
+        return false;
+    char **base = (char **)s->buf.items;
+    for (size_t i = 0; i < s->buf.count; i++) {
+        if (strcmp(base[i], task_id) == 0)
+            return true;
+    }
+    char *dup = safe_strdup(task_id);
+    if (!dup) {
+        s->failed = true;
+        return false;
+    }
+    char **slot = (char **)grow_push(&s->buf);
+    if (!slot) {
+        AIRY_FREE(dup);
+        s->failed = true;
+        return false;
+    }
+    *slot = dup;
+    return true;
+}
+
+/* Collect all sequence numbers for a task. Returns an AIRY_MALLOC-allocated
+ * array (caller must AIRY_FREE) with *out_count set; returns NULL and
+ * *out_count=0 when nothing matches. Not locked: only reads the directory;
+ * stats are updated by the caller under lock. */
 uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
 {
     *out_count = 0;
     if (!task_id)
         return NULL;
 
-    size_t cap = 16;
-    size_t cnt = 0;
-    uint64_t *seqs = (uint64_t *)AIRY_MALLOC(cap * sizeof(uint64_t));
-    if (!seqs)
-        return NULL;
-
-#ifdef _WIN32
-    char pattern[MAX_CHECKPOINT_PATH];
-    snprintf(pattern, sizeof(pattern), "%s/%s*.json", g_checkpoint_storage_path,
-             CHECKPOINT_FILE_PREFIX);
-    WIN32_FIND_DATAA find_data;
-    HANDLE hFind = FindFirstFileA(pattern, &find_data);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            uint64_t seq;
-            if (parse_seq_from_filename(find_data.cFileName, task_id, &seq)) {
-                if (cnt >= cap) {
-                    cap *= 2;
-                    uint64_t *ns = (uint64_t *)AIRY_REALLOC(seqs, cap * sizeof(uint64_t));
-                    if (!ns) {
-                        AIRY_FREE(seqs);
-                        FindClose(hFind);
-                        return NULL;
-                    }
-                    seqs = ns;
-                }
-                seqs[cnt++] = seq;
-            }
-        } while (FindNextFile(hFind, &find_data));
-        FindClose(hFind);
-    }
-#else
-    DIR *dir = opendir(g_checkpoint_storage_path);
-    if (dir) {
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != NULL) {
-            uint64_t seq;
-            if (parse_seq_from_filename(entry->d_name, task_id, &seq)) {
-                if (cnt >= cap) {
-                    cap *= 2;
-                    uint64_t *ns = (uint64_t *)AIRY_REALLOC(seqs, cap * sizeof(uint64_t));
-                    if (!ns) {
-                        AIRY_FREE(seqs);
-                        closedir(dir);
-                        return NULL;
-                    }
-                    seqs = ns;
-                }
-                seqs[cnt++] = seq;
-            }
-        }
-        closedir(dir);
-    }
-#endif
-
-    if (cnt == 0) {
-        AIRY_FREE(seqs);
+    seq_sink_t s = {task_id, {NULL, 0, 0, sizeof(uint64_t)}, false};
+    scan_cp_entries(seq_visitor, &s);
+    if (s.failed || s.buf.count == 0) {
+        AIRY_FREE(s.buf.items);
         return NULL;
     }
-    *out_count = cnt;
-    return seqs;
+    *out_count = s.buf.count;
+    return (uint64_t *)s.buf.items;
+}
+
+/* Collect the distinct task_ids that own at least one checkpoint. Returns an
+ * AIRY_MALLOC-allocated string array (caller frees each entry plus the
+ * array) with *out_count set; returns NULL and *out_count=0 when empty. */
+char **collect_task_ids(size_t *out_count)
+{
+    *out_count = 0;
+
+    id_sink_t s = {{NULL, 0, 0, sizeof(char *)}, false};
+    scan_cp_entries(id_visitor, &s);
+    if (s.failed) {
+        char **base = (char **)s.buf.items;
+        for (size_t i = 0; i < s.buf.count; i++)
+            AIRY_FREE(base[i]);
+        AIRY_FREE(s.buf.items);
+        return NULL;
+    }
+    *out_count = s.buf.count;
+    return (char **)s.buf.items;
 }
 
 /* Find the highest sequence number for a task; 0 means no checkpoint.

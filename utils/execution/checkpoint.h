@@ -72,6 +72,11 @@ AIRY_API airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t sequenc
 AIRY_API airy_err_t airy_checkpoint_list(const char *task_id,
                                          airy_task_checkpoint_t ***out_checkpoints,
                                          size_t *out_count);
+
+/* 列出所有存在检查点的 distinct task_id（SSoT：目录扫描+文件名解析）。
+ * 成功时 *out_task_ids 为 AIRY_MALLOC 字符串数组（每项与数组均由调用者释放），
+ * *out_count 为数量；无匹配时返回 AIRY_SUCCESS 且 *out_task_ids=NULL、*out_count=0。 */
+AIRY_API airy_err_t airy_checkpoint_ids(char ***out_task_ids, size_t *out_count);
 AIRY_API airy_err_t airy_checkpoint_get_stats(airy_checkpoint_stats_t *out_stats);
 AIRY_API airy_err_t airy_checkpoint_verify(const airy_task_checkpoint_t *checkpoint,
                                            bool *is_valid);
