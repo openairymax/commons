@@ -194,12 +194,12 @@ static int evt_digits(const char *p, uint64_t *out)
     return 0;
 }
 
-/* 手工解析 header 中 "gseq":N（与既有实现同规则）。 */
-static uint64_t evt_gseq_parse(const char *hdr)
+/* 手工解析 header 中 "gseq":N（读侧唯一实现，见 hall_event.h）。 */
+uint64_t hall_evt_gseq_of(const char *json)
 {
-    if (!hdr)
+    if (!json)
         return 0;
-    const char *p = strstr(hdr, EVT_GSEQ_TAG);
+    const char *p = strstr(json, EVT_GSEQ_TAG);
     if (!p)
         return 0;
     p += EVT_GSEQ_SKIP;
@@ -241,7 +241,7 @@ static uint64_t evt_max_gseq(const char *dir)
         size_t rd = fread(hdr, 1, sizeof(hdr) - 1, fp);
         fclose(fp);
         hdr[rd] = '\0';
-        uint64_t g = evt_gseq_parse(hdr);
+        uint64_t g = hall_evt_gseq_of(hdr);
         if (g > max_g)
             max_g = g;
     }

@@ -29,6 +29,7 @@
 #define AIRY_RT_HALL_EVENT_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,6 +98,16 @@ int hall_evt_parse(const char *name, hall_evt_parts_t *out);
  * @brief 取事件文件名的 seq 段数值（非十进制数字返回 0）。
  */
 unsigned long hall_evt_seq(const char *name);
+
+/**
+ * @brief 从事件 header JSON 中解析 "gseq":N 数值（BAN-154：不使用 sscanf）。
+ *
+ * 读侧（索引重建时 global_seq 抬升、回放排序、审计断言）唯一 gseq 解析
+ * 实现，禁止各自复刻取数规则。
+ *
+ * @return gseq 值；字段缺失或数值非法返回 0
+ */
+uint64_t hall_evt_gseq_of(const char *json);
 
 /**
  * @brief 生成 UTC 时间戳 "YYYYMMDDThhmmssmmm"（定宽 18 字符）。
