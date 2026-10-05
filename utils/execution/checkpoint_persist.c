@@ -169,7 +169,7 @@ static bool id_visitor(const char *task_id, uint64_t seq, void *ctx)
         if (strcmp(base[i], task_id) == 0)
             return true;
     }
-    char *dup = safe_strdup(task_id);
+    char *dup = AIRY_STRDUP(task_id);
     if (!dup) {
         s->failed = true;
         return false;
