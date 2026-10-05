@@ -87,13 +87,16 @@ log_file_state_t *log_internal_file_state(void);
 /* ==================== logging_format.c ==================== */
 
 bool log_internal_is_terminal(int fd);
-size_t log_internal_format_message(const log_record_t *record, char *buffer, size_t buffer_size);
+/* 行格式化单源（console/file 共用）：color 为渲染策略参数，console 传
+ * 颜色探测结果，file 传 false（日志文件不得混入 ANSI 转义序列）。 */
+size_t log_internal_format_message(const log_record_t *record, char *buffer, size_t buffer_size,
+                                   bool color);
 
 /* ==================== logging_backend_file.c ==================== */
 
 int log_internal_file_open(const char *path);
-void log_internal_file_write(const log_record_t *record, const char *formatted_message,
-                             size_t formatted_len);
+/* 直写已格式化日志行（含尾换行）；行内容由格式化单源产出。 */
+void log_internal_file_write(const char *formatted_message, size_t formatted_len);
 void log_internal_file_cleanup(void);
 
 /* ==================== logging_control.c ==================== */

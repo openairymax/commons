@@ -5,30 +5,27 @@
 
 ## 概述
 
-Logging 模块是 commons 的统一分层日志系统，按职责分为三层：
+Logging 模块是 commons 的统一分层日志系统，按功能域拆分为四个实现
+翻译单元（0.1.19 §205：未接线的 Atomic/Service 两层已删除，机制单源）：
 
-- **Core 层**（`logging.h` + 四个实现文件）：级别管理、格式化、控制台/文件输出、
-  按大小轮转、追踪 ID、模块级过滤、运行时节流；
-- **Atomic 层**（`atomic_logging.h/.c`）：无锁（MPSC 环形缓冲 + 线程本地缓冲）
-  日志记录提交与批量消费；
-- **Service 层**（`service_logging.h/.c`）：在 Core 之上叠加轮转/传输配置、
-  输出器与过滤器链、监控统计与配置热重载（可选，简单应用可只用 Core 层）。
+- **core**（`logging_core.c`）：级别管理、写入路径、模块级过滤、生命周期；
+- **format**（`logging_format.c`）：控制台行格式化（时间戳/级别/位置/trace/
+  span/线程/进程）、终端探测与 ANSI 颜色策略；
+- **file**（`logging_backend_file.c`）：文件后端写入与按大小轮转
+  （backup 滑动窗口）；
+- **control**（`logging_control.c`）：运行时节流（哈希桶 + 每秒上限）。
 
 ## 目录结构
 
 ```
 logging/
-├── logging.h                 # Core 层：公共 API、log_level_t/log_output_t/log_format_t、log_config_t
-├── logging_internal.h        # Core 层四个实现文件共享的内部状态与访问器声明
+├── logging.h                 # 公共 API、log_level_t/log_output_t/log_format_t、log_config_t
+├── logging_internal.h        # 四个实现文件共享的内部状态与访问器声明
 ├── logging_core.c            # 核心：全局状态、级别、写入路径、生命周期
-├── logging_format.c          # 格式化：控制台行格式化、终端与 ANSI 颜色探测
+├── logging_format.c          # 格式化：行格式化、终端与 ANSI 颜色探测
 ├── logging_backend_file.c    # 文件后端：打开/写入与按大小轮转（backup 滑动窗口）
 ├── logging_control.c         # 运行时控制：节流（哈希桶 + 每秒上限）等
-├── atomic_logging.h          # Atomic 层：无锁队列与批量写入 API
-├── atomic_logging.c
-├── service_logging.h         # Service 层：轮转/传输/过滤/监控 API
-├── service_logging.c
-├── svc_logger.h              # 服务层日志宏（SVC_LOG_*、带 trace 上下文的 AIRY_LOG_*_T 等）
+├── svc_logger.h              # 服务层日志宏别名（SVC_LOG_DEBUG/INFO/WARN/ERROR）
 └── README.md
 ```
 
@@ -80,39 +77,20 @@ logging/
   权威定义在 `commons/utils/observability/logger.h`（经 `airy_log_write` →
   `log_write_va` 落到本模块），并由 `commons/utils/include/logging_compat.h`
   提供包含兼容。
-- `SVC_LOG_TRACE/DEBUG/INFO/WARN/ERROR/FATAL(...)`：守护进程/服务层专用，
-  由本目录 `svc_logger.h` 提供，映射到 `AIRY_LOG_*`。
-- `AIRY_LOG_*_T(ctx, ...)`：带 trace 上下文版本（`svc_logger.h`）；
-  另有 `AIRY_LOG_ERROR_RETURN`、`AIRY_LOG_CHECK` 辅助宏。
+- `SVC_LOG_DEBUG/INFO/WARN/ERROR(...)`：守护进程/服务层专用别名
+  （`svc_logger.h`），一一映射到 `AIRY_LOG_*` 权威宏。
 
-### Atomic 层 API（`atomic_logging.h`）
+### 日志初始化
 
-| 函数 | 说明 |
-|------|------|
-| `atomic_logging_init(config)` | 初始化原子层 |
-| `atomic_logging_submit_lockfree(record, non_blocking)` | 无锁提交 |
-| `atomic_logging_submit_mutex(record)` | 互斥锁提交 |
-| `atomic_logging_submit_batch(records, count)` | 批量提交 |
-| `atomic_logging_acquire(record, timeout_ms)` | 消费一条记录 |
-| `atomic_logging_acquire_batch(records, max_count, timeout_ms)` | 批量消费 |
-| `atomic_logging_flush_thread_local_buffer(buffer)` | 刷出指定线程本地缓冲 |
-| `atomic_logging_flush()` | 刷出全部 |
-| `atomic_logging_get_stats(out_stats)` | 获取队列统计 |
-| `atomic_logging_cleanup()` | 清理 |
+守护进程启动直接使用 `log_init()`（0.1.19 §205：兼容包装
+`airy_log_init` 已随未接线层退役）：
 
-### Service 层 API（`service_logging.h`）
-
-| 函数 | 说明 |
-|------|------|
-| `service_logging_init(config)` | 初始化服务层 |
-| `service_logging_configure_rotation(config)` | 配置轮转 |
-| `service_logging_configure_transport(config)` | 配置传输 |
-| `service_logging_add_outputter(name, type, user_data)` | 注册输出器 |
-| `service_logging_add_filter(name, type, user_data)` | 注册过滤器 |
-| `service_logging_process_record(record)` | 处理一条日志记录 |
-| `service_logging_get_stats(stats)` | 获取监控统计 |
-| `service_logging_reload_config(path)` | 热重载服务层配置 |
-| `service_logging_cleanup()` | 清理 |
+```c
+log_config_t cfg = {0};
+cfg.level = LOG_LEVEL_INFO;
+cfg.outputs = (1u << LOG_OUTPUT_CONSOLE);
+log_init(&cfg);
+```
 
 ## 使用示例
 
@@ -181,8 +159,7 @@ AIRY_LOG_COLOR=0 ./your_daemon         # 终端中强制禁用色彩
 |------|------|
 | `error`（`commons/utils/error/`） | 错误码与错误处理 |
 | `airy_memory.h`（`commons/utils/memory/`） | 统一内存管理 |
-| `atomic_compat.h`（`commons/utils/include/`） | 跨平台原子操作（环形缓冲 CAS） |
-| `platform.h`（`commons/platform/`） | 平台抽象（时间、线程等） |
+| `platform.h`（`commons/platform/`） | 平台抽象（时间、线程、互斥量等） |
 | `string_compat.h`（`commons/utils/string/`） | 安全字符串操作 |
 
 ---
