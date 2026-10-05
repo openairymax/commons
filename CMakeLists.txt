@@ -13,7 +13,6 @@ set(SOURCES
     # 0c A 类直搬：平台扩展实现（airy_dl_*/airy_sock_*/进程/线程别名等，
     # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
     platform/src/platform_compat.c
-    utils/platform/platform_adapter.c
     utils/token/counter.c
     utils/token/budget.c
     utils/token/token_standard.c
@@ -60,7 +59,6 @@ set(SOURCES
     utils/sync/sync_rwlock.c
     utils/sync/sync_semaphore.c
     utils/sync/sync_condition.c
-    utils/sync/sync_barrier.c
     utils/sync/sync_recursive_mutex.c
     utils/sync/sync_common.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）

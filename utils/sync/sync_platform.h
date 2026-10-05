@@ -48,15 +48,6 @@ typedef HANDLE platform_semaphore_t;
 typedef CONDITION_VARIABLE platform_condition_t;
 
 
-typedef struct {
-    CRITICAL_SECTION cs;
-    CONDITION_VARIABLE cond;
-    unsigned int count;
-    unsigned int current;
-    unsigned int generation;
-} platform_barrier_t;
-
-
 #else
 #include <errno.h>
 #include <pthread.h>
@@ -88,21 +79,6 @@ typedef sem_t platform_semaphore_t;
 
 
 typedef pthread_cond_t platform_condition_t;
-
-
-#if defined(__APPLE__) && defined(__MACH__)
-/* macOS 无 pthread_barrier_t：pthread_mutex + pthread_cond 自实现，
- * 字段语义与 _WIN32 分支的 platform_barrier_t 对齐（count/current/generation）。 */
-typedef struct {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    unsigned int count;
-    unsigned int current;
-    unsigned int generation;
-} platform_barrier_t;
-#else
-typedef pthread_barrier_t platform_barrier_t;
-#endif
 
 
 #endif /* _WIN32 */
@@ -328,34 +304,6 @@ int platform_condition_signal(platform_condition_t *cond);
  * @return 0 on success, non-zero on failure
  */
 int platform_condition_broadcast(platform_condition_t *cond);
-
-/**
- * @brief Initialize a platform barrier
- * @param[in] barrier Barrier pointer
- * @param[in] count Number of threads to wait for
- * @return 0 on success, non-zero on failure
- */
-int platform_barrier_init(platform_barrier_t *barrier, unsigned int count);
-
-/**
- * @brief Destroy a platform barrier
- * @param[in] barrier Barrier pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_barrier_destroy(platform_barrier_t *barrier);
-
-/**
- * @brief Wait at a platform barrier
- * @param[in] barrier Barrier pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_barrier_wait(platform_barrier_t *barrier);
-
-/**
- * @brief Get the current timestamp (milliseconds)
- * @return Timestamp
- */
-uint64_t platform_get_timestamp_ms(void);
 
 /**
  * @brief Get the current thread ID

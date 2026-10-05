@@ -92,14 +92,6 @@ struct sync_condition {
     platform_condition_t cond;
 };
 
-struct sync_barrier {
-    sync_lock_hdr_t hdr;
-    unsigned int count;
-    unsigned int current;
-    unsigned int generation;
-    platform_barrier_t barrier;
-};
-
 #ifdef __cplusplus
 }
 #endif

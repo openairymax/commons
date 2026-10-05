@@ -17,7 +17,6 @@
  *       - sync_spinlock.c: spinlock
  *       - sync_semaphore.c: semaphore
  *       - sync_condition.c: condition variable
- *       - sync_barrier.c: barrier
  */
 
 #include "sync.h"
@@ -100,8 +99,6 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
         return SYNC_TYPE_SEMAPHORE;
     case SYNC_LOCK_CONDITION:
         return SYNC_TYPE_CONDITION;
-    case SYNC_LOCK_BARRIER:
-        return SYNC_TYPE_BARRIER;
     default:
         return SYNC_TYPE_UNKNOWN;
     }
@@ -131,8 +128,6 @@ const char *sync_get_name(void *lock)
         return ((struct sync_semaphore *)lock)->hdr.name;
     case SYNC_TYPE_CONDITION:
         return ((struct sync_condition *)lock)->hdr.name;
-    case SYNC_TYPE_BARRIER:
-        return ((struct sync_barrier *)lock)->hdr.name;
     default:
         return NULL;
     }
@@ -615,13 +610,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
         if (old_name)
             AIRY_FREE((void *)c->hdr.name);
         c->hdr.name = new_name;
-        break;
-    }
-    case SYNC_TYPE_BARRIER: {
-        struct sync_barrier *b = (struct sync_barrier *)lock;
-        if (old_name)
-            AIRY_FREE((void *)b->hdr.name);
-        b->hdr.name = new_name;
         break;
     }
     default:
