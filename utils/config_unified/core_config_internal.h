@@ -39,23 +39,6 @@ struct config_value {
             char *str;
             size_t len;
         } string_value;
-        struct {
-            config_value_t **items;
-            size_t count;
-            size_t capacity;
-        } array_value;
-        struct {
-            struct {
-                char *key;
-                config_value_t *value;
-            } *items;
-            size_t count;
-            size_t capacity;
-        } object_value;
-        struct {
-            void *data;
-            size_t size;
-        } binary_value;
     } data;
 };
 
