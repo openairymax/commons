@@ -43,8 +43,7 @@ static int ipc_mq_lock(ipc_mq_t *mq, uint32_t timeout_ms)
             if (airy_time_ms() >= deadline) {
                 return ETIMEDOUT;
             }
-            struct timespec ts = {0, 1000000};
-            nanosleep(&ts, NULL);
+            airy_sleep_ms(1);
         }
         return 0;
     }
@@ -244,7 +243,7 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
     __builtin_memcpy(msg->data, data, len);
     msg->len = len;
     msg->priority = priority;
-    msg->timestamp = ipc_get_timestamp_ns();
+    msg->timestamp = airy_time_ns();
     msg->next = NULL;
     if (mq->tail == NULL) {
         mq->head = mq->tail = msg;

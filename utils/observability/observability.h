@@ -139,27 +139,6 @@ void airy_trace_add_event(airy_trace_span_t *span, const char *name, const char 
  */
 char *airy_trace_export(void);
 
-
-/**
- * @brief Get the monotonic clock time (nanoseconds).
- * @return Monotonic nanosecond timestamp
- */
-static inline uint64_t airy_get_monotonic_time_ns(void)
-{
-#if defined(_WIN32) || defined(_WIN64)
-    /* Windows 无 clock_gettime/CLOCK_MONOTONIC，用 QPC（与
-     * platform.h 的 airy_time_ns 同源实现）。 */
-    LARGE_INTEGER freq, counter;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&counter);
-    return (uint64_t)((counter.QuadPart * 1000000000ULL) / freq.QuadPart);
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
-#endif
-}
-
 #ifdef __cplusplus
 }
 #endif

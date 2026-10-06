@@ -455,20 +455,6 @@ void airy_err_thread_cleanup(void)
 #endif
 }
 
-static uint64_t get_current_time_ns(void)
-{
-#ifdef _WIN32
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    ULARGE_INTEGER uli;
-    uli.LowPart = ft.dwLowDateTime;
-    uli.HighPart = ft.dwHighDateTime;
-    return uli.QuadPart * 100;
-#else
-    return airy_time_ns();
-#endif
-}
-
 void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *func,
                       const char *fmt, ...)
 {
@@ -485,7 +471,7 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
     if (severity >= 0 && severity < 4) {
         g_error_stats.errors_by_severity[severity]++;
     }
-    g_error_stats.last_error_time = get_current_time_ns();
+    g_error_stats.last_error_time = airy_time_ns();
     g_error_stats.last_error = code;
     STATS_UNLOCK();
 
@@ -503,7 +489,7 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
         entry->function = func;
         entry->message = AIRY_STRDUP(message_buffer);
         entry->error_code = code;
-        entry->timestamp_ns = get_current_time_ns();
+        entry->timestamp_ns = airy_time_ns();
         chain->depth++;
     } else {
 
@@ -517,7 +503,7 @@ void airy_err_push_ex(airy_err_t code, const char *file, int line, const char *f
         entry->function = func;
         entry->message = AIRY_STRDUP(message_buffer);
         entry->error_code = code;
-        entry->timestamp_ns = get_current_time_ns();
+        entry->timestamp_ns = airy_time_ns();
     }
 
     chain->code = code;

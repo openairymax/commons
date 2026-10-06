@@ -18,8 +18,8 @@ Observability 模块提供 AgentRT 运行时的可观测性基础组件，包含
 - **告警管理（alert_manager）**：规则引擎（`am_*` API），支持阈值/趋势/复合/
   异常规则、告警抑制与去重、多通道通知（日志/回调/Webhook/文件）与升级策略。
 
-`observability.h` 为聚合入口头：重导出 `logger.h`，声明指标与追踪的核心 API，
-并提供 `static inline` 的单调时钟读取 `airy_get_monotonic_time_ns()`。
+`observability.h` 为聚合入口头：重导出 `logger.h`，声明指标与追踪的核心 API。
+单调时钟读取统一走 platform 的 `airy_time_ns()`（SSoT，不在此重复提供）。
 
 ## 目录结构
 

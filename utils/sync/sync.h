@@ -543,13 +543,6 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type);
 void sync_sleep(unsigned int ms);
 
 /**
- * @brief Get the current timestamp (milliseconds)
- *
- * @return Timestamp
- */
-uint64_t sync_get_timestamp_ms(void);
-
-/**
  * @brief Atomic operation: compare-and-swap
  *
  * @param[inout] ptr Pointer

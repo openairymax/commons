@@ -15,26 +15,7 @@
 
 #include <string.h>
 
-#ifdef _WIN32
-#include <platform.h>
-#else
-#include <time.h>
-#endif
-
-/* ------------------------------------------------------------------ */
-/* Platform monotonic clock                                            */
-/* ------------------------------------------------------------------ */
-
-static uint64_t get_time_ms(void)
-{
-#ifdef _WIN32
-    return airy_time_ms();
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
-#endif
-}
+#include "platform.h"
 
 /* ------------------------------------------------------------------ */
 /* Lifecycle                                                           */
@@ -45,7 +26,7 @@ void airy_timer_init(airy_timer_state_t *ts)
     if (!ts)
         return;
     AIRY_MEMSET(ts, 0, sizeof(*ts));
-    ts->current_time_ms = get_time_ms();
+    ts->current_time_ms = airy_time_ms();
     ts->next_timer_id = 1;
     for (int i = 0; i < AIRY_TIMER_MAX_TIMERS; i++)
         ts->timers[i].active = false;
@@ -98,7 +79,7 @@ void airy_timer_process(airy_timer_state_t *ts, airy_event_loop_t *loop)
     if (!ts)
         return;
 
-    ts->current_time_ms = get_time_ms();
+    ts->current_time_ms = airy_time_ms();
 
     for (int i = 0; i < AIRY_TIMER_MAX_TIMERS; i++) {
         if (ts->timers[i].active && ts->current_time_ms >= ts->timers[i].next_fire_ms) {

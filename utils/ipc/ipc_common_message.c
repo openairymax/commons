@@ -36,7 +36,7 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
     AIRY_MEMSET(msg->header.target, 0, sizeof(msg->header.target));
     msg->header.aipc.payload_len = (uint32_t)payload_len;
     msg->header.checksum = 0;
-    msg->header.timestamp = ipc_get_timestamp_ns();
+    msg->header.timestamp = airy_time_ns();
     AIRY_MEMSET(msg->header.reserved, 0, sizeof(msg->header.reserved));
 
     if (payload && payload_len > 0) {

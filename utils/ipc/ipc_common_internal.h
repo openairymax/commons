@@ -189,7 +189,6 @@ struct ipc_rpc_client {
 };
 
 /* ---- Shared helper functions (defined in ipc_common.c) ---- */
-uint64_t ipc_get_timestamp_ns(void);
 uint32_t ipc_calc_crc32(const void *data, size_t len);
 extern bool g_ipc_initialized;
 

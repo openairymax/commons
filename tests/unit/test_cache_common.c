@@ -10,16 +10,13 @@
  */
 
 #include "cache_common.h"
+#include "platform.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 static void test_cache_create_destroy(void)
 {
@@ -221,12 +218,7 @@ static void test_cache_ttl(void)
     {
         time_t start = time(NULL);
         while (time(NULL) - start < 2) {
-#ifdef _WIN32
-            Sleep(50);
-#else
-            struct timespec ts = {.tv_sec = 0, .tv_nsec = 50 * 1000 * 1000}; /* 50ms */
-            nanosleep(&ts, NULL);
-#endif
+            airy_sleep_ms(50);
         }
     }
 

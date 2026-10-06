@@ -28,7 +28,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <windows.h> /* GetSystemTimeAsFileTime / GetCurrentProcessId */
+#include <windows.h> /* GetCurrentProcessId */
 #include <io.h>
 #include <errno.h>
 #else

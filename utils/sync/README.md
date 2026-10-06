@@ -85,7 +85,6 @@ sync/
 | `sync_init(error_callback, context)` | 登记全局错误回调（可选），幂等 |
 | `sync_cleanup(void)` | 清除全局状态 |
 | `sync_get_thread_id()` | 当前线程 ID（Windows `GetCurrentThreadId` / POSIX `pthread_self`） |
-| `sync_get_timestamp_ms()` | 当前时间戳（毫秒） |
 | `sync_sleep(ms)` | 当前线程休眠 |
 | `sync_get_type(lock, lock_type)` | 按调用侧标识返回 `sync_type_t` |
 | `sync_get_stats(lock, stats)` / `sync_reset_stats(lock)` | 读取时点统计快照 / 原子清零统计（任何已命名类型的句柄均可） |

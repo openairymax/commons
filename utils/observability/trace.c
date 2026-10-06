@@ -93,20 +93,6 @@ static struct {
     int initialized;
 } g_trace_state;
 
-static int64_t get_current_time_us(void)
-{
-#ifdef _WIN32
-    FILETIME ft;
-    ULARGE_INTEGER uli;
-    GetSystemTimeAsFileTime(&ft);
-    uli.LowPart = ft.dwLowDateTime;
-    uli.HighPart = ft.dwHighDateTime;
-    return (int64_t)((uli.QuadPart - 116444736000000000LL) / 10);
-#else
-    return (int64_t)(airy_time_ns() / 1000);
-#endif
-}
-
 static int init_trace_system(void)
 {
     if (g_trace_state.initialized) {
@@ -145,7 +131,7 @@ static trace_event_t *create_event(const char *name, const char *attributes)
         event->name[sizeof(event->name) - 1] = '\0';
     }
 
-    event->timestamp = get_current_time_us();
+    event->timestamp = (int64_t)(airy_time_ns() / 1000);
 
     if (attributes) {
         AIRY_STRNCPY_TERM(event->attributes, attributes, sizeof(event->attributes));
@@ -197,7 +183,7 @@ airy_trace_span_t *airy_trace_begin(const char *name, const char *parent_id)
     AIRY_STRNCPY_TERM(span->name, name, sizeof(span->name));
     span->name[sizeof(span->name) - 1] = '\0';
 
-    span->start_time = get_current_time_us();
+    span->start_time = (int64_t)(airy_time_ns() / 1000);
     span->end_time = 0;
     atomic_init(&span->status, 0);
     span->events = NULL;
@@ -238,7 +224,7 @@ void airy_trace_end(airy_trace_span_t *span)
         return;
     }
 
-    span->end_time = get_current_time_us();
+    span->end_time = (int64_t)(airy_time_ns() / 1000);
     atomic_store(&span->status, 1);
 
     trace_mutex_unlock(&span->mutex);
@@ -404,7 +390,7 @@ void airy_trace_cleanup(void)
         airy_trace_span_t *next = span->next;
 
         trace_mutex_lock(&span->mutex);
-        span->end_time = get_current_time_us();
+        span->end_time = (int64_t)(airy_time_ns() / 1000);
         atomic_store(&span->status, 1);
         free_events(span->events);
         trace_mutex_unlock(&span->mutex);

@@ -85,11 +85,6 @@ static void ensure_mutex_initialized(void)
     }
 }
 
-static uint64_t get_monotonic_ns(void)
-{
-    return airy_time_ns();
-}
-
 void airy_resource_track_alloc(void *resource, const char *type, const char *file, int line)
 {
     if (!resource) {
@@ -106,7 +101,7 @@ void airy_resource_track_alloc(void *resource, const char *type, const char *fil
     record->type = type;
     record->file = file;
     record->line = line;
-    record->timestamp_ns = get_monotonic_ns();
+    record->timestamp_ns = airy_time_ns();
 
     ensure_mutex_initialized();
     airy_mtx_lock(&g_resource_mutex);
