@@ -21,8 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define INDEX_NOT_FOUND (-1)
-
 static int find_item_index(const config_context_t *ctx, const char *key)
 {
     if (!ctx || !key) {

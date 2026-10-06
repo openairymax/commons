@@ -15,13 +15,10 @@
 #define AIRY_RT_CONFIG_SOURCE_INTERNAL_H
 
 #include "config_source.h"
+#include "core_config_internal.h"
 
 #include <stddef.h>
 #include <stdint.h>
-
-/* Unified base library compatibility layer */
-#include "airy_memory.h"
-#include "error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,19 +58,6 @@ typedef struct {
 config_source_t *config_source_create_base(config_source_type_t type, const char *name,
                                            const config_source_adapter_t *adapter);
 void config_source_free_base(config_source_t *source);
-
-static inline char *duplicate_string(const char *str)
-{
-    if (!str)
-        return NULL;
-    size_t len = strlen(str);
-    char *copy = (char *)AIRY_MALLOC(len + 1);
-    if (copy) {
-        __builtin_memcpy(copy, str, len);
-        copy[len] = '\0';
-    }
-    return copy;
-}
 
 #ifdef __cplusplus
 }

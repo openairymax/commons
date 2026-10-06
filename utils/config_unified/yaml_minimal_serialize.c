@@ -105,7 +105,7 @@ static void yaml_dump_append(struct yaml_node *node, char *buf, size_t bufsize, 
 void yaml_dump(struct yaml_node *node, char *buf, size_t bufsize, int indent)
 {
     /* 追加契约：调用方须提供已 NUL 终止的缓冲区（可为空串），dump 从
-     * 末尾续写（cupolas_config_export_yaml 在头部注释后调用依赖此语义）。 */
+     * 末尾续写（头部注释已先行写入，依赖此语义续写正文）。 */
     if (!node || !buf || bufsize == 0)
         return;
     size_t off = strlen(buf);
