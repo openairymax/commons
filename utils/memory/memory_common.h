@@ -31,14 +31,6 @@ typedef enum {
     MEMORY_STRATEGY_LOW_LATENCY
 } memory_strategy_t;
 
-/* Note: the old memory_pool_t / memory_pool_config_t / memory_pool_init /
- * memory_pool_alloc etc. have been removed; they conflict with the new
- * implementations in memory_pool.h. See memory_pool.h for the new pool
- * API (memory_pool_create / memory_pool_alloc etc.). The retained
- * memory_pool_t is defined in memory_pool.h as an opaque pointer
- * (struct memory_pool *).
- */
-
 void *memory_safe_alloc(size_t size);
 
 void *memory_safe_realloc(void *ptr, size_t size);
