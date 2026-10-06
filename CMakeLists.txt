@@ -23,7 +23,6 @@ set(SOURCES
     utils/cost/estimator.c
     utils/cost/controller.c
     utils/observability/logger.c
-    utils/observability/metrics.c
     utils/observability/trace.c
     utils/error/handler.c
     utils/io/file_utils.c
