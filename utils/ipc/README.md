@@ -39,10 +39,7 @@ ipc/
 │  # —— 内部与守护进程辅助头 ——
 ├── ipc_common_internal.h         # 实现内部共享定义
 ├── svc_common.h                  # 服务通用定义
-├── daemon_bootstrap_ipc.h        # 守护进程 IPC 引导辅助
 ├── daemon_rpc_client.h           # 守护进程 RPC 客户端辅助
-├── ipc_bus_helper.h              # 服务总线辅助
-├── ipc_service_bus.h             # 服务总线接口
 │
 │  # —— 全平台组件 ——
 ├── circuit_breaker.h / .c        # 熔断器（仅依赖互斥锁与标准库）

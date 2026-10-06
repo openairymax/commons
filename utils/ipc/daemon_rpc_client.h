@@ -19,7 +19,7 @@
  *
  * Design goals:
  *   - Strictly aligned with the daemon-side JSON-RPC 2.0 over Unix socket
- *   - Self-contained, no libcurl dependency (unlike ipc_client.h)
+ *   - Self-contained, no external HTTP dependency
  *   - Caller frees the returned result_json string via AIRY_FREE
  *
  */
