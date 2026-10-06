@@ -50,13 +50,14 @@ config_unified/
 
 ### 配置值类型 `config_value_type_t`（core_config.h）
 
-| 枚举 | 值 | 枚举 | 值 |
-|------|----|------|----|
-| `CONFIG_TYPE_NULL` | 0 | `CONFIG_TYPE_STRING` | 5 |
-| `CONFIG_TYPE_BOOL` | 1 | `CONFIG_TYPE_ARRAY` | 6 |
-| `CONFIG_TYPE_INT` | 2 | `CONFIG_TYPE_OBJECT` | 7 |
-| `CONFIG_TYPE_INT64` | 3 | `CONFIG_TYPE_BINARY` | 8 |
-| `CONFIG_TYPE_DOUBLE` | 4 | | |
+| 枚举 | 值 |
+|------|----|
+| `CONFIG_TYPE_NULL` | 0 |
+| `CONFIG_TYPE_BOOL` | 1 |
+| `CONFIG_TYPE_INT` | 2 |
+| `CONFIG_TYPE_INT64` | 3 |
+| `CONFIG_TYPE_DOUBLE` | 4 |
+| `CONFIG_TYPE_STRING` | 5 |
 
 ### 错误码 `config_error_t`
 
@@ -73,11 +74,10 @@ config_unified/
 
 | 接口 | 说明 |
 |------|------|
-| `config_value_create_null/bool/int/int64/double/string/array/object` | 按类型构造 |
+| `config_value_create_null/bool/int/int64/double/string` | 按类型构造 |
 | `config_value_clone` / `config_value_destroy` | 深拷贝 / 销毁 |
 | `config_value_get_type` | 查询类型 |
 | `config_value_get_bool/int/int64/double/string` | 取值，类型不符或 NULL 时返回 `default_value`；字符串为内部所有，不得释放 |
-| `config_value_array_append(array, item)` | 向数组追加元素 |
 
 ### 配置上下文 `config_context_t`
 
@@ -144,7 +144,7 @@ config_unified/
 
 | 入口 | 格式 | 说明 |
 |------|------|------|
-| `config_parse_json(data, len, ctx)` | JSON | 手写递归下降，对象展平为点分键 |
+| `config_parse_json(data, len, ctx)` | JSON | 手写递归下降，对象展平为点分键、数组展平为 `a.N` 索引键 |
 | `config_parse_yaml(data, len, ctx)` | YAML | 状态机骨架 + mapping/sequence 递归 + 标量侧（引号/块标量/流式集合） |
 | `config_parse_ini(data, len, ctx)` | INI | `[section]` + `key=value` 展平为 `section.key` |
 

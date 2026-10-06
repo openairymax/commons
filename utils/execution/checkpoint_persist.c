@@ -11,6 +11,8 @@
 
 #include "checkpoint_internal.h"
 
+#include "json_key.h"
+
 /* Build the checkpoint file path including the sequence number.
  *
  * v0.1.1 change: file name went from checkpoint_{task_id}.json to
@@ -67,7 +69,7 @@ static bool parse_cp_name(const char *name, char *tid, size_t tid_sz, uint64_t *
         seq = seq * 10 + (uint64_t)(c - '0');
     }
 
-    __builtin_memcpy(tid, mid, tlen);
+    AIRY_MEMCPY(tid, mid, tlen);
     tid[tlen] = '\0';
     *out_seq = seq;
     return true;
@@ -286,31 +288,10 @@ static void write_json_value(FILE *fp, const char *str)
 
 static char *json_extract_string(const char *json, const char *key)
 {
+    const char *p = airy_json_key(json, key);
 
-    if (!json || !key) {
+    if (!p || *p != '"')
         return NULL;
-    }
-    char search[256];
-    snprintf(search, sizeof(search), "\"%s\"", key);
-    const char *p = strstr(json, search);
-
-    if (!p) {
-        return NULL;
-    }
-    p += strlen(search);
-    while (*p && isspace((unsigned char)*p))
-        p++;
-
-    if (*p != ':') {
-        return NULL;
-    }
-    p++;
-    while (*p && isspace((unsigned char)*p))
-        p++;
-
-    if (*p != '"') {
-        return NULL;
-    }
     p++;
 
     size_t cap = 512;
@@ -374,15 +355,11 @@ static char *json_extract_string(const char *json, const char *key)
 
 static uint64_t json_extract_uint64(const char *json, const char *key)
 {
-    char search[128];
-    snprintf(search, sizeof(search), "\"%s\"", key);
-    const char *p = strstr(json, search);
+    const char *p = airy_json_key(json, key);
+    uint64_t v = 0;
+
     if (!p)
         return 0;
-    p += strlen(search);
-    while (*p && (*p == ' ' || *p == '\t' || *p == ':' || *p == '\n' || *p == '\r'))
-        p++;
-    uint64_t v = 0;
     while (*p >= '0' && *p <= '9') {
         v = v * 10 + (uint64_t)(*p - '0');
         p++;

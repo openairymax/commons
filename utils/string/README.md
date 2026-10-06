@@ -5,12 +5,14 @@
 
 ## 概述
 
-本模块是 AgentRT 全树字符串与 UTF-8 处理的**唯一真相源（SSoT）**，只保留两个
+本模块是 AgentRT 全树字符串与 UTF-8 处理的**唯一真相源（SSoT）**，保留三个
 能力面与一个跨平台兼容头：
 
 - **安全字符串层 `safe_string_utils.h`**（14 个函数）：替代 `strcpy`/`strcat`/
   `sprintf` 等不安全 libc 函数的带界校验版本，附敏感缓冲区清理与输入校验；
 - **UTF-8 安全层 `safe_utf8.h`**（2 个函数）：RFC 3629 合规性校验与非法序列净化；
+- **JSON 顶层键定位件 `json_key.h`**（`airy_json_key`，header-only）：无 cJSON
+  依赖的顶层键值定位机制件，收敛全树各模块自研的 `strstr` 键提取副本；
 - **兼容头 `string_compat.h`**：`ssize_t`（MSVC）与 `snprintf` 映射的 OS 屏蔽垫片。
 
 > **收敛历史（0.1.19）**：原 `airy_string.h` 核心层（57 函数：`string_buffer_t` /
@@ -18,6 +20,13 @@
 > （`strlcpy` 风格与 JSON 转义等 20 函数）经全树消费者审计确认**模块外零消费**后
 > 整体移除，其被消费的 UTF-8 能力迁入 `safe_utf8.*`。全树字符串处理一律委托本模块，
 > **不得自研重复轮子**。
+>
+> **收敛历史（0.1.19 §214）**：`checkpoint_persist.c`（`find_cp_key`）、
+> `checkpoint_adapter_json.c`（`find_json_value`）、`orchestrator_llm.c`
+> （`find_field`）三处近同构的本地 JSON 键定位 helper 收敛至 `json_key.h` 的
+> `airy_json_key`。`daemons/supervisor_d/src/ctrl.c` 的同名 `sup_find_key`
+> 因 supervisor_d 是「零项目内库依赖自持层」的隔离边界（仅自持 JSON/日志，
+> include 面不含本模块）而**刻意保留**，非重复缺陷。
 
 所有返回堆内存的接口统一经 [`utils/memory`](../memory/README.md) 的分配器分配，
 **必须使用 `AIRY_FREE()` 释放**（不要使用 libc `free()`）。头文件声明公共接口
@@ -30,6 +39,7 @@ string/
 ├── README.md
 ├── safe_string_utils.h/.c         # 安全字符串层 API 与实现
 ├── safe_utf8.h/.c                 # UTF-8 校验与净化
+├── json_key.h                     # JSON 顶层键定位机制件（header-only，无 .c）
 └── string_compat.h                # 跨平台兼容定义
 ```
 
@@ -52,6 +62,20 @@ string/
 |------|------|
 | `utf8_validate(str, len)` | 判定字节流是否合规 RFC 3629：拒绝 overlong 编码、代理对（U+D800–U+DFFF）、超出 U+10FFFF 的值、截断尾字节与非法续字节；遇 NUL 提前结束 |
 | `utf8_sanitize(in, len, out, out_cap)` | 将非法序列替换为 `U+FFFD`（`EF BF BD`）后写入 `out`，容量不足时安全截断；返回写入字节数，参数非法或容量为 0 时返回 0 |
+
+## JSON 顶层键定位件（`json_key.h`）
+
+`static inline const char *airy_json_key(const char *json, const char *key)`：在
+未强制依赖 cJSON 的模块中定位 JSON 对象成员值的起始位置，供解码外部或不可信
+JSON 文本使用（强制依赖 cJSON 的模块应优先用
+[`utils/cjson/cjson_helpers.h`](../cjson/cjson_helpers.h) 的结构化解析）。
+
+| 行为 | 语义 |
+|------|------|
+| 键匹配 | 以带引号完整键 `"key"` 精确匹配，`"turn"` 不会命中 `"current_turn"` |
+| 键判定 | 只认「跳过空白后紧随 `:`」的匹配，据此跳过值域内嵌的同名字面量 |
+| 返回值 | 越过 `:` 与空白后的值首字符指针；未找到或参数非法返回 `NULL` |
+| 依赖 | 仅 `<ctype.h>`/`<stddef.h>`/`<string.h>`，**无 cJSON 依赖**；非完整 JSON 解析器 |
 
 ## 兼容头（`string_compat.h`）
 
@@ -82,7 +106,7 @@ if (!utf8_validate(delta, delta_len)) {
 ## 构建与依赖
 
 本模块 2 个 `.c` 文件编入静态库 `airy_common`；头文件目录经 PUBLIC 导出，导出面
-仅 `safe_string_utils.h` / `safe_utf8.h` / `string_compat.h`。
+为 `safe_string_utils.h` / `safe_utf8.h` / `json_key.h` / `string_compat.h`。
 
 | 依赖 | 来源 | 用途 |
 |------|------|------|

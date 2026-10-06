@@ -32,10 +32,7 @@ typedef enum {
     CONFIG_TYPE_INT = 2,
     CONFIG_TYPE_INT64 = 3,
     CONFIG_TYPE_DOUBLE = 4,
-    CONFIG_TYPE_STRING = 5,
-    CONFIG_TYPE_ARRAY = 6,
-    CONFIG_TYPE_OBJECT = 7,
-    CONFIG_TYPE_BINARY = 8
+    CONFIG_TYPE_STRING = 5
 } config_value_type_t;
 
 
@@ -101,20 +98,6 @@ config_value_t *config_value_create_double(double value);
 config_value_t *config_value_create_string(const char *value);
 
 /**
- * @brief Create an array config value
- * @param capacity Initial capacity
- * @return Config value object, NULL on failure
- */
-config_value_t *config_value_create_array(size_t capacity);
-
-/**
- * @brief Create an object config value
- * @param capacity Initial capacity
- * @return Config value object, NULL on failure
- */
-config_value_t *config_value_create_object(size_t capacity);
-
-/**
  * @brief Clone a config value
  * @param value Source config value
  * @return New config value copy, NULL on failure
@@ -173,8 +156,6 @@ double config_value_get_double(const config_value_t *value, double default_value
  * @return String pointer (internally owned, do not free)
  */
 const char *config_value_get_string(const config_value_t *value, const char *default_value);
-
-config_error_t config_value_array_append(config_value_t *array, config_value_t *item);
 
 /**
  * @brief Create a configuration context
