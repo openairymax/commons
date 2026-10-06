@@ -9,7 +9,7 @@
 #include "cache_common.h"
 
 #include "../memory/memory_common.h"
-#include "../sync/sync_common.h"
+#include "../sync/sync.h"
 #include "atomic_compat.h"
 
 #include <stdlib.h>
@@ -181,7 +181,7 @@ static void evict_lru(cache_impl_t *cache)
     cache_entry_t *victim = cache->lru_tail;
     unsigned int idx = cache->manager.hash_func(victim->key);
 
-    sync_mutex_lock(&cache->buckets[idx].lock);
+    sync_mutex_lock_ex(cache->buckets[idx].lock, NULL);
 
     cache_entry_t **p = &cache->buckets[idx].head;
     while (*p) {
@@ -192,7 +192,7 @@ static void evict_lru(cache_impl_t *cache)
         p = &(*p)->hnext;
     }
 
-    sync_mutex_unlock(&cache->buckets[idx].lock);
+    sync_mutex_unlock_ex(cache->buckets[idx].lock);
 
     lru_remove(cache, victim);
     cache_entry_free(&cache->manager, victim);
@@ -218,9 +218,20 @@ cache_t cache_create(const cache_config_t *manager)
     cache->capacity = cache->manager.capacity;
     cache->ttl_sec = cache->manager.ttl_sec;
 
-    sync_mutex_init(&cache->lru_lock);
+    if (sync_mutex_create(&cache->lru_lock, NULL) != SYNC_SUCCESS) {
+        memory_safe_free(cache);
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "lru lock creation failed");
+    }
+
     for (int i = 0; i < HASH_SIZE; i++) {
-        sync_mutex_init(&cache->buckets[i].lock);
+        if (sync_mutex_create(&cache->buckets[i].lock, NULL) != SYNC_SUCCESS) {
+            while (--i >= 0) {
+                sync_mutex_free(cache->buckets[i].lock);
+            }
+            sync_mutex_free(cache->lru_lock);
+            memory_safe_free(cache);
+            AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "bucket lock creation failed");
+        }
     }
 
     return (cache_t)cache;
@@ -232,7 +243,7 @@ cache_t cache_create(const cache_config_t *manager)
 static void cache_bucket_drain(cache_impl_t *impl)
 {
     for (int i = 0; i < HASH_SIZE; i++) {
-        sync_mutex_lock(&impl->buckets[i].lock);
+        sync_mutex_lock_ex(impl->buckets[i].lock, NULL);
 
         cache_entry_t *entry = impl->buckets[i].head;
         while (entry) {
@@ -242,7 +253,7 @@ static void cache_bucket_drain(cache_impl_t *impl)
         }
 
         impl->buckets[i].head = NULL;
-        sync_mutex_unlock(&impl->buckets[i].lock);
+        sync_mutex_unlock_ex(impl->buckets[i].lock);
     }
 }
 
@@ -257,10 +268,10 @@ void cache_destroy(cache_t cache)
     cache_bucket_drain(impl);
 
     for (int i = 0; i < HASH_SIZE; i++) {
-        sync_mutex_destroy(&impl->buckets[i].lock);
+        sync_mutex_free(impl->buckets[i].lock);
     }
 
-    sync_mutex_destroy(&impl->lru_lock);
+    sync_mutex_free(impl->lru_lock);
     memory_safe_free(impl);
 }
 
@@ -275,7 +286,7 @@ int cache_get(cache_t cache, const void *key, void **out_value)
 
     unsigned int idx = impl->manager.hash_func(key);
 
-    sync_mutex_lock(&impl->buckets[idx].lock);
+    sync_mutex_lock_ex(impl->buckets[idx].lock, NULL);
 
     cache_entry_t *entry = impl->buckets[idx].head;
     while (entry) {
@@ -286,7 +297,7 @@ int cache_get(cache_t cache, const void *key, void **out_value)
     }
 
     if (!entry) {
-        sync_mutex_unlock(&impl->buckets[idx].lock);
+        sync_mutex_unlock_ex(impl->buckets[idx].lock);
         atomic_fetch_add(&impl->misses, 1);
         return 0;
     }
@@ -308,12 +319,12 @@ int cache_get(cache_t cache, const void *key, void **out_value)
             p = &(*p)->hnext;
         }
 
-        sync_mutex_unlock(&impl->buckets[idx].lock);
+        sync_mutex_unlock_ex(impl->buckets[idx].lock);
 
-        sync_mutex_lock(&impl->lru_lock);
+        sync_mutex_lock_ex(impl->lru_lock, NULL);
         lru_remove(impl, entry);
         impl->size--;
-        sync_mutex_unlock(&impl->lru_lock);
+        sync_mutex_unlock_ex(impl->lru_lock);
 
         cache_entry_free(&impl->manager, entry);
         atomic_fetch_add(&impl->misses, 1);
@@ -335,14 +346,14 @@ int cache_get(cache_t cache, const void *key, void **out_value)
      * LRU is only an access-heat optimization, so skipping on trylock
      * failure does not affect correctness.
      */
-    if (sync_mutex_trylock(&impl->lru_lock) == 0) {
+    if (sync_mutex_try_lock(impl->lru_lock) == SYNC_SUCCESS) {
         lru_move_to_head(impl, entry);
-        sync_mutex_unlock(&impl->lru_lock);
+        sync_mutex_unlock_ex(impl->lru_lock);
     }
 
     atomic_fetch_add(&impl->hits, 1);
 
-    sync_mutex_unlock(&impl->buckets[idx].lock);
+    sync_mutex_unlock_ex(impl->buckets[idx].lock);
     return 1;
 }
 
@@ -359,7 +370,7 @@ void cache_put(cache_t cache, const void *key, const void *value)
 
     unsigned int idx = impl->manager.hash_func(key);
 
-    sync_mutex_lock(&impl->buckets[idx].lock);
+    sync_mutex_lock_ex(impl->buckets[idx].lock, NULL);
 
     cache_entry_t **p = &impl->buckets[idx].head;
     while (*p) {
@@ -367,38 +378,38 @@ void cache_put(cache_t cache, const void *key, const void *value)
             cache_entry_t *entry = *p;
             *p = entry->hnext;
 
-            sync_mutex_unlock(&impl->buckets[idx].lock);
+            sync_mutex_unlock_ex(impl->buckets[idx].lock);
 
-            sync_mutex_lock(&impl->lru_lock);
+            sync_mutex_lock_ex(impl->lru_lock, NULL);
             lru_remove(impl, entry);
             impl->size--;
-            sync_mutex_unlock(&impl->lru_lock);
+            sync_mutex_unlock_ex(impl->lru_lock);
 
             cache_entry_free(&impl->manager, entry);
 
-            sync_mutex_lock(&impl->buckets[idx].lock);
+            sync_mutex_lock_ex(impl->buckets[idx].lock, NULL);
             break;
         }
         p = &(*p)->hnext;
     }
 
     if (!value) {
-        sync_mutex_unlock(&impl->buckets[idx].lock);
+        sync_mutex_unlock_ex(impl->buckets[idx].lock);
         return;
     }
 
     cache_entry_t *entry = cache_entry_create(&impl->manager, key, value);
     if (!entry) {
-        sync_mutex_unlock(&impl->buckets[idx].lock);
+        sync_mutex_unlock_ex(impl->buckets[idx].lock);
         return;
     }
 
     entry->hnext = impl->buckets[idx].head;
     impl->buckets[idx].head = entry;
 
-    sync_mutex_unlock(&impl->buckets[idx].lock);
+    sync_mutex_unlock_ex(impl->buckets[idx].lock);
 
-    sync_mutex_lock(&impl->lru_lock);
+    sync_mutex_lock_ex(impl->lru_lock, NULL);
     entry->next = impl->lru_head;
     if (impl->lru_head) {
         impl->lru_head->prev = entry;
@@ -408,12 +419,12 @@ void cache_put(cache_t cache, const void *key, const void *value)
         impl->lru_tail = entry;
     }
     impl->size++;
-    sync_mutex_unlock(&impl->lru_lock);
+    sync_mutex_unlock_ex(impl->lru_lock);
 
     if (impl->size > impl->capacity) {
-        sync_mutex_lock(&impl->lru_lock);
+        sync_mutex_lock_ex(impl->lru_lock, NULL);
         evict_lru(impl);
-        sync_mutex_unlock(&impl->lru_lock);
+        sync_mutex_unlock_ex(impl->lru_lock);
     }
 }
 
@@ -439,10 +450,10 @@ void cache_clear(cache_t cache)
 
     cache_bucket_drain(impl);
 
-    sync_mutex_lock(&impl->lru_lock);
+    sync_mutex_lock_ex(impl->lru_lock, NULL);
     impl->lru_head = impl->lru_tail = NULL;
     impl->size = 0;
-    sync_mutex_unlock(&impl->lru_lock);
+    sync_mutex_unlock_ex(impl->lru_lock);
 }
 
 /**
@@ -495,11 +506,11 @@ void cache_set_capacity(cache_t cache, size_t capacity)
     cache_impl_t *impl = (cache_impl_t *)cache;
     impl->capacity = capacity;
 
-    sync_mutex_lock(&impl->lru_lock);
+    sync_mutex_lock_ex(impl->lru_lock, NULL);
     while (impl->size > impl->capacity) {
         evict_lru(impl);
     }
-    sync_mutex_unlock(&impl->lru_lock);
+    sync_mutex_unlock_ex(impl->lru_lock);
 }
 
 int cache_get_ttl(cache_t cache)

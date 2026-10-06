@@ -5,15 +5,12 @@
 
 ## 概述
 
-Sync 模块提供跨平台的线程同步与并发执行基础设施，包含五个 API 域：
+Sync 模块提供跨平台的线程同步与并发执行基础设施，包含四个 API 域：
 
 - **核心层 `sync.h`**（34 个公开函数）：互斥锁（递归形态经
   `SYNC_FLAG_RECURSIVE` 创建）、读写锁、条件变量共三类同步原语，统一为
   不透明句柄 + `sync_result_t` 返回值，阻塞接口普遍支持毫秒超时；附统计
   计数、命名锁登记与持锁状态检查、原子操作（CAS/加/减/读/写）与线程工具；
-- **轻量公共层 `sync_common.h`**（25 个函数）：结构体内嵌式
-  init/destroy 风格接口（POSIX `pthread_*` 的直接封装），供不需要句柄分配、
-  统计与超时扩展的服务代码使用；
 - **事件循环 `airy_event_loop.h`**：fd 可读/可写事件分发 + 周期定时器，
   按平台由 epoll（Linux）、kqueue（macOS/BSD）、WSAEventSelect（Windows）
   三个后端实现，同一平台仅一个后端参与链接；
@@ -39,7 +36,6 @@ sync/
 ├── sync_types.h                         # 句柄内部布局（各原语 .c 共用，勿直接依赖）
 ├── sync_platform.h / sync_platform.c    # 平台抽象层（Win32 / POSIX / macOS 补齐）
 ├── sync_internal.h / sync_internal.c    # 内部助手（strdup/errno 映射/统计更新，不安装）
-├── sync_common.h / sync_common.c        # 轻量公共层（结构体内嵌式）
 ├── airy_event_loop.h / airy_event_loop.c            # 事件循环门面（stop/定时器委托）
 ├── airy_event_loop_epoll.c                          # Linux epoll 后端
 ├── airy_event_loop_kqueue.c                         # macOS/BSD kqueue 后端
@@ -120,21 +116,6 @@ sync/
 参数均为 `volatile void *` + `uintptr_t`，按指针位宽工作。Windows 使用
 `_Interlocked*64`/`_Interlocked*`（依 `_WIN64` 选择），POSIX 使用
 `__sync` 内建。
-
-## 轻量公共层（`sync_common.h`）
-
-面向服务代码的基础封装：对象为**调用方持有的结构体**（内含平台对象指针与
-`initialized` 标志），全部返回 `int`（0 成功）。
-
-| 对象 | 函数（组） |
-|------|-----------|
-| `sync_mutex_t`（结构体） | `sync_mutex_init/destroy/lock/unlock/trylock` |
-| `sync_cond_t` | `sync_cond_init/destroy/wait/timedwait(cond, mutex, ms)/signal/broadcast` |
-| `sync_sem_t`（含 `value` 字段） | `sync_sem_init(sem, value)/destroy/wait/timedwait/trywait/post/getvalue` |
-| `sync_rwlock_t`（结构体） | `sync_rwlock_init/destroy/rdlock/wrlock/tryrdlock/trywrlock/unlock` |
-
-**注意**：本头与 `sync.h` 各自 `typedef` 了同名的 `sync_mutex_t` /
-`sync_rwlock_t`（语义不同），二者**不可在同一编译单元同时包含**，按场景二选一。
 
 ## 平台抽象层（`sync_platform.h` / `sync_types.h`）
 
