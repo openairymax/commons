@@ -79,6 +79,9 @@ struct config_context {
     bool encryption_enabled;
 };
 
+/* Shared sentinel for "key/item not found" across core and service layers. */
+#define INDEX_NOT_FOUND (-1)
+
 /* Shared helper: string duplicate via AIRY_MALLOC (defined in
  * core_config_value.c). */
 char *duplicate_string(const char *str);

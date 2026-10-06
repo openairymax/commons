@@ -13,18 +13,11 @@
 #define AIRY_RT_CONFIG_SERVICE_INTERNAL_H
 
 #include "config_service.h"
-
-#include <string.h>
-
-/* Unified base library compatibility layer */
-#include "airy_memory.h"
-#include "error.h"
+#include "core_config_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define INDEX_NOT_FOUND (-1)
 
 typedef struct {
     char *key;
@@ -40,20 +33,6 @@ struct config_schema {
     size_t count;
     size_t capacity;
 };
-
-static inline char *duplicate_string(const char *str)
-{
-    if (!str) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
-    }
-    size_t len = strlen(str);
-    char *copy = (char *)AIRY_MALLOC(len + 1);
-    if (copy) {
-        __builtin_memcpy(copy, str, len);
-        copy[len] = '\0';
-    }
-    return copy;
-}
 
 #ifdef __cplusplus
 }
