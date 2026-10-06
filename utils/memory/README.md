@@ -6,9 +6,13 @@
 ## 概述
 
 Memory 模块提供 commons 统一的内存管理基础设施：带标签的安全分配/释放、
-内存池、调试能力（泄漏检测、边界检查、释放后使用与双重释放检查）、全局与
+调试能力（泄漏检测、边界检查、释放后使用与双重释放检查）、全局与
 扩展统计、内存水位监控与 OOM 响应，以及面向 compliance 封禁策略的全套
 `AIRY_*` 替代宏。公共入口是聚合头 `airy_memory.h`。
+
+内存池/Slab 分配机制（`airy_mempool_*` / `airy_slab_*`）的权威实现归
+corekern（`atoms/corekern/`），不在本模块；commons 侧旧的 `memory_pool_*`
+平行实现已删除，避免与 corekern 机制件重复定义。
 
 ## 目录结构
 
@@ -27,9 +31,6 @@ memory/
 │
 ├── memory_common.h / memory_common.c        # 安全分配原语与分配策略切换
 │
-├── memory_pool.h                            # 内存池 API
-├── memory_pool.c / memory_pool_alloc.c / memory_pool_stats.c
-├── memory_pool_internal.h                   # 池内部结构
 ├── memory_prealloc.h / memory_prealloc.c    # 低内存关键路径预分配缓冲
 │
 ├── memory_debug_core.c                      # 调试核心：开/关、泄漏检查、转储、校验
@@ -54,21 +55,6 @@ memory/
 | `tag` | `const char *` | 分配标签（调试与统计） |
 | `fail_strategy` | `memory_fail_strategy_t` | 失败策略：`RETURN_NULL` / `ABORT` / `CALLBACK` / `RETRY` |
 | `fail_callback` / `fail_callback_user_data` | 回调 | `CALLBACK` 策略下触发 |
-
-### memory_pool_options_t — 内存池选项
-
-| 字段 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `block_size` | `size_t` | — | 块大小（字节） |
-| `initial_blocks` | `size_t` | 16 | 创建时预分配块数 |
-| `max_blocks` | `size_t` | 0（无限制） | 最大块数 |
-| `expansion_size` | `size_t` | 8 | 池满时扩展块数 |
-| `thread_safe` | `bool` | true | 是否线程安全 |
-| `name` | `const char *` | NULL | 池名称（调试用） |
-
-`memory_pool_stats_t` 提供块水位（`total/allocated/free_blocks`）、字节用量
-（`total/used_memory`）、`allocation_count` / `free_count` 与命中率
-（`hit_count` / `miss_count`）。
 
 ### 扩展统计与水位监控
 
@@ -105,13 +91,6 @@ memory/
 `memory_safe_strdup`；`memory_get_global_stats` / `memory_reset_global_stats`；
 策略切换 `memory_set_strategy` / `memory_get_strategy`
 （`MEMORY_STRATEGY_DEFAULT` / `PERFORMANCE` / `SAFETY` / `LOW_LATENCY`）。
-
-### 内存池 API（`memory_pool.h`）
-
-`memory_pool_create` / `create_default` / `destroy`、`alloc` / `calloc` /
-`free`、`get_stats` / `reset_stats`、`prealloc` / `clear` / `expand` /
-`shrink`、`is_empty` / `is_full` / `validate`、`iterate`、`get_name` /
-`set_name`。
 
 ### 预分配缓冲（`memory_prealloc.h`）
 
@@ -155,7 +134,6 @@ memory/
 
 ```c
 #include "airy_memory.h"
-#include "memory_pool.h"
 
 memory_init(NULL);
 
@@ -165,22 +143,6 @@ AUTO_FREE char *buf = AIRY_MALLOC(1024);   /* 离开作用域自动 airy_free */
 void *data = AIRY_CALLOC(64, 64);
 data = AIRY_REALLOC(data, 4096);
 AIRY_FREE(data);
-
-/* 内存池 */
-memory_pool_options_t opts = {
-    .block_size = 256,
-    .initial_blocks = 32,
-    .max_blocks = 1024,
-    .expansion_size = 16,
-    .thread_safe = true,
-    .name = "request_pool"
-};
-memory_pool_t *pool = memory_pool_create(&opts);
-if (pool != NULL) {
-    void *block = memory_pool_alloc(pool);
-    memory_pool_free(pool, block);
-    memory_pool_destroy(pool);
-}
 
 /* 全局统计 */
 memory_stats_t stats;

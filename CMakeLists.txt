@@ -38,10 +38,6 @@ set(SOURCES
     utils/memory/memory_core.c
     utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
-    utils/memory/memory_pool.c
-    # memory_pool 按功能域拆分：块区生命周期/分配释放与容量/统计查询校验（2026-08-27）
-    utils/memory/memory_pool_alloc.c
-    utils/memory/memory_pool_stats.c
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
     utils/memory/memory_prealloc.c
@@ -271,9 +267,6 @@ set_source_files_properties(
     utils/memory/memory_core.c
     utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
-    utils/memory/memory_pool.c
-    utils/memory/memory_pool_alloc.c
-    utils/memory/memory_pool_stats.c
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
     utils/memory/memory_prealloc.c

@@ -39,13 +39,6 @@ static memory_stats_t g_memory_stats = {.total_allocated = 0,
 
 static memory_strategy_t g_memory_strategy = MEMORY_STRATEGY_DEFAULT;
 
-/* Note: the old memory_create_default_pool_config / memory_pool_init /
- * memory_pool_alloc / memory_pool_free / memory_pool_cleanup /
- * memory_pool_get_stats have been removed; they conflict with the new
- * implementations in memory_pool.c. See memory_pool.h for the new pool
- * API.
- */
-
 void *memory_safe_alloc(size_t size)
 {
     if (size == 0) {
