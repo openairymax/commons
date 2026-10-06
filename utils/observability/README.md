@@ -5,32 +5,35 @@
 
 ## 概述
 
-Observability 模块提供 AgentRT 运行时的可观测性基础组件，包含五个部分：
+Observability 模块提供 AgentRT 运行时的可观测性基础组件，包含四个部分：
 
 - **日志（logger）**：`AIRY_LOG_*` 便捷宏的权威定义源，底层委托
   [`utils/logging`](../logging/README.md) 统一日志引擎，自动附加文件、行号与追踪
   ID，进程加载时经构造函数一次性自动初始化；
-- **指标（metrics）**：轻量级收集器，支持 Counter / Gauge / Timing 三种类型，
-  可导出 JSON 或 Prometheus 文本格式；
-- **链路追踪（trace）**：Span 生命周期管理与事件注解，支持 JSON 导出；
 - **统一指标（unified_metrics）**：进程级全局注册表（`um_*` API），按模块/实例
-  聚合多个守护进程的指标，统一导出一个 Prometheus 端点；
+  聚合多个守护进程的指标，统一导出一个 Prometheus 端点；这是本模块**唯一**的
+  指标 SSoT；
+- **链路追踪（trace）**：Span 生命周期管理与事件注解，支持 JSON 导出；
 - **告警管理（alert_manager）**：规则引擎（`am_*` API），支持阈值/趋势/复合/
   异常规则、告警抑制与去重、多通道通知（日志/回调/Webhook/文件）与升级策略。
 
-`observability.h` 为聚合入口头：重导出 `logger.h`，声明指标与追踪的核心 API。
-单调时钟读取统一走 platform 的 `airy_time_ns()`（SSoT，不在此重复提供）。
+`observability.h` 为薄聚合入口头：仅转发 `logger.h`（日志）与 `trace.h`（追踪），
+不再重复声明各子头的 API。单调时钟读取统一走 platform 的 `airy_time_ns()`
+（SSoT，不在此重复提供）。
+
+> S-2 SSoT 收敛（2026-10-06）：历史遗留的 `airy_metrics_*` 基础收集器
+> （`metrics.h` / `metrics.c`）与 `unified_metrics` 职责重叠、且近死（
+> `increment/gauge/timing/export_prometheus` 无生产消费者），已整体退役。
+> 所有指标采集统一走 `unified_metrics.h` 的 `um_*` API。
 
 ## 目录结构
 
 ```
 observability/
 ├── README.md
-├── observability.h            # 聚合入口（日志宏重导出 + 指标/追踪声明 + 单调时钟）
+├── observability.h            # 薄聚合入口（转发 logger.h + trace.h）
 ├── logger.h                   # AIRY_LOG_* 宏权威定义 + airy_log_* 函数声明
 ├── logger.c                   # airy_log_* 实现（委托 utils/logging 引擎）
-├── metrics.h                  # 指标收集接口
-├── metrics.c                  # 指标实现（JSON 导出经 cJSON，Prometheus 手工格式化）
 ├── trace.h                    # 链路追踪接口（Span 句柄 + 只读 getter）
 ├── trace.c                    # 追踪实现（全局 Span 链表 + 每 Span 互斥锁）
 ├── unified_metrics.h          # 统一指标注册表接口（um_*）
@@ -77,44 +80,6 @@ observability/
 
 > 注意：本模块 `airy_log_write()` 以**文件名**定位来源；`utils/logging` 的
 > `log_write()` 以**模块名字符串**定位来源，两者签名不同、用途互补。
-
-## 指标收集（metrics.h）
-
-### 指标类型
-
-| 类型 | 写入 API | 导出形态 |
-|------|----------|----------|
-| Counter | `airy_metrics_increment()`（`uint64_t` 增量） | 单调累计值 |
-| Gauge | `airy_metrics_gauge()`（`double`） | 瞬时值 |
-| Timing | `airy_metrics_timing()`（毫秒 `double`） | 总和 + 次数，导出平均值 |
-
-指标名不存在时写入 API 自动创建对应表项（内部为按类型分组的链表）。
-
-### 接口
-
-| 函数 | 说明 |
-|------|------|
-| `airy_metrics_create()` | 创建收集器，返回句柄（失败返回 NULL） |
-| `airy_metrics_destroy(metrics)` | 销毁收集器并释放全部指标 |
-| `airy_metrics_increment(metrics, name, value)` | 计数器增加 `value` |
-| `airy_metrics_gauge(metrics, name, value)` | 设置仪表值 |
-| `airy_metrics_timing(metrics, name, duration_ms)` | 记录一次耗时（毫秒） |
-| `airy_metrics_export(metrics)` | 导出 JSON 字符串（调用方释放）；未启用 cJSON 时返回 NULL |
-| `airy_metrics_export_prometheus(metrics)` | 导出 Prometheus 文本格式（调用方释放） |
-| `airy_metrics_export_prometheus_filtered(metrics, prefix)` | 按名称前缀过滤导出 |
-
-JSON 导出结构为三个对象分组 `counters` / `gauges` / `timings`，其中 timing 项
-含 `avg` 与 `count` 字段。Prometheus 文本示例：
-
-```
-# TYPE requests_total counter
-requests_total 1523
-# TYPE memory_usage_mb gauge
-memory_usage_mb 128.5
-# TYPE request_duration_ms summary
-request_duration_ms_sum 42.3
-request_duration_ms_count 1
-```
 
 ## 链路追踪（trace.h）
 
@@ -220,17 +185,6 @@ airy_log_set_trace_id(NULL);
 AIRY_LOG_INFO("agent init start");
 AIRY_LOG_ERROR("connect failed: %s", reason);
 
-/* 指标：命名收集器 */
-airy_metrics_t *m = airy_metrics_create();
-airy_metrics_increment(m, "requests_total", 1);
-airy_metrics_gauge(m, "memory_usage_mb", 128.5);
-airy_metrics_timing(m, "request_duration_ms", 42.3);
-
-char *prom = airy_metrics_export_prometheus(m);
-/* ... 将 prom 文本写入 HTTP /metrics 响应 ... */
-AIRY_FREE(prom);
-airy_metrics_destroy(m);
-
 /* 追踪：父子 Span 与事件注解 */
 airy_trace_span_t *root = airy_trace_begin("handle_request", NULL);
 airy_trace_add_event(root, "request_received", "{\"method\":\"GET\"}");
@@ -268,7 +222,6 @@ um_shutdown();
 | `platform.h` | 跨平台时间戳（`airy_time_ns`） | `platform` |
 | `atomic_compat.h` | 跨平台原子操作与互斥量 | `utils/include` |
 | `string_compat.h` / `safe_string_utils.h` | 安全字符串操作 | `utils/string` |
-| `cjson/cJSON.h` | JSON 序列化（可选；构建未启用 cjson 时自动注入 `AIRY_NO_CJSON`，`airy_metrics_export()` 返回 NULL） | `utils/cjson`（第三方） |
 
 ---
 
