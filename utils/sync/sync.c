@@ -6,16 +6,12 @@
  * @brief Unified thread synchronization primitives - core layer.
  *
  * Provides cross-platform, safe, efficient thread synchronization
- * primitives for Windows and POSIX: mutex, condition variable, semaphore,
- * rwlock, etc.
+ * primitives for Windows and POSIX: mutex, rwlock and condition variable.
  *
  * @note This file is the module entry point; implementations are split
  *       across:
  *       - sync_mutex.c: mutex
- *       - sync_recursive_mutex.c: recursive mutex
  *       - sync_rwlock.c: rwlock
- *       - sync_spinlock.c: spinlock
- *       - sync_semaphore.c: semaphore
  *       - sync_condition.c: condition variable
  */
 
@@ -38,7 +34,6 @@
 #else
 #include <errno.h>
 #include <sched.h>
-#include <semaphore.h>
 #include <sys/time.h>
 #include <unistd.h>
 #endif
@@ -89,14 +84,8 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
     switch (lock_type) {
     case SYNC_LOCK_MUTEX:
         return SYNC_TYPE_MUTEX;
-    case SYNC_LOCK_RECURSIVE_MUTEX:
-        return SYNC_TYPE_RECURSIVE_MUTEX;
     case SYNC_LOCK_RWLOCK:
         return SYNC_TYPE_RWLOCK;
-    case SYNC_LOCK_SPINLOCK:
-        return SYNC_TYPE_SPINLOCK;
-    case SYNC_LOCK_SEMAPHORE:
-        return SYNC_TYPE_SEMAPHORE;
     case SYNC_LOCK_CONDITION:
         return SYNC_TYPE_CONDITION;
     default:
@@ -118,14 +107,9 @@ const char *sync_get_name(void *lock)
 
     switch (base->hdr.type) {
     case SYNC_TYPE_MUTEX:
-    case SYNC_TYPE_RECURSIVE_MUTEX:
         return ((struct sync_mutex *)lock)->hdr.name;
     case SYNC_TYPE_RWLOCK:
         return ((struct sync_rwlock *)lock)->hdr.name;
-    case SYNC_TYPE_SPINLOCK:
-        return ((struct sync_spinlock *)lock)->hdr.name;
-    case SYNC_TYPE_SEMAPHORE:
-        return ((struct sync_semaphore *)lock)->hdr.name;
     case SYNC_TYPE_CONDITION:
         return ((struct sync_condition *)lock)->hdr.name;
     default:
@@ -452,8 +436,7 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
         return false;
 
     switch (type) {
-    case SYNC_TYPE_MUTEX:
-    case SYNC_TYPE_RECURSIVE_MUTEX: {
+    case SYNC_TYPE_MUTEX: {
         struct sync_mutex *m = (struct sync_mutex *)lock;
 #ifdef _WIN32
         if (TryEnterCriticalSection(&m->mutex)) {
@@ -465,34 +448,6 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
         int rc = pthread_mutex_trylock(&m->mutex);
         if (rc == 0) {
             pthread_mutex_unlock(&m->mutex);
-            return false;
-        }
-        return true;
-#endif
-    }
-    case SYNC_TYPE_SPINLOCK: {
-        struct sync_spinlock *sp = (struct sync_spinlock *)lock;
-#ifdef _WIN32
-
-        int expected = 0;
-        if (_InterlockedCompareExchange((volatile LONG *)&sp->lock, 1, expected) == expected) {
-            _InterlockedExchange((volatile LONG *)&sp->lock, 0);
-            return false;
-        }
-        return true;
-#elif defined(__APPLE__) && defined(__MACH__)
-        /* macOS 无 pthread_spinlock_t：platform_spinlock_t 即 atomic_int，
-         * 与 sync_spinlock.c 的 CAS 实现同语义。 */
-        int expected = 0;
-        if (atomic_compare_exchange_strong(&sp->lock, &expected, 1)) {
-            atomic_store(&sp->lock, 0);
-            return false;
-        }
-        return true;
-#else
-        int rc = pthread_spin_trylock(&sp->lock);
-        if (rc == 0) {
-            pthread_spin_unlock(&sp->lock);
             return false;
         }
         return true;
@@ -515,26 +470,7 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
         return true;
 #endif
     }
-    case SYNC_TYPE_SEMAPHORE: {
-        struct sync_semaphore *sem = (struct sync_semaphore *)lock;
-#ifdef _WIN32
-        DWORD wr = WaitForSingleObject(sem->semaphore, 0);
-        if (wr == WAIT_OBJECT_0) {
-            ReleaseSemaphore(sem->semaphore, 1, NULL);
-            return false;
-        }
-        return true;
-#else
-        int rc = sem_trywait(&sem->semaphore);
-        if (rc == 0) {
-            sem_post(&sem->semaphore);
-            return false;
-        }
-        return true;
-#endif
-    }
     default:
-
         return false;
     }
 }
@@ -562,8 +498,7 @@ sync_result_t sync_set_name(void *lock, const char *name)
     }
 
     switch (type) {
-    case SYNC_TYPE_MUTEX:
-    case SYNC_TYPE_RECURSIVE_MUTEX: {
+    case SYNC_TYPE_MUTEX: {
         struct sync_mutex *m = (struct sync_mutex *)lock;
         if (old_name)
             AIRY_FREE((void *)m->hdr.name);
@@ -575,20 +510,6 @@ sync_result_t sync_set_name(void *lock, const char *name)
         if (old_name)
             AIRY_FREE((void *)rw->hdr.name);
         rw->hdr.name = new_name;
-        break;
-    }
-    case SYNC_TYPE_SPINLOCK: {
-        struct sync_spinlock *sp = (struct sync_spinlock *)lock;
-        if (old_name)
-            AIRY_FREE((void *)sp->hdr.name);
-        sp->hdr.name = new_name;
-        break;
-    }
-    case SYNC_TYPE_SEMAPHORE: {
-        struct sync_semaphore *sem = (struct sync_semaphore *)lock;
-        if (old_name)
-            AIRY_FREE((void *)sem->hdr.name);
-        sem->hdr.name = new_name;
         break;
     }
     case SYNC_TYPE_CONDITION: {

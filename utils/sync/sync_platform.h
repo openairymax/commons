@@ -27,8 +27,6 @@ extern "C" {
 
 
 #ifdef _WIN32
-#include "atomic_compat.h"
-
 #include <synchapi.h>
 #include <windows.h>
 
@@ -37,9 +35,6 @@ typedef CRITICAL_SECTION platform_mutex_t;
 
 
 typedef SRWLOCK platform_rwlock_t;
-
-
-typedef atomic_int platform_spinlock_t;
 
 
 typedef HANDLE platform_semaphore_t;
@@ -55,24 +50,11 @@ typedef CONDITION_VARIABLE platform_condition_t;
 #include <sys/time.h>
 #include <unistd.h>
 
-#if defined(__APPLE__) && defined(__MACH__)
-#include "atomic_compat.h"
-#endif
-
 
 typedef pthread_mutex_t platform_mutex_t;
 
 
 typedef pthread_rwlock_t platform_rwlock_t;
-
-
-/* macOS 无 pthread_spinlock_t：使用 C11 atomic_int CAS 自旋，
- * 与 Windows 分支实现策略对齐。 */
-#if defined(__APPLE__) && defined(__MACH__)
-typedef atomic_int platform_spinlock_t;
-#else
-typedef pthread_spinlock_t platform_spinlock_t;
-#endif
 
 
 typedef sem_t platform_semaphore_t;
@@ -188,33 +170,6 @@ int platform_rw_timed(platform_rwlock_t *rwlock, bool write, uint32_t timeout_ms
  * @return 0 on success, non-zero on failure
  */
 int platform_rwlock_unlock(platform_rwlock_t *rwlock);
-
-/**
- * @brief Initialize a platform spinlock
- * @return 0 on success, non-zero on failure
- */
-int platform_spinlock_init(platform_spinlock_t *spinlock);
-
-/**
- * @brief Destroy a platform spinlock
- * @param[in] spinlock Spinlock pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_spinlock_destroy(platform_spinlock_t *spinlock);
-
-/**
- * @brief Lock a platform spinlock
- * @param[in] spinlock Spinlock pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_spinlock_lock(platform_spinlock_t *spinlock);
-
-/**
- * @brief Unlock a platform spinlock
- * @param[in] spinlock Spinlock pointer
- * @return 0 on success, non-zero on failure
- */
-int platform_spinlock_unlock(platform_spinlock_t *spinlock);
 
 /**
  * @brief Initialize a platform semaphore
