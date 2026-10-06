@@ -335,20 +335,6 @@ sync_result_t sync_debug(void *lock)
     return SYNC_SUCCESS;
 }
 
-uint64_t sync_get_timestamp_ms(void)
-{
-#ifdef _WIN32
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    uint64_t timestamp = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-    return timestamp / 10000;
-#else
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (uint64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
-#endif
-}
-
 void sync_sleep_ms(uint64_t ms)
 {
 #ifdef _WIN32

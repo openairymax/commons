@@ -49,24 +49,6 @@ bool log_internal_color_enabled(void)
 
 /* ==================== Context helpers ==================== */
 
-static uint64_t get_current_timestamp(void)
-{
-#if defined(_WIN32)
-    /* Windows 无 clock_gettime：GetSystemTimeAsFileTime 返回 1601-01-01
-     * 起的 100ns 间隔，换算到 Unix 毫秒（偏移 11644473600000 ms）。 */
-    FILETIME ft;
-    ULARGE_INTEGER u;
-    GetSystemTimeAsFileTime(&ft);
-    u.LowPart = ft.dwLowDateTime;
-    u.HighPart = ft.dwHighDateTime;
-    return (uint64_t)((u.QuadPart / 10000ULL) - 11644473600000ULL);
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
-#endif
-}
-
 static uint64_t get_current_thread_id(void)
 {
     return airy_thread_id();
@@ -250,12 +232,12 @@ static void log_write_core(log_level_t level, const char *module, int line,
     vsnprintf(message_buffer, sizeof(message_buffer), fmt,
               args); /* flawfinder: ignore - variadic logging wrapper */
 
-    uint64_t now_sec = (uint64_t)(get_current_timestamp() / 1000);
+    uint64_t now_sec = (uint64_t)(airy_time_wall_ms() / 1000);
     if (log_internal_throttle_suppress(module, line, message_buffer, now_sec)) {
         return;
     }
 
-    log_record_t record = {.timestamp = get_current_timestamp(),
+    log_record_t record = {.timestamp = airy_time_wall_ms(),
                            .level = level,
                            .module = module,
                            .line = line,

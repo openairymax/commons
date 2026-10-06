@@ -64,12 +64,7 @@ static int test_time_functions(void)
 {
     uint64_t time1 = airy_time_ns();
 
-#ifdef _WIN32
-    Sleep(10);
-#else
-    struct timespec ts = {0, 10000000}; /* 10ms */
-    nanosleep(&ts, NULL);
-#endif
+    airy_sleep_ms(10);
 
     uint64_t time2 = airy_time_ns();
 

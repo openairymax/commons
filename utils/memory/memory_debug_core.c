@@ -69,7 +69,7 @@ size_t memory_check_leaks(bool dump_to_stderr)
 
     if (dump_to_stderr && current != NULL) {
         fprintf(stderr, "=== Memory Leak Detection Report ===\n");
-        fprintf(stderr, "Time: %llu\n", (unsigned long long)memory_get_timestamp());
+        fprintf(stderr, "Time: %llu\n", (unsigned long long)airy_time_wall_ms());
         fprintf(stderr, "Current allocated: %zu bytes\n", g_state.stats.current_allocated);
         fprintf(stderr, "Leak blocks: %zu\n", leak_count);
     }
@@ -116,7 +116,7 @@ void memory_dump_debug_info(const char *file)
     }
 
     fprintf(output, "=== Memory Debug Info Dump ===\n");
-    fprintf(output, "Timestamp: %llu\n", (unsigned long long)memory_get_timestamp());
+    fprintf(output, "Timestamp: %llu\n", (unsigned long long)airy_time_wall_ms());
     fprintf(output, "Current allocation blocks:\n");
 
     struct memory_debug_info *current = g_state.debug_list_head;

@@ -42,18 +42,6 @@
 
 /* ---- Internal shared helpers (declared in ipc_common_internal.h) ---- */
 
-uint64_t ipc_get_timestamp_ns(void)
-{
-#ifdef _WIN32
-    LARGE_INTEGER freq, counter;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&counter);
-    return (uint64_t)((double)counter.QuadPart / freq.QuadPart * 1000000000.0);
-#else
-    return airy_time_ns();
-#endif
-}
-
 uint32_t ipc_calc_crc32(const void *data, size_t len)
 {
     const uint8_t *buf = (const uint8_t *)data;

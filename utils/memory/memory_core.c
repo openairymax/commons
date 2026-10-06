@@ -22,15 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
-#include <stdint.h>
-#include <sys/time.h>
-#endif
 
 /**
  * @brief Module internal state (definition; type declared in memory_internal.h).
@@ -55,20 +46,6 @@ void memory_lock(void)
 void memory_unlock(void)
 {
     airy_mtx_unlock(&g_state.lock);
-}
-
-uint64_t memory_get_timestamp(void)
-{
-#ifdef _WIN32
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    uint64_t ts = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-    return ts / 10000;
-#else
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (uint64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
-#endif
 }
 
 static void memory_handle_fail(size_t size, const char *tag)
@@ -114,7 +91,7 @@ static void memory_add_debug_info(void *addr, size_t size, size_t alignment, con
     info->file = file ? strdup(file) : NULL;
     info->line = line;
     info->function = function ? strdup(function) : NULL;
-    info->timestamp = memory_get_timestamp();
+    info->timestamp = airy_time_wall_ms();
     info->next = g_state.debug_list_head;
     g_state.debug_list_head = info;
 }

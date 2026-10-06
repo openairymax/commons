@@ -130,10 +130,10 @@ SVC_LOG_INFO("请求处理开始, trace: %s", trace_id);
 
 - **ANSI 色彩**：终端自动启用（INFO=蓝/WARN=黄/ERROR=红/FATAL=品红/DEBUG=灰），
   重定向到管道/文件时自动禁用。
-- **时间戳**：`log_write` 内部使用 `clock_gettime(CLOCK_REALTIME, ...)`（墙钟），
-  格式 `[YYYY-MM-DD HH:MM:SS.sss]`。`CLOCK_MONOTONIC` 系 API
-  （`airy_time_monotonic_ns/ms`，platform 模块）只用于超时、调度与性能测量，
-  不应用于日志时间戳；墙钟查询用 `airy_time_realtime_ns`。
+- **时间戳**：`log_write` 使用 `airy_time_wall_ms()`（platform_time 校正
+  逻辑墙钟，epoch 毫秒），格式 `[YYYY-MM-DD HH:MM:SS.sss]`。单调钟 API
+  （`airy_time_ms`/`airy_time_ns`，platform_misc）只用于超时、调度与性能
+  测量，不应用于日志时间戳。
 - **节流**：相同消息按哈希桶限速，避免日志洪水。
 
 ## 环境变量

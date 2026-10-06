@@ -15,18 +15,13 @@
 
 #include "api_recovery.h"
 #include "airy_defaults.h"
+#include "platform.h"
 #include "svc_logger.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-
-static uint64_t rec_timestamp_ms(void)
-{
-    return airy_time_ms();
-}
 
 static double rec_jitter(float ratio)
 {
@@ -41,7 +36,7 @@ static void rec_update_cred_health(api_rec_credential_t *cred, bool success)
     if (!cred)
         return;
     cred->total_uses++;
-    uint64_t now = rec_timestamp_ms();
+    uint64_t now = airy_time_ms();
 
     if (success) {
         cred->last_success_time = now;
@@ -390,10 +385,7 @@ int api_rec_execute_with_recovery(api_rec_pool_t *pool, api_rec_request_fn reque
 
             SVC_LOG_DEBUG("API rec[%s]: retry #%u in %ums", pool->name, attempt, delay_ms);
 
-            struct timespec ts;
-            ts.tv_sec = delay_ms / 1000;
-            ts.tv_nsec = (delay_ms % 1000) * 1000000L;
-            nanosleep(&ts, NULL);
+            airy_sleep_ms(delay_ms);
 
             if (classify_http_error(http_code) == API_REC_ERR_RATE_LIMIT) {
                 cred = api_rec_next_credential(pool);

@@ -87,16 +87,16 @@ void hall_clock_utc(char *buf, size_t sz)
 {
     if (!buf || sz == 0)
         return;
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    uint64_t wall_ms = airy_time_wall_ms();
+    time_t secs = (time_t)(wall_ms / 1000);
     struct tm tmv;
 #if defined(_WIN32)
-    gmtime_s(&tmv, &ts.tv_sec);
+    gmtime_s(&tmv, &secs);
 #else
-    gmtime_r(&ts.tv_sec, &tmv);
+    gmtime_r(&secs, &tmv);
 #endif
     snprintf(buf, sz, "%04d%02d%02dT%02d%02d%02d%03ld", tmv.tm_year + 1900, tmv.tm_mon + 1,
-             tmv.tm_mday, tmv.tm_hour, tmv.tm_min, tmv.tm_sec, ts.tv_nsec / 1000000);
+             tmv.tm_mday, tmv.tm_hour, tmv.tm_min, tmv.tm_sec, (long)(wall_ms % 1000));
 }
 
 const char *hall_roles_of(const char *category)

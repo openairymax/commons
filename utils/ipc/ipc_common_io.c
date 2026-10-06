@@ -137,7 +137,7 @@ airy_err_t ipc_send_data(ipc_channel_t *channel, const void *data, size_t len, s
     msg.header.flags = 0;
     msg.header.msg_id = ++channel->msg_id_counter;
     msg.header.aipc.payload_len = (uint32_t)len;
-    msg.header.timestamp = ipc_get_timestamp_ns();
+    msg.header.timestamp = airy_time_ns();
     msg.payload = (void *)data;
     msg.payload_size = len;
 
@@ -195,7 +195,7 @@ airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t l
     msg.header.type = IPC_MSG_NOTIFICATION;
     msg.header.flags = 0;
     msg.header.msg_id = ++channel->msg_id_counter;
-    msg.header.timestamp = ipc_get_timestamp_ns();
+    msg.header.timestamp = airy_time_ns();
     msg.payload = (void *)notification;
     msg.payload_size = len;
 
