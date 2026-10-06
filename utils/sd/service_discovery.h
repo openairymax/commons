@@ -27,7 +27,6 @@
  * 4. Cross-platform: Windows/Linux/macOS shared-memory abstraction
  *
  * @see svc_common.h service management framework
- * @see ipc_service_bus.h IPC service bus
  */
 
 #ifndef AIRY_RT_SERVICE_DISCOVERY_H
