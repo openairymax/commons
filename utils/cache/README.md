@@ -140,7 +140,7 @@ target_link_libraries(<your_target> PRIVATE airy_common)
 | 依赖 | 用途 |
 |------|------|
 | [memory](../memory/README.md) | `memory_safe_alloc` / `memory_safe_strdup` / `memory_safe_free` 内部分配 |
-| [sync](../sync/README.md) | `sync_common.h` 轻量互斥锁（桶锁与 LRU 锁） |
+| [sync](../sync/README.md) | `sync.h` 互斥锁句柄（桶锁与 LRU 锁） |
 | [error](../error/README.md) | `AIRY_EINVAL` 错误码与 error 栈 |
 | C 标准库 | `string` / `time` |
 

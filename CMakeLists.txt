@@ -52,7 +52,6 @@ set(SOURCES
     utils/sync/sync_mutex.c
     utils/sync/sync_rwlock.c
     utils/sync/sync_condition.c
-    utils/sync/sync_common.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）
     utils/sync/cancel_token.c
     utils/sync/thread_pool.c
