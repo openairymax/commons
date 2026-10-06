@@ -6,7 +6,7 @@
  * @brief Platform abstraction layer implementation for sync primitives
  *
  * Provides cross-platform implementations of mutex, condition variable,
- * semaphore, rwlock, spinlock, barrier, and event primitives.
+ * semaphore and rwlock primitives.
  *
  */
 
@@ -21,7 +21,6 @@
 #include <windows.h>
 #else
 #include <pthread.h>
-#include <sched.h>
 #include <semaphore.h>
 #include <sys/time.h>
 #include <time.h>
@@ -29,15 +28,6 @@
 #endif
 
 #include "error.h"
-
-/* macOS 无 pthread_spinlock_t，与 Windows 一样使用 C11 原子 CAS 自旋。 */
-#if defined(__APPLE__) && defined(__MACH__)
-#define AIRY_SPINLOCK_CAS 1
-#elif defined(_WIN32)
-#define AIRY_SPINLOCK_CAS 1
-#else
-#define AIRY_SPINLOCK_CAS 0
-#endif
 
 /* POSIX 绝对超时时刻的唯一构造点：Linux/其它 POSIX 的 timed 原语共用。
  * Windows 无 timespec、macOS 无 timed 原语（走轮询），故不参与编译。 */
@@ -250,59 +240,6 @@ int platform_rwlock_unlock(platform_rwlock_t *rwlock)
     return 0;
 #else
     return pthread_rwlock_unlock(rwlock);
-#endif
-}
-
-int platform_spinlock_init(platform_spinlock_t *spinlock)
-{
-#if AIRY_SPINLOCK_CAS
-    atomic_init(spinlock, 0);
-    return 0;
-#else
-    return pthread_spin_init(spinlock, PTHREAD_PROCESS_PRIVATE);
-#endif
-}
-
-int platform_spinlock_destroy(platform_spinlock_t *spinlock)
-{
-#if AIRY_SPINLOCK_CAS
-    atomic_store(spinlock, 0);
-    return 0;
-#else
-    return pthread_spin_destroy(spinlock);
-#endif
-}
-
-int platform_spinlock_lock(platform_spinlock_t *spinlock)
-{
-#if AIRY_SPINLOCK_CAS && defined(_WIN32)
-    int expected = 0;
-    while (!atomic_compare_exchange_strong_explicit(spinlock, &expected, 1, memory_order_acquire,
-                                                    memory_order_relaxed)) {
-        expected = 0;
-        SwitchToThread();
-    }
-    return 0;
-#elif AIRY_SPINLOCK_CAS
-    int expected = 0;
-    while (!atomic_compare_exchange_strong_explicit(spinlock, &expected, 1, memory_order_acquire,
-                                                    memory_order_relaxed)) {
-        expected = 0;
-        sched_yield();
-    }
-    return 0;
-#else
-    return pthread_spin_lock(spinlock);
-#endif
-}
-
-int platform_spinlock_unlock(platform_spinlock_t *spinlock)
-{
-#if AIRY_SPINLOCK_CAS
-    atomic_store_explicit(spinlock, 0, memory_order_release);
-    return 0;
-#else
-    return pthread_spin_unlock(spinlock);
 #endif
 }
 

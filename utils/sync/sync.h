@@ -7,8 +7,8 @@
  * @brief Unified thread-synchronization primitives module: core-layer API.
  *
  * Provides cross-platform, safe, efficient thread-synchronization
- * primitives: mutexes, condition variables, semaphores, read-write locks,
- * spinlocks, barriers, etc. Supports Windows and POSIX systems.
+ * primitives: mutexes, condition variables and read-write locks.
+ * Supports Windows and POSIX systems.
  *
  * @note Thread safety: all public interfaces are thread-safe
  * @see ARCHITECTURAL_PRINCIPLES.md E-3 resource-determinism principle
@@ -36,10 +36,7 @@ extern "C" {
 typedef enum {
     SYNC_TYPE_UNKNOWN = 0,
     SYNC_TYPE_MUTEX,
-    SYNC_TYPE_RECURSIVE_MUTEX,
     SYNC_TYPE_RWLOCK,
-    SYNC_TYPE_SPINLOCK,
-    SYNC_TYPE_SEMAPHORE,
     SYNC_TYPE_CONDITION
 } sync_type_t;
 
@@ -48,10 +45,7 @@ typedef enum {
  */
 typedef enum {
     SYNC_LOCK_MUTEX,
-    SYNC_LOCK_RECURSIVE_MUTEX,
     SYNC_LOCK_RWLOCK,
-    SYNC_LOCK_SPINLOCK,
-    SYNC_LOCK_SEMAPHORE,
     SYNC_LOCK_CONDITION
 } sync_lock_type_t;
 
@@ -109,24 +103,9 @@ typedef struct {
 typedef struct sync_mutex *sync_mutex_t;
 
 /**
- * @brief Recursive mutex handle
- */
-typedef struct sync_recursive_mutex *sync_recursive_mutex_t;
-
-/**
  * @brief Read-write lock handle
  */
 typedef struct sync_rwlock *sync_rwlock_t;
-
-/**
- * @brief Spinlock handle
- */
-typedef struct sync_spinlock *sync_spinlock_t;
-
-/**
- * @brief Semaphore handle
- */
-typedef struct sync_semaphore *sync_semaphore_t;
 
 /**
  * @brief Condition variable handle
@@ -233,50 +212,6 @@ sync_result_t sync_mutex_try_lock(sync_mutex_t mutex);
 sync_result_t sync_mutex_unlock_ex(sync_mutex_t mutex);
 
 /**
- * @brief Create a recursive mutex
- *
- * @param[out] mutex Recursive mutex handle
- * @param[in] attr Lock attributes (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_recursive_mutex_create(sync_recursive_mutex_t *mutex, const sync_attr_t *attr);
-
-/**
- * @brief Destroy a recursive mutex
- *
- * @param[in] mutex Recursive mutex handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_recursive_mutex_free(sync_recursive_mutex_t mutex);
-
-/**
- * @brief Lock a recursive mutex
- *
- * @param[in] mutex Recursive mutex handle
- * @param[in] timeout Timeout setting (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_recursive_mutex_lock_ex(sync_recursive_mutex_t mutex,
-                                           const sync_timeout_t *timeout);
-
-/**
- * @brief Unlock a recursive mutex
- *
- * @param[in] mutex Recursive mutex handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_recursive_mutex_unlock_ex(sync_recursive_mutex_t mutex);
-
-/**
- * @brief Get the recursion count of a recursive mutex
- *
- * @param[in] mutex Recursive mutex handle
- * @param[out] count Recursion count
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_recursive_mutex_get_count(sync_recursive_mutex_t mutex, size_t *count);
-
-/**
  * @brief Create a read-write lock
  *
  * @param[out] rwlock Read-write lock handle
@@ -334,101 +269,6 @@ sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock);
  * @return SYNC_SUCCESS on success, error code on failure
  */
 sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock);
-
-/**
- * @brief Create a spinlock
- *
- * @param[out] spinlock Spinlock handle
- * @param[in] attr Lock attributes (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_spinlock_create(sync_spinlock_t *spinlock, const sync_attr_t *attr);
-
-/**
- * @brief Destroy a spinlock
- *
- * @param[in] spinlock Spinlock handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_spinlock_free(sync_spinlock_t spinlock);
-
-/**
- * @brief Lock a spinlock
- *
- * @param[in] spinlock Spinlock handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_spinlock_lock_ex(sync_spinlock_t spinlock);
-
-/**
- * @brief Try to lock a spinlock
- *
- * @param[in] spinlock Spinlock handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_spinlock_try_lock(sync_spinlock_t spinlock);
-
-/**
- * @brief Unlock a spinlock
- *
- * @param[in] spinlock Spinlock handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_spinlock_unlock_ex(sync_spinlock_t spinlock);
-
-/**
- * @brief Create a semaphore
- *
- * @param[out] semaphore Semaphore handle
- * @param[in] initial_value Initial value
- * @param[in] max_value Maximum value (0 for unlimited)
- * @param[in] attr Semaphore attributes (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_create(sync_semaphore_t *semaphore, unsigned int initial_value,
-                                    unsigned int max_value, const sync_attr_t *attr);
-
-/**
- * @brief Destroy a semaphore
- *
- * @param[in] semaphore Semaphore handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_free(sync_semaphore_t semaphore);
-
-/**
- * @brief Wait on a semaphore
- *
- * @param[in] semaphore Semaphore handle
- * @param[in] timeout Timeout setting (optional)
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_wait_ex(sync_semaphore_t semaphore, const sync_timeout_t *timeout);
-
-/**
- * @brief Try to wait on a semaphore
- *
- * @param[in] semaphore Semaphore handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_try_wait(sync_semaphore_t semaphore);
-
-/**
- * @brief Post a semaphore
- *
- * @param[in] semaphore Semaphore handle
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_post_ex(sync_semaphore_t semaphore);
-
-/**
- * @brief Get the current value of a semaphore
- *
- * @param[in] semaphore Semaphore handle
- * @param[out] value Current value
- * @return SYNC_SUCCESS on success, error code on failure
- */
-sync_result_t sync_semaphore_get_value(sync_semaphore_t semaphore, unsigned int *value);
 
 /**
  * @brief Create a condition variable

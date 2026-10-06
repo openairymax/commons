@@ -50,12 +50,9 @@ set(SOURCES
     utils/sync/sync.c
     utils/sync/sync_platform.c
     utils/sync/sync_internal.c
-    utils/sync/sync_spinlock.c
     utils/sync/sync_mutex.c
     utils/sync/sync_rwlock.c
-    utils/sync/sync_semaphore.c
     utils/sync/sync_condition.c
-    utils/sync/sync_recursive_mutex.c
     utils/sync/sync_common.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链）
     utils/sync/cancel_token.c

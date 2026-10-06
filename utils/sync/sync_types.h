@@ -59,13 +59,6 @@ struct sync_mutex {
     platform_mutex_t mutex;
 };
 
-struct sync_recursive_mutex {
-    sync_lock_hdr_t hdr;
-    size_t recursive_count;
-    uint64_t owner_thread;
-    platform_mutex_t mutex;
-};
-
 struct sync_rwlock {
     sync_lock_hdr_t hdr;
     platform_rwlock_t rwlock;
@@ -74,17 +67,6 @@ struct sync_rwlock {
      * 释放。记账写者线程 ID（0 表示当前无写者）；读者不触碰该域。 */
     atomic_uint writer_owner;
 #endif
-};
-
-struct sync_spinlock {
-    sync_lock_hdr_t hdr;
-    platform_spinlock_t lock;
-};
-
-struct sync_semaphore {
-    sync_lock_hdr_t hdr;
-    unsigned int max_value;
-    platform_semaphore_t semaphore;
 };
 
 struct sync_condition {

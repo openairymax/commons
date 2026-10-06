@@ -7,10 +7,10 @@
 
 Sync 模块提供跨平台的线程同步与并发执行基础设施，包含五个 API 域：
 
-- **核心层 `sync.h`**（55 个公开函数）：互斥锁、递归互斥锁、读写锁、自旋锁、
-  信号量、条件变量、屏障共七类同步原语，统一为不透明句柄 + `sync_result_t`
-  返回值，阻塞接口普遍支持毫秒超时；附统计计数、命名锁登记与持锁状态检查、
-  原子操作（CAS/加/减/读/写）与线程工具；
+- **核心层 `sync.h`**（34 个公开函数）：互斥锁（递归形态经
+  `SYNC_FLAG_RECURSIVE` 创建）、读写锁、条件变量共三类同步原语，统一为
+  不透明句柄 + `sync_result_t` 返回值，阻塞接口普遍支持毫秒超时；附统计
+  计数、命名锁登记与持锁状态检查、原子操作（CAS/加/减/读/写）与线程工具；
 - **轻量公共层 `sync_common.h`**（25 个函数）：结构体内嵌式
   init/destroy 风格接口（POSIX `pthread_*` 的直接封装），供不需要句柄分配、
   统计与超时扩展的服务代码使用；
@@ -24,8 +24,8 @@ Sync 模块提供跨平台的线程同步与并发执行基础设施，包含五
 
 平台差异由内部抽象层 `sync_platform.h` / `sync_types.h` 吸收：POSIX 分支基于
 pthread/semaphore，Windows 分支基于 CriticalSection/SRWLOCK/HANDLE 信号量；
-macOS 缺失的 `pthread_spinlock_t` 与 `pthread_barrier_t` 分别以 C11 原子 CAS
-自旋和 mutex+cond（代数计数）自实现补齐。
+macOS 缺失的 `pthread_mutex_timedlock`、`pthread_rwlock_timed*`、`sem_timedwait`
+统一以 try + 短眠轮询近似超时。
 
 ## 目录结构
 
@@ -33,13 +33,9 @@ macOS 缺失的 `pthread_spinlock_t` 与 `pthread_barrier_t` 分别以 C11 原�
 sync/
 ├── README.md
 ├── sync.h / sync.c                      # 核心层 API：生命周期/统计/命名/原子/工具
-├── sync_mutex.c                         # 互斥锁
-├── sync_recursive_mutex.c               # 递归互斥锁
+├── sync_mutex.c                         # 互斥锁（含递归形态）
 ├── sync_rwlock.c                        # 读写锁
-├── sync_spinlock.c                      # 自旋锁
-├── sync_semaphore.c                     # 信号量
 ├── sync_condition.c                     # 条件变量
-├── sync_barrier.c                       # 屏障
 ├── sync_types.h                         # 句柄内部布局（各原语 .c 共用，勿直接依赖）
 ├── sync_platform.h / sync_platform.c    # 平台抽象层（Win32 / POSIX / macOS 补齐）
 ├── sync_internal.h / sync_internal.c    # 内部助手（strdup/errno 映射/统计更新，不安装）
@@ -60,8 +56,8 @@ sync/
 
 | 类型 | 取值 |
 |------|------|
-| `sync_type_t` | `SYNC_TYPE_UNKNOWN=0`，`SYNC_TYPE_MUTEX`、`SYNC_TYPE_RECURSIVE_MUTEX`、`SYNC_TYPE_RWLOCK`、`SYNC_TYPE_SPINLOCK`、`SYNC_TYPE_SEMAPHORE`、`SYNC_TYPE_CONDITION`、`SYNC_TYPE_BARRIER` |
-| `sync_lock_type_t` | 七类锁的调用侧标识（`SYNC_LOCK_MUTEX` … `SYNC_LOCK_BARRIER`，无 UNKNOWN），供 `sync_get_type` 做类型安全转换 |
+| `sync_type_t` | `SYNC_TYPE_UNKNOWN=0`，`SYNC_TYPE_MUTEX`、`SYNC_TYPE_RWLOCK`、`SYNC_TYPE_CONDITION` |
+| `sync_lock_type_t` | 三类锁的调用侧标识（`SYNC_LOCK_MUTEX`、`SYNC_LOCK_RWLOCK`、`SYNC_LOCK_CONDITION`），供 `sync_get_type` 做类型安全转换 |
 | `sync_result_t` | `SYNC_SUCCESS=0`、`SYNC_ERROR_TIMEOUT`、`SYNC_ERROR_DEADLOCK`、`SYNC_ERROR_INVALID`、`SYNC_ERROR_MEMORY`、`SYNC_ERROR_PERMISSION`、`SYNC_ERROR_BUSY`、`SYNC_ERROR_UNSUPPORTED`、`SYNC_ERROR_UNKNOWN` |
 | `sync_flag_t` | `SYNC_FLAG_NONE=0`、`SHARED`、`EXCLUSIVE`、`TRY`、`TIMEOUT`、`RECURSIVE`、`ERROR_CHECK`、`PRIORITY_INHERIT`、`ROBUST`（位标志 `1<<0`…`1<<7`） |
 | `sync_option_t` | `SYNC_OPTION_NAME=1`、`SYNC_OPTION_TIMEOUT=2`、`SYNC_OPTION_PRIORITY_INHERIT=3`、`SYNC_OPTION_ROBUST=4` |
@@ -74,9 +70,8 @@ sync/
 | `sync_deadlock_info_t` | `{ thread_count, lock_count, detection_time, thread_names, lock_names }` |
 | `sync_error_callback_t` | `void (*)(sync_result_t, const char *lock_name, void *context)` |
 
-七类原语各有不透明句柄类型：`sync_mutex_t`、`sync_recursive_mutex_t`、
-`sync_rwlock_t`、`sync_spinlock_t`、`sync_semaphore_t`、`sync_condition_t`、
-`sync_barrier_t`。句柄由 `*_create` 分配、由对应 `*_free` 释放。
+三类原语各有不透明句柄类型：`sync_mutex_t`、`sync_rwlock_t`、
+`sync_condition_t`。句柄由 `*_create` 分配、由对应 `*_free` 释放。
 
 ### 模块生命周期与通用函数
 
@@ -99,24 +94,18 @@ sync/
 它是时点快照式检查，不做等待图环路分析；`thread_count`/`thread_names` 不填充。
 未命名的锁不参与该检查。
 
-### 七类原语接口
+### 三类原语接口
 
 | 原语 | 函数 |
 |------|------|
-| 互斥锁 | `sync_mutex_create(&m, attr)` / `sync_mutex_free(m)` / `sync_mutex_lock_ex(m, timeout)` / `sync_mutex_try_lock(m)` / `sync_mutex_unlock_ex(m)` |
-| 递归互斥锁 | `sync_recursive_mutex_create/free/lock_ex/unlock_ex` + `sync_recursive_mutex_get_count(m, &count)`；POSIX 下以 `PTHREAD_MUTEX_RECURSIVE` 属性创建并另记账主线程与递归深度 |
+| 互斥锁 | `sync_mutex_create(&m, attr)` / `sync_mutex_free(m)` / `sync_mutex_lock_ex(m, timeout)` / `sync_mutex_try_lock(m)` / `sync_mutex_unlock_ex(m)`；`attr->flags & SYNC_FLAG_RECURSIVE` 时创建为递归互斥（POSIX 走 `PTHREAD_MUTEX_RECURSIVE`，Windows `CRITICAL_SECTION` 天然递归） |
 | 读写锁 | `sync_rwlock_create/free` + `read_lock_ex` / `try_read_lock` / `write_lock_ex` / `try_write_lock` / `unlock_ex`（读共享、写独占，均支持超时） |
-| 自旋锁 | `sync_spinlock_create/free` + `lock_ex`（无超时参数，纯自旋）/ `try_lock` / `unlock_ex`；POSIX 用 `pthread_spinlock_t`，Windows/macOS 用 C11 原子 CAS 自旋 |
-| 信号量 | `sync_semaphore_create(&s, initial_value, max_value, attr)`（`max_value=0` 不限）/ `free` / `wait_ex(s, timeout)` / `try_wait` / `post_ex` / `get_value(s, &value)` |
 | 条件变量 | `sync_condition_create/free` + `wait_ex(cond, mutex, timeout)` / `signal_ex` / `broadcast_ex`；等待必须关联核心层 `sync_mutex_t` |
-| 屏障 | `sync_barrier_create(&b, count, attr)` / `free` / `wait_ex(b, timeout)` / `reset(b, new_count)`（`new_count=0` 维持原计数） |
 
 超时与平台限制：
 
 - `timeout == NULL` 或 `timeout_ms == 0` 表示无限等待（各处文档以各函数注释为准，
   超时值为相对毫秒时长按 `sync_timeout_t.absolute` 区分）；
-- 屏障超时仅 Windows 分支生效；POSIX `pthread_barrier_t` 无限时等待，
-  `sync_barrier_wait_ex` 在该分支忽略 `timeout`；
 - 每次阻塞获取/等待都会原子累加对应句柄的统计计数器；`sync_get_stats` 返回
   调用时刻的一致快照。读者可在持有读锁期间并发上报统计，不构成数据竞争。
 
@@ -149,21 +138,18 @@ sync/
 
 ## 平台抽象层（`sync_platform.h` / `sync_types.h`）
 
-`sync_platform.h` 声明 37 个 `platform_*` 函数（七类句柄的 init/lock/unlock 等
-最小操作集 + `platform_get_timestamp_ms` + `platform_get_thread_id`）；
-`sync_types.h` 定义七个句柄结构体的内部布局（公共字段：`type`、`initialized`、
-`name`、`stats`，加平台对象；递归锁另含 `recursive_count`/`owner_thread`，
-屏障含 `count`/`current`/`generation`）。两文件供本模块各 `.c` 共用，
+`sync_platform.h` 声明 28 个 `platform_*` 函数（互斥锁/读写锁/信号量/条件变量
+四类句柄的 init/lock/unlock 等最小操作集 + `platform_get_thread_id`）；
+`sync_types.h` 定义句柄结构体的内部布局（家族公共头 `hdr`：`type`、
+`initialized`、`name`、`stats`，后接各平台对象）。两文件供本模块各 `.c` 共用，
 不属于稳定公共 API。
 
 | 原语 | Linux/POSIX | macOS | Windows |
 |------|-------------|-------|---------|
-| 互斥锁 / 递归锁 | `pthread_mutex_t` | 同左 | `CRITICAL_SECTION`（天然递归） |
+| 互斥锁（含递归） | `pthread_mutex_t` | 同左 | `CRITICAL_SECTION`（天然递归） |
 | 读写锁 | `pthread_rwlock_t` | 同左 | `SRWLOCK` |
-| 自旋锁 | `pthread_spinlock_t` | `atomic_int` CAS 自旋 | `atomic_int` CAS 自旋 |
 | 信号量 | `sem_t` | 同左 | `HANDLE` |
 | 条件变量 | `pthread_cond_t` | 同左 | `CONDITION_VARIABLE` |
-| 屏障 | `pthread_barrier_t` | mutex+cond+代数自实现 | CS+cond+代数自实现 |
 
 ## 事件循环（`airy_event_loop.h`）
 
@@ -271,7 +257,7 @@ if (g_loop != NULL) {
 
 ## 构建与依赖
 
-本模块 18 个 `.c` 全部编入静态库 `airy_common`（三后端文件全平台参与构建，
+本模块 15 个 `.c` 全部编入静态库 `airy_common`（三后端文件全平台参与构建，
 由预处理器守卫决定实际生效者），头文件目录经 PUBLIC 导出；安装时排除
 `sync_internal.h` 与 `airy_event_loop_internal.h`（`*_internal.h` 规则）。
 
@@ -279,7 +265,6 @@ if (g_loop != NULL) {
 |------|------|------|
 | `airy_memory.h` | [`utils/memory`](../memory/README.md) | 句柄/名称/任务节点的堆分配（`AIRY_CALLOC`/`AIRY_FREE`） |
 | `error.h` | [`utils/error`](../error/README.md) | `AIRY_ERR_*` 返回码（线程池、取消令牌） |
-| `check.h` | [`utils/include`](../include/README.md) | 信号量/自旋锁实现的参数校验宏 |
 | `logging.h` / `svc_logger.h` | [`utils/observability`](../observability/README.md) | 核心层与线程池日志、事件循环后端日志 |
 | `platform.h` | [`commons/platform`](../../platform/README.md) | 取消令牌与线程池的线程/锁/原子原语 |
 | `atomic_compat.h` | [`utils/compat`](../compat/README.md) | Windows/macOS 分支的 C11 原子支持 |
