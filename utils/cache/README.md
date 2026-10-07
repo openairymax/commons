@@ -8,7 +8,7 @@
 
 - **单一实现**：1024 个固定哈希桶（链地址法）+ 全局 LRU 双向链表；默认字符串哈希为 djb2。
 - **深拷贝语义**：`cache_put` 立即以配置的复制回调复制键与值，调用方可自由复用或释放原始内存；`cache_get` 同样输出值的**副本**，调用方须用配置的释放回调回收（字符串缓存即 `cache_string_free`）。
-- **线程安全**：每桶一把互斥锁，另有一把全局 LRU 锁；读写可在多线程下并发调用。
+- **线程安全**：整表由一把互斥锁守护（哈希桶与 LRU 链同处一个临界区），读写可在多线程下并发调用。
 - **TTL 惰性过期**：条目过期仅在被 `cache_get` 命中时检测并删除，没有后台清扫；`ttl_sec <= 0` 表示永不过期。
 - 内置字符串键的哈希/比较/复制/释放四个默认回调与便捷构造、读写接口。
 
@@ -70,9 +70,9 @@ commons/utils/cache/
 
 ## 容量与并发语义
 
-- **LRU 更新**：`cache_get` 命中后以 `trylock` 方式将条目移至链表头；锁竞争时跳过热度更新，不影响正确性。
+- **LRU 更新**：`cache_get` 命中后在锁内将条目移至链表头。
 - **逐出**：`cache_put` 使条目数超过容量时逐出 LRU 尾端 1 条；`cache_set_capacity` 缩容则循环逐出。
-- **过期检查**：在桶锁内完成，过期条目从哈希链与 LRU 链同时摘除并按配置的释放回调回收，`cache_get` 对其返回未命中。
+- **过期检查**：在锁内完成，过期条目从哈希链与 LRU 链同时摘除并按配置的释放回调回收，`cache_get` 对其返回未命中。
 - 通用接口约定 `key` 指向键对象本体（字符串场景即 `char *` 本身，而非 `char **`），四个回调须与该键类型配套。
 
 ## 用法示例
@@ -140,7 +140,7 @@ target_link_libraries(<your_target> PRIVATE airy_common)
 | 依赖 | 用途 |
 |------|------|
 | [memory](../memory/README.md) | `memory_safe_alloc` / `memory_safe_strdup` / `memory_safe_free` 内部分配 |
-| [sync](../sync/README.md) | `sync.h` 互斥锁句柄（桶锁与 LRU 锁） |
+| [sync](../sync/README.md) | `sync.h` 互斥锁句柄（缓存互斥锁） |
 | [error](../error/README.md) | `AIRY_EINVAL` 错误码与 error 栈 |
 | C 标准库 | `string` / `time` |
 
