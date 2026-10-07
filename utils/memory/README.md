@@ -10,9 +10,10 @@ Memory 模块提供 commons 统一的内存管理基础设施：带标签的安�
 扩展统计、内存水位监控与 OOM 响应，以及面向 compliance 封禁策略的全套
 `AIRY_*` 替代宏。公共入口是聚合头 `airy_memory.h`。
 
-内存池/Slab 分配机制（`airy_mempool_*` / `airy_slab_*`）的权威实现归
-corekern（`atoms/corekern/`），不在本模块；commons 侧旧的 `memory_pool_*`
-平行实现已删除，避免与 corekern 机制件重复定义。
+内存池/Slab 分配机制在 commons 侧无实现：旧 `memory_pool_*` 平行实现已删除。
+corekern 侧早期的 `airy_mempool_*` / `airy_slab_*` / `airy_arena_*` 分配器因
+全仓零消费，已随 0.1.19 死件清扫退役；托管堆的定长块池由 `airy_mem_pool_*`
+（`atoms/corekern/src/mem/pool.c`）提供。
 
 ## 目录结构
 
