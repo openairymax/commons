@@ -3,59 +3,13 @@
 
 /**
  * @file platform_process.c
- * @brief Process management domain: cross-platform process start/wait/
- * terminate, pipe shutdown and command output capture.
+ * @brief 进程管理域：跨平台进程启动/等待/终止/收割、子进程生成与命令输出捕获。
  */
 
 #include "platform_internal.h"
 
-/* ==================== Pipe API (platform-shared) ==================== */
-
-int airy_pipe_create(int fds[2])
-{
-#if AIRY_PLATFORM_WINDOWS
-    /* _pipe handles are inheritable by default; the child end must be
-     * inheritable for STARTF_USESTDHANDLES redirection. */
-    return _pipe(fds, 65536, _O_BINARY) == 0 ? 0 : -1;
-#else
-    return pipe(fds) == 0 ? 0 : -1;
-#endif
-}
-
-void airy_pipe_close(int *fd)
-{
-    if (fd && *fd >= 0) {
-        close(*fd);
-        *fd = -1;
-    }
-}
-
-long airy_pipe_read(int fd, void *buf, size_t len)
-{
-    if (fd < 0)
-        return -1;
-    long n = (long)read(fd, buf, len);
-    return n < 0 ? -1 : n;
-}
-
-int airy_pipe_write(int fd, const void *buf, size_t len)
-{
-    if (fd < 0)
-        return -1;
-    const char *p = (const char *)buf;
-    while (len > 0) {
-        long n = (long)write(fd, p, len);
-        if (n < 0) {
-            if (errno == EINTR)
-                continue;
-            return -1;
-        }
-        p += n;
-        len -= (size_t)n;
-    }
-    return 0;
-}
-
+/* Pipe-pair teardown helper for the process implementation below; the
+ * public airy_pipe_* primitives live in platform_pipe.c. */
 static void pipe_pair_close(int fds[2])
 {
     airy_pipe_close(&fds[0]);
@@ -90,7 +44,7 @@ static char *win_env_block(char *const env[])
     char *p = block;
     for (int i = 0; env && env[i]; i++) {
         size_t len = strlen(env[i]) + 1;
-        memcpy(p, env[i], len);
+        AIRY_MEMCPY(p, env[i], len);
         p += len;
     }
     *p = '\0';
