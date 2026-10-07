@@ -57,31 +57,8 @@ AIRY_API char *jsonrpc_build_error_with_data(int code, const char *message, cJSO
 AIRY_API int jsonrpc_is_batch_request(const char *raw);
 
 /**
- * @brief Response sink used by the same-process corekern transport.
- *
- * When a sink is active for the current thread, the JSONRPC_SEND_ERROR /
- * JSONRPC_SEND_SUCCESS macros append the serialized response to sink->buf
- * instead of writing it to a socket. This lets an L2 dispatch trampoline
- * (see daemon_main.h DAEMON_L2_ENABLE) capture responses in memory and
- * hand them to the corekern IPC layer. The sink is a dumb byte bucket:
- * it has no capacity field because the daemon L2 bridge already enforces
- * the 512 KiB payload ceiling; buf is AIRY_MALLOC'd (realloc'd) and
- * NUL-terminated, and its owner frees it.
- */
-typedef struct jsonrpc_resp_sink {
-    char *buf;  /* AIRY_MALLOC'd, NUL-terminated; NULL until first append */
-    size_t len; /* response bytes, NUL excluded */
-} jsonrpc_resp_sink_t;
-
-/** @brief Install @p sink as this thread's response sink (NULL fields). */
-AIRY_API void jsonrpc_resp_sink_activate(jsonrpc_resp_sink_t *sink);
-
-/** @brief Detach this thread's response sink (responses go to the socket). */
-AIRY_API void jsonrpc_resp_sink_deactivate(void);
-
-/**
- * @brief Route a serialized JSON-RPC response to the active sink or socket.
- * @param socket Client socket (ignored while a sink is active)
+ * @brief Route a serialized JSON-RPC response to the client socket.
+ * @param socket Client socket
  * @param str Serialized response (JSON-RPC error or success object)
  * @param len Length in bytes
  * @return AIRY_SUCCESS, or an AIRY_ERR_* code on failure
@@ -95,8 +72,7 @@ AIRY_API int jsonrpc_route_response(airy_sock_t socket, const char *str, size_t 
  * @param message Error message
  * @param id Request ID
  * @note Replaces the manual build_error -> send -> free three-liner
- * @note Routing honors the thread's response sink when active (corekern
- *       transport), else writes to @p socket via airy_sock_send
+ * @note Writes to @p socket via jsonrpc_route_response (airy_sock_send)
  */
 #define JSONRPC_SEND_ERROR(socket, error_code, message, id)                     \
     do {                                                                        \

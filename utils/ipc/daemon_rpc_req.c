@@ -5,11 +5,10 @@
  * @file daemon_rpc_req.c
  * @brief Daemon JSON-RPC 2.0 request wire-format builder.
  *
- * 0.1.19 §80: 请求构建机制件下沉 commons。socket 路径（daemons
- * daemon_rpc_client.c）与 L2 桥（daemon_l2_bridge.c）分属不同静态库且
- * svc_common → daemon_l1_server 单向，机制件须居两者公共下游；权威头
- * daemon_rpc_client.h 已在 commons/utils/ipc（P0.17 先例），实现随之
- * 归位，符号经 airy_common PUBLIC 链接提供。
+ * 0.1.19 §80: 请求构建机制件下沉 commons。权威头 daemon_rpc_client.h
+ * 已在 commons/utils/ipc（P0.17 先例），实现随之归位；daemons
+ * daemon_rpc_client.c（socket 路径）等消费方经 airy_common PUBLIC
+ * 链接解析符号。
  */
 
 #include "airy_memory.h"
