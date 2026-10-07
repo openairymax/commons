@@ -39,9 +39,9 @@ extern "C" {
  * @brief Build a JSON-RPC 2.0 request body (mechanism shared by all
  *        transports).
  *
- * The exact wire form both the socket transport and the L2 bridge
- * (daemon_l2_rpc_transact) put on the wire: id=1; params embedded
- * when params_json parses as JSON, stringified otherwise, {} when empty.
+ * The exact wire form the socket transport puts on the wire: id=1;
+ * params embedded when params_json parses as JSON, stringified
+ * otherwise, {} when empty.
  *
  * @param method       JSON-RPC method name (non-NULL)
  * @param params_json  Serialized params object (NULL/empty = empty params)
