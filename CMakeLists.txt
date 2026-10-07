@@ -7,6 +7,8 @@ set(SOURCES
     platform/src/platform.c
     platform/src/platform_sync.c
     platform/src/platform_process.c
+    # 匿名管道原语域（0.1.19 §224: 从进程域解出，G24 文件长度收敛）
+    platform/src/platform_pipe.c
     # 子进程沙箱（seccomp / seatbelt）（2026-09 §203 B2）
     platform/src/platform_sandbox.c
     platform/src/platform_paths.c
