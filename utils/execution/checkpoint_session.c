@@ -158,11 +158,13 @@ airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
         return AIRY_ENOTINIT;
 
     airy_mtx_lock(&g_checkpoint_mutex);
-    /* Must use the CLOCK_REALTIME baseline (time(NULL)) to compare against
-     * file st_mtime. Earlier code wrongly used airy_time_ms()
-     * (CLOCK_MONOTONIC, milliseconds since boot), whose baseline differs
-     * from st_mtime (CLOCK_REALTIME, seconds since 1970); the uint64_t
-     * subtraction underflowed and every file was judged stale and deleted. */
+    /* Age is measured on the CLOCK_REALTIME baseline (time(NULL)) so the
+     * comparison is meaningful against st_mtime (also CLOCK_REALTIME).
+     * The subtraction must never be allowed to underflow: coarse
+     * filesystem timestamps can report an mtime up to one tick ahead of
+     * time(NULL), and an unsigned wrap would make a freshly written
+     * checkpoint look infinitely old and get deleted. Guard the ordering
+     * before subtracting instead of relying on wraparound. */
     uint64_t now_sec = (uint64_t)time(NULL);
 
     if (max_age_sec > 0) {
@@ -181,7 +183,7 @@ airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
                 ft.LowPart = find_data.ftLastWriteTime.dwLowDateTime;
                 ft.HighPart = find_data.ftLastWriteTime.dwHighDateTime;
                 uint64_t mod_sec = (ft.QuadPart / 10000000ULL) - 11644473600ULL;
-                if ((now_sec - mod_sec) > max_age_sec)
+                if (mod_sec <= now_sec && (now_sec - mod_sec) > max_age_sec)
                     DeleteFileA(filepath);
             } while (FindNextFile(hFind, &find_data));
             FindClose(hFind);
@@ -198,10 +200,11 @@ airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
                 snprintf(filepath, sizeof(filepath), "%s/%s", g_checkpoint_storage_path,
                          entry->d_name);
                 struct stat st;
-                if (stat(filepath, &st) == 0) {
-                    if ((now_sec - (uint64_t)st.st_mtime) > max_age_sec)
-                        remove(filepath);
-                }
+                if (stat(filepath, &st) != 0)
+                    continue;
+                uint64_t mtime = (uint64_t)st.st_mtime;
+                if (mtime <= now_sec && (now_sec - mtime) > max_age_sec)
+                    remove(filepath);
             }
             closedir(dir);
         }
