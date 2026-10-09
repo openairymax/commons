@@ -42,6 +42,8 @@ set(SOURCES
     utils/memory/memory_prealloc.c
     utils/string/safe_string_utils.c
     utils/string/safe_utf8.c
+    # 0.1.19 §263：通用文本算法 SSoT（大小写/子串搜索/相似度/关键词切分）
+    utils/string/text_utils.c
     # 0.1.19 §60：任务大厅事件磁盘格式 SSoT（写侧机制件）
     utils/hall/hall_event.c
     # 0.1.19 §130：字符串→下标开放寻址哈希索引 SSoT（djb2 + 墓碑）

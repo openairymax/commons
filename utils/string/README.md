@@ -13,6 +13,8 @@
 - **UTF-8 安全层 `safe_utf8.h`**（2 个函数）：RFC 3629 合规性校验与非法序列净化；
 - **JSON 顶层键定位件 `json_key.h`**（`airy_json_key`，header-only）：无 cJSON
   依赖的顶层键值定位机制件，收敛全树各模块自研的 `strstr` 键提取副本；
+- **通用文本算法层 `text_utils.h`**（5 个函数）：域无关的大小写转换、忽略大小写
+  子串搜索、相似度与关键词切分；
 - **兼容头 `string_compat.h`**：`ssize_t`（MSVC）与 `snprintf` 映射的 OS 屏蔽垫片。
 
 > **收敛历史（0.1.19）**：原 `airy_string.h` 核心层（57 函数：`string_buffer_t` /
@@ -27,6 +29,12 @@
 > `airy_json_key`。`daemons/supervisor_d/src/ctrl.c` 的同名 `sup_find_key`
 > 因 supervisor_d 是「零项目内库依赖自持层」的隔离边界（仅自持 JSON/日志，
 > include 面不含本模块）而**刻意保留**，非重复缺陷。
+>
+> **收敛历史（0.1.19 §263）**：原 `cognition/think/intent/intent_utils.c` 的 5 个
+> 文本算法（`intent_to_lowercase` / `intent_contains_ignore_case` /
+> `intent_string_similarity` / `intent_extract_keywords` / `intent_free_keywords`）
+> 为**域无关通用算法**，却错置于 intent 策略域，并被 cognition（`dual_model.c`）与
+> intent 域跨域消费。经机制/策略分离审计迁入本模块，重命名为 `airy_text_*`。
 
 所有返回堆内存的接口统一经 [`utils/memory`](../memory/README.md) 的分配器分配，
 **必须使用 `AIRY_FREE()` 释放**（不要使用 libc `free()`）。头文件声明公共接口
@@ -39,6 +47,7 @@ string/
 ├── README.md
 ├── safe_string_utils.h/.c         # 安全字符串层 API 与实现
 ├── safe_utf8.h/.c                 # UTF-8 校验与净化
+├── text_utils.h/.c                # 通用文本算法（大小写/子串/相似度/关键词）
 ├── json_key.h                     # JSON 顶层键定位机制件（header-only，无 .c）
 └── string_compat.h                # 跨平台兼容定义
 ```
@@ -77,6 +86,16 @@ JSON 文本使用（强制依赖 cJSON 的模块应优先用
 | 返回值 | 越过 `:` 与空白后的值首字符指针；未找到或参数非法返回 `NULL` |
 | 依赖 | 仅 `<ctype.h>`/`<stddef.h>`/`<string.h>`，**无 cJSON 依赖**；非完整 JSON 解析器 |
 
+## 通用文本算法层（`text_utils.h`）
+
+| 函数 | 说明 |
+|------|------|
+| `airy_text_lower(str)` | 就地把 ASCII 大写转小写（`(unsigned char)` 转型，非 ASCII 字节按字节序不动）；返回入参 |
+| `airy_text_icontains(haystack, needle)` | 忽略大小写的子串包含判定，命中返回 1，否则 0；任一参数为 `NULL` 返回 0 |
+| `airy_text_similar(s1, s2)` | 基于最长公共子串的相似度（0–1）；空串或 `NULL` 返回 0.0 |
+| `airy_text_keywords(text, keywords, max_keywords)` | 按空白与标点切分、忽略长度 ≤2 的词元，小写化后堆写入 `keywords`；返回词元数 |
+| `airy_text_kw_free(keywords, count)` | 释放 `airy_text_keywords` 写出的关键词数组（逐项经 `AIRY_FREE`） |
+
 ## 兼容头（`string_compat.h`）
 
 - `_WIN32`：定义 `ssize_t`（若 MSVC 尚未定义）与 `snprintf → _snprintf` 映射；
@@ -105,8 +124,9 @@ if (!utf8_validate(delta, delta_len)) {
 
 ## 构建与依赖
 
-本模块 2 个 `.c` 文件编入静态库 `airy_common`；头文件目录经 PUBLIC 导出，导出面
-为 `safe_string_utils.h` / `safe_utf8.h` / `json_key.h` / `string_compat.h`。
+本模块 3 个 `.c` 文件编入静态库 `airy_common`；头文件目录经 PUBLIC 导出，导出面
+为 `safe_string_utils.h` / `safe_utf8.h` / `text_utils.h` / `json_key.h` /
+`string_compat.h`。
 
 | 依赖 | 来源 | 用途 |
 |------|------|------|
