@@ -66,9 +66,7 @@ set(SOURCES
     # airy_regex ERE 引擎按功能域拆分：公共 API+VM/解析/编译（2026-08-27）
     utils/compat/airy_regex_parse.c
     utils/compat/airy_regex_compile.c
-    utils/cognition/cognition_common.c
     utils/cognition/agent_vocab.c
-    utils/strategy/strategy_common.c
     # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
     utils/network/network_common.c
     utils/network/network_http.c
@@ -103,8 +101,6 @@ set(SOURCES
     utils/execution/checkpoint_snapshot.c
     utils/execution/checkpoint_session.c
     utils/task/task_desc.c
-    # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
-    utils/effect/airy_effect.c
     # 阶段 2: 统一扩展注册表 + 四域 provider 注册辅助（memory/llm/tool/storage/sandbox）
     utils/ext/airy_ext.c
     utils/ext/airy_providers.c
@@ -226,7 +222,6 @@ set(_inc_dirs
     utils/config_unified
     utils/execution
     utils/cognition
-    utils/strategy
     utils/network
     utils/ipc
     utils/sd
@@ -238,7 +233,6 @@ set(_inc_dirs
     utils/ds
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     utils/cjson
-    utils/effect
     # 阶段 2: 统一扩展注册表头
     utils/ext
     # 阶段 4: 内置拼音输入法头
@@ -299,7 +293,6 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/config_unified
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/execution
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cognition
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/strategy
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/network
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/sd
@@ -309,11 +302,8 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/hall
     # 0.1.19 §130: 字符串→下标哈希索引 SSoT
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ds
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/print
     # P0.18.2: cJSON 三步曲宏化辅助头文件（header-only）
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson
-    # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/effect
     # 阶段 2: 统一扩展注册表头
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext
     # 阶段 4: 内置拼音输入法头
@@ -412,11 +402,7 @@ install(DIRECTORY utils/platform/ DESTINATION include/agentrt/utils/platform
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/cognition/ DESTINATION include/agentrt/utils/cognition
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(DIRECTORY utils/strategy/ DESTINATION include/agentrt/utils/strategy
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/cjson/ DESTINATION include/agentrt/utils/cjson
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(DIRECTORY utils/effect/ DESTINATION include/agentrt/utils/effect
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/ext/ DESTINATION include/agentrt/utils/ext
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
