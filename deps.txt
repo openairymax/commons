@@ -19,12 +19,12 @@
 #
 # 注: compat 的 <io.h>/<stdint.h> 等为 Windows 系统头（platform/compat/
 #     下的 MSVC 替身），不计入项目依赖边。
-cache:
+cache: include
 cjson:
 cognition:
 compat: include
 compliance:
-config_unified:
+config_unified: include
 cost:
 effect: include
 error: types
@@ -36,18 +36,18 @@ include:
 io:
 ipc: error memory types include cjson compat sync platform
 logging: compat error memory observability platform
-memory: error platform
+memory: error platform include
 network: error types
-observability:
+observability: include
 platform: compat include
 print: logging
 quality: error
-resource: error memory
+resource: error memory include
 sd: include
 security:
 strategy: memory string
-string:
-sync: platform memory
+string: include
+sync: platform memory include
 task:
 token:
 types: include
