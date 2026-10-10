@@ -12,30 +12,46 @@
  * SSoT 规则：本数组 MUST 与 tool_d/service_builtin.c 注册的 builtin 工具
  * 一一对应（id / description / parameters.required 数组）；tool_d 校验器
  * 将每个 required!=0 参数视为必填，若此处标记 optional 而 tool_d 要求必填，
- * LLM 可能省略该参数导致校验失败。一致性由 daemons/gateway_d 的
- * test_mcp_tools_schema.c 门禁保证。
+ * LLM 可能省略该参数导致校验失败。
  */
 
 #ifndef AIRY_RT_TOOL_SCHEMA_H
 #define AIRY_RT_TOOL_SCHEMA_H
 
+/* 工具路径锚点契约（缺陷 #4）：所有 path/base/cwd 参数以 tool_d 进程工作
+ * 目录（cwd）为相对路径解析基准；工具结果回执回显解析后的绝对路径，调用方
+ * 据此判断锚点，无需猜测。 */
+#define AIRY_TOOL_PATH_DESC \
+    "File path. A relative path resolves against the tool service working directory; the result echoes the absolute path."
+#define AIRY_TOOL_BASE_DESC \
+    "Base directory. A relative path resolves against the tool service working directory (default '.')."
+#define AIRY_TOOL_CWD_DESC \
+    "Working directory for the command. A relative path resolves against the tool service working directory."
+#define AIRY_TOOL_MKDIRS_DESC "Create missing parent directories (default true)."
+
 #define AIRY_TOOLS_JSON_SOURCE \
     "[" \
     "{\"type\":\"function\",\"function\":{\"name\":\"fs_read\"," \
     "\"description\":\"Read a file's content from the local filesystem\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"," \
+    "\"description\":\"" AIRY_TOOL_PATH_DESC "\"}}," \
     "\"required\":[\"path\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_write\"," \
     "\"description\":\"Write content to a local file (creates or overwrites)\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}," \
-    "\"content\":{\"type\":\"string\"}},\"required\":[\"path\",\"content\"]}}}" \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"," \
+    "\"description\":\"" AIRY_TOOL_PATH_DESC "\"}," \
+    "\"content\":{\"type\":\"string\"},\"create_dirs\":{\"type\":\"boolean\"," \
+    "\"description\":\"" AIRY_TOOL_MKDIRS_DESC "\"}}," \
+    "\"required\":[\"path\",\"content\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_list\"," \
     "\"description\":\"List entries of a local directory (JSON array)\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"," \
+    "\"description\":\"" AIRY_TOOL_PATH_DESC "\"}}," \
     "\"required\":[]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"shell_run\"," \
     "\"description\":\"Execute a shell command and capture its output\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}}," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}," \
+    "\"cwd\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_CWD_DESC "\"}}," \
     "\"required\":[\"command\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"web_fetch\"," \
     "\"description\":\"Fetch a web page over HTTP(S) and return its body text\"," \
@@ -44,21 +60,25 @@
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_glob\"," \
     "\"description\":\"List files matching a glob pattern (supports * ? and **)\"," \
     "\"parameters\":{\"type\":\"object\",\"properties\":{\"pattern\":{\"type\":\"string\"}," \
-    "\"base\":{\"type\":\"string\"}},\"required\":[\"pattern\"]}}}" \
+    "\"base\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_BASE_DESC "\"}}," \
+    "\"required\":[\"pattern\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_grep\"," \
     "\"description\":\"Search file contents with a regular expression (relpath:line:text)\"," \
     "\"parameters\":{\"type\":\"object\",\"properties\":{\"pattern\":{\"type\":\"string\"}," \
-    "\"path\":{\"type\":\"string\"},\"glob\":{\"type\":\"string\"}," \
+    "\"path\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_PATH_DESC "\"}," \
+    "\"glob\":{\"type\":\"string\"}," \
     "\"max_results\":{\"type\":\"integer\"}},\"required\":[\"pattern\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_edit\"," \
     "\"description\":\"Replace an exact string in a file (search-and-replace edit)\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"," \
+    "\"description\":\"" AIRY_TOOL_PATH_DESC "\"}," \
     "\"old\":{\"type\":\"string\"},\"new\":{\"type\":\"string\"}," \
     "\"count\":{\"type\":\"integer\"}},\"required\":[\"path\",\"old\",\"new\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"fs_delete\"," \
     "\"description\":\"Delete a local file, or a directory (recursive=1 for " \
     "non-empty trees; destructive)\"," \
-    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"," \
+    "\"description\":\"" AIRY_TOOL_PATH_DESC "\"}," \
     "\"recursive\":{\"type\":\"boolean\"}},\"required\":[\"path\"]}}}" \
     ",{\"type\":\"function\",\"function\":{\"name\":\"web_search\"," \
     "\"description\":\"Search the web (DuckDuckGo) and return ranked results\"," \
