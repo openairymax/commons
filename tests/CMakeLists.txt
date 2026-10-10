@@ -20,11 +20,8 @@ set(UNIT_TEST_SOURCES
     unit/test_types.c
     # 网络通信（连接/HTTP/连接池/DNS/工具）；network 实现全平台编译
     unit/test_network.c
-    unit/test_print.c
     # 改进1（异步可中断）：取消令牌（原子标志 + 回调唤醒链 + 跨线程唤醒）
     unit/test_cancel_token.c
-    # P23: 统一作用域 effect 原语（注册即副作用 + disposer + 逆序回滚）
-    unit/test_airy_effect.c
     # 阶段 2: 统一扩展注册表 + 四域 provider 契约
     unit/test_airy_ext.c
     # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名）
@@ -113,10 +110,8 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/svc
         ${COMMONS_ROOT}/utils/network
         ${COMMONS_ROOT}/utils/memory
-        ${COMMONS_ROOT}/utils/print
         ${COMMONS_ROOT}/utils/sync
         ${COMMONS_ROOT}/utils/cache
-        ${COMMONS_ROOT}/utils/effect
         ${COMMONS_ROOT}/utils/ext
         ${COMMONS_ROOT}/utils/ime
         ${COMMONS_ROOT}/utils/io
