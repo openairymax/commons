@@ -14,13 +14,9 @@
 #ifndef AIRY_RT_CACHE_COMMON_H
 #define AIRY_RT_CACHE_COMMON_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /**
  * @brief Cache key-value callback function types
@@ -205,8 +201,6 @@ int cache_get_string(cache_t cache, const char *key, char **out_value);
  */
 void cache_put_string(cache_t cache, const char *key, const char *value);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* CACHE_COMMON_H */

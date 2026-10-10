@@ -22,13 +22,9 @@
 #ifndef AIRY_RT_YAML_MINIMAL_H
 #define AIRY_RT_YAML_MINIMAL_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 typedef enum yaml_node_type {
     YAML_NODE_NONE = 0,
@@ -107,8 +103,6 @@ void yaml_dump(struct yaml_node *node, char *buf, size_t bufsize, int indent);
  * 调用方必须用 AIRY_FREE() 释放（勿用 libc free()，Windows 对齐堆不兼容）。 */
 char *yaml_serialize(yaml_document_t *doc);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_YAML_MINIMAL_H */

@@ -24,13 +24,9 @@
 
 #include "tool_service_types.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 typedef struct safety_guard_bridge_s safety_guard_bridge_t;
 
@@ -63,8 +59,6 @@ typedef struct {
     int params_were_sanitized;
 } tool_approval_detail_t;
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_TOOL_APPROVAL_TYPES_H */

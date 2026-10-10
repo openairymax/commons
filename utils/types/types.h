@@ -33,13 +33,9 @@
 
 #include "../../include/airy_types.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /*
  * Part 1: Basic type definitions
@@ -667,8 +663,6 @@ typedef struct {
 #define AIRY_SEC_TO_NS(s) ((uint64_t)(s) * 1000000000ULL)
 
 /** @} */ /* end of HelperMacros */
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_TYPES_H */

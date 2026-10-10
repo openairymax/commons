@@ -10,13 +10,9 @@
 #ifndef AIRY_RT_MEMORY_TYPES_H
 #define AIRY_RT_MEMORY_TYPES_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /**
  * @defgroup memory_api 内存管理API
@@ -241,8 +237,6 @@ typedef struct {
  * 自动释放三步合一，消除 `ptr = malloc(size); if (!ptr) return -1;` 样板。
  */
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_MEMORY_TYPES_H */

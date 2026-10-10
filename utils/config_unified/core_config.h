@@ -17,13 +17,9 @@
 #ifndef AIRY_RT_CORE_CONFIG_H
 #define AIRY_RT_CORE_CONFIG_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 typedef enum {
@@ -219,8 +215,6 @@ void config_context_set_schema(config_context_t *ctx, config_schema_t *schema);
 void config_context_set_hot_reload(config_context_t *ctx, bool enabled, uint32_t interval_ms);
 void config_context_set_encryption(config_context_t *ctx, bool enabled);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_CORE_CONFIG_H */

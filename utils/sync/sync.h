@@ -17,13 +17,9 @@
 #ifndef AIRY_RT_SYNC_H
 #define AIRY_RT_SYNC_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /**
  * @defgroup sync_api Thread synchronization API
@@ -463,8 +459,6 @@ sync_result_t sync_set_option(void *lock, int option, void *value);
 sync_result_t sync_get_option(void *lock, int option, void *value);
 
 /** @} */ /* end of sync_api */
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_SYNC_H */

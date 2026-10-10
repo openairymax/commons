@@ -17,13 +17,9 @@
 #ifndef API_RECOVERY_H
 #define API_RECOVERY_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 #define API_REC_MAX_CREDENTIALS 8
 #define API_REC_MAX_CRED_LEN 256
@@ -137,8 +133,6 @@ void api_rec_get_stats(const api_rec_pool_t *pool, uint64_t *total, uint64_t *re
 const char *api_rec_error_string(api_rec_error_code_t code);
 const char *api_rec_degradation_string(api_rec_degradation_level_t level);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* API_RECOVERY_H */

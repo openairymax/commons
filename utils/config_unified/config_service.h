@@ -15,13 +15,9 @@
 #include "config_source.h"
 #include "core_config.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /**
  * @brief Configuration schema item
@@ -91,8 +87,6 @@ config_context_t *config_service_create(const char *service_name, config_schema_
 config_error_t config_service_load(config_context_t *ctx, config_source_t **sources,
                                    size_t source_count);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_CONFIG_SERVICE_H */

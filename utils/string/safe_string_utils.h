@@ -14,13 +14,9 @@
 #ifndef AIRY_RT_SAFE_STRING_UTILS_H
 #define AIRY_RT_SAFE_STRING_UTILS_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 int safe_strcpy(char *dest, const char *src, size_t dest_size);
@@ -64,8 +60,6 @@ void *safe_calloc(size_t count, size_t size, const char *purpose);
 
 void *safe_realloc(void *ptr, size_t new_size, const char *purpose);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_SAFE_STRING_UTILS_H */

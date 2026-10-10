@@ -73,13 +73,9 @@
 
 #include <airymax/ipc.h> /* AIRY_IPC_MAGIC (0x41524531 'ARE1') */
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 /**
@@ -320,8 +316,6 @@ typedef uint64_t airy_message_id_t;
  * 3. Error handling: use the unified error code definitions
  */
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_UNIFIED_TYPES_H */
