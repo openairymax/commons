@@ -15,13 +15,9 @@
 
 #include "core_config.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 typedef enum {
@@ -144,8 +140,6 @@ const config_source_attr_t *config_source_get_attributes(config_source_t *source
  */
 const char *config_source_type_to_string(config_source_type_t type);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_CONFIG_SOURCE_H */

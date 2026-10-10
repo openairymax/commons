@@ -17,13 +17,9 @@
 #ifndef AIRY_RT_THREAD_POOL_H
 #define AIRY_RT_THREAD_POOL_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 typedef struct thread_pool_s thread_pool_t;
@@ -61,8 +57,6 @@ static inline void thread_pool_get_default_config(thread_pool_config_t *cfg)
     cfg->idle_timeout_ms = 30000;
 }
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_THREAD_POOL_H */

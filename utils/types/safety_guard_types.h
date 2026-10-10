@@ -19,13 +19,9 @@
 #ifndef AIRY_RT_SAFETY_GUARD_TYPES_H
 #define AIRY_RT_SAFETY_GUARD_TYPES_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 #define SAFETY_MAX_SUBJECT_LEN 128
 #define SAFETY_MAX_ACTION_LEN 64
@@ -81,8 +77,6 @@ typedef struct {
 
 typedef struct safety_guard_context_s safety_guard_context_t;
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_SAFETY_GUARD_TYPES_H */

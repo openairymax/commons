@@ -16,13 +16,9 @@
 #include "../../include/export.h"
 #include "../error/error.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 typedef enum {
     CHECKPOINT_STATE_PENDING = 0,
@@ -92,8 +88,6 @@ AIRY_API airy_err_t airy_checkpoint_set_auto_hook(airy_checkpoint_hook_fn hook, 
 
 AIRY_API airy_err_t airy_checkpoint_trigger_auto(const char *task_id);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif

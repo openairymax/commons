@@ -12,13 +12,9 @@
 #ifndef AIRY_RT_SYNC_PLATFORM_H
 #define AIRY_RT_SYNC_PLATFORM_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 /**
  * @addtogroup sync_platform
@@ -267,8 +263,6 @@ int platform_condition_broadcast(platform_condition_t *cond);
 uint64_t platform_get_thread_id(void);
 
 /** @} */
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_SYNC_PLATFORM_H */

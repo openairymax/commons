@@ -19,18 +19,12 @@
 #pragma GCC system_header
 #endif
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 #include "atomic_compat_platform.h"
 #include "atomic_compat_api.h"
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_ATOMIC_COMPAT_H */

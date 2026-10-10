@@ -4,13 +4,9 @@
 #ifndef AIRY_RT_EVENT_LOOP_H
 #define AIRY_RT_EVENT_LOOP_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 #define AIRY_EVENT_LOOP_MAX_EVENTS 1024
 #define AIRY_EVENT_LOOP_MAX_TIMERS 64
@@ -64,8 +60,6 @@ int airy_event_loop_get_fd_count(airy_event_loop_t *loop);
 
 int airy_event_loop_wakeup(airy_event_loop_t *loop);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif

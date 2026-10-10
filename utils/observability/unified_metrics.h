@@ -18,13 +18,9 @@
 #ifndef AIRY_RT_UNIFIED_METRICS_H
 #define AIRY_RT_UNIFIED_METRICS_H
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "airy_abi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+AIRY_ABI_BEGIN
 
 
 #define UM_MAX_MODULES 32
@@ -196,8 +192,6 @@ int um_get_stats(um_stats_t *stats);
  */
 um_config_t um_create_default_config(void);
 
-#ifdef __cplusplus
-}
-#endif
+AIRY_ABI_END
 
 #endif /* AIRY_RT_UNIFIED_METRICS_H */
