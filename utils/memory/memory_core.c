@@ -351,6 +351,34 @@ void *memory_aligned_alloc(size_t alignment, size_t size, const char *tag)
     return ptr;
 }
 
+/* realloc 期间用于续接调试记录的本地快照：必须在摘除 debug 条目之前复制字段。 */
+typedef struct {
+    size_t alignment;
+    int line;
+    char tag[64];
+    char file[128];
+    char func[64];
+} memory_trace_t;
+
+/* 重新登记 realloc 后指针的调试信息；saved 为 NULL 时按调用点信息新建。 */
+static void memory_retrack(void *ptr, size_t size, const char *tag, const memory_trace_t *saved)
+{
+    if (!g_state.debug_enabled) {
+        return;
+    }
+
+    if (saved != NULL) {
+        memory_add_debug_info(ptr, size, saved->alignment,
+                              saved->tag[0] ? saved->tag : tag,
+                              saved->file[0] ? saved->file : __FILE__,
+                              saved->line > 0 ? saved->line : __LINE__,
+                              saved->func[0] ? saved->func : __func__);
+        return;
+    }
+
+    memory_add_debug_info(ptr, size, sizeof(void *), tag, __FILE__, __LINE__, __func__);
+}
+
 void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 {
     if (ptr == NULL) {
@@ -371,36 +399,26 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
     struct memory_debug_info *debug_info = memory_find_debug_info(ptr);
     size_t old_size = debug_info ? debug_info->size : 0;
 
-    size_t saved_alignment = debug_info ? debug_info->alignment : sizeof(void *);
-
     void *old_ptr = ptr;
+    memory_trace_t saved = {0};
     bool debug_info_saved = false;
-    char saved_tag[64] = {0};
-    char saved_file[128] = {0};
-    char saved_func[64] = {0};
-    int saved_line = 0;
     if (debug_info && g_state.debug_enabled) {
         debug_info_saved = true;
+        saved.alignment = debug_info->alignment;
+        saved.line = debug_info->line;
         if (debug_info->tag)
-            AIRY_STRNCPY_TERM(saved_tag, debug_info->tag, sizeof(saved_tag));
+            AIRY_STRNCPY_TERM(saved.tag, debug_info->tag, sizeof(saved.tag));
         if (debug_info->file)
-            AIRY_STRNCPY_TERM(saved_file, debug_info->file, sizeof(saved_file));
+            AIRY_STRNCPY_TERM(saved.file, debug_info->file, sizeof(saved.file));
         if (debug_info->function)
-            AIRY_STRNCPY_TERM(saved_func, debug_info->function, sizeof(saved_func));
-        saved_line = debug_info->line;
-        saved_alignment = debug_info->alignment;
+            AIRY_STRNCPY_TERM(saved.func, debug_info->function, sizeof(saved.func));
         memory_remove_debug_info(old_ptr);
     }
 
     void *new_ptr = realloc(ptr, new_size);
     if (new_ptr == NULL) {
-
-        if (debug_info_saved && g_state.debug_enabled) {
-            memory_add_debug_info(old_ptr, old_size, saved_alignment,
-                                  saved_tag[0] ? saved_tag : tag,
-                                  saved_file[0] ? saved_file : __FILE__,
-                                  saved_line > 0 ? saved_line : __LINE__,
-                                  saved_func[0] ? saved_func : __func__);
+        if (debug_info_saved) {
+            memory_retrack(old_ptr, old_size, tag, &saved);
         }
         memory_handle_fail(new_size, tag);
         memory_unlock();
@@ -412,39 +430,15 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
             memory_update_stats_free(old_size);
         }
         memory_update_stats_alloc(new_size);
-
-        if (g_state.debug_enabled) {
-            if (debug_info_saved) {
-                memory_add_debug_info(new_ptr, new_size, saved_alignment,
-                                      saved_tag[0] ? saved_tag : tag,
-                                      saved_file[0] ? saved_file : __FILE__,
-                                      saved_line > 0 ? saved_line : __LINE__,
-                                      saved_func[0] ? saved_func : __func__);
-            } else {
-                memory_add_debug_info(new_ptr, new_size, sizeof(void *), tag, __FILE__, __LINE__,
-                                      __func__);
-            }
-        }
     } else {
         if (new_size > old_size) {
             memory_update_stats_alloc(new_size - old_size);
         } else if (new_size < old_size) {
             memory_update_stats_free(old_size - new_size);
         }
-
-        if (g_state.debug_enabled) {
-            if (debug_info_saved) {
-                memory_add_debug_info(new_ptr, new_size, saved_alignment,
-                                      saved_tag[0] ? saved_tag : tag,
-                                      saved_file[0] ? saved_file : __FILE__,
-                                      saved_line > 0 ? saved_line : __LINE__,
-                                      saved_func[0] ? saved_func : __func__);
-            } else {
-                memory_add_debug_info(new_ptr, new_size, sizeof(void *), tag, __FILE__, __LINE__,
-                                      __func__);
-            }
-        }
     }
+
+    memory_retrack(new_ptr, new_size, tag, debug_info_saved ? &saved : NULL);
 
     memory_unlock();
 
