@@ -33,33 +33,11 @@
         on_fail;                                   \
     }
 
-#elif defined(_MSC_VER)
-
-/**
- * @def AIRY_MALLOC_GUARD(ptr, size, on_fail)
- * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
- */
-#define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
-    void *ptr = AIRY_MALLOC(size);            \
-    if (!(ptr)) {                             \
-        on_fail;                              \
-    }
-
-/**
- * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
- * @brief RAII 内存分配守卫（MSVC — 无自动释放，需手动 AIRY_FREE）
- */
-#define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
-    void *ptr = AIRY_CALLOC(num, size);            \
-    if (!(ptr)) {                                  \
-        on_fail;                                   \
-    }
-
 #else
 
 /**
  * @def AIRY_MALLOC_GUARD(ptr, size, on_fail)
- * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
+ * @brief RAII 内存分配守卫（MSVC 及其他编译器 — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_MALLOC_GUARD(ptr, size, on_fail) \
     void *ptr = AIRY_MALLOC(size);            \
@@ -69,7 +47,7 @@
 
 /**
  * @def AIRY_CALLOC_GUARD(ptr, num, size, on_fail)
- * @brief RAII 内存分配守卫（未知编译器 — 无自动释放，需手动 AIRY_FREE）
+ * @brief RAII 内存分配守卫（MSVC 及其他编译器 — 无自动释放，需手动 AIRY_FREE）
  */
 #define AIRY_CALLOC_GUARD(ptr, num, size, on_fail) \
     void *ptr = AIRY_CALLOC(num, size);            \
