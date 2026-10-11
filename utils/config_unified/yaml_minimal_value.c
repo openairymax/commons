@@ -78,6 +78,30 @@ struct yaml_node *parse_alias_value(struct parse_ctx *ctx, char *tag, char *anch
     return copy;
 }
 
+/*
+ * Attach an optional anchor and tag to a freshly built node, release the
+ * borrowed strings, and hand the node back. Every value constructor (quoted
+ * string, block scalar, flow sequence, flow mapping) ends with this same tail;
+ * keeping it in one place stops the scalar and flow variants from drifting
+ * apart over whether an existing tag is freed first.
+ */
+static struct yaml_node *finish_node(struct parse_ctx *ctx, struct yaml_node *node,
+                                     char *tag, char *anchor_name)
+{
+    if (node) {
+        if (anchor_name)
+            register_anchor(ctx, anchor_name, node);
+        if (tag) {
+            AIRY_FREE(node->tag);
+            node->tag = tag;
+            tag = NULL;
+        }
+    }
+    AIRY_FREE(anchor_name);
+    AIRY_FREE(tag);
+    return node;
+}
+
 struct yaml_node *parse_quoted_value(struct parse_ctx *ctx, int quote, char *tag,
                                      char *anchor_name)
 {
@@ -86,16 +110,8 @@ struct yaml_node *parse_quoted_value(struct parse_ctx *ctx, int quote, char *tag
     if (n) {
         n->scalar.value = s;
         n->scalar.length = s ? strlen(s) : 0;
-        if (anchor_name)
-            register_anchor(ctx, anchor_name, n);
-        if (tag) {
-            n->tag = tag;
-            tag = NULL;
-        }
     }
-    AIRY_FREE(anchor_name);
-    AIRY_FREE(tag);
-    return n;
+    return finish_node(ctx, n, tag, anchor_name);
 }
 
 static void parse_block_header(struct parse_ctx *ctx, int *chomp, int *block_indent)
@@ -240,16 +256,8 @@ struct yaml_node *parse_block_scalar_value(struct parse_ctx *ctx, bool is_folded
     if (n) {
         n->scalar.value = buf;
         n->scalar.length = len;
-        if (anchor_name)
-            register_anchor(ctx, anchor_name, n);
-        if (tag) {
-            n->tag = tag;
-            tag = NULL;
-        }
     }
-    AIRY_FREE(anchor_name);
-    AIRY_FREE(tag);
-    return n;
+    return finish_node(ctx, n, tag, anchor_name);
 }
 
 struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_indent,
@@ -294,16 +302,7 @@ struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_in
     } else if (!ctx->doc->error_msg) {
         set_error(ctx, "line %d: unterminated flow sequence", ctx->line);
     }
-    if (anchor_name)
-        register_anchor(ctx, anchor_name, seq);
-    if (tag) {
-        AIRY_FREE(seq->tag);
-        seq->tag = tag;
-        tag = NULL;
-    }
-    AIRY_FREE(anchor_name);
-    AIRY_FREE(tag);
-    return seq;
+    return finish_node(ctx, seq, tag, anchor_name);
 }
 
 struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_indent,
@@ -352,14 +351,5 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
     } else if (!ctx->doc->error_msg) {
         set_error(ctx, "line %d: unterminated flow mapping", ctx->line);
     }
-    if (anchor_name)
-        register_anchor(ctx, anchor_name, map);
-    if (tag) {
-        AIRY_FREE(map->tag);
-        map->tag = tag;
-        tag = NULL;
-    }
-    AIRY_FREE(anchor_name);
-    AIRY_FREE(tag);
-    return map;
+    return finish_node(ctx, map, tag, anchor_name);
 }
