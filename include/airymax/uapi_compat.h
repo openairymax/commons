@@ -118,12 +118,13 @@
 #endif
 
 /* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
- * When AIRY_SC_FALLBACK is defined, the three-way type bridge collapses
- * to a two-way bridge: __KERNEL__ vs non-__KERNEL__. The non-Linux
- * branch (macOS/Windows) reuses the Linux user-space typedefs because
- * both rely on <stdint.h> with identical fixed-width mappings. This
- * guarantees that agentrt cross-platform builds still compile when the
- * full [SC] contract is degraded. See [DSL] §2.2.
+ * When AIRY_SC_FALLBACK is defined, this block must survive on its own
+ * ([DSL] §5.3): it may not rely on any symbol from the [SC] body. The
+ * stdint mapping below repeats the main-bridge user-space typedefs on
+ * purpose — the guard macro short-circuits it while the body is intact,
+ * and restores the fixed-width types if the body is corrupted. This
+ * deliberate duplication is recorded in the G26 exemption list as
+ * "dsl-selfcontain". See [DSL] §2.2 (two-way bridge duty).
  */
 #ifdef AIRY_SC_FALLBACK
 	#ifdef __KERNEL__
