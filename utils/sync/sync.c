@@ -93,17 +93,26 @@ sync_type_t sync_get_type(void *lock, sync_lock_type_t lock_type)
     }
 }
 
-const char *sync_get_name(void *lock)
+/*
+ * Validate a lock handle and return its common header, or NULL when the handle
+ * is NULL or the lock was never initialized. Callers map NULL to their own
+ * error (SYNC_ERROR_INVALID, or a NULL name) so the validity rule lives in one
+ * place instead of being re-derived in every accessor.
+ */
+static struct sync_mutex *sync_lock_base(void *lock)
 {
-    if (lock == NULL) {
+    if (lock == NULL)
         return NULL;
-    }
 
     struct sync_mutex *base = (struct sync_mutex *)lock;
+    return base->hdr.initialized ? base : NULL;
+}
 
-    if (!base->hdr.initialized) {
+const char *sync_get_name(void *lock)
+{
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base)
         return NULL;
-    }
 
     switch (base->hdr.type) {
     case SYNC_TYPE_MUTEX:
@@ -119,12 +128,8 @@ const char *sync_get_name(void *lock)
 
 sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
 {
-    if (lock == NULL || stats == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->hdr.initialized) {
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base || stats == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -135,12 +140,8 @@ sync_result_t sync_get_stats(void *lock, sync_stats_t *stats)
 
 sync_result_t sync_reset_stats(void *lock)
 {
-    if (lock == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->hdr.initialized) {
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -189,12 +190,8 @@ static sync_option_slot_t *alloc_option_slot(void *lock)
 
 sync_result_t sync_set_option(void *lock, int option, void *value)
 {
-    if (lock == NULL || value == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->hdr.initialized) {
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base || value == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -236,12 +233,8 @@ sync_result_t sync_set_option(void *lock, int option, void *value)
 
 sync_result_t sync_get_option(void *lock, int option, void *value)
 {
-    if (lock == NULL || value == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->hdr.initialized) {
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base || value == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
@@ -477,12 +470,8 @@ static bool registry_lock_is_held(void *lock, sync_type_t type)
 
 sync_result_t sync_set_name(void *lock, const char *name)
 {
-    if (lock == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    if (!base->hdr.initialized) {
+    struct sync_mutex *base = sync_lock_base(lock);
+    if (!base) {
         return SYNC_ERROR_INVALID;
     }
 
