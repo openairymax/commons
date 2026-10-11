@@ -16,6 +16,25 @@ static void pipe_pair_close(int fds[2])
     airy_pipe_close(&fds[1]);
 }
 
+/* Shared spawn prologue: validate arguments, reset the process handle and
+ * stdio descriptors, and seed the three pipe pairs to "closed". The win and
+ * posix spawn bodies diverge only after this point, so the prologue is
+ * defined once here instead of being duplicated in both platform branches. */
+static int spawn_prep(const char *exe, char *const argv[], airy_process_info_t *proc,
+                      int in_pipe[2], int out_pipe[2], int err_pipe[2])
+{
+    if (!exe || !argv || !proc)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
+    proc->stdin_fd = -1;
+    proc->stdout_fd = -1;
+    proc->stderr_fd = -1;
+    in_pipe[0] = in_pipe[1] = -1;
+    out_pipe[0] = out_pipe[1] = -1;
+    err_pipe[0] = err_pipe[1] = -1;
+    return 0;
+}
+
 #if AIRY_PLATFORM_WINDOWS
 
 /* Build a quoted Windows command line from argv (argv[0] is skipped; the
@@ -177,13 +196,6 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
-int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
-                             uint32_t timeout_ms, char *output, size_t output_size)
-{
-    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms, output, output_size,
-                                       NULL);
-}
-
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
                                 uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
@@ -297,16 +309,10 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
 int airy_process_spawn(const char *executable, char *const argv[],
                        const airy_process_opt_t *opt, airy_process_info_t *proc)
 {
-    if (!executable || !argv || !proc)
-        return AIRY_EINVAL;
-    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
-    proc->stdin_fd = -1;
-    proc->stdout_fd = -1;
-    proc->stderr_fd = -1;
-
-    int in_pipe[2] = {-1, -1};
-    int out_pipe[2] = {-1, -1};
-    int err_pipe[2] = {-1, -1};
+    int in_pipe[2], out_pipe[2], err_pipe[2];
+    int rc = spawn_prep(executable, argv, proc, in_pipe, out_pipe, err_pipe);
+    if (rc != 0)
+        return rc;
 
     STARTUPINFOA si;
     AIRY_MEMSET(&si, 0, sizeof(si));
@@ -569,13 +575,6 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
-int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
-                             uint32_t timeout_ms, char *output, size_t output_size)
-{
-    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms, output, output_size,
-                                       NULL);
-}
-
 // Cancellation via short select polling (cancel_token.h has no unregister
 // interface yet, avoiding a dangling stack ctx)
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
@@ -707,16 +706,11 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
 int airy_process_spawn(const char *executable, char *const argv[],
                        const airy_process_opt_t *opt, airy_process_info_t *proc)
 {
-    if (!executable || !argv || !proc)
-        return AIRY_EINVAL;
-    AIRY_MEMSET(proc, 0, sizeof(airy_process_info_t));
-    proc->stdin_fd = -1;
-    proc->stdout_fd = -1;
-    proc->stderr_fd = -1;
+    int in_pipe[2], out_pipe[2], err_pipe[2];
+    int rc = spawn_prep(executable, argv, proc, in_pipe, out_pipe, err_pipe);
+    if (rc != 0)
+        return rc;
 
-    int in_pipe[2] = {-1, -1};
-    int out_pipe[2] = {-1, -1};
-    int err_pipe[2] = {-1, -1};
     if (opt && opt->redirect_stdin && airy_pipe_create(in_pipe) != 0)
         return AIRY_ERR_IO;
     if (opt && opt->redirect_stdout && airy_pipe_create(out_pipe) != 0)
@@ -769,3 +763,12 @@ int airy_process_reap(airy_process_info_t *proc, airy_exit_status_t *status)
 }
 
 #endif
+
+/* Platform-independent: both back ends capture via *_ex; hoisted out of the
+ * conditional so the delegate is defined once instead of per platform. */
+int airy_process_run_capture(const char *executable, char *const argv[], char *const envp[],
+                             uint32_t timeout_ms, char *output, size_t output_size)
+{
+    return airy_process_run_capture_ex(executable, argv, envp, timeout_ms, output, output_size,
+                                       NULL);
+}
