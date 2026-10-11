@@ -104,34 +104,9 @@ int airy_memmove_s(void *dest, size_t dest_size, const void *src, size_t count)
     return 0;
 }
 
-void airy_assert_fail(const char *cond, const char *file, int line, const char *func)
+static void assert_dispatch(const char *cond, const char *file, int line, const char *func,
+                            const char *msg)
 {
-    AIRY_LOG_ERROR("Assertion failed: %s", cond);
-    AIRY_LOG_ERROR("  at %s:%d in %s()", file, line, func);
-
-    if (g_assert_handler) {
-        g_assert_handler(cond, file, line, func, NULL);
-        return;
-    }
-
-#ifdef AIRY_PLATFORM_WINDOWS
-    if (IsDebuggerPresent()) {
-        DebugBreak();
-    }
-#else
-    raise(SIGABRT);
-#endif
-
-    abort();
-}
-
-void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
-                          const char *msg)
-{
-    AIRY_LOG_ERROR("Assertion failed: %s", cond);
-    AIRY_LOG_ERROR("  Message: %s", msg);
-    AIRY_LOG_ERROR("  at %s:%d in %s()", file, line, func);
-
     if (g_assert_handler) {
         g_assert_handler(cond, file, line, func, msg);
         return;
@@ -146,6 +121,24 @@ void airy_assert_fail_msg(const char *cond, const char *file, int line, const ch
 #endif
 
     abort();
+}
+
+void airy_assert_fail(const char *cond, const char *file, int line, const char *func)
+{
+    AIRY_LOG_ERROR("Assertion failed: %s", cond);
+    AIRY_LOG_ERROR("  at %s:%d in %s()", file, line, func);
+
+    assert_dispatch(cond, file, line, func, NULL);
+}
+
+void airy_assert_fail_msg(const char *cond, const char *file, int line, const char *func,
+                          const char *msg)
+{
+    AIRY_LOG_ERROR("Assertion failed: %s", cond);
+    AIRY_LOG_ERROR("  Message: %s", msg);
+    AIRY_LOG_ERROR("  at %s:%d in %s()", file, line, func);
+
+    assert_dispatch(cond, file, line, func, msg);
 }
 
 void airy_debug_break(void)
