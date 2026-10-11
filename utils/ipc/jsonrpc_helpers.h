@@ -84,6 +84,23 @@ AIRY_API int jsonrpc_route_response(airy_sock_t socket, const char *str, size_t 
     } while (0)
 
 /**
+ * @brief Validate a required value and reply with INVALID_PARAMS.
+ * @param expr Expression evaluating the required value
+ * @param socket Client socket descriptor
+ * @param message Error message
+ * @param id Request ID
+ * @note On failure sends a JSON-RPC error and returns from the
+ *       enclosing void handler
+ */
+#define JSONRPC_REQUIRE(expr, socket, message, id)                                 \
+    do {                                                                           \
+        if (!(expr)) {                                                             \
+            JSONRPC_SEND_ERROR((socket), JSONRPC_INVALID_PARAMS, (message), (id)); \
+            return;                                                                \
+        }                                                                          \
+    } while (0)
+
+/**
  * @brief Send a JSON-RPC success response to the client (build+send+free).
  * @param socket Client socket descriptor
  * @param result cJSON result object (ownership transfers to the root
