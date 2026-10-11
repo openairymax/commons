@@ -179,6 +179,33 @@ int yaml_parse_multi(yaml_document_t *doc, const char *input, size_t len)
     return doc->root ? 0 : -1;
 }
 
+int yaml_parse_root(const char *input, yaml_document_t **out_doc, struct yaml_node **out_root)
+{
+    if (!input || !out_doc || !out_root)
+        return AIRY_ERR_INVALID_PARAM;
+    *out_doc = NULL;
+    *out_root = NULL;
+
+    yaml_document_t *doc = yaml_create();
+    if (!doc)
+        return AIRY_ERR_OUT_OF_MEMORY;
+
+    if (yaml_parse_string(doc, input, strlen(input)) != 0) {
+        yaml_destroy(doc);
+        return AIRY_ERR_PARSE_ERROR;
+    }
+
+    struct yaml_node *root = yaml_root(doc);
+    if (!root || root->type != YAML_NODE_MAPPING) {
+        yaml_destroy(doc);
+        return AIRY_ERR_PARSE_ERROR;
+    }
+
+    *out_doc = doc;
+    *out_root = root;
+    return 0;
+}
+
 void yaml_destroy_chain(yaml_document_t *doc)
 {
     if (!doc)

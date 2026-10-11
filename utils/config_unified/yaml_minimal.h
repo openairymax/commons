@@ -80,6 +80,9 @@ void yaml_destroy(yaml_document_t *doc);
 int yaml_parse_string(yaml_document_t *doc, const char *input, size_t len);
 int yaml_parse_file(yaml_document_t *doc, const char *filepath);
 int yaml_parse_multi(yaml_document_t *doc, const char *input, size_t len);
+/* 解析单份 YAML 文本并要求其根为映射：成功时 *out_doc 持有待销毁文档、
+ * *out_root 指向根映射节点；失败时两者保持 NULL 并返回错误码。 */
+int yaml_parse_root(const char *input, yaml_document_t **out_doc, struct yaml_node **out_root);
 void yaml_destroy_chain(yaml_document_t *doc);
 
 const char *yaml_get_error(const yaml_document_t *doc);
