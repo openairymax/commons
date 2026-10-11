@@ -78,27 +78,7 @@ int jsonrpc_parse_request(const char *raw, char **out_method, cJSON **out_params
 
     CJSON_PARSE_GUARD(req, raw, { return JSONRPC_PARSE_ERROR; });
 
-    if (jsonrpc_validate_request(req) != 0) {
-
-        return JSONRPC_INVALID_REQUEST;
-    }
-
-    cJSON *method_obj = cJSON_GetObjectItem(req, "method");
-    if (method_obj && cJSON_IsString(method_obj)) {
-        *out_method = AIRY_STRDUP(method_obj->valuestring);
-    }
-
-    cJSON *params_obj = cJSON_GetObjectItem(req, "params");
-    if (params_obj) {
-        *out_params = cJSON_Duplicate(params_obj, 1);
-    }
-
-    cJSON *id_obj = cJSON_GetObjectItem(req, "id");
-    if (id_obj && cJSON_IsNumber(id_obj)) {
-        *out_id = id_obj->valueint;
-    }
-
-    return 0;
+    return jsonrpc_parse_request_ptr(req, out_method, out_params, out_id);
 }
 
 int jsonrpc_parse_request_ptr(cJSON *req, char **out_method, cJSON **out_params, int *out_id)
