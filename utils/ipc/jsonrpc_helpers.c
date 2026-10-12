@@ -61,12 +61,6 @@ char *jsonrpc_build_success(cJSON *result, int id)
     return resp;
 }
 
-char *jsonrpc_build_success_string(const char *result_str, int id)
-{
-    cJSON *result = cJSON_CreateString(result_str ? result_str : "");
-    return jsonrpc_build_success(result, id);
-}
-
 int jsonrpc_parse_request(const char *raw, char **out_method, cJSON **out_params, int *out_id)
 {
     if (!raw || !out_method || !out_params || !out_id)
@@ -234,27 +228,6 @@ const char *jsonrpc_get_error_message(int code)
     default:
         return "Unknown error";
     }
-}
-
-char *jsonrpc_build_error_with_data(int code, const char *message, cJSON *data, int id)
-{
-    if (!message)
-        message = jsonrpc_get_error_message(code);
-
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "jsonrpc", "2.0");
-    cJSON_AddNumberToObject(root, "id", id);
-
-    cJSON *error = cJSON_CreateObject();
-    cJSON_AddNumberToObject(error, "code", code);
-    cJSON_AddStringToObject(error, "message", message);
-    if (data)
-        cJSON_AddItemToObject(error, "data", data);
-    cJSON_AddItemToObject(root, "error", error);
-
-    char *result = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-    return result;
 }
 
 int jsonrpc_is_batch_request(const char *raw)
