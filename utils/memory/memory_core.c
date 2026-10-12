@@ -109,14 +109,7 @@ static void memory_remove_debug_info(void *addr)
         if (current->address == addr) {
             *prev = current->next;
 
-            if (current->tag)
-                free((void *)current->tag);
-            if (current->file)
-                free((void *)current->file);
-            if (current->function)
-                free((void *)current->function);
-            free(current);
-
+            free_debug_node(current);
             return;
         }
 
@@ -262,18 +255,8 @@ void memory_cleanup(void)
             AIRY_LOG_WARN("Leak: %p (%zu bytes) - tag: %s", current->address, current->size,
                      current->tag ? current->tag : "(null)");
 
-            // AIRY_FREE(current->address);
-
             struct memory_debug_info *next = current->next;
-
-            if (current->tag)
-                free((void *)current->tag);
-            if (current->file)
-                free((void *)current->file);
-            if (current->function)
-                free((void *)current->function);
-            free(current);
-
+            free_debug_node(current);
             current = next;
         }
 

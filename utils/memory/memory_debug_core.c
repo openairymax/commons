@@ -8,6 +8,17 @@
 
 #include "memory_internal.h"
 
+void free_debug_node(struct memory_debug_info *node)
+{
+    if (node->tag)
+        free((void *)node->tag);
+    if (node->file)
+        free((void *)node->file);
+    if (node->function)
+        free((void *)node->function);
+    free(node);
+}
+
 bool memory_debug_enable(bool enable)
 {
     if (!g_state.initialized) {
@@ -30,15 +41,7 @@ bool memory_debug_enable(bool enable)
         struct memory_debug_info *current = g_state.debug_list_head;
         while (current != NULL) {
             struct memory_debug_info *next = current->next;
-
-            if (current->tag)
-                free((void *)current->tag);
-            if (current->file)
-                free((void *)current->file);
-            if (current->function)
-                free((void *)current->function);
-            free(current);
-
+            free_debug_node(current);
             current = next;
         }
         g_state.debug_list_head = NULL;

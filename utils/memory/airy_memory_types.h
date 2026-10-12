@@ -77,12 +77,6 @@ typedef struct memory_debug_info {
 extern void airy_mem_stats_record_alloc(size_t bytes);
 extern void airy_mem_stats_record_dealloc(size_t bytes);
 
-#ifndef AIRY_MEMORY_STATS_T_DEFINED
-#define AIRY_MEMORY_STATS_T_DEFINED
-/* 注：memory_stats_t 已在上方 @file 顶部定义（AIRY_MEMORY_STATS_T_DEFINED guard）。
- * 此 guard 保证与原 airy_memory.h 的定义不冲突。 */
-#endif
-
 /**
  * @brief 内存分配类别枚举（SEC-15 合规）
  *

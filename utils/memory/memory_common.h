@@ -11,19 +11,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef AIRY_MEMORY_STATS_T_DEFINED
-#define AIRY_MEMORY_STATS_T_DEFINED
-typedef struct {
-    size_t total_allocated;
-    size_t total_freed;
-    size_t current_allocated;
-    size_t peak_allocated;
-    size_t allocation_count;
-    size_t free_count;
-    size_t leak_count;
-} memory_stats_t;
-#endif
-
 typedef enum {
     MEMORY_STRATEGY_DEFAULT = 0,
     MEMORY_STRATEGY_PERFORMANCE,
