@@ -13,7 +13,6 @@
 
 #include "jsonrpc_helpers.h"
 
-#include <cjson_helpers.h>
 #include "svc_logger.h"
 
 #include <stdarg.h>
@@ -59,20 +58,6 @@ char *jsonrpc_build_success(cJSON *result, int id)
     char *resp = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     return resp;
-}
-
-int jsonrpc_parse_request(const char *raw, char **out_method, cJSON **out_params, int *out_id)
-{
-    if (!raw || !out_method || !out_params || !out_id)
-        return AIRY_ERR_INVALID_PARAM;
-
-    *out_method = NULL;
-    *out_params = NULL;
-    *out_id = 0;
-
-    CJSON_PARSE_GUARD(req, raw, { return JSONRPC_PARSE_ERROR; });
-
-    return jsonrpc_parse_request_ptr(req, out_method, out_params, out_id);
 }
 
 int jsonrpc_parse_request_ptr(cJSON *req, char **out_method, cJSON **out_params, int *out_id)
@@ -131,38 +116,6 @@ const char *jsonrpc_get_string_param(cJSON *params, const char *key, const char 
     return item->valuestring;
 }
 
-int jsonrpc_get_int_param(cJSON *params, const char *key, int default_value)
-{
-    if (!params || !key)
-        return default_value;
-    cJSON *item = cJSON_GetObjectItem(params, key);
-    if (!item || !cJSON_IsNumber(item))
-        return default_value;
-    return item->valueint;
-}
-
-int jsonrpc_get_bool_param(cJSON *params, const char *key, int default_value)
-{
-    if (!params || !key)
-        return default_value;
-    cJSON *item = cJSON_GetObjectItem(params, key);
-    if (!item || !cJSON_IsBool(item))
-        return default_value;
-    return cJSON_IsTrue(item) ? 1 : 0;
-}
-
-cJSON *jsonrpc_get_array_param(cJSON *params, const char *key)
-{
-    if (!params || !key) {
-        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "jsonrpc_get_array_param: null parameter");
-    }
-    cJSON *item = cJSON_GetObjectItem(params, key);
-    if (!item || !cJSON_IsArray(item)) {
-        AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "jsonrpc_get_array_param: not an array");
-    }
-    return item;
-}
-
 cJSON *jsonrpc_get_object_param(cJSON *params, const char *key)
 {
     if (!params || !key) {
@@ -173,14 +126,6 @@ cJSON *jsonrpc_get_object_param(cJSON *params, const char *key)
         AIRY_ERROR_NULL(AIRY_ERR_UNKNOWN, "jsonrpc_get_object_param: not an object");
     }
     return item;
-}
-
-int jsonrpc_is_notification(cJSON *req)
-{
-    if (!req)
-        return 0;
-    cJSON *id = cJSON_GetObjectItem(req, "id");
-    return (id == NULL) ? 1 : 0;
 }
 
 char *jsonrpc_build_notification(const char *method, cJSON *params)
@@ -228,19 +173,6 @@ const char *jsonrpc_get_error_message(int code)
     default:
         return "Unknown error";
     }
-}
-
-int jsonrpc_is_batch_request(const char *raw)
-{
-    if (!raw)
-        return 0;
-
-    const char *p = raw;
-    while (*p && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
-        p++;
-    }
-
-    return (*p == '[') ? 1 : 0;
 }
 
 /* JSONRPC_SEND_ERROR / JSONRPC_SEND_SUCCESS funnel every serialized
