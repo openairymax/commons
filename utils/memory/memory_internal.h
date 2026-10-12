@@ -50,6 +50,7 @@ void memory_lock_destroy(void);
 void memory_lock(void);
 void memory_unlock(void);
 struct memory_debug_info *memory_find_debug_info(void *addr);
+void free_debug_node(struct memory_debug_info *node);
 
 #ifdef __cplusplus
 }
