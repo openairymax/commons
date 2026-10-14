@@ -9,7 +9,8 @@
  * 为一个词，残缺尾部序列按剩余字节产出，非法前缀字节跳过；NUL 提前终止。
  * 多字节词产出前先 flush 已累积的 ASCII 词，避免跨字符边界粘连。
  * 0.1.19 §164：单源化 mem_d compress/cache 与 atoms memory builtin_index
- * 三处同构扫描器（G26 跨文件克隆消解 + compress 侧 CJK 边界粘连修复）。
+ * （已随 C3 清退）三处同构扫描器（G26 跨文件克隆消解 + compress 侧
+ * CJK 边界粘连修复）。
  */
 
 #include "token.h"

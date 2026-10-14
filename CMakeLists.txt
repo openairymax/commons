@@ -20,7 +20,7 @@ set(SOURCES
     utils/token/counter.c
     utils/token/budget.c
     utils/token/token_standard.c
-    # 0.1.19 §164: UTF-8 词流扫描机制件（compress/cache/builtin_index 词法 SSoT）
+    # 0.1.19 §164: UTF-8 词流扫描机制件（mem_d compress/cache 词法 SSoT）
     utils/token/scan.c
     utils/cost/estimator.c
     utils/cost/controller.c
