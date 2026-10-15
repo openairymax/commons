@@ -29,9 +29,9 @@
 
 #include "error.h"
 
-/* POSIX 绝对超时时刻的唯一构造点：Linux/其它 POSIX 的 timed 原语共用。
- * Windows 无 timespec、macOS 无 timed 原语（走轮询），故不参与编译。 */
-#if !defined(_WIN32) && !(defined(__APPLE__) && defined(__MACH__))
+/* POSIX 绝对超时时刻的唯一构造点：非 Windows 平台上的 timed 原语共用。
+ * macOS 虽无 sem/rwlock timed 原语（走轮询），但 condition_timedwait 依赖它。 */
+#if !defined(_WIN32)
 static void make_deadline(uint32_t timeout_ms, struct timespec *ts)
 {
     clock_gettime(CLOCK_REALTIME, ts);
@@ -307,13 +307,7 @@ int platform_semaphore_timedwait(platform_semaphore_t *semaphore, uint32_t timeo
     return -1;
 #else
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += timeout_ms / 1000;
-    ts.tv_nsec += (timeout_ms % 1000) * 1000000L;
-    if (ts.tv_nsec >= 1000000000L) {
-        ts.tv_sec += 1;
-        ts.tv_nsec -= 1000000000L;
-    }
+    make_deadline(timeout_ms, &ts);
     return (sem_timedwait(semaphore, &ts) == 0) ? 0 : -1;
 #endif
 }
@@ -364,13 +358,7 @@ int platform_condition_timedwait(platform_condition_t *cond, platform_mutex_t *m
     return SleepConditionVariableCS(cond, mutex, timeout_ms) ? 0 : -1;
 #else
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += timeout_ms / 1000;
-    ts.tv_nsec += (timeout_ms % 1000) * 1000000;
-    if (ts.tv_nsec >= 1000000000) {
-        ts.tv_sec++;
-        ts.tv_nsec -= 1000000000;
-    }
+    make_deadline(timeout_ms, &ts);
     return pthread_cond_timedwait(cond, mutex, &ts);
 #endif
 }
