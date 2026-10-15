@@ -165,7 +165,7 @@ int jsonrpc_validate_request(cJSON *req)
 /* Strict variant: also requires an id field (number|string|null), per
  * JSON-RPC 2.0 request semantics. Notification frames (no id) must go
  * through jsonrpc_validate_request() instead. */
-int jsonrpc_validate_strict(const cJSON *req)
+int jsonrpc_check_strict(const cJSON *req)
 {
     if (!req)
         return AIRY_ERR_NULL_POINTER;

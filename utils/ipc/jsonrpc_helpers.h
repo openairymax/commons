@@ -53,7 +53,7 @@ AIRY_API int jsonrpc_validate_request(cJSON *req);
  * @return 0 valid
  * @return AIRY_ERR_NULL_POINTER / AIRY_ERR_PARSE_ERROR on failure
  */
-AIRY_API int jsonrpc_validate_strict(const cJSON *req);
+AIRY_API int jsonrpc_check_strict(const cJSON *req);
 
 /**
  * @brief Create a JSON-RPC 2.0 success response envelope.

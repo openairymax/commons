@@ -90,7 +90,7 @@ static void test_validate_valid_request(void)
     const char *valid_request = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":1}";
     cJSON *json = parse_json(valid_request);
 
-    int result = jsonrpc_validate_strict(json);
+    int result = jsonrpc_check_strict(json);
     ASSERT_EQ(result, 0);
 
     cJSON_Delete(json);
@@ -109,7 +109,7 @@ static void test_validate_request_with_params(void)
                                 "\"params\":{\"key\":\"value\"},\"id\":\"req1\"}";
     cJSON *json = parse_json(valid_request);
 
-    int result = jsonrpc_validate_strict(json);
+    int result = jsonrpc_check_strict(json);
     ASSERT_EQ(result, 0);
 
     const cJSON *params = cJSON_GetObjectItem(json, "params");
@@ -133,19 +133,19 @@ static void test_validate_missing_fields(void)
 
     const char *missing_jsonrpc = "{\"method\":\"test\",\"id\":1}";
     cJSON *json = parse_json(missing_jsonrpc);
-    int result = jsonrpc_validate_strict(json);
+    int result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
     cJSON_Delete(json);
 
     const char *missing_method = "{\"jsonrpc\":\"2.0\",\"id\":1}";
     json = parse_json(missing_method);
-    result = jsonrpc_validate_strict(json);
+    result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
     cJSON_Delete(json);
 
     const char *missing_id = "{\"jsonrpc\":\"2.0\",\"method\":\"test\"}";
     json = parse_json(missing_id);
-    result = jsonrpc_validate_strict(json);
+    result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
     cJSON_Delete(json);
 
@@ -162,7 +162,7 @@ static void test_validate_wrong_version(void)
     const char *wrong_version = "{\"jsonrpc\":\"1.0\",\"method\":\"test\",\"id\":1}";
     cJSON *json = parse_json(wrong_version);
 
-    int result = jsonrpc_validate_strict(json);
+    int result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
 
     cJSON_Delete(json);
@@ -179,13 +179,13 @@ static void test_validate_wrong_field_types(void)
 
     const char *method_not_string = "{\"jsonrpc\":\"2.0\",\"method\":123,\"id\":1}";
     cJSON *json = parse_json(method_not_string);
-    int result = jsonrpc_validate_strict(json);
+    int result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
     cJSON_Delete(json);
 
     const char *id_is_object = "{\"jsonrpc\":\"2.0\",\"method\":\"test\",\"id\":{}}";
     json = parse_json(id_is_object);
-    result = jsonrpc_validate_strict(json);
+    result = jsonrpc_check_strict(json);
     ASSERT_TRUE(result < 0);
     cJSON_Delete(json);
 
@@ -203,7 +203,7 @@ static void test_validate_loose_notification(void)
     cJSON *json = parse_json(notification);
 
     ASSERT_EQ(jsonrpc_validate_request(json), 0);
-    ASSERT_TRUE(jsonrpc_validate_strict(json) < 0);
+    ASSERT_TRUE(jsonrpc_check_strict(json) < 0);
 
     cJSON_Delete(json);
 
@@ -394,7 +394,7 @@ static void test_null_input_handling(void)
 {
     TEST_BEGIN("null_input_handling");
 
-    int result = jsonrpc_validate_strict(NULL);
+    int result = jsonrpc_check_strict(NULL);
     ASSERT_TRUE(result < 0);
 
     TEST_PASS();
