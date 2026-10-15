@@ -6,6 +6,9 @@
  * @brief JSON-RPC 2.0 common helper function implementation.
  *
  * 0.1.9 0c (IRON-6 归位)：实现从 daemons/common/src/util/ 迁入 commons/utils/ipc。
+ * 0.1.19 (u76)：JSON-RPC 响应构建母件归一——gateway/src/utils/jsonrpc.c
+ * 的 create_success/create_error（cJSON 通用 id 版）下沉至此，build_error/
+ * build_success 降为 int-id 薄包装，严格校验 validate_strict 一并归位。
  */
 
 #include "airy_memory.h"
@@ -20,44 +23,97 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *jsonrpc_build_error(int code, const char *message, int id)
+/* echo the request id into a response envelope */
+static void jsonrpc_add_id(cJSON *response, const cJSON *id)
 {
-    if (!message)
-        message = jsonrpc_get_error_message(code);
+    if (id)
+        cJSON_AddItemToObject(response, "id", cJSON_Duplicate(id, 1));
+    else
+        cJSON_AddNullToObject(response, "id");
+}
 
-    cJSON *root = cJSON_CreateObject();
-    if (!root) {
-        AIRY_ERROR_NULL(AIRY_ERR_OUT_OF_MEMORY, "cJSON_CreateObject failed");
+char *jsonrpc_create_success_response(const cJSON *id, cJSON *result)
+{
+    cJSON *response = cJSON_CreateObject();
+    if (!response) {
+        if (result)
+            cJSON_Delete(result);
+        return NULL;
     }
 
-    cJSON_AddStringToObject(root, "jsonrpc", "2.0");
-    cJSON_AddNumberToObject(root, "id", id);
+    cJSON_AddStringToObject(response, "jsonrpc", "2.0");
+
+    if (result) {
+        cJSON_AddItemToObject(response, "result", result);
+    } else {
+        cJSON_AddNullToObject(response, "result");
+    }
+
+    jsonrpc_add_id(response, id);
+
+    char *json_str = cJSON_PrintUnformatted(response);
+    cJSON_Delete(response);
+
+    return json_str;
+}
+
+char *jsonrpc_create_error_response(const cJSON *id, int code, const char *message, cJSON *data)
+{
+    cJSON *response = cJSON_CreateObject();
+    if (!response) {
+        if (data)
+            cJSON_Delete(data);
+        return NULL;
+    }
 
     cJSON *error = cJSON_CreateObject();
-    cJSON_AddNumberToObject(error, "code", code);
-    cJSON_AddStringToObject(error, "message", message);
-    cJSON_AddItemToObject(root, "error", error);
+    if (!error) {
+        cJSON_Delete(response);
+        if (data)
+            cJSON_Delete(data);
+        return NULL;
+    }
 
-    char *result = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-    return result;
+    cJSON_AddNumberToObject(error, "code", code);
+
+    const char *msg = message;
+    if (!msg)
+        msg = jsonrpc_get_error_message(code);
+    cJSON_AddStringToObject(error, "message", msg ? msg : "Internal error");
+
+    if (data)
+        cJSON_AddItemToObject(error, "data", data);
+
+    cJSON_AddStringToObject(response, "jsonrpc", "2.0");
+    cJSON_AddItemToObject(response, "error", error);
+
+    jsonrpc_add_id(response, id);
+
+    char *json_str = cJSON_PrintUnformatted(response);
+    cJSON_Delete(response);
+
+    return json_str;
+}
+
+char *jsonrpc_build_error(int code, const char *message, int id)
+{
+    cJSON *id_json = cJSON_CreateNumber(id);
+    if (!id_json)
+        AIRY_ERROR_NULL(AIRY_ERR_OUT_OF_MEMORY, "cJSON_CreateNumber failed");
+
+    return jsonrpc_create_error_response(id_json, code, message, NULL);
 }
 
 char *jsonrpc_build_success(cJSON *result, int id)
 {
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "jsonrpc", "2.0");
-    cJSON_AddNumberToObject(root, "id", id);
-
-    if (result) {
-        cJSON_AddItemToObject(root, "result", result);
-    } else {
-        cJSON_AddNullToObject(root, "result");
+    cJSON *id_json = cJSON_CreateNumber(id);
+    if (!id_json) {
+        if (result)
+            cJSON_Delete(result);
+        AIRY_ERROR_NULL(AIRY_ERR_OUT_OF_MEMORY, "cJSON_CreateNumber failed");
     }
 
-    char *resp = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-    return resp;
+    return jsonrpc_create_success_response(id_json, result);
 }
 
 int jsonrpc_parse_request_ptr(cJSON *req, char **out_method, cJSON **out_params, int *out_id)
@@ -101,6 +157,33 @@ int jsonrpc_validate_request(cJSON *req)
 
     cJSON *method = cJSON_GetObjectItem(req, "method");
     if (!method || !cJSON_IsString(method))
+        return AIRY_ERR_PARSE_ERROR;
+
+    return 0;
+}
+
+/* Strict variant: also requires an id field (number|string|null), per
+ * JSON-RPC 2.0 request semantics. Notification frames (no id) must go
+ * through jsonrpc_validate_request() instead. */
+int jsonrpc_validate_strict(const cJSON *req)
+{
+    if (!req)
+        return AIRY_ERR_NULL_POINTER;
+
+    if (!cJSON_HasObjectItem(req, "jsonrpc") || !cJSON_HasObjectItem(req, "method") ||
+        !cJSON_HasObjectItem(req, "id"))
+        return AIRY_ERR_PARSE_ERROR;
+
+    const cJSON *jsonrpc = cJSON_GetObjectItemCaseSensitive(req, "jsonrpc");
+    if (!cJSON_IsString(jsonrpc) || strcmp(jsonrpc->valuestring, "2.0") != 0)
+        return AIRY_ERR_PARSE_ERROR;
+
+    const cJSON *method = cJSON_GetObjectItemCaseSensitive(req, "method");
+    if (!cJSON_IsString(method) || strlen(method->valuestring) == 0)
+        return AIRY_ERR_PARSE_ERROR;
+
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(req, "id");
+    if (!cJSON_IsNumber(id) && !cJSON_IsString(id) && !cJSON_IsNull(id))
         return AIRY_ERR_PARSE_ERROR;
 
     return 0;
