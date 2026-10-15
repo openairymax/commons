@@ -298,12 +298,8 @@ airy_err_t ipc_client_connect(ipc_client_t *client, uint32_t timeout_ms)
         const char *path = client->config.name ? client->config.name : airy_runtime_dir_socket("ipc");
         AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
-        if (timeout_ms > 0 && client->config.nonblocking) {
-            /* P2-2：F_GETFL 失败时 flags=-1，F_SETFL 会破坏 fd 标志位 */
-            int flags = fcntl(sock_fd, F_GETFL, 0);
-            if (flags >= 0)
-                fcntl(sock_fd, F_SETFL, flags | O_NONBLOCK);
-        }
+        if (timeout_ms > 0 && client->config.nonblocking)
+            airy_sock_set_nonblock(sock_fd, 1);
 
         int ret = connect(sock_fd, (struct sockaddr *)&addr, sizeof(addr));
         if (ret < 0) {

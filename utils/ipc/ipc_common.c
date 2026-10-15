@@ -226,14 +226,9 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
         channel->fd_write = pipefd[1];
 
         if (channel->config.nonblocking) {
-            /* P2-2：F_GETFL 失败返回 -1，直接 F_SETFL 会把 fd 所有
-             * 标志位误置为全 1；仅在读取成功时设置 O_NONBLOCK。 */
-            int flags = fcntl(channel->fd_read, F_GETFL, 0);
-            if (flags >= 0)
-                fcntl(channel->fd_read, F_SETFL, flags | O_NONBLOCK);
-            flags = fcntl(channel->fd_write, F_GETFL, 0);
-            if (flags >= 0)
-                fcntl(channel->fd_write, F_SETFL, flags | O_NONBLOCK);
+            /* 非阻塞置位委托平台层 SSoT（内含 P2-2 F_GETFL 守卫） */
+            airy_sock_set_nonblock(channel->fd_read, 1);
+            airy_sock_set_nonblock(channel->fd_write, 1);
         }
     }
 #endif
@@ -251,12 +246,8 @@ airy_err_t ipc_channel_open(ipc_channel_t *channel)
             channel->state = IPC_STATE_ERROR;
             return AIRY_EIO;
         }
-        if (channel->config.nonblocking) {
-            /* P2-2：F_GETFL 失败时 flags=-1，F_SETFL 会破坏 fd 标志位 */
-            int flags = fcntl(channel->socket_fd, F_GETFL, 0);
-            if (flags >= 0)
-                fcntl(channel->socket_fd, F_SETFL, flags | O_NONBLOCK);
-        }
+        if (channel->config.nonblocking)
+            airy_sock_set_nonblock(channel->socket_fd, 1);
         break;
 
     case IPC_TYPE_SHM:
