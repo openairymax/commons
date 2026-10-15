@@ -190,6 +190,12 @@ struct ipc_rpc_client {
 
 /* ---- Shared helper functions (defined in ipc_common.c) ---- */
 uint32_t ipc_calc_crc32(const void *data, size_t len);
+
+/* 出帧头装配 SSoT：把 ipc_message_t 的不变头字段（magic/version/flags/
+ * timestamp/payload_len）一次置齐，消除 send-data/notify/rpc/create 四处
+ * 逐字重复的装配样板。调用者随后设置 type 相关的 msg_id 与 payload 指针
+ * （payload_size 由调用者按引用语义决定是否等于 payload_len）。 */
+void ipc_msg_setup(ipc_message_t *msg, uint32_t type, uint64_t msg_id, size_t payload_len);
 extern bool g_ipc_initialized;
 
 #ifdef __cplusplus

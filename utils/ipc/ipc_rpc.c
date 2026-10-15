@@ -305,12 +305,7 @@ airy_err_t ipc_rpc_call_sync(ipc_rpc_client_t *client, const char *method_name, 
     }
 
     ipc_message_t req_msg = {0};
-    req_msg.header.aipc.magic = IPC_MAGIC;
-    req_msg.header.version = 1;
-    req_msg.header.type = IPC_MSG_REQUEST;
-    req_msg.header.msg_id = ++client->request_id_counter;
-    req_msg.header.aipc.payload_len = total_payload;
-    req_msg.header.timestamp = 0;
+    ipc_msg_setup(&req_msg, IPC_MSG_REQUEST, ++client->request_id_counter, total_payload);
     req_msg.payload = request_buf;
     req_msg.payload_size = total_payload;
 

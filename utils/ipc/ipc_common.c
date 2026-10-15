@@ -60,6 +60,17 @@ uint32_t ipc_calc_crc32(const void *data, size_t len)
     return ~crc;
 }
 
+void ipc_msg_setup(ipc_message_t *msg, uint32_t type, uint64_t msg_id, size_t payload_len)
+{
+    msg->header.aipc.magic = IPC_MAGIC; /* [SC] 128B 头 magic */
+    msg->header.version = 1;
+    msg->header.type = type;
+    msg->header.flags = 0;
+    msg->header.msg_id = msg_id;
+    msg->header.aipc.payload_len = (uint32_t)payload_len;
+    msg->header.timestamp = airy_time_ns();
+}
+
 bool g_ipc_initialized = false;
 
 airy_err_t ipc_init(void)

@@ -26,18 +26,7 @@ ipc_message_t *ipc_message_create(ipc_msg_type_t type, const void *payload, size
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
     }
 
-    msg->header.aipc.magic = IPC_MAGIC; /* [SC] 128B 头 magic */
-    msg->header.version = 1;
-    msg->header.type = (uint32_t)type;
-    msg->header.flags = 0;
-    msg->header.msg_id = 0;
-    msg->header.correlation_id = 0;
-    AIRY_MEMSET(msg->header.source, 0, sizeof(msg->header.source));
-    AIRY_MEMSET(msg->header.target, 0, sizeof(msg->header.target));
-    msg->header.aipc.payload_len = (uint32_t)payload_len;
-    msg->header.checksum = 0;
-    msg->header.timestamp = airy_time_ns();
-    AIRY_MEMSET(msg->header.reserved, 0, sizeof(msg->header.reserved));
+    ipc_msg_setup(msg, (uint32_t)type, 0, payload_len);
 
     if (payload && payload_len > 0) {
         msg->payload = AIRY_MALLOC(payload_len);
