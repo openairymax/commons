@@ -114,6 +114,20 @@ static void transition_state(cb_internal_t *cb, cb_manager_internal_t *mgr, cb_s
     notify_event(mgr, &event);
 }
 
+/* 入口存活性守卫的唯一实现：加锁并校验销毁态。
+ * 返回 true 表示已持锁且可继续，调用者在返回前负责解锁；
+ * 返回 false 表示已自行解锁，调用者按其返回类型退出。 */
+static bool cb_lock_alive(cb_internal_t *cb, const char *what)
+{
+    airy_mtx_lock(&cb->mutex);
+    if (cb->destroying) {
+        SVC_LOG_WARN("%s: breaker is being destroyed", what);
+        airy_mtx_unlock(&cb->mutex);
+        return false;
+    }
+    return true;
+}
+
 static void check_window_reset(cb_internal_t *cb)
 {
     uint64_t now = airy_time_ms();
@@ -357,12 +371,8 @@ AIRY_API bool cb_allow_request(circuit_breaker_t breaker)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_allow_request: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_allow_request"))
         return false;
-    }
 
     switch (cb->state) {
     case CB_STATE_CLOSED:
@@ -406,12 +416,8 @@ AIRY_API void cb_record_success(circuit_breaker_t breaker, uint32_t duration_ms)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_record_success: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_record_success"))
         return;
-    }
 
     cb->stats.total_calls++;
     cb->stats.successful_calls++;
@@ -447,12 +453,8 @@ AIRY_API void cb_record_failure(circuit_breaker_t breaker, int32_t error_code)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_record_failure: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_record_failure"))
         return;
-    }
 
     cb->stats.total_calls++;
     cb->stats.failed_calls++;
@@ -473,12 +475,8 @@ AIRY_API void cb_record_timeout(circuit_breaker_t breaker)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_record_timeout: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_record_timeout"))
         return;
-    }
 
     cb->stats.total_calls++;
     cb->stats.timeout_calls++;
@@ -520,12 +518,8 @@ AIRY_API airy_err_t cb_get_stats(circuit_breaker_t breaker, cb_stats_t *stats)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_get_stats: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_get_stats"))
         return AIRY_EINVAL;
-    }
     __builtin_memcpy(stats, &cb->stats, sizeof(cb_stats_t));
     airy_mtx_unlock(&cb->mutex);
 
@@ -541,12 +535,8 @@ AIRY_API void cb_reset(circuit_breaker_t breaker)
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_reset: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_reset"))
         return;
-    }
 
     cb_state_t old = cb->state;
     cb->state = CB_STATE_CLOSED;
@@ -576,12 +566,8 @@ AIRY_API void cb_force_open(circuit_breaker_t breaker)
     }
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_force_open: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_force_open"))
         return;
-    }
     transition_state(cb, cb->manager, CB_STATE_OPEN);
     airy_mtx_unlock(&cb->mutex);
 }
@@ -594,12 +580,8 @@ AIRY_API void cb_force_close(circuit_breaker_t breaker)
     }
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_force_close: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_force_close"))
         return;
-    }
     transition_state(cb, cb->manager, CB_STATE_CLOSED);
     airy_mtx_unlock(&cb->mutex);
 }
@@ -615,12 +597,8 @@ AIRY_API airy_err_t cb_set_failover_config(circuit_breaker_t breaker,
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_set_failover_config: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_set_failover_config"))
         return AIRY_EINVAL;
-    }
     __builtin_memcpy(&cb->failover_config, config, sizeof(cb_failover_config_t));
     airy_mtx_unlock(&cb->mutex);
 
@@ -639,12 +617,8 @@ AIRY_API airy_err_t cb_execute_failover(circuit_breaker_t breaker, int32_t origi
 
     cb_internal_t *cb = (cb_internal_t *)breaker;
 
-    airy_mtx_lock(&cb->mutex);
-    if (cb->destroying) {
-        SVC_LOG_WARN("cb_execute_failover: breaker is being destroyed");
-        airy_mtx_unlock(&cb->mutex);
+    if (!cb_lock_alive(cb, "cb_execute_failover"))
         return AIRY_EINVAL;
-    }
 
     cb_failover_config_t *fc = &cb->failover_config;
     airy_err_t err = AIRY_ERR_UNKNOWN;
