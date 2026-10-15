@@ -591,11 +591,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
 
 uint64_t sync_get_thread_id(void)
 {
-#ifdef _WIN32
-    return (uint64_t)GetCurrentThreadId();
-#else
-    return (uint64_t)pthread_self();
-#endif
+    return platform_get_thread_id();
 }
 
 bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)
