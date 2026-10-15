@@ -208,22 +208,14 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
     if (mq->current_count >= mq->config.max_messages) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Message queue full (count=%zu, max=%zu)",
                  mq->current_count, mq->config.max_messages);
-#ifdef _WIN32
-        ReleaseMutex(mq->hMutex);
-#else
-        airy_mtx_unlock(&mq->mutex);
-#endif
+        ipc_mq_unlock(mq);
         return AIRY_EBUSY;
     }
 
     ipc_mq_message_t *msg = (ipc_mq_message_t *)AIRY_MALLOC(sizeof(ipc_mq_message_t));
     if (!msg) {
         snprintf(mq->error_msg, sizeof(mq->error_msg), "Failed to allocate memory for message");
-#ifdef _WIN32
-        ReleaseMutex(mq->hMutex);
-#else
-        airy_mtx_unlock(&mq->mutex);
-#endif
+        ipc_mq_unlock(mq);
         return AIRY_ENOMEM;
     }
 
@@ -232,11 +224,7 @@ airy_err_t ipc_mq_send(ipc_mq_t *mq, const void *data, size_t len, unsigned int 
         snprintf(mq->error_msg, sizeof(mq->error_msg),
                  "Failed to allocate memory for message data");
         AIRY_FREE(msg);
-#ifdef _WIN32
-        ReleaseMutex(mq->hMutex);
-#else
-        airy_mtx_unlock(&mq->mutex);
-#endif
+        ipc_mq_unlock(mq);
         return AIRY_ENOMEM;
     }
 
@@ -339,11 +327,7 @@ airy_err_t ipc_mq_clear(ipc_mq_t *mq)
     mq->tail = NULL;
     mq->current_count = 0;
 
-#ifdef _WIN32
-    ReleaseMutex(mq->hMutex);
-#else
-    airy_mtx_unlock(&mq->mutex);
-#endif
+    ipc_mq_unlock(mq);
 
     return AIRY_SUCCESS;
 }
