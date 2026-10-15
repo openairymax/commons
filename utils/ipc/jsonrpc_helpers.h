@@ -41,6 +41,41 @@ AIRY_API char *jsonrpc_build_success(cJSON *result, int id);
 AIRY_API int jsonrpc_parse_request_ptr(cJSON *req, char **out_method, cJSON **out_params,
                                        int *out_id);
 AIRY_API int jsonrpc_validate_request(cJSON *req);
+
+/**
+ * @brief Strict JSON-RPC 2.0 request validation (id required).
+ *
+ * Checks jsonrpc=="2.0", non-empty string method, and an id field of
+ * type number|string|null. Notification frames (no id) are rejected
+ * here; use jsonrpc_validate_request() for the loose variant.
+ *
+ * @param[in] req Parsed request object
+ * @return 0 valid
+ * @return AIRY_ERR_NULL_POINTER / AIRY_ERR_PARSE_ERROR on failure
+ */
+AIRY_API int jsonrpc_validate_strict(const cJSON *req);
+
+/**
+ * @brief Create a JSON-RPC 2.0 success response envelope.
+ *
+ * @param[in] id Request id echoed into the response (NULL -> null id)
+ * @param[in] result Result object (ownership transfers; NULL -> null result)
+ * @return Serialized JSON string, caller frees; NULL on allocation failure
+ */
+AIRY_API char *jsonrpc_create_success_response(const cJSON *id, cJSON *result);
+
+/**
+ * @brief Create a JSON-RPC 2.0 error response envelope.
+ *
+ * @param[in] id Request id echoed into the response (NULL -> null id)
+ * @param[in] code Error code
+ * @param[in] message Error message (NULL -> standard message for @p code)
+ * @param[in] data Optional error data (ownership transfers; may be NULL)
+ * @return Serialized JSON string, caller frees; NULL on allocation failure
+ */
+AIRY_API char *jsonrpc_create_error_response(const cJSON *id, int code, const char *message,
+                                             cJSON *data);
+
 AIRY_API const char *jsonrpc_get_string_param(cJSON *params, const char *key,
                                               const char *default_value);
 AIRY_API cJSON *jsonrpc_get_object_param(cJSON *params, const char *key);

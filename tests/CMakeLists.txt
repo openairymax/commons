@@ -47,6 +47,9 @@ set(UNIT_TEST_SOURCES
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
     unit/test_svc_common.c
     unit/test_svc_stop.c
+    # JSON-RPC 2.0 母件面（0.1.19 u76 随 gateway jsonrpc.c 下沉归一迁入；
+    # validate_strict / create_success / create_error 协议合规）
+    unit/test_jsonrpc.c
     # 原生执行沙箱机制 SSoT（§204：global_read 双模式 + Landlock/seccomp
     # fork 真实行为 + deny-list 网络拦截，全项目唯一沙箱机制测试）
     unit/test_platform_sandbox.c
@@ -93,6 +96,16 @@ foreach(test_source ${UNIT_TEST_SOURCES})
     if(test_source STREQUAL "unit/test_ime.c")
         target_compile_definitions(${test_name} PRIVATE
             AIRY_IME_TEST_DICT="${CMAKE_CURRENT_SOURCE_DIR}/../utils/ime/data/airy_ime.dat")
+    endif()
+
+    # test_jsonrpc 直接断言 cJSON 结构（airy_common 为 PRIVATE 链接 cjson，
+    # 符号不传播），需自链 cjson 并取 cjson_helpers 头路径
+    if(test_source STREQUAL "unit/test_jsonrpc.c")
+        target_include_directories(${test_name} PRIVATE
+            ${COMMONS_ROOT}/utils/cjson)
+        if(AIRY_HAS_CJSON)
+            target_link_libraries(${test_name} PRIVATE cjson)
+        endif()
     endif()
 
     target_include_directories(${test_name} PRIVATE
