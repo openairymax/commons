@@ -101,7 +101,10 @@ char *jsonrpc_build_error(int code, const char *message, int id)
     if (!id_json)
         AIRY_ERROR_NULL(AIRY_ERR_OUT_OF_MEMORY, "cJSON_CreateNumber failed");
 
-    return jsonrpc_create_error_response(id_json, code, message, NULL);
+    char *resp = jsonrpc_create_error_response(id_json, code, message, NULL);
+    cJSON_Delete(id_json);
+
+    return resp;
 }
 
 char *jsonrpc_build_success(cJSON *result, int id)
@@ -113,7 +116,10 @@ char *jsonrpc_build_success(cJSON *result, int id)
         AIRY_ERROR_NULL(AIRY_ERR_OUT_OF_MEMORY, "cJSON_CreateNumber failed");
     }
 
-    return jsonrpc_create_success_response(id_json, result);
+    char *resp = jsonrpc_create_success_response(id_json, result);
+    cJSON_Delete(id_json);
+
+    return resp;
 }
 
 int jsonrpc_parse_request_ptr(cJSON *req, char **out_method, cJSON **out_params, int *out_id)
