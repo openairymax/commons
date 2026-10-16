@@ -14,14 +14,11 @@
 #include "daemon_platform_ext.h"
 #include "airy_memory.h"
 
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <time.h>
 #include "error.h"
 #ifdef _WIN32
-#include <direct.h>
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -65,101 +62,6 @@ uint64_t airy_time_to_ms(const airy_timestamp_t *ts)
     if (!ts)
         return 0;
     return *ts / 1000000ULL;
-}
-
-void airy_time_from_ms(uint64_t ms, airy_timestamp_t *ts)
-{
-    if (!ts)
-        return;
-    *ts = ms * 1000000ULL;
-}
-
-uint32_t airy_process_self(void)
-{
-#ifdef _WIN32
-    return GetCurrentProcessId();
-#else
-    return (uint32_t)getpid();
-#endif
-}
-
-uint64_t airy_thread_self(void)
-{
-#ifdef _WIN32
-    return GetCurrentThreadId();
-#else
-    return (uint64_t)(uintptr_t)pthread_self();
-#endif
-}
-
-int airy_thread_setname(const char *name)
-{
-#ifdef __linux__
-    return pthread_setname_np(pthread_self(), name);
-#elif defined(__APPLE__)
-    return pthread_setname_np(name);
-#else
-
-    if (name && name[0]) {
-    }
-    return 0;
-#endif
-}
-
-int airy_thread_getname(char *name, size_t size)
-{
-#ifdef __linux__
-    if (pthread_getname_np(pthread_self(), name, size) != 0)
-        name[0] = '\0';
-    return 0;
-#elif defined(__APPLE__)
-    if (size > 0)
-        name[0] = '\0';
-    return 0;
-#else
-
-    if (name && size > 0)
-        name[0] = '\0';
-    return AIRY_ERR_UNKNOWN;
-#endif
-}
-
-int airy_mkdir(const char *path, int recursive)
-{
-    if (!path)
-        return AIRY_ERR_INVALID_PARAM;
-#ifdef _WIN32
-
-    if (recursive > 0) {
-    }
-    return _mkdir(path);
-#else
-    if (recursive) {
-        char tmp[PATH_MAX];
-        size_t len = strlen(path);
-        if (len == 0 || len >= PATH_MAX)
-            return AIRY_ERR_OVERFLOW;
-        __builtin_memcpy(tmp, path, len + 1);
-        for (size_t i = (tmp[0] == '/') ? 1 : 0; i <= len; i++) {
-            if (tmp[i] == '/' || tmp[i] == '\0') {
-                char saved = tmp[i];
-                tmp[i] = '\0';
-                if (i > 0 && tmp[0] != '\0') {
-                    struct stat st;
-                    if (stat(tmp, &st) != 0) {
-                        if (mkdir(tmp, 0755) != 0) {
-                            tmp[i] = saved;
-                            return AIRY_ERR_IO;
-                        }
-                    }
-                }
-                tmp[i] = saved;
-            }
-        }
-        return 0;
-    }
-    return mkdir(path, 0755);
-#endif
 }
 
 airy_dl_t airy_dl_open(const char *path)

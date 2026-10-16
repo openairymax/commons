@@ -103,13 +103,6 @@ typedef struct {
 int airy_time_now(airy_timestamp_t *ts);
 int airy_time_monotonic(airy_timestamp_t *ts);
 uint64_t airy_time_to_ms(const airy_timestamp_t *ts);
-void airy_time_from_ms(uint64_t ms, airy_timestamp_t *ts);
-
-uint32_t airy_process_self(void);
-uint64_t airy_thread_self(void);
-int airy_thread_setname(const char *name);
-int airy_thread_getname(char *name, size_t size);
-int airy_mkdir(const char *path, int recursive);
 
 
 #ifndef AIRY_DL_T_DEFINED
