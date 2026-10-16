@@ -67,8 +67,6 @@ logging/
 | `log_reload_config(path)` | 热重载日志配置 |
 | `log_flush()` | 强制刷出全部缓冲 |
 | `log_cleanup()` | 释放资源并刷出 |
-| `log_set_throttle(enable, max_per_sec)` | 启用/配置相同消息节流 |
-| `log_should_sample(level)` | 按级别采样率决定是否输出（ERROR/FATAL 恒为真） |
 | `log_level_to_string(level)` / `log_level_from_string(str)` | 级别与字符串互转 |
 
 ### 便捷宏体系
@@ -112,7 +110,6 @@ log_init(&config);
 log_set_trace_id("tr-0123456789abcdef");
 log_write(LOG_LEVEL_INFO, "gateway", __LINE__, "服务启动完成, port: %d", 8080);
 log_set_module_level("network.*", LOG_LEVEL_WARN);
-log_set_throttle(true, 100);
 
 log_flush();
 log_cleanup();

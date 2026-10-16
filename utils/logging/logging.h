@@ -256,12 +256,6 @@ typedef struct {
 
 
     bool enable_statistics;
-
-
-    bool enable_throttling;
-
-
-    uint32_t throttle_max_per_sec;
 } log_config_t;
 
 
@@ -439,26 +433,6 @@ void log_cleanup(void);
  * log_init 等）与 log_level_t 内部类型，不再定义 LOG_* 宏。
  * SVC_LOG_*（服务层专用）仍由 svc_logger.h 提供，映射到 AIRY_LOG_*。
  */
-
-/**
- * @brief Enable log throttling
- *
- * @param enable Whether to enable
- * @param max_per_sec Maximum identical messages per second (0 for the
- *                    default of 100)
- */
-void log_set_throttle(bool enable, uint32_t max_per_sec);
-
-/**
- * @brief Check whether the current log should be sampled
- *
- * Probabilistic decision based on the level's sampling rate. ERROR/FATAL
- * always return true (100% sampling).
- *
- * @param level Log level
- * @return true to output, false to skip
- */
-bool log_should_sample(log_level_t level);
 
 #ifdef __cplusplus
 }
