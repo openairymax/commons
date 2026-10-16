@@ -134,7 +134,6 @@ int log_init(const log_config_t *manager)
         return AIRY_EINVAL;
     }
 
-    log_internal_throttle_init_mutex();
     log_file_state_t *fs = log_internal_file_state();
     if (!fs->mutex_init) {
         if (airy_mtx_init(&fs->mutex) == 0) {
@@ -231,11 +230,6 @@ static void log_write_core(log_level_t level, const char *module, int line,
     char message_buffer[MAX_MESSAGE_LEN];
     vsnprintf(message_buffer, sizeof(message_buffer), fmt,
               args); /* flawfinder: ignore - variadic logging wrapper */
-
-    uint64_t now_sec = (uint64_t)(airy_time_wall_ms() / 1000);
-    if (log_internal_throttle_suppress(module, line, message_buffer, now_sec)) {
-        return;
-    }
 
     log_record_t record = {.timestamp = airy_time_wall_ms(),
                            .level = level,
@@ -430,7 +424,6 @@ void log_cleanup(void)
     airy_mtx_unlock(&g_logging_state.mutex);
     airy_mtx_destroy(&g_logging_state.mutex);
 
-    log_internal_throttle_cleanup();
     log_internal_file_cleanup();
 
     AIRY_MEMSET(&g_logging_state, 0, sizeof(g_logging_state));

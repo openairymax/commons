@@ -10,7 +10,7 @@
  *   - logging_core.c          日志核心：状态、级别、写入路径、生命周期
  *   - logging_format.c        格式化：控制台行格式化 + 终端/颜色探测
  *   - logging_backend_file.c  输出后端：文件打开/写入 + 轮转管理
- *   - logging_control.c       运行时控制：热加载、节流、采样
+ *   - logging_control.c       运行时控制：热加载（配置键值解析）
  * 所有拆分文件沿用 AIRY_COMPLIANCE_IMPL 编译定义（见 commons/CMakeLists.txt）。
  */
 
@@ -98,12 +98,5 @@ int log_internal_file_open(const char *path);
 /* 直写已格式化日志行（含尾换行）；行内容由格式化单源产出。 */
 void log_internal_file_write(const char *formatted_message, size_t formatted_len);
 void log_internal_file_cleanup(void);
-
-/* ==================== logging_control.c ==================== */
-
-void log_internal_throttle_init_mutex(void);
-void log_internal_throttle_cleanup(void);
-bool log_internal_throttle_suppress(const char *module, int line, const char *message,
-                                    uint64_t now_sec);
 
 #endif /* LOGGING_INTERNAL_H */
