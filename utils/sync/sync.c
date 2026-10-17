@@ -267,66 +267,12 @@ sync_result_t sync_get_option(void *lock, int option, void *value)
     }
 }
 
-bool sync_is_valid(void *lock)
-{
-    return lock != NULL;
-}
-
-sync_result_t sync_debug(void *lock)
-{
-    if (lock == NULL) {
-        return SYNC_ERROR_INVALID;
-    }
-
-    struct sync_mutex *base = (struct sync_mutex *)lock;
-    /* base is consumed only by debug logging, which compiles out in
-     * release builds; keep the (void) to stay warning-clean there. */
-    (void)base;
-
-    AIRY_LOG_DEBUG("[SYNC DEBUG] ====================");
-    AIRY_LOG_DEBUG("[SYNC DEBUG] Lock at: %p", (void *)lock);
-    AIRY_LOG_DEBUG("[SYNC DEBUG] Type: %d", base->hdr.type);
-    AIRY_LOG_DEBUG("[SYNC DEBUG] Initialized: %s", base->hdr.initialized ? "true" : "false");
-
-    const char *name = sync_get_name(lock);
-    if (name != NULL) {
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Name: %s", name);
-    } else {
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Name: (unnamed)");
-    }
-
-    sync_stats_t stats;
-    if (sync_get_stats(lock, &stats) == SYNC_SUCCESS) {
-        AIRY_LOG_DEBUG("[SYNC DEBUG] --- Statistics ---");
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Lock count: %zu", stats.lock_count);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Unlock count: %zu", stats.unlock_count);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Wait count: %zu", stats.wait_count);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Timeout count: %zu", stats.timeout_count);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Deadlock count: %zu", stats.deadlock_count);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Total wait time: %lu ms", (unsigned long)stats.total_wait_time_ms);
-        AIRY_LOG_DEBUG("[SYNC DEBUG] Max wait time: %lu ms", (unsigned long)stats.max_wait_time_ms);
-    }
-
-    AIRY_LOG_DEBUG("[SYNC DEBUG] ====================");
-
-    return SYNC_SUCCESS;
-}
-
 void sync_sleep_ms(uint64_t ms)
 {
 #ifdef _WIN32
     Sleep((DWORD)ms);
 #else
     usleep((useconds_t)(ms * 1000));
-#endif
-}
-
-void sync_yield(void)
-{
-#ifdef _WIN32
-    SwitchToThread();
-#else
-    sched_yield();
 #endif
 }
 
