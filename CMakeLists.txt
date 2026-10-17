@@ -27,6 +27,8 @@ set(SOURCES
     utils/observability/logger.c
     utils/observability/trace.c
     utils/error/handler.c
+    # 0.1.19 §3.7.2 N1：ErrorModel v1 错误分类 SSoT（class/JSON 契约）
+    utils/error/err_class.c
     utils/io/file_utils.c
     # logging 核心按功能域拆分：核心/格式化/文件后端/运行时控制（2026-08-27）
     utils/logging/logging_core.c
