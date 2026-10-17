@@ -165,6 +165,9 @@ endif()
 # airy_coreloopthree orchestrator 引用 cb_*（cb_manager_create 等）时
 # think_d 12×LNK2001——Windows 同样需要熔断能力，从 ipc_common 组剥离。
 list(APPEND SOURCES utils/ipc/circuit_breaker.c)
+# 0.1.19 §3.6 D7: IPC 重连退避 + 失败窗口聚合原语全平台编译：纯算术状态机，
+# 无 POSIX/日志依赖（gateway PEP epoch 观察线程为当前唯一消费方）。
+list(APPEND SOURCES utils/ipc/ipc_backoff.c)
 
 add_library(airy_common STATIC ${SOURCES})
 
