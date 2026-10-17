@@ -53,6 +53,9 @@ set(UNIT_TEST_SOURCES
     # 原生执行沙箱机制 SSoT（§204：global_read 双模式 + Landlock/seccomp
     # fork 真实行为 + deny-list 网络拦截，全项目唯一沙箱机制测试）
     unit/test_platform_sandbox.c
+    # ErrorModel v1 错误分类 SSoT（0.1.19 §3.7.2 N1：五类 golden +
+    # class/JSON 信封往返；直断 cJSON，需自链 cjson）
+    unit/test_err_class.c
 )
 
 # IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
@@ -100,7 +103,8 @@ foreach(test_source ${UNIT_TEST_SOURCES})
 
     # test_jsonrpc 直接断言 cJSON 结构（airy_common 为 PRIVATE 链接 cjson，
     # 符号不传播），需自链 cjson 并取 cjson_helpers 头路径
-    if(test_source STREQUAL "unit/test_jsonrpc.c")
+    if(test_source STREQUAL "unit/test_jsonrpc.c" OR
+       test_source STREQUAL "unit/test_err_class.c")
         target_include_directories(${test_name} PRIVATE
             ${COMMONS_ROOT}/utils/cjson)
         if(AIRY_HAS_CJSON)
