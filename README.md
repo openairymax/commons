@@ -43,7 +43,7 @@ sub-module header through one link.
   for Linux / Windows / macOS.
 - **High-performance infrastructure** — memory pools, sync primitives and
   queues, LRU/TTL cache, event loop and timers, atomic-operation compat layer.
-- **Agent-runtime utilities** — token counting and budgets, cost estimation,
+- **Agent-runtime utilities** — token counting and budgets,
   task checkpoints, cognition/strategy helpers, service discovery, IPC/RPC,
   unified configuration with a minimal built-in YAML parser, a pinyin IME
   dictionary.
@@ -79,17 +79,17 @@ commons/
 │   │   └── syscalls.h sched.h memory_types.h cognition_types.h
 │   │       security_types.h lsm_types.h log_types.h bpf_struct_ops.h
 │   └── third_party/             # vendored third-party headers (e.g. nghttp2)
-├── utils/                       # 32 utility modules (+ utils/include shared headers)
+├── utils/                       # 30 utility modules (+ utils/include shared headers)
 │   ├── include/                 # cross-module shared headers
 │   │   ├── atomic_compat.h      # cross-platform atomic operations (umbrella)
 │   │   ├── atomic_compat_api.h  # atomic API per type
 │   │   ├── atomic_compat_platform.h # atomic backend selection
 │   │   ├── logging_compat.h     # logging compatibility shim
 │   │   └── check.h              # generic check macros
-│   ├── logging/  sync/  memory/  string/  ipc/  token/  cost/
+│   ├── logging/  sync/  memory/  string/  ipc/  token/
 │   ├── observability/  platform/  error/  types/  config_unified/
 │   ├── execution/  io/  cache/  compat/  cognition/  strategy/
-│   ├── network/  security/  resource/  uuid/  print/  compliance/
+│   ├── network/  security/  uuid/  print/  compliance/
 │   ├── quality/  sd/  effect/  ext/  id/  task/  cjson/  ime/
 │   └── <module>/                # each module is flat: headers + sources in one dir
 └── tests/                       # test suite (unit / bench / helpers)
@@ -109,7 +109,6 @@ Every module directory carries its own README with the API details.
 | string | string operations, safe string utilities |
 | ipc | IPC abstraction (channel/server/client/shm/mq/rpc), JSON-RPC helpers, circuit breaker |
 | token | LLM token counting and budgets; API-key standard |
-| cost | cost estimation and budget controller |
 | observability | metrics, traces, structured logger facade, unified metrics, alert manager |
 | platform | platform adapter utilities (fs, env, paths, time, sysinfo) |
 | error | error handling macros and user-space extended error codes |
@@ -123,7 +122,6 @@ Every module directory carries its own README with the API details.
 | strategy | weighted scoring and agent-selection strategy |
 | network | HTTP client, connection pool, DNS resolution |
 | security | input validation, log sanitization |
-| resource | resource guards, quotas, API recovery |
 | uuid | UUID generation and parsing |
 | print | unified runtime print macros (airy_print_*) |
 | compliance | strict-compliance unsafe-function poisoning and exemption macros |
@@ -224,7 +222,7 @@ int main(void) {
 - **heapstore** — logging, configuration, memory pools, sync primitives.
 - **protocols** — `airy_err_t`, `struct airy_ipc_msg_hdr`, sync, observability.
 - **gateway** — network utilities, token management, logging, configuration.
-- **daemons** — the full surface: logging, config, network, token, cost,
+- **daemons** — the full surface: logging, config, network, token,
   observability, cognition, strategy, IPC, service discovery.
 
 The language SDKs ultimately bind back to these same commons types and error

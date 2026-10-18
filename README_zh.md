@@ -25,7 +25,7 @@
 commons **不依赖**任何其他 Airymax 模块：它位于依赖图的最底层，仅依赖
 操作系统、C11 编译器和可选外部库（pthreads、cJSON）。
 
-它编译为**单一静态库**（target `airy_common`），聚合 32 个内聚工具模块
+它编译为**单一静态库**（target `airy_common`），聚合 30 个内聚工具模块
 外加平台抽象层。include 路径以 `PUBLIC` 导出，消费者链接 `airy_common`
 后即可通过单次链接看到全部子模块头文件。
 
@@ -74,17 +74,17 @@ commons/
 │   │   └── syscalls.h sched.h memory_types.h cognition_types.h
 │   │       security_types.h lsm_types.h log_types.h bpf_struct_ops.h
 │   └── third_party/             # 内嵌第三方头（如 nghttp2）
-├── utils/                       # 32 个工具模块（另有 utils/include 共享头目录）
+├── utils/                       # 30 个工具模块（另有 utils/include 共享头目录）
 │   ├── include/                 # 跨模块共享头
 │   │   ├── atomic_compat.h      # 跨平台原子操作（总入口）
 │   │   ├── atomic_compat_api.h  # 按类型的原子 API
 │   │   ├── atomic_compat_platform.h # 原子后端选择
 │   │   ├── logging_compat.h     # 日志兼容垫片
 │   │   └── check.h              # 通用检查宏
-│   ├── logging/  sync/  memory/  string/  ipc/  token/  cost/
+│   ├── logging/  sync/  memory/  string/  ipc/  token/
 │   ├── observability/  platform/  error/  types/  config_unified/
 │   ├── execution/  io/  cache/  compat/  cognition/  strategy/
-│   ├── network/  security/  resource/  uuid/  print/  compliance/
+│   ├── network/  security/  uuid/  print/  compliance/
 │   ├── quality/  sd/  effect/  ext/  id/  task/  cjson/  ime/
 │   └── <module>/                # 每个模块目录扁平存放：头文件与源码同目录
 └── tests/                       # 测试套件（unit / bench / 辅助框架）
@@ -103,7 +103,6 @@ commons/
 | string | 字符串操作与安全字符串工具 |
 | ipc | IPC 抽象（channel/server/client/shm/mq/rpc）、JSON-RPC 辅助、熔断器 |
 | token | LLM token 计数与预算；API Key 标准 |
-| cost | 成本估算与预算控制器 |
 | observability | 指标、跟踪、结构化日志门面、统一指标、告警管理器 |
 | platform | 平台适配工具（文件系统、环境变量、路径、时间、系统信息） |
 | error | 错误处理宏与用户态扩展错误码 |
@@ -117,7 +116,6 @@ commons/
 | strategy | 加权评分与 agent 选择策略 |
 | network | HTTP 客户端、连接池、DNS 解析 |
 | security | 输入校验、日志脱敏 |
-| resource | 资源守护、配额、API 恢复 |
 | uuid | UUID 生成与解析 |
 | print | 统一运行时打印宏（airy_print_*） |
 | compliance | 严格合规的不安全函数投毒与豁免宏 |
@@ -215,7 +213,7 @@ int main(void) {
 - **heapstore** — 日志、配置、内存池、同步原语。
 - **protocols** — `airy_err_t`、`struct airy_ipc_msg_hdr`、sync、observability。
 - **gateway** — 网络工具、token 管理、日志、配置。
-- **daemons** — 全量接口：logging、config、network、token、cost、
+- **daemons** — 全量接口：logging、config、network、token、
   observability、cognition、strategy、IPC、service discovery。
 
 各语言 SDK 最终绑定回同一套 commons 类型与错误码，保持运行时的宿主端

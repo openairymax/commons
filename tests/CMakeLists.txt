@@ -15,7 +15,6 @@ set(UNIT_TEST_SOURCES
     unit/test_error.c
     unit/test_logger.c
     unit/test_token.c
-    unit/test_cost.c
     # 统一类型定义（含 IPC 类型/错误码/宏契约）；已适配 cmocka_stub
     unit/test_types.c
     # 网络通信（连接/HTTP/连接池/DNS/工具）；network 实现全平台编译
@@ -121,7 +120,6 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         ${COMMONS_ROOT}/utils/observability
         ${COMMONS_ROOT}/utils/types
         ${COMMONS_ROOT}/utils/token
-        ${COMMONS_ROOT}/utils/cost
         ${COMMONS_ROOT}/utils/ipc
         ${COMMONS_ROOT}/utils/sd
         ${COMMONS_ROOT}/utils/svc
