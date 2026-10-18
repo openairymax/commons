@@ -134,36 +134,35 @@ static sync_result_t sync_finish_lock(int rc, int64_t start_time, sync_stats_ctr
 }
 
 /* 获取互斥量的唯一入口：mutex 与 recursive_mutex 共用。平台原语与超时策略
- * 下沉 sync_platform（platform_mutex_lock / platform_mtx_timed），本层只保留
- * 计时与统计。 */
-sync_result_t sync_mtx_lock(platform_mutex_t *mtx, const sync_timeout_t *timeout,
+ * 下沉平台母件（airy_mtx_lock / airy_mtx_timed），本层只保留计时与统计。 */
+sync_result_t sync_mtx_lock(airy_mtx_t *mtx, const sync_timeout_t *timeout,
                             sync_stats_ctr_t *stats)
 {
     int64_t start_time = sync_start_timer(timeout);
 
     int rc;
     if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = platform_mutex_lock(mtx);
+        rc = airy_mtx_lock(mtx);
     } else {
-        rc = platform_mtx_timed(mtx, (uint32_t)timeout->timeout_ms);
+        rc = airy_mtx_timed(mtx, (uint32_t)timeout->timeout_ms);
     }
 
     return sync_finish_lock(rc, start_time, stats);
 }
 
 /* 获取读写锁的唯一入口：read（write=false）与 write（write=true）共用。
- * 平台原语与超时策略下沉 sync_platform（platform_rwlock_{rd,wr}lock /
- * platform_rw_timed），本层只保留计时与统计。 */
-sync_result_t sync_rw_lock(platform_rwlock_t *rwlock, bool write, const sync_timeout_t *timeout,
+ * 平台原语与超时策略下沉平台母件（airy_rwlock_{wr,rd}lock /
+ * airy_rwlock_timed），本层只保留计时与统计。 */
+sync_result_t sync_rw_lock(airy_rwlock_t *rwlock, bool write, const sync_timeout_t *timeout,
                            sync_stats_ctr_t *stats)
 {
     int64_t start_time = sync_start_timer(timeout);
 
     int rc;
     if (timeout == NULL || timeout->timeout_ms == 0) {
-        rc = write ? platform_rwlock_wrlock(rwlock) : platform_rwlock_rdlock(rwlock);
+        rc = write ? airy_rwlock_wrlock(rwlock) : airy_rwlock_rdlock(rwlock);
     } else {
-        rc = platform_rw_timed(rwlock, write, (uint32_t)timeout->timeout_ms);
+        rc = airy_rwlock_timed(rwlock, write, (uint32_t)timeout->timeout_ms);
     }
 
     return sync_finish_lock(rc, start_time, stats);
@@ -182,7 +181,7 @@ sync_lock_hdr_t *sync_lock_new(size_t size, sync_type_t type, const sync_attr_t 
     return hdr;
 }
 
-sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, platform_mutex_t *prim)
+sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, airy_mtx_t *prim)
 {
     if (hdr == NULL)
         return SYNC_ERROR_INVALID;
@@ -190,19 +189,19 @@ sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, platform_mutex_t *prim)
     /* initialized 未置位意味着平台原语尚未成功初始化（如 create 失败路径），
      * 此时只回收内存，不对原语调用 destroy。 */
     if (hdr->initialized)
-        platform_mutex_destroy(prim);
+        airy_mtx_destroy(prim);
 
     AIRY_FREE(hdr->name);
     AIRY_FREE(hdr);
     return SYNC_SUCCESS;
 }
 
-sync_result_t sync_lock_unlock(sync_lock_hdr_t *hdr, platform_mutex_t *prim)
+sync_result_t sync_lock_unlock(sync_lock_hdr_t *hdr, airy_mtx_t *prim)
 {
     if (hdr == NULL || !hdr->initialized)
         return SYNC_ERROR_INVALID;
 
-    int rc = platform_mutex_unlock(prim);
+    int rc = airy_mtx_unlock(prim);
     if (rc != 0)
         return sync_internal_posix_error_to_result(rc);
 

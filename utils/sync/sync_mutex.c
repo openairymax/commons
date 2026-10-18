@@ -22,7 +22,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
     }
 
     bool recursive = (attr != NULL) && (attr->flags & SYNC_FLAG_RECURSIVE) != 0;
-    int result = platform_mtx_init(&m->mutex, recursive);
+    int result = airy_mtx_init_ex(&m->mutex, recursive);
     if (result != 0) {
         sync_lock_free((sync_lock_hdr_t *)m, &m->mutex);
         return sync_internal_posix_error_to_result(result);
@@ -57,7 +57,7 @@ sync_result_t sync_mutex_try_lock(sync_mutex_t mutex)
         return SYNC_ERROR_INVALID;
     }
 
-    int rc = platform_mutex_trylock(&mutex->mutex);
+    int rc = airy_mtx_trylock(&mutex->mutex);
     if (rc != 0) {
         return sync_internal_posix_error_to_result(rc);
     }

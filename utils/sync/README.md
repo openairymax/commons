@@ -1,7 +1,7 @@
 # Sync — 线程同步与并发执行原语
 
 **模块路径**: `commons/utils/sync/`
-**版本**: 0.1.16
+**版本**: 0.1.19
 
 ## 概述
 
@@ -19,10 +19,10 @@ Sync 模块提供跨平台的线程同步与并发执行基础设施，包含四
 - **取消令牌 `cancel_token.h`**：原子取消标志 + 条件变量阻塞等待 + 唤醒回调链，
   用于异步任务的可中断执行。
 
-平台差异由内部抽象层 `sync_platform.h` / `sync_types.h` 吸收：POSIX 分支基于
-pthread/semaphore，Windows 分支基于 CriticalSection/SRWLOCK/HANDLE 信号量；
-macOS 缺失的 `pthread_mutex_timedlock`、`pthread_rwlock_timed*`、`sem_timedwait`
-统一以 try + 短眠轮询近似超时。
+平台差异统一委托 `commons/platform` 母件（`platform_sync.h`）：POSIX 分支基于
+pthread，Windows 分支基于 CriticalSection/SRWLOCK/CONDITION_VARIABLE；macOS
+缺失的 `pthread_mutex_timedlock`、`pthread_rwlock_timed*` 由母件
+`airy_mtx_timed` / `airy_rwlock_timed` 以 try + 短眠轮询近似超时。
 
 ## 目录结构
 
@@ -33,13 +33,13 @@ sync/
 ├── sync_mutex.c                         # 互斥锁（含递归形态）
 ├── sync_rwlock.c                        # 读写锁
 ├── sync_condition.c                     # 条件变量
-├── sync_types.h                         # 句柄内部布局（各原语 .c 共用，勿直接依赖）
-├── sync_platform.h / sync_platform.c    # 平台抽象层（Win32 / POSIX / macOS 补齐）
+├── sync_types.h                         # 句柄内部布局（家族头 + 母件原语，勿直接依赖）
 ├── sync_internal.h / sync_internal.c    # 内部助手（strdup/errno 映射/统计更新，不安装）
 ├── airy_event_loop.h / airy_event_loop.c            # 事件循环门面（stop/定时器委托）
 ├── airy_event_loop_epoll.c                          # Linux epoll 后端
 ├── airy_event_loop_kqueue.c                         # macOS/BSD kqueue 后端
 ├── airy_event_loop_win.c                            # Windows WSAEventSelect 后端
+├── airy_event_loop_posix.c                          # 两 POSIX 后端共享机制（Windows 下为空）
 ├── airy_event_loop_internal.h                       # 门面与后端的内部契约（不安装）
 ├── airy_event_timer.h / airy_event_timer.c          # 平台无关定时器管理（内部）
 ├── thread_pool.h / thread_pool.c        # 线程池
@@ -55,7 +55,7 @@ sync/
 | `sync_type_t` | `SYNC_TYPE_UNKNOWN=0`，`SYNC_TYPE_MUTEX`、`SYNC_TYPE_RWLOCK`、`SYNC_TYPE_CONDITION` |
 | `sync_lock_type_t` | 三类锁的调用侧标识（`SYNC_LOCK_MUTEX`、`SYNC_LOCK_RWLOCK`、`SYNC_LOCK_CONDITION`），供 `sync_get_type` 做类型安全转换 |
 | `sync_result_t` | `SYNC_SUCCESS=0`、`SYNC_ERROR_TIMEOUT`、`SYNC_ERROR_DEADLOCK`、`SYNC_ERROR_INVALID`、`SYNC_ERROR_MEMORY`、`SYNC_ERROR_PERMISSION`、`SYNC_ERROR_BUSY`、`SYNC_ERROR_UNSUPPORTED`、`SYNC_ERROR_UNKNOWN` |
-| `sync_flag_t` | `SYNC_FLAG_NONE=0`、`SHARED`、`EXCLUSIVE`、`TRY`、`TIMEOUT`、`RECURSIVE`、`ERROR_CHECK`、`PRIORITY_INHERIT`、`ROBUST`（位标志 `1<<0`…`1<<7`） |
+| `sync_flag_t` | `SYNC_FLAG_NONE=0`、`SYNC_FLAG_EXCLUSIVE=1<<1`、`SYNC_FLAG_TRY=1<<2`、`SYNC_FLAG_TIMEOUT=1<<3`、`SYNC_FLAG_RECURSIVE=1<<4`、`SYNC_FLAG_ERROR_CHECK=1<<5`、`SYNC_FLAG_PRIORITY_INHERIT=1<<6`、`SYNC_FLAG_ROBUST=1<<7` |
 | `sync_option_t` | `SYNC_OPTION_NAME=1`、`SYNC_OPTION_TIMEOUT=2`、`SYNC_OPTION_PRIORITY_INHERIT=3`、`SYNC_OPTION_ROBUST=4` |
 
 | 结构 | 字段/说明 |
@@ -117,19 +117,17 @@ sync/
 `_Interlocked*64`/`_Interlocked*`（依 `_WIN64` 选择），POSIX 使用
 `__sync` 内建。
 
-## 平台抽象层（`sync_platform.h` / `sync_types.h`）
+## 平台原语委托（`commons/platform`）
 
-`sync_platform.h` 声明 28 个 `platform_*` 函数（互斥锁/读写锁/信号量/条件变量
-四类句柄的 init/lock/unlock 等最小操作集 + `platform_get_thread_id`）；
-`sync_types.h` 定义句柄结构体的内部布局（家族公共头 `hdr`：`type`、
-`initialized`、`name`、`stats`，后接各平台对象）。两文件供本模块各 `.c` 共用，
-不属于稳定公共 API。
+核心层三类原语的平台实现统一委托母件 `platform_sync.h`（`commons/platform`）：
+`airy_mtx_t`、`airy_rwlock_t`、`airy_cond_t`。`sync_types.h` 仅保留句柄
+结构体的内部布局（家族公共头 `hdr`：`type`、`initialized`、`name`、`stats`，
+后接对应母件原语），供本模块各 `.c` 共用，不属于稳定公共 API。
 
 | 原语 | Linux/POSIX | macOS | Windows |
 |------|-------------|-------|---------|
-| 互斥锁（含递归） | `pthread_mutex_t` | 同左 | `CRITICAL_SECTION`（天然递归） |
-| 读写锁 | `pthread_rwlock_t` | 同左 | `SRWLOCK` |
-| 信号量 | `sem_t` | 同左 | `HANDLE` |
+| 互斥锁（含递归） | `pthread_mutex_t` | 同左（timed 轮询补齐） | `CRITICAL_SECTION`（天然递归） |
+| 读写锁 | `pthread_rwlock_t` | 同左（timed 轮询补齐） | `SRWLOCK` + 状态字 |
 | 条件变量 | `pthread_cond_t` | 同左 | `CONDITION_VARIABLE` |
 
 ## 事件循环（`airy_event_loop.h`）
@@ -238,7 +236,7 @@ if (g_loop != NULL) {
 
 ## 构建与依赖
 
-本模块 15 个 `.c` 全部编入静态库 `airy_common`（三后端文件全平台参与构建，
+本模块 13 个 `.c` 全部编入静态库 `airy_common`（三后端文件全平台参与构建，
 由预处理器守卫决定实际生效者），头文件目录经 PUBLIC 导出；安装时排除
 `sync_internal.h` 与 `airy_event_loop_internal.h`（`*_internal.h` 规则）。
 
@@ -250,8 +248,7 @@ if (g_loop != NULL) {
 | `platform.h` | [`commons/platform`](../../platform/README.md) | 取消令牌与线程池的线程/锁/原子原语 |
 | `atomic_compat.h` | [`utils/compat`](../compat/README.md) | Windows/macOS 分支的 C11 原子支持 |
 
-不依赖任何外部并发库；POSIX 分支链接 pthread（Linux 上信号量另需 pthread/rt
-基础设施，由集成方构建系统处理）。
+不依赖任何外部并发库；POSIX 分支链接 pthread。
 
 ---
 

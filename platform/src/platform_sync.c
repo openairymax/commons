@@ -14,6 +14,8 @@
 
 #include "platform_internal.h"
 
+#include <errno.h> /* ETIMEDOUT / EBUSY（timed 原语 POSIX 裸码约定） */
+
 #if AIRY_PLATFORM_WINDOWS
 
 /* CreateThread 回调必须是 __stdcall（LPTHREAD_START_ROUTINE），而
@@ -310,10 +312,18 @@ static bool airy_mtx_created_has(airy_mtx_t *m)
     return found;
 }
 
-int airy_mtx_init(airy_mtx_t *mutex)
+int airy_mtx_init_ex(airy_mtx_t *mutex, bool recursive)
 {
+    /* CRITICAL_SECTION 天生递归：recursive=false 无法在 Windows 落地，
+     * 请求方只能得到递归语义（与 POSIX 端 init_ex 的严格分型不同）。 */
+    (void)recursive;
     InitializeCriticalSection(mutex);
     return 0;
+}
+
+int airy_mtx_init(airy_mtx_t *mutex)
+{
+    return airy_mtx_init_ex(mutex, true);
 }
 
 int airy_mtx_lock(airy_mtx_t *mutex)
@@ -332,15 +342,27 @@ int airy_mtx_trylock(airy_mtx_t *mutex)
         /* create() 路径为非递归互斥量：本线程已持锁时 trylock 必须失败，
          * 与 POSIX pthread_mutex_trylock 非递归语义对齐。 */
         if (mutex->OwningThread == (HANDLE)(uintptr_t)GetCurrentThreadId()) {
-            return -1;
+            return EBUSY;
         }
     }
-    return TryEnterCriticalSection(mutex) ? 0 : -1;
+    return TryEnterCriticalSection(mutex) ? 0 : EBUSY;
 }
 
 int airy_mtx_unlock(airy_mtx_t *mutex)
 {
     LeaveCriticalSection(mutex);
+    return 0;
+}
+
+int airy_mtx_timed(airy_mtx_t *mutex, uint32_t timeout_ms)
+{
+    DWORD start_tick = GetTickCount();
+    while (!TryEnterCriticalSection(mutex)) {
+        if (GetTickCount() - start_tick >= (DWORD)timeout_ms) {
+            return ETIMEDOUT;
+        }
+        Sleep(1);
+    }
     return 0;
 }
 
@@ -370,14 +392,33 @@ void airy_mtx_free(airy_mtx_t *mutex)
 
 #else
 
-int airy_mtx_init(airy_mtx_t *mutex)
+/* 绝对超时时刻的唯一构造点：mtx/rwlock 的 timed 原语共用。 */
+static void make_deadline(uint32_t timeout_ms, struct timespec *ts)
+{
+    clock_gettime(CLOCK_REALTIME, ts);
+    ts->tv_sec += (time_t)(timeout_ms / 1000);
+    ts->tv_nsec += (long)((timeout_ms % 1000) * 1000000L);
+    if (ts->tv_nsec >= 1000000000L) {
+        ts->tv_sec += 1;
+        ts->tv_nsec -= 1000000000L;
+    }
+}
+
+int airy_mtx_init_ex(airy_mtx_t *mutex, bool recursive)
 {
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    if (recursive) {
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    }
     int ret = pthread_mutex_init(mutex, &attr);
     pthread_mutexattr_destroy(&attr);
     return ret;
+}
+
+int airy_mtx_init(airy_mtx_t *mutex)
+{
+    return airy_mtx_init_ex(mutex, true);
 }
 
 int airy_mtx_lock(airy_mtx_t *mutex)
@@ -393,6 +434,26 @@ int airy_mtx_trylock(airy_mtx_t *mutex)
 int airy_mtx_unlock(airy_mtx_t *mutex)
 {
     return pthread_mutex_unlock(mutex);
+}
+
+int airy_mtx_timed(airy_mtx_t *mutex, uint32_t timeout_ms)
+{
+#if defined(__APPLE__) && defined(__MACH__)
+    int rc = EBUSY;
+    int64_t remaining_ms = (int64_t)timeout_ms;
+    while (rc == EBUSY && remaining_ms-- > 0) {
+        rc = pthread_mutex_trylock(mutex);
+        if (rc == EBUSY) {
+            struct timespec nap = {0, 1000000L};
+            nanosleep(&nap, NULL);
+        }
+    }
+    return (rc == EBUSY) ? ETIMEDOUT : rc;
+#else
+    struct timespec ts;
+    make_deadline(timeout_ms, &ts);
+    return pthread_mutex_timedlock(mutex, &ts);
+#endif
 }
 
 void airy_mtx_destroy(airy_mtx_t *mutex)
@@ -585,7 +646,7 @@ int airy_rwlock_tryrd(airy_rwlock_t *lock)
     if (!lock)
         return -1;
     if (!TryAcquireSRWLockShared(&lock->lock))
-        return -1;
+        return EBUSY;
     InterlockedIncrement(&lock->state);
     return 0;
 }
@@ -595,9 +656,17 @@ int airy_rwlock_trywr(airy_rwlock_t *lock)
     if (!lock)
         return -1;
     if (!TryAcquireSRWLockExclusive(&lock->lock))
-        return -1;
+        return EBUSY;
     InterlockedExchange(&lock->state, -1);
     return 0;
+}
+
+int airy_rwlock_timed(airy_rwlock_t *lock, bool write, uint32_t timeout_ms)
+{
+    /* SRWLock 无 timed 等待：沿用单次尝试语义，timeout_ms 不参与判定。 */
+    (void)timeout_ms;
+    int rc = write ? airy_rwlock_trywr(lock) : airy_rwlock_tryrd(lock);
+    return (rc == 0) ? 0 : ETIMEDOUT;
 }
 
 int airy_rwlock_unlock(airy_rwlock_t *lock)
@@ -667,6 +736,29 @@ int airy_rwlock_tryrd(airy_rwlock_t *lock)
 int airy_rwlock_trywr(airy_rwlock_t *lock)
 {
     return lock ? pthread_rwlock_trywrlock(lock) : AIRY_EINVAL;
+}
+
+int airy_rwlock_timed(airy_rwlock_t *lock, bool write, uint32_t timeout_ms)
+{
+    if (!lock)
+        return AIRY_EINVAL;
+#if defined(__APPLE__) && defined(__MACH__)
+    int rc = EBUSY;
+    int64_t remaining_ms = (int64_t)timeout_ms;
+    while (rc == EBUSY && remaining_ms-- > 0) {
+        rc = write ? pthread_rwlock_trywrlock(lock) : pthread_rwlock_tryrdlock(lock);
+        if (rc == EBUSY) {
+            struct timespec nap = {0, 1000000L};
+            nanosleep(&nap, NULL);
+        }
+    }
+    return (rc == EBUSY) ? ETIMEDOUT : rc;
+#else
+    struct timespec ts;
+    make_deadline(timeout_ms, &ts);
+    return write ? pthread_rwlock_timedwrlock(lock, &ts)
+                 : pthread_rwlock_timedrdlock(lock, &ts);
+#endif
 }
 
 int airy_rwlock_unlock(airy_rwlock_t *lock)
