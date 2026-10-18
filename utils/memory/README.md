@@ -28,7 +28,6 @@ memory/
 │
 ├── memory_core.c               # 核心分配/释放/统计实现
 ├── memory_internal.h           # 核心内部锁与调试表访问
-├── memory_stats.c              # 全局统计实现
 │
 ├── memory_common.h / memory_common.c        # 安全分配原语与分配策略切换
 │
@@ -79,8 +78,6 @@ memory/
 | `memory_aligned_alloc(alignment, size, tag)` | 对齐分配 |
 | `memory_realloc(ptr, new_size, tag)` | 重分配 |
 | `memory_free(ptr)` | 释放 |
-| `memory_get_stats(stats)` / `memory_reset_stats()` | 全局统计 |
-| `memory_get_current_usage()` / `memory_get_peak_usage()` | 当前 / 峰值用量 |
 | `memory_check_leaks(dump_to_stderr)` | 泄漏检查 |
 | `memory_dump_debug_info(file)` / `memory_validate(ptr)` | 调试信息转储 / 块完整性验证 |
 | `memory_debug_enable(enable)` | 开/关调试追踪 |
@@ -105,8 +102,7 @@ memory/
 `track_free`、`airy_check_leaks_scheduled`、`airy_memory_calc_watermark` /
 `airy_memory_check_watermark`、`airy_register_watermark_callback` /
 `airy_unregister_watermark_callback`、`airy_oom_determine_response`、
-`airy_memory_stats_report`，以及轻量包装 `airy_check_memory_leaks` /
-`airy_get_memory_stats`。
+`airy_memory_stats_report`，以及轻量包装 `airy_check_memory_leaks`。
 
 ### 统计上报器（`memory_stats_reporter.h`）
 
@@ -145,11 +141,9 @@ void *data = AIRY_CALLOC(64, 64);
 data = AIRY_REALLOC(data, 4096);
 AIRY_FREE(data);
 
-/* 全局统计 */
+/* 全局统计（memory_common 的 SSoT 快照） */
 memory_stats_t stats;
-if (memory_get_stats(&stats)) {
-    /* stats.current_allocated / stats.peak_allocated ... */
-}
+memory_get_global_stats(&stats);
 memory_cleanup();
 ```
 

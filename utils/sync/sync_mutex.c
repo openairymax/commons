@@ -15,8 +15,7 @@ sync_result_t sync_mutex_create(sync_mutex_t *mutex, const sync_attr_t *attr)
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_mutex *m =
-        (struct sync_mutex *)sync_lock_new(sizeof(struct sync_mutex), SYNC_TYPE_MUTEX, attr);
+    struct sync_mutex *m = (struct sync_mutex *)sync_lock_new(sizeof(struct sync_mutex));
     if (m == NULL) {
         return SYNC_ERROR_MEMORY;
     }
@@ -48,7 +47,7 @@ sync_result_t sync_mutex_lock_ex(sync_mutex_t mutex, const sync_timeout_t *timeo
         return SYNC_ERROR_INVALID;
     }
 
-    return sync_mtx_lock(&mutex->mutex, timeout, &mutex->hdr.stats);
+    return sync_mtx_lock(&mutex->mutex, timeout);
 }
 
 sync_result_t sync_mutex_try_lock(sync_mutex_t mutex)
@@ -62,7 +61,6 @@ sync_result_t sync_mutex_try_lock(sync_mutex_t mutex)
         return sync_internal_posix_error_to_result(rc);
     }
 
-    sync_internal_update_stats_lock(&mutex->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 

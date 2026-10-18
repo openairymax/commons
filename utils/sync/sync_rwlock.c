@@ -11,24 +11,19 @@
 
 sync_result_t sync_rwlock_create(sync_rwlock_t *rwlock, const sync_attr_t *attr)
 {
+    (void)attr;
+
     if (rwlock == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
-    struct sync_rwlock *r = (struct sync_rwlock *)AIRY_CALLOC(1, sizeof(struct sync_rwlock));
+    struct sync_rwlock *r = (struct sync_rwlock *)sync_lock_new(sizeof(struct sync_rwlock));
     if (r == NULL) {
         return SYNC_ERROR_MEMORY;
     }
 
-    r->hdr.type = SYNC_TYPE_RWLOCK;
-    if (attr != NULL && attr->name != NULL) {
-        r->hdr.name = sync_internal_strdup(attr->name);
-    }
-    sync_stats_reset(&r->hdr.stats);
-
     int result = airy_rwlock_init(&r->rwlock);
     if (result != 0) {
-        AIRY_FREE(r->hdr.name);
         AIRY_FREE(r);
         return sync_internal_posix_error_to_result(result);
     }
@@ -48,7 +43,6 @@ sync_result_t sync_rwlock_free(sync_rwlock_t rwlock)
         airy_rwlock_destroy(&rwlock->rwlock);
     }
 
-    AIRY_FREE(rwlock->hdr.name);
     AIRY_FREE(rwlock);
     return SYNC_SUCCESS;
 }
@@ -59,7 +53,7 @@ sync_result_t sync_rwlock_read_lock_ex(sync_rwlock_t rwlock, const sync_timeout_
         return SYNC_ERROR_INVALID;
     }
 
-    return sync_rw_lock(&rwlock->rwlock, false, timeout, &rwlock->hdr.stats);
+    return sync_rw_lock(&rwlock->rwlock, false, timeout);
 }
 
 sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
@@ -73,7 +67,6 @@ sync_result_t sync_rwlock_try_read_lock(sync_rwlock_t rwlock)
         return sync_internal_posix_error_to_result(rc);
     }
 
-    sync_internal_update_stats_lock(&rwlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
@@ -83,7 +76,7 @@ sync_result_t sync_rwlock_write_lock_ex(sync_rwlock_t rwlock, const sync_timeout
         return SYNC_ERROR_INVALID;
     }
 
-    return sync_rw_lock(&rwlock->rwlock, true, timeout, &rwlock->hdr.stats);
+    return sync_rw_lock(&rwlock->rwlock, true, timeout);
 }
 
 sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)
@@ -97,7 +90,6 @@ sync_result_t sync_rwlock_try_write_lock(sync_rwlock_t rwlock)
         return sync_internal_posix_error_to_result(rc);
     }
 
-    sync_internal_update_stats_lock(&rwlock->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 
@@ -112,6 +104,5 @@ sync_result_t sync_rwlock_unlock_ex(sync_rwlock_t rwlock)
         return sync_internal_posix_error_to_result(rc);
     }
 
-    atomic_fetch_add(&rwlock->hdr.stats.unlock_count, (size_t)1);
     return SYNC_SUCCESS;
 }

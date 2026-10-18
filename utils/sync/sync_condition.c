@@ -13,25 +13,20 @@
 
 sync_result_t sync_condition_create(sync_condition_t *condition, const sync_attr_t *attr)
 {
+    (void)attr;
+
     if (condition == NULL) {
         return SYNC_ERROR_INVALID;
     }
 
     struct sync_condition *c =
-        (struct sync_condition *)AIRY_CALLOC(1, sizeof(struct sync_condition));
+        (struct sync_condition *)sync_lock_new(sizeof(struct sync_condition));
     if (c == NULL) {
         return SYNC_ERROR_MEMORY;
     }
 
-    c->hdr.type = SYNC_TYPE_CONDITION;
-    if (attr != NULL && attr->name != NULL) {
-        c->hdr.name = sync_internal_strdup(attr->name);
-    }
-    sync_stats_reset(&c->hdr.stats);
-
     int result = airy_cond_init(&c->cond);
     if (result != 0) {
-        AIRY_FREE(c->hdr.name);
         AIRY_FREE(c);
         return sync_internal_posix_error_to_result(result);
     }
@@ -51,7 +46,6 @@ sync_result_t sync_condition_free(sync_condition_t condition)
         airy_cond_destroy(&condition->cond);
     }
 
-    AIRY_FREE(condition->hdr.name);
     AIRY_FREE(condition);
     return SYNC_SUCCESS;
 }
@@ -71,14 +65,12 @@ sync_result_t sync_condition_wait_ex(sync_condition_t condition, sync_mutex_t mu
                                  (uint32_t)timeout->timeout_ms);
     }
     if (rc == AIRY_ERR_TIMEOUT) {
-        sync_internal_update_stats_timeout(&condition->hdr.stats);
         return SYNC_ERROR_TIMEOUT;
     }
     if (rc != 0) {
         return sync_internal_posix_error_to_result(rc);
     }
 
-    sync_internal_update_stats_lock(&condition->hdr.stats, 0);
     return SYNC_SUCCESS;
 }
 

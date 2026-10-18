@@ -23,17 +23,6 @@ static inline size_t airy_check_memory_leaks(bool dump_to_stderr)
     return memory_check_leaks(dump_to_stderr);
 }
 
-/**
- * @brief 获取内存统计信息
- *
- * @param[out] stats 统计信息结构体
- * @return 成功返回true，失败返回false
- */
-static inline bool airy_get_memory_stats(memory_stats_t *stats)
-{
-    return memory_get_stats(stats);
-}
-
 
 /**
  * @brief 初始化扩展内存统计跟踪器（SEC-15）

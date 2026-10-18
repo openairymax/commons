@@ -399,16 +399,6 @@ size_t log_get_module_count(void);
 size_t log_get_module_info(log_module_info_t *out_info, size_t max_count);
 
 /**
- * @brief Reload the log configuration
- *
- * Reloads the log configuration from a config file; supports hot reload.
- *
- * @param config_path Config file path, NULL for the default path
- * @return 0 on success, negative on error
- */
-int log_reload_config(const char *config_path);
-
-/**
  * @brief Flush the log buffer
  *
  * Force-flushes all buffered logs to the output targets. Call before

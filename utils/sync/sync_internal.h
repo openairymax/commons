@@ -13,33 +13,25 @@
 #ifndef AIRY_RT_SYNC_INTERNAL_H
 #define AIRY_RT_SYNC_INTERNAL_H
 
-#include "sync.h"
+#include "airy_memory.h"
 #include "platform_sync.h"
+#include "sync.h"
 #include "sync_types.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <string.h>
-#include <time.h>
 
-char *sync_internal_strdup(const char *str);
 sync_result_t sync_internal_posix_error_to_result(int error_code);
-void sync_stats_reset(sync_stats_ctr_t *stats);
-void sync_stats_snapshot(const sync_stats_ctr_t *stats, sync_stats_t *out);
-void sync_internal_update_stats_lock(sync_stats_ctr_t *stats, int64_t elapsed_ms);
-void sync_internal_update_stats_timeout(sync_stats_ctr_t *stats);
-void sync_internal_update_stats_wait(sync_stats_ctr_t *stats, int64_t elapsed_ms);
 
-sync_result_t sync_mtx_lock(airy_mtx_t *mtx, const sync_timeout_t *timeout,
-                            sync_stats_ctr_t *stats);
-sync_result_t sync_rw_lock(airy_rwlock_t *rwlock, bool write, const sync_timeout_t *timeout,
-                           sync_stats_ctr_t *stats);
+sync_result_t sync_mtx_lock(airy_mtx_t *mtx, const sync_timeout_t *timeout);
+sync_result_t sync_rw_lock(airy_rwlock_t *rwlock, bool write, const sync_timeout_t *timeout);
 
 /* 生命周期单源：sync_types.h 定义家族公共头 sync_lock_hdr_t（各具锁结构
- * 体首成员），本组函数以之为视图承载对象分配、命名、统计与释放/解锁的
- * 公共逻辑，使各实现文件不再各自复制同一段生命周期代码。prim 指向各
- * 结构体自身持有的平台互斥量字段。 */
-sync_lock_hdr_t *sync_lock_new(size_t size, sync_type_t type, const sync_attr_t *attr);
+ * 体首成员），本组函数以之为视图承载对象分配与释放/解锁的公共逻辑，使各
+ * 实现文件不再各自复制同一段生命周期代码。prim 指向各结构体自身持有的
+ * 平台互斥量字段。 */
+sync_lock_hdr_t *sync_lock_new(size_t size);
 sync_result_t sync_lock_free(sync_lock_hdr_t *hdr, airy_mtx_t *prim);
 sync_result_t sync_lock_unlock(sync_lock_hdr_t *hdr, airy_mtx_t *prim);
 
