@@ -64,7 +64,6 @@ logging/
 | `log_set_trace_id(id)` / `log_get_trace_id()` | 当前线程追踪 ID |
 | `log_set_span_id(id)` / `log_get_span_id()` | OpenTelemetry Span ID |
 | `log_set_module_level(pattern, level)` | 模块级别设置（支持通配符） |
-| `log_reload_config(path)` | 热重载日志配置 |
 | `log_flush()` | 强制刷出全部缓冲 |
 | `log_cleanup()` | 释放资源并刷出 |
 | `log_level_to_string(level)` / `log_level_from_string(str)` | 级别与字符串互转 |

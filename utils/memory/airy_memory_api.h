@@ -126,19 +126,6 @@ void memory_free(void *ptr);
     } while (0)
 
 /**
- * @brief 获取内存统计信息
- *
- * @param[out] stats 统计信息输出缓冲区
- * @return 成功返回true，失败返回false
- */
-bool memory_get_stats(memory_stats_t *stats);
-
-/**
- * @brief 重置内存统计信息
- */
-void memory_reset_stats(void);
-
-/**
  * @brief 启用或禁用内存调试
  *
  * @param[in] enable 是否启用调试
@@ -185,20 +172,6 @@ bool memory_validate(void *ptr);
  */
 void memory_set_fail_callback(void (*callback)(size_t size, const char *tag, void *user_data),
                               void *user_data);
-
-/**
- * @brief 获取当前分配的内存大小
- *
- * @return 当前分配的总字节数
- */
-size_t memory_get_current_usage(void);
-
-/**
- * @brief 获取内存分配峰值
- *
- * @return 内存分配峰值（字节）
- */
-size_t memory_get_peak_usage(void);
 
 /** @} */ /* end of memory_api */
 #ifdef __cplusplus

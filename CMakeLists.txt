@@ -18,7 +18,6 @@ set(SOURCES
     # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
     platform/src/platform_compat.c
     utils/token/counter.c
-    utils/token/budget.c
     utils/token/token_standard.c
     # 0.1.19 §164: UTF-8 词流扫描机制件（mem_d compress/cache 词法 SSoT）
     utils/token/scan.c
@@ -28,14 +27,12 @@ set(SOURCES
     # 0.1.19 §3.7.2 N1：ErrorModel v1 错误分类 SSoT（class/JSON 契约）
     utils/error/err_class.c
     utils/io/file_utils.c
-    # logging 核心按功能域拆分：核心/格式化/文件后端/运行时控制（2026-08-27）
+    # logging 核心按功能域拆分：核心/格式化/文件后端（2026-08-27）
     utils/logging/logging_core.c
     utils/logging/logging_format.c
     utils/logging/logging_backend_file.c
-    utils/logging/logging_control.c
-    # memory 核心层按功能域拆分：状态机+分配 / 统计 / 调试核心
+    # memory 核心层按功能域拆分：状态机+分配 / 调试核心
     utils/memory/memory_core.c
-    utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
@@ -255,9 +252,8 @@ if(_inc_missing GREATER 0)
 endif()
 
 set_source_files_properties(
-    # memory 核心层按功能域拆分：状态机+分配 / 统计 / 调试核心
+    # memory 核心层按功能域拆分：状态机+分配 / 调试核心
     utils/memory/memory_core.c
-    utils/memory/memory_stats.c
     utils/memory/memory_debug_core.c
     utils/memory/memory_common.c
     utils/memory/memory_stats_reporter.c
@@ -265,7 +261,6 @@ set_source_files_properties(
     utils/logging/logging_core.c
     utils/logging/logging_format.c
     utils/logging/logging_backend_file.c
-    utils/logging/logging_control.c
     PROPERTIES COMPILE_DEFINITIONS "AIRY_COMPLIANCE_IMPL"
 )
 

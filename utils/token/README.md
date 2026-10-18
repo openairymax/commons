@@ -1,12 +1,12 @@
 # token — Token 计数与预算管理
 
-**模块路径**: `commons/utils/token/` · **版本**: 0.1.16
+**模块路径**: `commons/utils/token/` · **版本**: 0.1.19
 
-为 LLM 应用提供轻量的 token 估算、文本截断与预算/配额控制。全部实现为字符级启发式算法，不引入任何第三方编码器或外部依赖。
+为 LLM 应用提供轻量的 token 估算与文本截断。全部实现为字符级启发式算法，不引入任何第三方编码器或外部依赖。
 
 ## 概述
 
-- **两类不透明对象**：`airy_token_counter_t`（按模型名估算与截断）与 `airy_token_budget_t`（输入/输出 token 预算记账与时间窗口滚动），对象内部加锁，操作线程安全。
+- **不透明对象**：`airy_token_counter_t`（按模型名估算与截断），对象内部加锁，操作线程安全。
 - **标准化估算层**（`token_standard.h`）：`airy_token_standard_count()` 及批量/文本分析/配置校验/精度切换/配额检查接口，可独立于计数器对象使用。
 - **算法为字符级启发式**：UTF-8 严格解码后统计 CJK 字符、拉丁字母与总码点数，按比例模型折算。它不是 BPE 编码器，结果用于预算控制与预检，不保证与任一模型服务端逐 token 一致；需要精确计数时应接入目标模型的专用编码器。
 - **错误契约**：返回指针的接口失败时返回 `NULL` 并将负值错误码压入 error 栈（见 [error 模块](../error/README.md)）；返回 `size_t` 的计数接口以 `(size_t)-1` 表示参数或配置错误；返回 `int` 的接口以 `AIRY_EINVAL`（-22）等 POSIX 风格负码表示失败。
@@ -17,10 +17,9 @@
 ```
 commons/utils/token/
 ├── README.md
-├── token.h             # 计数器与预算 API
+├── token.h             # 计数器 API
 ├── token_standard.h    # 标准化估算 / 精度 / 配额 API
 ├── counter.c           # 计数、批量与截断实现
-├── budget.c            # 预算记账与时间窗口实现
 └── token_standard.c    # 标准化估算算法实现
 ```
 
@@ -58,20 +57,6 @@ commons/utils/token/
 
 截断按字节数折算目标长度（`原字节长 × max_tokens ÷ 当前估算`），在字节边界裁切并追加 `...`（中段为 `...[truncated]...`），不保证落在 UTF-8 字符边界上；文本本就不超时返回全文副本。
 
-## 预算 API（token.h）
-
-| 函数 | 语义 |
-|------|------|
-| `airy_token_budget_create(max_tokens)` | 创建预算；`max_tokens == 0` 或分配失败返回 `NULL`（错误入栈） |
-| `airy_token_budget_destroy(budget)` | 销毁，接受 `NULL` |
-| `airy_token_budget_add(budget, input, output)` | 记账一次请求。成功返回 0；余额不足返回 `AIRY_EINVAL` 且拒绝计数 +1；参数为 `NULL` 同样返回 `AIRY_EINVAL` |
-| `airy_token_budget_remaining(budget)` | 剩余可用 token 数（耗尽时为 0） |
-| `airy_token_budget_used` / `_input` / `_output` | 已用总量 / 输入量 / 输出量 |
-| `airy_token_budget_requests` / `_denied` | 成功记账次数 / 被拒绝次数（`uint32_t`） |
-| `airy_token_budget_reset(budget)` | 清零 `used/input/output` 三项用量；`requests`、`denied` 不受影响 |
-| `airy_token_budget_set_window(budget, seconds)` | 设定时间窗口，起算点为调用时刻 |
-| `airy_token_budget_check_window(budget)` | 惰性滚窗：当前时间越过窗口终点时清零用量并顺延一个窗口；未设置窗口时不做任何事。返回 0（`budget` 为 `NULL` 返回 `AIRY_EINVAL`） |
-
 ## 标准化估算 API（token_standard.h）
 
 | 函数 | 语义 |
@@ -104,7 +89,7 @@ commons/utils/token/
 
 ## 用法示例
 
-### 估算与截断
+### 计数器估算与截断
 
 ```c
 #include "token.h"
@@ -135,35 +120,9 @@ if (counter) {
 }
 ```
 
-### 预算与时间窗口
-
-```c
-#include "token.h"
-
-airy_token_budget_t *budget = airy_token_budget_create(100000);
-
-if (budget) {
-    airy_token_budget_set_window(budget, 3600); /* 每小时滚动 */
-
-    airy_token_budget_check_window(budget);     /* 到期自动清零并顺延 */
-
-    if (airy_token_budget_add(budget, 1200, 300) == 0) {
-        /* 记账成功 */
-    } else {
-        /* 余额不足：返回 AIRY_EINVAL，denied 计数 +1 */
-    }
-
-    if (airy_token_budget_remaining(budget) > 0) {
-        /* 仍有预算 */
-    }
-
-    airy_token_budget_destroy(budget);
-}
-```
-
 ## 构建与依赖
 
-源文件 `counter.c`、`budget.c`、`token_standard.c` 随 commons 一并编入静态库 `airy_common`；`token.h` 与 `token_standard.h` 随库安装并作为 PUBLIC include 目录导出。
+源文件 `counter.c`、`token_standard.c` 随 commons 一并编入静态库 `airy_common`；`token.h` 与 `token_standard.h` 随库安装并作为 PUBLIC include 目录导出。
 
 ```cmake
 target_link_libraries(<your_target> PRIVATE airy_common)
@@ -174,7 +133,7 @@ target_link_libraries(<your_target> PRIVATE airy_common)
 | [memory](../memory/README.md) | `AIRY_MALLOC` / `AIRY_STRDUP` / `AIRY_FREE` 分配契约 |
 | [error](../error/README.md) | `AIRY_EINVAL` 负值错误码与 error 栈（`AIRY_ERROR_NULL`） |
 | [compat](../compat/README.md) | `string_compat.h` 安全字符串、`atomic_compat.h` 原子类型兜底 |
-| [platform](../../platform/README.md) | `airy_mtx_t` 及锁原语（预算内部记账锁） |
+| [platform](../../platform/README.md) | `airy_mtx_t` 及锁原语（计数器内部锁） |
 | C 标准库 | `ctype` / `string` / `time` / `stdatomic` |
 
 本模块无 agentrt 内部上游依赖。

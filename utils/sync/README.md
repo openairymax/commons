@@ -7,10 +7,10 @@
 
 Sync 模块提供跨平台的线程同步与并发执行基础设施，包含四个 API 域：
 
-- **核心层 `sync.h`**（34 个公开函数）：互斥锁（递归形态经
-  `SYNC_FLAG_RECURSIVE` 创建）、读写锁、条件变量共三类同步原语，统一为
-  不透明句柄 + `sync_result_t` 返回值，阻塞接口普遍支持毫秒超时；附统计
-  计数、命名锁登记与持锁状态检查、原子操作（CAS/加/减/读/写）与线程工具；
+- **核心层 `sync.h`**：互斥锁（递归形态经 `SYNC_FLAG_RECURSIVE` 创建）、
+  读写锁、条件变量共三类同步原语，统一为不透明句柄 + `sync_result_t`
+  返回值，阻塞接口普遍支持毫秒超时；附原子操作（CAS/加/减/读/写）与
+  线程 ID 查询；
 - **事件循环 `airy_event_loop.h`**：fd 可读/可写事件分发 + 周期定时器，
   按平台由 epoll（Linux）、kqueue（macOS/BSD）、WSAEventSelect（Windows）
   三个后端实现，同一平台仅一个后端参与链接；
@@ -29,12 +29,12 @@ pthread，Windows 分支基于 CriticalSection/SRWLOCK/CONDITION_VARIABLE；macO
 ```
 sync/
 ├── README.md
-├── sync.h / sync.c                      # 核心层 API：生命周期/统计/命名/原子/工具
+├── sync.h / sync.c                      # 核心层 API：线程工具/原子操作
 ├── sync_mutex.c                         # 互斥锁（含递归形态）
 ├── sync_rwlock.c                        # 读写锁
 ├── sync_condition.c                     # 条件变量
 ├── sync_types.h                         # 句柄内部布局（家族头 + 母件原语，勿直接依赖）
-├── sync_internal.h / sync_internal.c    # 内部助手（strdup/errno 映射/统计更新，不安装）
+├── sync_internal.h / sync_internal.c    # 内部助手（errno 映射/句柄分配，不安装）
 ├── airy_event_loop.h / airy_event_loop.c            # 事件循环门面（stop/定时器委托）
 ├── airy_event_loop_epoll.c                          # Linux epoll 后端
 ├── airy_event_loop_kqueue.c                         # macOS/BSD kqueue 后端
@@ -52,43 +52,22 @@ sync/
 
 | 类型 | 取值 |
 |------|------|
-| `sync_type_t` | `SYNC_TYPE_UNKNOWN=0`，`SYNC_TYPE_MUTEX`、`SYNC_TYPE_RWLOCK`、`SYNC_TYPE_CONDITION` |
-| `sync_lock_type_t` | 三类锁的调用侧标识（`SYNC_LOCK_MUTEX`、`SYNC_LOCK_RWLOCK`、`SYNC_LOCK_CONDITION`），供 `sync_get_type` 做类型安全转换 |
 | `sync_result_t` | `SYNC_SUCCESS=0`、`SYNC_ERROR_TIMEOUT`、`SYNC_ERROR_DEADLOCK`、`SYNC_ERROR_INVALID`、`SYNC_ERROR_MEMORY`、`SYNC_ERROR_PERMISSION`、`SYNC_ERROR_BUSY`、`SYNC_ERROR_UNSUPPORTED`、`SYNC_ERROR_UNKNOWN` |
-| `sync_flag_t` | `SYNC_FLAG_NONE=0`、`SYNC_FLAG_EXCLUSIVE=1<<1`、`SYNC_FLAG_TRY=1<<2`、`SYNC_FLAG_TIMEOUT=1<<3`、`SYNC_FLAG_RECURSIVE=1<<4`、`SYNC_FLAG_ERROR_CHECK=1<<5`、`SYNC_FLAG_PRIORITY_INHERIT=1<<6`、`SYNC_FLAG_ROBUST=1<<7` |
-| `sync_option_t` | `SYNC_OPTION_NAME=1`、`SYNC_OPTION_TIMEOUT=2`、`SYNC_OPTION_PRIORITY_INHERIT=3`、`SYNC_OPTION_ROBUST=4` |
+| `sync_flag_t` | `SYNC_FLAG_NONE=0`、`SYNC_FLAG_RECURSIVE=1<<4` |
 
 | 结构 | 字段/说明 |
 |------|-----------|
 | `sync_timeout_t` | `{ uint64_t timeout_ms; bool absolute; }`；接口传 `NULL` 表示无限等待 |
-| `sync_attr_t` | 创建属性 `{ type, flags, name, context }`，`name` 在创建时被复制 |
-| `sync_stats_t` | `{ lock_count, unlock_count, wait_count, timeout_count, deadlock_count, total_wait_time_ms, max_wait_time_ms }`；计数以原子方式累加，读取得到调用时刻的时点快照 |
-| `sync_deadlock_info_t` | `{ thread_count, lock_count, detection_time, thread_names, lock_names }` |
-| `sync_error_callback_t` | `void (*)(sync_result_t, const char *lock_name, void *context)` |
+| `sync_attr_t` | 创建属性 `{ uint32_t flags; }`，当前仅识别 `SYNC_FLAG_RECURSIVE` |
 
 三类原语各有不透明句柄类型：`sync_mutex_t`、`sync_rwlock_t`、
 `sync_condition_t`。句柄由 `*_create` 分配、由对应 `*_free` 释放。
 
-### 模块生命周期与通用函数
+### 线程工具
 
 | 函数 | 说明 |
 |------|------|
-| `sync_init(error_callback, context)` | 登记全局错误回调（可选），幂等 |
-| `sync_cleanup(void)` | 清除全局状态 |
 | `sync_get_thread_id()` | 当前线程 ID（Windows `GetCurrentThreadId` / POSIX `pthread_self`） |
-| `sync_sleep(ms)` | 当前线程休眠 |
-| `sync_get_type(lock, lock_type)` | 按调用侧标识返回 `sync_type_t` |
-| `sync_get_stats(lock, stats)` / `sync_reset_stats(lock)` | 读取时点统计快照 / 原子清零统计（任何已命名类型的句柄均可） |
-| `sync_set_name(lock, name)` / `sync_get_name(lock)` | 命名锁；命名同时把锁登记进全局注册表（上限 256 项），`name` 被复制 |
-| `sync_set_option(lock, option, value)` / `sync_get_option(...)` | 设置/读回 `NAME`/`TIMEOUT`/`PRIORITY_INHERIT`/`ROBUST` 选项 |
-| `sync_check_deadlock(info, max_info_size)` | 见下方说明 |
-
-**持锁状态检查**：`sync_check_deadlock` 遍历注册表中已命名的锁，对每把锁做一次
-非阻塞试锁探测；只要存在处于被持有状态的命名锁即返回 `SYNC_ERROR_DEADLOCK`，
-并把持锁名复制进 `info->lock_names`（堆数组，**每项与数组本身须用 `AIRY_FREE()`
-释放**），`lock_count` 为持锁总数、`detection_time` 为检查时刻（epoch 秒）。
-它是时点快照式检查，不做等待图环路分析；`thread_count`/`thread_names` 不填充。
-未命名的锁不参与该检查。
 
 ### 三类原语接口
 
@@ -98,12 +77,8 @@ sync/
 | 读写锁 | `sync_rwlock_create/free` + `read_lock_ex` / `try_read_lock` / `write_lock_ex` / `try_write_lock` / `unlock_ex`（读共享、写独占，均支持超时） |
 | 条件变量 | `sync_condition_create/free` + `wait_ex(cond, mutex, timeout)` / `signal_ex` / `broadcast_ex`；等待必须关联核心层 `sync_mutex_t` |
 
-超时与平台限制：
-
-- `timeout == NULL` 或 `timeout_ms == 0` 表示无限等待（各处文档以各函数注释为准，
-  超时值为相对毫秒时长按 `sync_timeout_t.absolute` 区分）；
-- 每次阻塞获取/等待都会原子累加对应句柄的统计计数器；`sync_get_stats` 返回
-  调用时刻的一致快照。读者可在持有读锁期间并发上报统计，不构成数据竞争。
+`timeout == NULL` 或 `timeout_ms == 0` 表示无限等待；超时值为相对毫秒时长，
+按 `sync_timeout_t.absolute` 区分是否为绝对时刻。
 
 ### 原子操作
 
@@ -121,8 +96,8 @@ sync/
 
 核心层三类原语的平台实现统一委托母件 `platform_sync.h`（`commons/platform`）：
 `airy_mtx_t`、`airy_rwlock_t`、`airy_cond_t`。`sync_types.h` 仅保留句柄
-结构体的内部布局（家族公共头 `hdr`：`type`、`initialized`、`name`、`stats`，
-后接对应母件原语），供本模块各 `.c` 共用，不属于稳定公共 API。
+结构体的内部布局（家族公共头 `sync_lock_hdr_t`：`initialized`，后接对应
+母件原语），供本模块各 `.c` 共用，不属于稳定公共 API。
 
 | 原语 | Linux/POSIX | macOS | Windows |
 |------|-------------|-------|---------|
@@ -199,14 +174,9 @@ if (rc == SYNC_SUCCESS) {
     if (rc == SYNC_SUCCESS) {
         /* 临界区 ... */
         sync_mutex_unlock_ex(m);
-
-        sync_stats_t st;
-        if (sync_get_stats(m, &st) == SYNC_SUCCESS) {
-            /* st.lock_count / st.max_wait_time_ms ... */
-        }
     }
     /* rc == SYNC_ERROR_TIMEOUT：未在期限内取得锁 */
-    sync_mutex_free(m); /* 句柄由 free 归还，含内部名称副本 */
+    sync_mutex_free(m);
 }
 ```
 
@@ -242,7 +212,7 @@ if (g_loop != NULL) {
 
 | 依赖 | 来源 | 用途 |
 |------|------|------|
-| `airy_memory.h` | [`utils/memory`](../memory/README.md) | 句柄/名称/任务节点的堆分配（`AIRY_CALLOC`/`AIRY_FREE`） |
+| `airy_memory.h` | [`utils/memory`](../memory/README.md) | 句柄/任务节点的堆分配（`AIRY_CALLOC`/`AIRY_FREE`） |
 | `error.h` | [`utils/error`](../error/README.md) | `AIRY_ERR_*` 返回码（线程池、取消令牌） |
 | `logging.h` / `svc_logger.h` | [`utils/observability`](../observability/README.md) | 核心层与线程池日志、事件循环后端日志 |
 | `platform.h` | [`commons/platform`](../../platform/README.md) | 取消令牌与线程池的线程/锁/原子原语 |

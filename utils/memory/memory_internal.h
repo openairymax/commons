@@ -12,7 +12,6 @@
  *
  * 文件归属：
  *   - memory_core.c      状态机/锁/内部分配/生命周期/alloc-free
- *   - memory_stats.c     统计查询/重置/用量
  *   - memory_debug_core.c 调试使能/泄漏检查/转储/校验/失败回调
  */
 
