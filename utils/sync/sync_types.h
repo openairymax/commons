@@ -16,8 +16,8 @@
 
 #include "airy_memory.h"
 #include "atomic_compat.h"
+#include "platform_sync.h"
 #include "sync.h"
-#include "sync_platform.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,22 +56,17 @@ typedef struct {
 
 struct sync_mutex {
     sync_lock_hdr_t hdr;
-    platform_mutex_t mutex;
+    airy_mtx_t mutex;
 };
 
 struct sync_rwlock {
     sync_lock_hdr_t hdr;
-    platform_rwlock_t rwlock;
-#ifdef _WIN32
-    /* SRWLock 的释放必须与获取方向一致，且只有以写模式获取的线程才以写模式
-     * 释放。记账写者线程 ID（0 表示当前无写者）；读者不触碰该域。 */
-    atomic_uint writer_owner;
-#endif
+    airy_rwlock_t rwlock;
 };
 
 struct sync_condition {
     sync_lock_hdr_t hdr;
-    platform_condition_t cond;
+    airy_cond_t cond;
 };
 
 #ifdef __cplusplus

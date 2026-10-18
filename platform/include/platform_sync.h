@@ -31,6 +31,19 @@ extern "C" {
 int airy_mtx_init(airy_mtx_t *mutex);
 
 /**
+ * @brief Initialize a mutex with an explicit recursion policy
+ *
+ * POSIX implements the requested policy strictly (recursive or plain);
+ * Windows CRITICAL_SECTION is inherently recursive, so recursive=false
+ * still yields recursive semantics there.
+ *
+ * @param mutex mutex pointer
+ * @param recursive request recursive acquisition support
+ * @return 0 on success, non-zero on failure
+ */
+int airy_mtx_init_ex(airy_mtx_t *mutex, bool recursive);
+
+/**
  * @brief Destroy a mutex
  * @param mutex mutex pointer
  */
@@ -56,6 +69,19 @@ int airy_mtx_trylock(airy_mtx_t *mutex);
  * @return 0 on success, non-zero on failure
  */
 int airy_mtx_unlock(airy_mtx_t *mutex);
+
+/**
+ * @brief Lock a mutex with a bounded wait
+ *
+ * Returns POSIX raw errno codes (0 / ETIMEDOUT / ...). On platforms
+ * without a native timed mutex the wait is approximated by trylock
+ * polling; Windows keeps the same contract via TryEnterCriticalSection.
+ *
+ * @param mutex mutex pointer
+ * @param timeout_ms maximum wait in milliseconds
+ * @return 0 on success, ETIMEDOUT on timeout, non-zero on failure
+ */
+int airy_mtx_timed(airy_mtx_t *mutex, uint32_t timeout_ms);
 
 /**
  * @brief Dynamically create a mutex (allocate and initialize)
@@ -169,6 +195,20 @@ int airy_rwlock_tryrd(airy_rwlock_t *lock);
  *         (POSIX: pthread raw code, EBUSY=16; Windows: -1)
  */
 int airy_rwlock_trywr(airy_rwlock_t *lock);
+
+/**
+ * @brief Acquire a read-write lock with a bounded wait
+ *
+ * Returns POSIX raw errno codes (0 / ETIMEDOUT / ...). macOS approximates
+ * the wait by try-polling; Windows SRWLock has no timed wait, so a single
+ * try decides the outcome (timeout_ms unused there).
+ *
+ * @param lock rwlock pointer
+ * @param write acquire for writing (exclusive) when true, reading otherwise
+ * @param timeout_ms maximum wait in milliseconds
+ * @return 0 on success, ETIMEDOUT on timeout, non-zero on failure
+ */
+int airy_rwlock_timed(airy_rwlock_t *lock, bool write, uint32_t timeout_ms);
 
 /**
  * @brief Release a read or write lock (auto-dispatches by holder type)

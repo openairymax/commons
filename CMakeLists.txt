@@ -51,7 +51,6 @@ set(SOURCES
     # 0.1.19 §130：字符串→下标开放寻址哈希索引 SSoT（djb2 + 墓碑）
     utils/ds/hindex.c
     utils/sync/sync.c
-    utils/sync/sync_platform.c
     utils/sync/sync_internal.c
     utils/sync/sync_mutex.c
     utils/sync/sync_rwlock.c

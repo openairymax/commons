@@ -38,7 +38,7 @@
 #include <unistd.h>
 #endif
 
-#include "sync_platform.h"
+#include "platform_process.h"
 
 #include "logging.h"
 
@@ -537,7 +537,7 @@ sync_result_t sync_check_deadlock(sync_deadlock_info_t *info, size_t max_info_si
 
 uint64_t sync_get_thread_id(void)
 {
-    return platform_get_thread_id();
+    return airy_thread_id();
 }
 
 bool sync_atomic_cas(volatile void *ptr, uintptr_t expected, uintptr_t desired)

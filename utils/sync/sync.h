@@ -65,7 +65,6 @@ typedef enum {
  */
 typedef enum {
     SYNC_FLAG_NONE = 0,
-    SYNC_FLAG_SHARED = 1 << 0,
     SYNC_FLAG_EXCLUSIVE = 1 << 1,
     SYNC_FLAG_TRY = 1 << 2,
     SYNC_FLAG_TIMEOUT = 1 << 3,
