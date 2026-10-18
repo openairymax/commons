@@ -7,7 +7,8 @@
  *
  * epoll（Linux）与 kqueue（macOS/BSD）两后端共享的平台无关机制：
  *   - fd 注册表与就绪缓冲的分配/释放（最大容量 max_events）；
- *   - fd 订阅的参数校验与注册表登记（airy_evloop_fd_check / _fd_track）；
+ *   - fd 订阅的参数校验、后端注册分发与注册表登记
+ *     （airy_evloop_fd_check / _fd_add / _fd_track）；
  *   - 就绪事件回调分发（wait 归一化结果 → 用户回调）；
  *   - fd 计数（遍历注册表统计已登记 fd）。
  *
@@ -75,6 +76,18 @@ int airy_evloop_fd_track(airy_event_loop_t *loop, int fd, uint32_t events,
     posix->fd_entries[fd].user_data = user_data;
     posix->fd_entries[fd].level_triggered = level_triggered;
     return 0;
+}
+
+int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
+                       airy_event_callback_t cb, void *user_data, bool level_triggered)
+{
+    int rc = airy_evloop_fd_check(loop, fd, cb);
+    if (rc)
+        return rc;
+    rc = airy_evloop_arm(loop, fd, events, level_triggered);
+    if (rc)
+        return rc;
+    return airy_evloop_fd_track(loop, fd, events, cb, user_data, level_triggered);
 }
 
 void airy_evloop_dispatch(airy_event_loop_t *loop, int ready_n)

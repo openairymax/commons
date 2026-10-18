@@ -42,13 +42,8 @@ struct airy_event_loop {
     struct epoll_event *epoll_events;
 };
 
-int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
-                       airy_event_callback_t cb, void *user_data, bool level_triggered)
+int airy_evloop_arm(airy_event_loop_t *loop, int fd, uint32_t events, bool level_triggered)
 {
-    int rc = airy_evloop_fd_check(loop, fd, cb);
-    if (rc)
-        return rc;
-
     struct epoll_event ev;
     __builtin_memset(&ev, 0, sizeof(ev));
     ev.data.fd = fd;
@@ -60,19 +55,17 @@ int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
     if (!level_triggered)
         ev.events |= EPOLLET;
 
+    int rc = 0;
     if (epoll_ctl(loop->epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0) {
-        if (errno == EEXIST) {
-            if (epoll_ctl(loop->epoll_fd, EPOLL_CTL_MOD, fd, &ev) < 0) {
-                AIRY_LOG_DEBUG("epoll_ctl MOD failed for fd=%d: %s", fd, strerror(errno));
-                return AIRY_ERR_IO;
-            }
-        } else {
-            AIRY_LOG_DEBUG("epoll_ctl ADD failed for fd=%d: %s", fd, strerror(errno));
-            return AIRY_ERR_IO;
+        int op = errno == EEXIST ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
+        if (epoll_ctl(loop->epoll_fd, op, fd, &ev) < 0) {
+            AIRY_LOG_DEBUG("epoll_ctl %s failed for fd=%d: %s",
+                           op == EPOLL_CTL_ADD ? "ADD" : "MOD", fd, strerror(errno));
+            rc = AIRY_ERR_IO;
         }
     }
 
-    return airy_evloop_fd_track(loop, fd, events, cb, user_data, level_triggered);
+    return rc;
 }
 
 airy_event_loop_t *airy_event_loop_create(int max_events)
