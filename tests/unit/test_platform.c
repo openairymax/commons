@@ -188,6 +188,7 @@ static int test_network_functions(void)
 }
 
 #if !defined(_WIN32)
+#include <limits.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -360,7 +361,11 @@ static int test_spawn_env_cwd(void)
     char buf[256] = {0};
     TEST_ASSERT(airy_pipe_read(proc.stdout_fd, buf, sizeof(buf) - 1) > 0,
                 "stdout should be captured");
-    TEST_ASSERT(strncmp(buf, "/tmp", 4) == 0, "child cwd should be /tmp");
+    /* macOS 的 /tmp 是 /private/tmp 的符号链接，子进程 pwd 输出物理路径；
+     * 断言前按 realpath 归一，比较语义路径解析结果而非宿主字面布局。 */
+    char want[PATH_MAX];
+    TEST_ASSERT(realpath("/tmp", want) != NULL, "/tmp should resolve");
+    TEST_ASSERT(strncmp(buf, want, strlen(want)) == 0, "child cwd should be /tmp");
 
     airy_exit_status_t st;
     TEST_ASSERT(airy_process_reap(&proc, &st) == 0, "reap should succeed");
