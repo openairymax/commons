@@ -22,8 +22,6 @@ set(SOURCES
     utils/token/token_standard.c
     # 0.1.19 §164: UTF-8 词流扫描机制件（mem_d compress/cache 词法 SSoT）
     utils/token/scan.c
-    utils/cost/estimator.c
-    utils/cost/controller.c
     utils/observability/logger.c
     utils/observability/trace.c
     utils/error/handler.c
@@ -130,8 +128,6 @@ set(SOURCES
     # 0c A 类直搬：observability 域
     utils/observability/unified_metrics.c
     utils/observability/alert_manager.c
-    # 0c A 类直搬：resource 域（api_recovery）
-    utils/resource/api_recovery.c
     # 0c A 类直搬：security 域（log_sanitizer）
     utils/security/log_sanitizer.c
     # 0c A 类直搬：跨进程服务发现全家族（g14 补完 P0.17 phase 4 半程迁移，
@@ -219,11 +215,9 @@ set(_inc_dirs
     utils/string
     utils/compat
     utils/token
-    utils/cost
     utils/observability
     utils/io
     utils/security
-    utils/resource
     utils/cache
     utils/platform
     utils/config_unified
@@ -290,11 +284,9 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/string
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/compat
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/token
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/cost
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/observability
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/io
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/security
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/resource
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cache
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/platform
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/config_unified
@@ -359,8 +351,6 @@ install(DIRECTORY platform/include/ DESTINATION include/agentrt/platform)
 # 扁平化：utils/<X>/ 平铺后仅安装公共头（*.h），排除 _internal.h
 install(DIRECTORY utils/token/ DESTINATION include/agentrt/utils/token
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(DIRECTORY utils/cost/ DESTINATION include/agentrt/utils/cost
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/observability/ DESTINATION include/agentrt/utils/observability
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/logging/ DESTINATION include/agentrt/utils/logging
@@ -376,8 +366,6 @@ install(DIRECTORY utils/io/ DESTINATION include/agentrt/utils/io
 install(DIRECTORY utils/types/ DESTINATION include/agentrt/utils/types
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/security/ DESTINATION include/agentrt/utils/security
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(DIRECTORY utils/resource/ DESTINATION include/agentrt/utils/resource
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/memory/ DESTINATION include/agentrt/utils/memory
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
