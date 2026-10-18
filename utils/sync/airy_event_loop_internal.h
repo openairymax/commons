@@ -134,6 +134,25 @@ int airy_evloop_fd_check(airy_event_loop_t *loop, int fd, airy_event_callback_t 
 /** fd 登记入注册表：填充 fd_entries 五字段并返回 0。 */
 int airy_evloop_fd_track(airy_event_loop_t *loop, int fd, uint32_t events,
                          airy_event_callback_t cb, void *user_data, bool level_triggered);
+
+/**
+ * @brief Backend hook arming one fd on the selected multiplexer.
+ *
+ * 由编译选中的 POSIX 后端提供（epoll_ctl / kevent），仅承载注册动作；
+ * 公共骨架（校验 → arm → 登记）收敛于 airy_evloop_fd_add。
+ */
+int airy_evloop_arm(airy_event_loop_t *loop, int fd, uint32_t events,
+                    bool level_triggered);
+
+/**
+ * @brief POSIX fd 订阅公共骨架（edge / level triggered）。
+ *
+ * 校验 → 后端 arm → 注册表登记三段式；核心 TU 的公共入口
+ * airy_event_loop_add_fd / airy_event_loop_add_fd_lt 仅分别以
+ * level_triggered=false / true 转发本入口，避免骨架在双后端重复。
+ */
+int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
+                       airy_event_callback_t cb, void *user_data, bool level_triggered);
 #endif
 
 /* --- 核心侧（airy_event_loop.c）导出的内部契约 ------------------------- */
@@ -148,17 +167,6 @@ int airy_evloop_fd_track(airy_event_loop_t *loop, int fd, uint32_t events,
  * NULL，调用方据此提前返回。
  */
 airy_event_loop_t *airy_evloop_alloc(size_t loop_size, int *max_events);
-
-/**
- * @brief Backend hook implementing fd registration (edge / level triggered).
- *
- * 由当前参与链接的平台后端提供（epoll / win / kqueue 三选一），承载各
- * 多路复用机制的实际订阅工作；核心 TU 的公共入口
- * airy_event_loop_add_fd / airy_event_loop_add_fd_lt 仅分别以
- * level_triggered=false / true 转发本钩子，避免该公共形状在三后端重复。
- */
-int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
-                       airy_event_callback_t cb, void *user_data, bool level_triggered);
 
 #ifdef __cplusplus
 }

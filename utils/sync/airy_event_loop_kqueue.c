@@ -48,13 +48,8 @@ struct airy_event_loop {
     struct kevent *kq_events;
 };
 
-int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
-                       airy_event_callback_t cb, void *user_data, bool level_triggered)
+int airy_evloop_arm(airy_event_loop_t *loop, int fd, uint32_t events, bool level_triggered)
 {
-    int rc = airy_evloop_fd_check(loop, fd, cb);
-    if (rc)
-        return rc;
-
     struct kevent kev[2];
     int n = 0;
     if (events & AIRY_EVENT_TYPE_READ) {
@@ -77,7 +72,7 @@ int airy_evloop_fd_add(airy_event_loop_t *loop, int fd, uint32_t events,
         }
     }
 
-    return airy_evloop_fd_track(loop, fd, events, cb, user_data, level_triggered);
+    return 0;
 }
 
 airy_event_loop_t *airy_event_loop_create(int max_events)
