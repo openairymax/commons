@@ -21,13 +21,8 @@ AIRY_ABI_BEGIN
 
 
 typedef enum {
-    CONFIG_SOURCE_FILE = 0,
-    CONFIG_SOURCE_ENV = 1,
-    CONFIG_SOURCE_ARGS = 2,
-    CONFIG_SOURCE_MEMORY = 3,
-    CONFIG_SOURCE_NETWORK = 4,
-    CONFIG_SOURCE_DATABASE = 5,
-    CONFIG_SOURCE_DEFAULT = 6
+    CONFIG_SOURCE_ENV = 0,
+    CONFIG_SOURCE_MEMORY = 1
 } config_source_type_t;
 
 
@@ -49,7 +44,6 @@ typedef struct {
     const char *prefix;
     bool case_sensitive;
     const char *separator;
-    bool expand_vars;
 } config_env_source_options_t;
 
 

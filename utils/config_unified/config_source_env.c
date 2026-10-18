@@ -233,7 +233,6 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
     priv->case_sensitive = options->case_sensitive;
     priv->separator =
         options->separator ? duplicate_string(options->separator) : duplicate_string("_");
-    priv->expand_vars = options->expand_vars;
     priv->env_keys = NULL;
     priv->env_count = 0;
 

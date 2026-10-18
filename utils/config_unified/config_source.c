@@ -107,20 +107,10 @@ const config_source_attr_t *config_source_get_attributes(config_source_t *source
 const char *config_source_type_to_string(config_source_type_t type)
 {
     switch (type) {
-    case CONFIG_SOURCE_FILE:
-        return "file";
     case CONFIG_SOURCE_ENV:
         return "env";
-    case CONFIG_SOURCE_ARGS:
-        return "args";
     case CONFIG_SOURCE_MEMORY:
         return "memory";
-    case CONFIG_SOURCE_NETWORK:
-        return "network";
-    case CONFIG_SOURCE_DATABASE:
-        return "database";
-    case CONFIG_SOURCE_DEFAULT:
-        return "default";
     default:
         return "unknown";
     }

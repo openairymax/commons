@@ -101,9 +101,8 @@ config_unified/
 
 ### 配置源类型
 
-`CONFIG_SOURCE_FILE`(0)、`ENV`(1)、`ARGS`(2)、`MEMORY`(3)、`NETWORK`(4)、
-`DATABASE`(5)、`DEFAULT`(6)。内置实现为环境变量与内存两类创建入口；
-其余类型为枚举保留位（默认值统一经 `config_schema_apply_defaults()` 施加），
+`CONFIG_SOURCE_ENV`(0)、`MEMORY`(1)。内置实现为环境变量与内存两类创建入口；
+默认值统一经 `config_schema_apply_defaults()` 施加，
 外部源按适配器接口实现即可接入。
 
 每个源携带属性 `config_source_attr_t`：`type`、`name`、`priority`（整型优先级，
@@ -113,7 +112,7 @@ config_unified/
 
 | 创建函数 | 选项要点 |
 |----------|----------|
-| `config_source_create_env` | `config_env_source_options_t{prefix, case_sensitive, separator, expand_vars}`；prefix 为可选前缀（NULL 表示不加前缀），separator 默认 `"_"`；env 源只读、不可 save |
+| `config_source_create_env` | `config_env_source_options_t{prefix, case_sensitive, separator}`；prefix 为可选前缀（NULL 表示不加前缀），separator 默认 `"_"`；env 源只读、不可 save |
 | `config_source_create_memory` | `config_memory_source_options_t{data, data_len, format}` |
 
 源对象统一接口：`config_source_load/save/has_changed/get_attributes/destroy`，
