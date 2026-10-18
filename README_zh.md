@@ -23,7 +23,7 @@
 （[daemons](https://atomgit.com/openairymax/daemons)）。
 
 commons **不依赖**任何其他 Airymax 模块：它位于依赖图的最底层，仅依赖
-操作系统、C11 编译器和可选外部库（pthreads、libyaml、cJSON）。
+操作系统、C11 编译器和可选外部库（pthreads、cJSON）。
 
 它编译为**单一静态库**（target `airy_common`），聚合 32 个内聚工具模块
 外加平台抽象层。include 路径以 `PUBLIC` 导出，消费者链接 `airy_common`
@@ -160,10 +160,10 @@ target_link_libraries(my_component PRIVATE airy_common)
 | `ENABLE_SANITIZERS` | `OFF` | ASan/UBSan 插桩 |
 | `AIRY_COMPLIANCE_STRICT` | `ON` | 通过 `utils/compliance/banned_functions.h` 投毒不安全 libc 函数（以 `-include` 全工程注入） |
 | `AIRY_HAS_CJSON` | 自动 | 由依赖检测设置；控制 cJSON 代码路径 |
-| `AIRY_HAS_YAML` | 自动 | 由依赖检测设置；控制 libyaml 代码路径 |
 
-cJSON 或 libyaml 不可用时 commons 自动降级：定义 `AIRY_NO_CJSON`，
-配置解析回退到内置的极简 YAML 解析器（`utils/config_unified/yaml_minimal`）。
+cJSON 不可用时 commons 自动降级：定义 `AIRY_NO_CJSON`，JSON 配置解析
+回退为错误上报；YAML 解析恒用内置极简 YAML 解析器
+（`utils/config_unified/yaml_minimal`）。
 
 **安装布局：** 静态库与公共头安装到 `include/agentrt/{platform,utils/*}`；
 IME 词典安装到 `share/agentrt/ime`。

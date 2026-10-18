@@ -341,10 +341,6 @@ target_link_libraries(airy_common
     PUBLIC airy_compile_defs
 )
 
-if(AIRY_HAS_YAML AND YAML_FOUND)
-    target_link_libraries(airy_common PRIVATE ${YAML_LIBRARIES})
-    target_include_directories(airy_common PRIVATE ${YAML_INCLUDE_DIRS})
-endif()
 if(AIRY_HAS_CJSON)
     if(cJSON_FOUND)
         target_link_libraries(airy_common PRIVATE cjson)

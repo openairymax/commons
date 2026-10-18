@@ -24,7 +24,7 @@ primitives ([atoms](https://atomgit.com/openairymax/atoms)), the security dome
 
 commons depends on **no** other Airymax module: it sits at the bottom of the
 dependency graph and only relies on the operating system, the C11 compiler,
-and optional external libraries (pthreads, libyaml, cJSON).
+and optional external libraries (pthreads, cJSON).
 
 It builds as a **single static library**, target `airy_common`, aggregating
 32 cohesive utility modules plus a platform abstraction layer. Include paths
@@ -166,10 +166,10 @@ All module include directories are exported as `PUBLIC`, so linking
 | `ENABLE_SANITIZERS` | `OFF` | ASan/UBSan instrumentation |
 | `AIRY_COMPLIANCE_STRICT` | `ON` | Poison unsafe libc functions via `utils/compliance/banned_functions.h` (injected project-wide with `-include`) |
 | `AIRY_HAS_CJSON` | auto | Set by dependency detection; gates cJSON code paths |
-| `AIRY_HAS_YAML` | auto | Set by dependency detection; gates libyaml code paths |
 
-When cJSON or libyaml is unavailable, commons degrades gracefully:
-`AIRY_NO_CJSON` is defined and configuration parsing falls back to the built-in
+When cJSON is unavailable, commons degrades gracefully:
+`AIRY_NO_CJSON` is defined and JSON configuration parsing falls back to
+error reporting; YAML parsing always uses the built-in
 minimal YAML parser (`utils/config_unified/yaml_minimal`).
 
 **Install layout:** the static library plus public headers under
