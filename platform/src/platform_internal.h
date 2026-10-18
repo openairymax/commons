@@ -41,6 +41,7 @@
 #include <bcrypt.h>
 #include <direct.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <io.h>
 #include <process.h>
 #include <sys/stat.h>

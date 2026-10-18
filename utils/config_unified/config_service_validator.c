@@ -15,7 +15,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#if !defined(_WIN32)
 #include <strings.h>
+#endif
 
 /* Unified base library compatibility layer */
 #include "airy_memory.h"
