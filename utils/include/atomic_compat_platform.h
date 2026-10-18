@@ -39,6 +39,11 @@
 
 #define AIRY_USE_STDATOMIC 1
 
+/* C11 分支的窄原语族是三平台统一公开接口（带位宽后缀，与 Windows/POSIX
+ * 分支同名同义），products 域直接消费。此处仅保留有真实调用者的成员；
+ * 零消费成员（exchange_32/64、CAS_64、8/16 全族）已删除，泛型风格调用
+ * 由系统 stdatomic 原语直接承担。 */
+
 static inline int atomic_load_32(volatile _Atomic int *ptr, memory_order order)
 {
     return (int)atomic_load_explicit(ptr, order);
@@ -57,10 +62,6 @@ static inline int atomic_fetch_add_32(volatile _Atomic int *ptr, int val, memory
 static inline int atomic_fetch_sub_32(volatile _Atomic int *ptr, int val, memory_order order)
 {
     return (int)atomic_fetch_sub_explicit(ptr, val, order);
-}
-static inline int atomic_exchange_32(volatile _Atomic int *ptr, int val, memory_order order)
-{
-    return (int)atomic_exchange_explicit(ptr, val, order);
 }
 static inline _Bool atomic_compare_exchange_strong_32(volatile _Atomic int *ptr, int *expected,
                                                       int desired, memory_order succ,
@@ -88,75 +89,6 @@ static inline int64_t atomic_fetch_sub_64(volatile _Atomic int64_t *ptr, int64_t
                                           memory_order order)
 {
     return (int64_t)atomic_fetch_sub_explicit(ptr, val, order);
-}
-static inline int64_t atomic_exchange_64(volatile _Atomic int64_t *ptr, int64_t val,
-                                         memory_order order)
-{
-    return (int64_t)atomic_exchange_explicit(ptr, val, order);
-}
-static inline _Bool atomic_compare_exchange_strong_64(volatile _Atomic int64_t *ptr,
-                                                      int64_t *expected, int64_t desired,
-                                                      memory_order succ, memory_order fail)
-{
-    return atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail);
-}
-static inline char atomic_load_8(volatile _Atomic char *ptr, memory_order order)
-{
-    return (char)atomic_load_explicit(ptr, order);
-}
-static inline void atomic_store_8(volatile _Atomic char *ptr, char val, memory_order order)
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow="
-    atomic_store_explicit(ptr, val, order);
-#pragma GCC diagnostic pop
-}
-static inline char atomic_fetch_add_8(volatile _Atomic char *ptr, char val, memory_order order)
-{
-    return (char)atomic_fetch_add_explicit(ptr, val, order);
-}
-static inline char atomic_fetch_sub_8(volatile _Atomic char *ptr, char val, memory_order order)
-{
-    return (char)atomic_fetch_sub_explicit(ptr, val, order);
-}
-static inline char atomic_exchange_8(volatile _Atomic char *ptr, char val, memory_order order)
-{
-    return (char)atomic_exchange_explicit(ptr, val, order);
-}
-static inline _Bool atomic_compare_exchange_strong_8(volatile _Atomic char *ptr, char *expected,
-                                                     char desired, memory_order succ,
-                                                     memory_order fail)
-{
-    return atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail);
-}
-static inline short atomic_load_16(volatile _Atomic short *ptr, memory_order order)
-{
-    return (short)atomic_load_explicit(ptr, order);
-}
-static inline void atomic_store_16(volatile _Atomic short *ptr, short val, memory_order order)
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstringop-overflow="
-    atomic_store_explicit(ptr, val, order);
-#pragma GCC diagnostic pop
-}
-static inline short atomic_fetch_add_16(volatile _Atomic short *ptr, short val, memory_order order)
-{
-    return (short)atomic_fetch_add_explicit(ptr, val, order);
-}
-static inline short atomic_fetch_sub_16(volatile _Atomic short *ptr, short val, memory_order order)
-{
-    return (short)atomic_fetch_sub_explicit(ptr, val, order);
-}
-static inline short atomic_exchange_16(volatile _Atomic short *ptr, short val, memory_order order)
-{
-    return (short)atomic_exchange_explicit(ptr, val, order);
-}
-static inline _Bool atomic_compare_exchange_strong_16(volatile _Atomic short *ptr, short *expected,
-                                                      short desired, memory_order succ,
-                                                      memory_order fail)
-{
-    return atomic_compare_exchange_strong_explicit(ptr, expected, desired, succ, fail);
 }
 
 static inline void *atomic_load_ptr(_Atomic(void *) *ptr, memory_order order)
