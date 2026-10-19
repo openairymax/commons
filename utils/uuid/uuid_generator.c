@@ -45,7 +45,8 @@ airy_uuid_error_t airy_uuid_init(void)
     if (atomic_compare_exchange_strong_explicit(&g_uuid_initialized, &expected, 1,
                                                 memory_order_acq_rel, memory_order_relaxed)) {
 #if defined(_WIN32) || defined(_WIN64)
-        RPC_STATUS status = UuidCreateSequential(NULL);
+        UUID probe;
+        RPC_STATUS status = UuidCreateSequential(&probe);
         if (status != RPC_S_OK && status != RPC_S_UUID_LOCAL_ONLY) {
             atomic_store_explicit(&g_uuid_initialized, 0, memory_order_release);
             return AIRY_UUID_EUNAVAIL;
