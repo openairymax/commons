@@ -290,7 +290,11 @@ int airy_io_mkdir_p(const char *path, int mode)
 #ifdef _WIN32
     size_t start_pos = 0;
     if (len >= 2 && path_copy[1] == ':') {
-        start_pos = 2;
+        /* Start past "X:\": the bare "X:" drive-root segment is not a
+         * creatable path and its stat resolves via the per-drive CWD. */
+        start_pos = (len >= 3 && (path_copy[2] == '/' || path_copy[2] == '\\'))
+                        ? 3
+                        : 2;
     }
 
     for (size_t i = start_pos; i < len; i++) {
@@ -316,11 +320,11 @@ int airy_io_mkdir_p(const char *path, int mode)
 
             if (stat(path_copy, &st) == -1) {
 #ifdef _WIN32
-                if (_mkdir(path_copy) != 0) {
+                if (_mkdir(path_copy) != 0 && errno != EEXIST) {
                     return AIRY_EINVAL;
                 }
 #else
-                if (mkdir(path_copy, mode) != 0) {
+                if (mkdir(path_copy, mode) != 0 && errno != EEXIST) {
                     return AIRY_EINVAL;
                 }
 #endif
@@ -333,10 +337,18 @@ int airy_io_mkdir_p(const char *path, int mode)
     }
 
 #ifdef _WIN32
-    return _mkdir(path_copy) == 0 ? 0 : -1;
+    if (_mkdir(path_copy) == 0) {
+        return 0;
+    }
 #else
-    return mkdir(path_copy, mode) == 0 ? 0 : -1;
+    if (mkdir(path_copy, mode) == 0) {
+        return 0;
+    }
 #endif
+    if (errno == EEXIST && stat(path_copy, &st) == 0 && S_ISDIR(st.st_mode)) {
+        return 0;
+    }
+    return -1;
 }
 
 /**
