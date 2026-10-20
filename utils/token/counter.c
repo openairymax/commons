@@ -64,7 +64,7 @@ static int family_lookup(const char *name, airy_token_model_t *out)
     return -1;
 }
 
-static size_t count_tokens_by_family(airy_token_model_t type, const char *text,
+static size_t count_tok_family(airy_token_model_t type, const char *text,
                                      size_t length)
 {
     airy_token_config_t config = AIRY_TOKEN_CONFIG_DEFAULT;
@@ -137,7 +137,7 @@ size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text)
 
     airy_mtx_lock(&counter->mutex);
 
-    size_t token_count = count_tokens_by_family(counter->type, text, length);
+    size_t token_count = count_tok_family(counter->type, text, length);
     counter->total_count += token_count;
     counter->request_count++;
 
@@ -159,7 +159,7 @@ size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char 
     for (size_t i = 0; i < count; i++) {
         if (texts[i]) {
             size_t len = strlen(texts[i]);
-            out_counts[i] = count_tokens_by_family(counter->type, texts[i], len);
+            out_counts[i] = count_tok_family(counter->type, texts[i], len);
             total += out_counts[i];
         } else {
             out_counts[i] = 0;
@@ -188,7 +188,7 @@ char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *tex
 
     airy_mtx_lock(&counter->mutex);
 
-    size_t current_tokens = count_tokens_by_family(counter->type, text, length);
+    size_t current_tokens = count_tok_family(counter->type, text, length);
 
     if (current_tokens <= max_tokens) {
         airy_mtx_unlock(&counter->mutex);
