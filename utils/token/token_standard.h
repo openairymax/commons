@@ -27,14 +27,17 @@ extern "C" {
 #define AIRY_TOKEN_ALGORITHM_VERSION "1.0"
 
 /**
- * @brief Token counting model types.
+ * @brief Tokenizer algorithm families.
+ *
+ * Named by algorithm, never by product: the counting coefficients follow
+ * the tokenizer's segmentation behaviour, so a new endpoint sharing the
+ * same algorithm needs no code change here.
  */
 typedef enum {
-    AIRY_TOKEN_MODEL_GENERIC = 0,
-    AIRY_TOKEN_MODEL_GPT4,
-    AIRY_TOKEN_MODEL_GPT35,
-    AIRY_TOKEN_MODEL_CLAUDE,
-    AIRY_TOKEN_MODEL_LLAMA,
+    AIRY_TOKEN_MODEL_GENERIC = 0, /**< language-ratio heuristic */
+    AIRY_TOKEN_MODEL_BPE,         /**< byte-level BPE: latin ~4 chars/token */
+    AIRY_TOKEN_MODEL_SPM,         /**< SentencePiece: CJK ~2 chars/token */
+    AIRY_TOKEN_MODEL_UNIFORM,     /**< flat density ~3.5 chars/token */
     AIRY_TOKEN_MODEL_CUSTOM
 } airy_token_model_t;
 
@@ -57,10 +60,10 @@ typedef struct {
 #define AIRY_TOKEN_FLAG_INCLUDE_BOM 0x04
 
 /**
- * @brief Default token counting model name.
+ * @brief Default tokenizer family name.
  *
- * Used when the caller has not declared an actual model; the name feeds the
- * model→algorithm mapping in count_tokens_by_model() (generic = no scaling).
+ * Used when the caller has not declared a tokenizer family; maps to
+ * AIRY_TOKEN_MODEL_GENERIC (language-ratio heuristic, no family scaling).
  */
 #define AIRY_TOKEN_MODEL_NAME_DEFAULT "generic"
 
