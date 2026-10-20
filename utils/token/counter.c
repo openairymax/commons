@@ -7,7 +7,7 @@
  *
  * Implements token counting and budget management:
  * - Character-level heuristic approximation (word/CJK/punctuation tokenization)
- * - Model-type coefficient adjustment (GPT-4/GPT-3.5/Claude/Llama)
+ * - Tokenizer family coefficient adjustment (generic/bpe/spm/uniform)
  * - Batch counting and truncation
  * - Thread-safe counter operations
  *
@@ -29,43 +29,65 @@
 #include "../string/string_compat.h"
 #include "error.h"
 
-#define MAX_MODEL_NAME 64
+#define MAX_FAMILY_NAME 16
 
 /**
  * @brief Token counter internal structure.
  */
 struct airy_token_counter {
-    char model_name[MAX_MODEL_NAME];
+    char family[MAX_FAMILY_NAME];
+    airy_token_model_t type;
     airy_mtx_t mutex;
     size_t total_count;
     uint64_t request_count;
     size_t max_token_length;
 };
 
-static size_t count_tokens_by_model(const char *model_name, const char *text, size_t length)
+static int family_lookup(const char *name, airy_token_model_t *out)
+{
+    static const struct {
+        const char *name;
+        airy_token_model_t type;
+    } table[] = {
+        {"generic", AIRY_TOKEN_MODEL_GENERIC},
+        {"bpe", AIRY_TOKEN_MODEL_BPE},
+        {"spm", AIRY_TOKEN_MODEL_SPM},
+        {"uniform", AIRY_TOKEN_MODEL_UNIFORM},
+    };
+
+    for (size_t i = 0; i < sizeof(table) / sizeof(table[0]); i++) {
+        if (strcmp(name, table[i].name) == 0) {
+            *out = table[i].type;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static size_t count_tokens_by_family(airy_token_model_t type, const char *text,
+                                     size_t length)
 {
     airy_token_config_t config = AIRY_TOKEN_CONFIG_DEFAULT;
 
-    if (model_name) {
-        if (strstr(model_name, "gpt-4") || strstr(model_name, "gpt-4o")) {
-            config.model_type = AIRY_TOKEN_MODEL_GPT4;
-        } else if (strstr(model_name, "gpt-35") || strstr(model_name, "gpt-3.5")) {
-            config.model_type = AIRY_TOKEN_MODEL_GPT35;
-        } else if (strstr(model_name, "claude")) {
-            config.model_type = AIRY_TOKEN_MODEL_CLAUDE;
-        } else if (strstr(model_name, "llama") || strstr(model_name, "vicuna") ||
-                   strstr(model_name, "alpaca")) {
-            config.model_type = AIRY_TOKEN_MODEL_LLAMA;
-        }
+    config.model_type = type;
+    /* 族系数只在 ACCURATE 路径生效（ACCURATE/ESTIMATE 互斥）；声明了具体族
+     * 就切到 ACCURATE，未声明族保持启发式估计。 */
+    if (type != AIRY_TOKEN_MODEL_GENERIC) {
+        config.flags = AIRY_TOKEN_FLAG_ACCURATE;
     }
 
     return airy_token_standard_count(text, length, &config);
 }
 
-airy_token_counter_t *airy_token_counter_create(const char *model_name)
+airy_token_counter_t *airy_token_counter_create(const char *family_name)
 {
-    if (!model_name) {
+    if (!family_name) {
         AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "null parameter");
+    }
+
+    airy_token_model_t type;
+    if (family_lookup(family_name, &type) != 0) {
+        AIRY_ERROR_NULL(AIRY_ERR_INVALID_PARAM, "unknown token family");
     }
 
     airy_token_counter_t *counter =
@@ -76,8 +98,9 @@ airy_token_counter_t *airy_token_counter_create(const char *model_name)
 
     AIRY_MEMSET(counter, 0, sizeof(airy_token_counter_t));
 
-    AIRY_STRNCPY_TERM(counter->model_name, model_name, MAX_MODEL_NAME);
-    counter->model_name[MAX_MODEL_NAME - 1] = '\0';
+    AIRY_STRNCPY_TERM(counter->family, family_name, MAX_FAMILY_NAME);
+    counter->family[MAX_FAMILY_NAME - 1] = '\0';
+    counter->type = type;
 
     if (airy_mtx_init(&counter->mutex) != 0) {
         AIRY_FREE(counter);
@@ -114,7 +137,7 @@ size_t airy_token_counter_count(airy_token_counter_t *counter, const char *text)
 
     airy_mtx_lock(&counter->mutex);
 
-    size_t token_count = count_tokens_by_model(counter->model_name, text, length);
+    size_t token_count = count_tokens_by_family(counter->type, text, length);
     counter->total_count += token_count;
     counter->request_count++;
 
@@ -136,7 +159,7 @@ size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char 
     for (size_t i = 0; i < count; i++) {
         if (texts[i]) {
             size_t len = strlen(texts[i]);
-            out_counts[i] = count_tokens_by_model(counter->model_name, texts[i], len);
+            out_counts[i] = count_tokens_by_family(counter->type, texts[i], len);
             total += out_counts[i];
         } else {
             out_counts[i] = 0;
@@ -165,7 +188,7 @@ char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *tex
 
     airy_mtx_lock(&counter->mutex);
 
-    size_t current_tokens = count_tokens_by_model(counter->model_name, text, length);
+    size_t current_tokens = count_tokens_by_family(counter->type, text, length);
 
     if (current_tokens <= max_tokens) {
         airy_mtx_unlock(&counter->mutex);

@@ -187,16 +187,15 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
 
     if (cfg->flags & AIRY_TOKEN_FLAG_ACCURATE) {
         switch (cfg->model_type) {
-        case AIRY_TOKEN_MODEL_GPT4:
-        case AIRY_TOKEN_MODEL_GPT35:
+        case AIRY_TOKEN_MODEL_BPE:
             token_count = (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f);
             break;
 
-        case AIRY_TOKEN_MODEL_CLAUDE:
+        case AIRY_TOKEN_MODEL_UNIFORM:
             token_count = (size_t)(total_chars / 3.5f);
             break;
 
-        case AIRY_TOKEN_MODEL_LLAMA:
+        case AIRY_TOKEN_MODEL_SPM:
             token_count = (size_t)(cjk_chars / 2.0f + (total_chars - cjk_chars) / 4.0f);
             break;
 

@@ -39,10 +39,11 @@ typedef struct airy_token_counter airy_token_counter_t;
 
 /**
  * @brief Create a token counter.
- * @param model_name Model name (e.g. "gpt-4")
+ * @param family_name Tokenizer family: generic | bpe | spm | uniform
+ *                    (unknown names are rejected, never silently mapped)
  * @return Counter handle, NULL on failure
  */
-airy_token_counter_t *airy_token_counter_create(const char *model_name);
+airy_token_counter_t *airy_token_counter_create(const char *family_name);
 
 /**
  * @brief Destroy a counter.
