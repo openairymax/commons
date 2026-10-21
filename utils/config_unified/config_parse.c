@@ -15,82 +15,124 @@
 
 /* ==================== INI parsing ==================== */
 
+/*
+ * 注释行与节头行都要跳到下一行起点，原实现在两处各写了一遍同样的四
+ * 行游标推进；统一到这里后两处只保留一次语义，且 `[` 未闭合时可安全
+ * 返回 end。
+ */
+static const char *ini_eol(const char *p, const char *end)
+{
+    while (p < end && *p != '\n')
+        p++;
+    return (p < end) ? p + 1 : p;
+}
+
+static const char *ini_blank(const char *p, const char *end)
+{
+    while (p < end && (*p == ' ' || *p == '\t'))
+        p++;
+    return p;
+}
+
+/* `[name]`：未闭合时取到行尾，超长按 cap 截断；返回节头之后的下一行。 */
+static const char *ini_sect(const char *p, const char *end, char *sect, size_t cap)
+{
+    const char *close = p + 1;
+    size_t len;
+
+    while (close < end && *close != ']')
+        close++;
+    len = (size_t)(close - p - 1);
+    if (len >= cap)
+        len = cap - 1;
+    __builtin_memcpy(sect, p + 1, len);
+    sect[len] = '\0';
+    return ini_eol(close, end);
+}
+
+/* 定位行内首个 '='（只认第一个），同时返回行尾便于调用方推进游标。 */
+static const char *ini_split(const char *line, const char *end, const char **eq)
+{
+    const char *p = line;
+
+    *eq = NULL;
+    while (p < end && *p != '\n') {
+        if (*p == '=' && !*eq)
+            *eq = p;
+        p++;
+    }
+    return p;
+}
+
+/*
+ * 单条 key=value 落库：值侧只剥离行尾的 CR/LF/空格，键侧只剥离尾部的
+ * 空格与制表符，前导空白上游已跳过；带节时键前缀为 "节."，超长键按原
+ * 语义丢弃而不是截断成另一个有效键。
+ */
+static void ini_pair(const char *line, const char *eq, const char *eol,
+                     const char *sect, config_context_t *ctx)
+{
+    char key[512];
+    char val[1024];
+    size_t klen = (size_t)(eq - line);
+    size_t vlen;
+    const char *vend = eol;
+
+    while (vend > eq + 1 && (vend[-1] == '\r' || vend[-1] == '\n' || vend[-1] == ' '))
+        vend--;
+    while (klen > 0 && (line[klen - 1] == ' ' || line[klen - 1] == '\t'))
+        klen--;
+    if (sect[0]) {
+        size_t off = strlen(sect) + 1;
+
+        snprintf(key, sizeof(key), "%s.", sect);
+        if (off + klen < sizeof(key)) {
+            __builtin_memcpy(key + off, line, klen);
+            key[off + klen] = '\0';
+        }
+    } else {
+        if (klen >= sizeof(key))
+            klen = sizeof(key) - 1;
+        __builtin_memcpy(key, line, klen);
+        key[klen] = '\0';
+    }
+    vlen = (size_t)(vend - eq - 1);
+    if (vlen >= sizeof(val))
+        vlen = sizeof(val) - 1;
+    __builtin_memcpy(val, eq + 1, vlen);
+    val[vlen] = '\0';
+    config_value_t *cv = config_value_create_string(val);
+    if (cv)
+        config_context_set(ctx, key, cv);
+}
+
 static config_error_t parse_ini_simple(const char *data, size_t data_len, config_context_t *ctx)
 {
-    if (!data || data_len == 0 || !ctx)
-        return CONFIG_ERROR_INVALID_ARG;
     char section[256] = "";
     const char *p = data;
-    const char *end = data + data_len;
+    const char *end;
+    const char *eq;
+
+    if (!data || data_len == 0 || !ctx)
+        return CONFIG_ERROR_INVALID_ARG;
+    end = data + data_len;
     while (p < end) {
-        while (p < end && (*p == ' ' || *p == '\t'))
-            p++;
+        p = ini_blank(p, end);
         if (p >= end)
             break;
         if (*p == '#' || *p == ';') {
-            while (p < end && *p != '\n')
-                p++;
-            if (p < end)
-                p++;
+            p = ini_eol(p, end);
             continue;
         }
         if (*p == '[') {
-            p++;
-            const char *sec_start = p;
-            while (p < end && *p != ']')
-                p++;
-            size_t sec_len = (size_t)(p - sec_start);
-            if (sec_len >= sizeof(section))
-                sec_len = sizeof(section) - 1;
-            __builtin_memcpy(section, sec_start, sec_len);
-            section[sec_len] = '\0';
-            while (p < end && *p != '\n')
-                p++;
-            if (p < end)
-                p++;
+            p = ini_sect(p, end, section, sizeof(section));
             continue;
         }
-        const char *line_start = p;
-        const char *eq = NULL;
-        while (p < end && *p != '\n') {
-            if (*p == '=' && !eq)
-                eq = p;
-            p++;
-        }
-        if (eq && eq > line_start) {
-            size_t key_len = (size_t)(eq - line_start);
-            char key_buf[512];
-            const char *val_start = eq + 1;
-            const char *val_end = p;
-            while (val_end > val_start &&
-                   (*(val_end - 1) == '\r' || *(val_end - 1) == '\n' || *(val_end - 1) == ' '))
-                val_end--;
-            size_t val_len = (size_t)(val_end - val_start);
-            while (key_len > 0 &&
-                   (*(line_start + key_len - 1) == ' ' || *(line_start + key_len - 1) == '\t'))
-                key_len--;
-            if (section[0]) {
-                snprintf(key_buf, sizeof(key_buf), "%s.", section);
-                size_t sl = strlen(key_buf);
-                if (sl + key_len < sizeof(key_buf)) {
-                    __builtin_memcpy(key_buf + sl, line_start, key_len);
-                    key_buf[sl + key_len] = '\0';
-                }
-            } else {
-                if (key_len >= sizeof(key_buf))
-                    key_len = sizeof(key_buf) - 1;
-                __builtin_memcpy(key_buf, line_start, key_len);
-                key_buf[key_len] = '\0';
-            }
-            char val_buf[1024];
-            if (val_len >= sizeof(val_buf))
-                val_len = sizeof(val_buf) - 1;
-            __builtin_memcpy(val_buf, val_start, val_len);
-            val_buf[val_len] = '\0';
-            config_value_t *cv = config_value_create_string(val_buf);
-            if (cv)
-                config_context_set(ctx, key_buf, cv);
-        }
+        const char *line = p;
+
+        p = ini_split(line, end, &eq);
+        if (eq && eq > line)
+            ini_pair(line, eq, p, section, ctx);
         if (p < end)
             p++;
     }
