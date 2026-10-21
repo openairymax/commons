@@ -510,6 +510,110 @@ static int airy_req_grow(char **buf, size_t *cap, size_t used,
     return 0;
 }
 
+/* 统一失败出口：置静态原因串（err 可空）、释放半成品缓冲并返回 NULL，
+ * 避免读帧路径上多处手写清理各自漂移。 */
+static char *airy_req_fail(char *buf, const char **err, const char *msg)
+{
+    if (err)
+        *err = msg;
+    AIRY_FREE(buf);
+    return NULL;
+}
+
+/* 累计缓冲是否已构成完整 JSON 帧（客户端等待应答期间不断链，无 EOF 可用）。 */
+static int airy_req_ready(const char *buf)
+{
+    cJSON *probe = cJSON_Parse(buf);
+    if (!probe)
+        return 0;
+    cJSON_Delete(probe);
+    return 1;
+}
+
+#if AIRY_PLATFORM_POSIX
+/* 首字节等待：1 可读、0 超时、-1 出错。 */
+static int airy_req_first(airy_sock_t fd, int timeout_ms)
+{
+    struct pollfd pfd;
+    pfd.fd = (int)fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    int pr = poll(&pfd, 1, timeout_ms);
+    if (pr <= 0)
+        return pr;
+    return (pfd.revents & POLLIN) ? 1 : -1;
+}
+
+/* 单次 recv：有数据则追加并补 NUL；瞬时无数据返回 0，硬错误返回 -1。 */
+static int airy_req_recv(airy_sock_t fd, char *buf, size_t cap, size_t *used)
+{
+    ssize_t n = airy_sock_recv(fd, buf + *used, cap - *used - 1);
+
+    if (n < 0) {
+        if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+            return 0;
+        return -1;
+    }
+    if (n > 0) {
+        *used += (size_t)n;
+        buf[*used] = '\0';
+    }
+    return 0;
+}
+
+/* 读预算内的切片等待：1 可读、0 已消费本轮切片（含 EINTR）、-1 断链或出错。 */
+static int airy_req_wait(airy_sock_t fd, uint32_t left, uint32_t *elapsed)
+{
+    uint32_t slice = left < AIRY_DAEMON_REQ_SLICE_MS ? left : AIRY_DAEMON_REQ_SLICE_MS;
+    struct pollfd pfd;
+    pfd.fd = (int)fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    int pr = poll(&pfd, 1, (int)slice);
+    if (pr < 0)
+        return (errno == EINTR) ? 0 : -1;
+    if (pr == 0) {
+        *elapsed += slice;
+        return 0;
+    }
+    if (!(pfd.revents & POLLIN))
+        return -1;
+    *elapsed += 1;
+    return 1;
+}
+#else
+/* Windows 无 poll：以 SLICE_MS 切片 select 轮询，语义对齐 POSIX 切片。 */
+static int airy_req_recv(airy_sock_t fd, char *buf, size_t cap, size_t *used)
+{
+    ssize_t n = airy_sock_recv(fd, buf + *used, cap - *used - 1);
+
+    if (n <= 0)
+        return 0;
+    *used += (size_t)n;
+    buf[*used] = '\0';
+    return 0;
+}
+
+static int airy_req_wait(airy_sock_t fd, uint32_t left, uint32_t *elapsed)
+{
+    fd_set rfds;
+    struct timeval tv;
+    int pr;
+
+    (void)left;
+    FD_ZERO(&rfds);
+    FD_SET((SOCKET)fd, &rfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = AIRY_DAEMON_REQ_SLICE_MS * 1000;
+    pr = select(0, &rfds, NULL, NULL, &tv);
+    if (pr < 0)
+        return -1;
+    /* 可读但 recv 无进展时同样计入预算，避免空转（原实现只累计超时轮）。 */
+    *elapsed += (pr == 0) ? AIRY_DAEMON_REQ_SLICE_MS : 1;
+    return (pr == 0) ? 0 : 1;
+}
+#endif
+
 char *airy_daemon_read_request(airy_sock_t client_fd, size_t *out_len, const char **err)
 {
     if (out_len)
@@ -520,157 +624,36 @@ char *airy_daemon_read_request(airy_sock_t client_fd, size_t *out_len, const cha
         return NULL;
 
 #if AIRY_PLATFORM_POSIX
-    /* Wait for the first byte (5 s). The fd accepted by the event driver may
-     * not have data yet; airy_sock_recv is MSG_DONTWAIT, so an immediate recv
-     * can return 0 on EAGAIN, be mistaken for a failed connection and closed
-     * (SIGPIPE / lost request race). */
-    {
-        struct pollfd pfd;
-        pfd.fd = (int)client_fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-        int pr = poll(&pfd, 1, (int)airy_daemon_req_timeout_ms());
-        if (pr <= 0 || !(pfd.revents & POLLIN)) {
-            if (err)
-                *err = "Request read timeout";
-            return NULL;
-        }
-    }
-
-    size_t cap = AIRY_DAEMON_REQ_INITIAL_CAP;
-    char *buf = (char *)AIRY_MALLOC(cap);
-    if (!buf) {
-        if (err)
-            *err = "Out of memory";
-        return NULL;
-    }
-    size_t used = 0;
-    uint32_t elapsed = 0;
-    uint32_t req_budget = airy_daemon_req_timeout_ms();
-
-    for (;;) {
-        if (airy_req_grow(&buf, &cap, used, err) != 0)
-            return NULL;
-
-        ssize_t n = airy_sock_recv(client_fd, buf + used, cap - used - 1);
-        if (n < 0) {
-            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
-                /* no data at this instant: fall through to the poll below */
-            } else {
-                if (err)
-                    *err = "Request read error";
-                AIRY_FREE(buf);
-                return NULL;
-            }
-        } else if (n > 0) {
-            used += (size_t)n;
-            buf[used] = '\0';
-        }
-
-        /* A parseable frame ends the request (the client keeps the connection
-         * open while waiting for the reply, so there is no EOF to rely on). */
-        if (used > 0) {
-            cJSON *probe = cJSON_Parse(buf);
-            if (probe) {
-                cJSON_Delete(probe);
-                break;
-            }
-        }
-
-        if (elapsed >= req_budget) {
-            /* Read budget exhausted without a complete frame. */
-            if (err)
-                *err = "Request read timeout";
-            AIRY_FREE(buf);
-            return NULL;
-        }
-        struct pollfd pfd;
-        pfd.fd = (int)client_fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-        uint32_t remain = (req_budget - elapsed) < AIRY_DAEMON_REQ_SLICE_MS
-                              ? (req_budget - elapsed)
-                              : AIRY_DAEMON_REQ_SLICE_MS;
-        int pr = poll(&pfd, 1, (int)remain);
-        if (pr < 0) {
-            if (errno == EINTR)
-                continue;
-            if (err)
-                *err = "Request read error";
-            AIRY_FREE(buf);
-            return NULL;
-        }
-        if (pr == 0) {
-            elapsed += remain;
-            continue;
-        }
-        if (!(pfd.revents & POLLIN)) {
-            /* Hangup before a complete frame. */
-            if (err)
-                *err = "Request read error";
-            AIRY_FREE(buf);
-            return NULL;
-        }
-        elapsed += 1;
-    }
-
-    *out_len = used;
-    return buf;
-#else
-    /* Windows fallback：与 POSIX 主路径相同的循环读 + JSON 完整性探测，
-     * 消除历史单次 recv 的 64 KiB 截断（llm.complete 携带大 tool 结果时
-     * 会超限被截成 JSON 解析错误）。命名管道/TCP 均按完整帧语义读取。 */
-    char *buf = (char *)AIRY_MALLOC(AIRY_DAEMON_REQ_INITIAL_CAP);
-    if (!buf) {
-        if (err)
-            *err = "Out of memory";
-        return NULL;
-    }
-    size_t cap = AIRY_DAEMON_REQ_INITIAL_CAP;
-    size_t used = 0;
-    uint32_t elapsed = 0;
-
-    for (;;) {
-        if (airy_req_grow(&buf, &cap, used, err) != 0)
-            return NULL;
-
-        ssize_t n = airy_sock_recv(client_fd, buf + used, cap - used - 1);
-        if (n > 0) {
-            used += (size_t)n;
-            buf[used] = '\0';
-            cJSON *probe = cJSON_Parse(buf);
-            if (probe) {
-                cJSON_Delete(probe);
-                break;
-            }
-            continue;
-        }
-
-        if (elapsed >= AIRY_DAEMON_REQ_FIRST_POLL_MS) {
-            if (err)
-                *err = "Request read timeout";
-            AIRY_FREE(buf);
-            return NULL;
-        }
-        /* Windows 无 poll：以 50ms select 切片刻轮询（等价 POSIX 切片） */
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET((SOCKET)client_fd, &rfds);
-        struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = AIRY_DAEMON_REQ_SLICE_MS * 1000;
-        int pr = select(0, &rfds, NULL, NULL, &tv);
-        if (pr < 0) {
-            if (err)
-                *err = "Request read error";
-            AIRY_FREE(buf);
-            return NULL;
-        }
-        if (pr == 0)
-            elapsed += AIRY_DAEMON_REQ_SLICE_MS;
-    }
-
-    *out_len = used;
-    return buf;
+    /* 事件驱动交来的 fd 未必已有数据，airy_sock_recv 为 MSG_DONTWAIT，
+     * 立即 recv 的 EAGAIN 会被误判为断链（SIGPIPE / 请求丢失竞态）。 */
+    if (airy_req_first(client_fd, (int)airy_daemon_req_timeout_ms()) != 1)
+        return airy_req_fail(NULL, err, "Request read timeout");
 #endif
+
+    /* 两平台共用「循环读 + JSON 完整性探测」：单次 recv 会在 64 KiB 处
+     * 截断大 tool 结果，命名管道/TCP 均须按完整帧语义读取。 */
+    uint32_t budget = airy_daemon_req_timeout_ms();
+    uint32_t elapsed = 0;
+    size_t cap = AIRY_DAEMON_REQ_INITIAL_CAP;
+    size_t used = 0;
+    char *buf = (char *)AIRY_MALLOC(cap);
+
+    if (!buf)
+        return airy_req_fail(NULL, err, "Out of memory");
+
+    for (;;) {
+        if (airy_req_grow(&buf, &cap, used, err) != 0)
+            return NULL;
+        if (airy_req_recv(client_fd, buf, cap, &used) != 0)
+            return airy_req_fail(buf, err, "Request read error");
+        if (used > 0 && airy_req_ready(buf))
+            break;
+        if (elapsed >= budget)
+            return airy_req_fail(buf, err, "Request read timeout");
+        if (airy_req_wait(client_fd, budget - elapsed, &elapsed) < 0)
+            return airy_req_fail(buf, err, "Request read error");
+    }
+
+    *out_len = used;
+    return buf;
 }
