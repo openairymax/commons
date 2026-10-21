@@ -35,6 +35,26 @@ static int spawn_prep(const char *exe, char *const argv[], airy_process_info_t *
     return 0;
 }
 
+/* 捕获缓冲的唯一写入点：尾部始终留一个 '\0'，超界按剩余空间截断。
+ * 两个平台分支原先各自内联了同一段越界计算，缩容时极易一处改、另一处漏。 */
+static size_t cap_copy(char *dst, size_t cap, size_t off, const char *src, size_t n)
+{
+    if (!dst || cap == 0 || off + 1 >= cap)
+        return off;
+    if (n > cap - 1 - off)
+        n = cap - 1 - off;
+    __builtin_memcpy(dst + off, src, n);
+    return off + n;
+}
+
+/* 捕获缓冲的收尾写点：off=0 即清空，其余为正文尾部定界。判空集中在这里，
+ * 两平台分支的缓冲生命周期形状因此完全一致。 */
+static void cap_seal(char *output, size_t output_size, size_t off)
+{
+    if (output && output_size > 0)
+        output[off] = '\0';
+}
+
 #if AIRY_PLATFORM_WINDOWS
 
 /* Build a quoted Windows command line from argv (argv[0] is skipped; the
@@ -196,31 +216,74 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
+/* 摘取输出：drain=0 只取当前就绪的一段（轮询路径），drain=1 阻塞读到 EOF
+ * 或缓冲填满（子进程退出后的排空路径）。 */
+static size_t win_pull(HANDLE pipe, char *output, size_t output_size, size_t off, int drain)
+{
+    char buf[4096];
+    DWORD avail = 0;
+    DWORD got;
+
+    if (!output || output_size == 0)
+        return off;
+    for (;;) {
+        if (!drain && (!PeekNamedPipe(pipe, NULL, 0, NULL, &avail, NULL) || avail == 0))
+            return off;
+        if (!ReadFile(pipe, buf, sizeof(buf) - 1, &got, NULL) || got == 0)
+            return off;
+        off = cap_copy(output, output_size, off, buf, (size_t)got);
+        if (!drain || off + 1 >= output_size)
+            return off;
+    }
+}
+
+/* 一轮采样：先判取消与超时（两者都直接终止进程并结束循环，残留数据不再
+ * 回收），再摘取就绪输出，最后以 50ms 粒度探测退出。 */
+static int win_cycle(HANDLE proc, HANDLE pipe, airy_cancel_token_t *tok,
+                     uint64_t deadline_ms, int *timed_out, int *canceled,
+                     char *output, size_t output_size, size_t *off)
+{
+    if (tok && airy_cancel_token_is_canceled(tok)) {
+        *canceled = 1;
+        TerminateProcess(proc, 1);
+        return 1;
+    }
+    if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
+        *timed_out = 1;
+        TerminateProcess(proc, 1);
+        return 1;
+    }
+    *off = win_pull(pipe, output, output_size, *off, 0);
+    return (WaitForSingleObject(proc, 50) == WAIT_OBJECT_0) ? 1 : 0;
+}
+
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
                                 uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
 {
     (void)envp;
-    /* use CreateProcess + anonymous pipes instead of _popen
-     * (eliminates cmd.exe injection risk). CreateProcess parses the command
-     * line directly without a shell, aligning behavior with POSIX
-     * fork/execvp. Consistent with the win_run_command secure pattern in
-     * market_service_impl.c. */
     char cmdline[4096];
-    win_build_cmdline(executable, argv, cmdline, sizeof(cmdline));
-
     SECURITY_ATTRIBUTES sa;
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    HANDLE pipe_read = NULL;
+    HANDLE pipe_write = NULL;
+    size_t offset = 0;
+    uint64_t deadline_ms;
+    int timed_out = 0;
+    int canceled = 0;
+    DWORD exit_code = 1;
+
+    /* 用 CreateProcess + 匿名管道替代 _popen：命令行不经 cmd.exe 解释，
+     * 与 POSIX fork/execvp 的行为对齐，也不存在 shell 注入面。 */
+    win_build_cmdline(executable, argv, cmdline, sizeof(cmdline));
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = NULL;
     sa.bInheritHandle = TRUE;
-    HANDLE pipe_read = NULL, pipe_write = NULL;
-    if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0)) {
+    if (!CreatePipe(&pipe_read, &pipe_write, &sa, 0))
         return AIRY_ERR_IO;
-    }
     SetHandleInformation(pipe_read, HANDLE_FLAG_INHERIT, 0);
 
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
@@ -229,74 +292,24 @@ int airy_process_run_capture_ex(const char *executable, char *const argv[], char
     si.hStdInput = NULL;
     ZeroMemory(&pi, sizeof(pi));
 
-    /* 与 airy_process_start 对齐：CREATE_NO_WINDOW 避免拉起控制台程序时闪现窗口 */
-    BOOL ok = CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
-    CloseHandle(pipe_write);
-    if (!ok) {
+    /* CREATE_NO_WINDOW 与 airy_process_start 对齐，避免拉起控制台程序时闪窗 */
+    if (!CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CloseHandle(pipe_write);
         CloseHandle(pipe_read);
         return AIRY_ERR_EXEC_FAIL;
     }
+    CloseHandle(pipe_write);
 
-    size_t offset = 0;
-    if (output && output_size > 0)
-        output[0] = '\0';
+    cap_seal(output, output_size, 0);
+    deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
+    while (!win_cycle(pi.hProcess, pipe_read, cancel_token, deadline_ms,
+                      &timed_out, &canceled, output, output_size, &offset))
+        ;
+    if (!canceled && !timed_out)
+        offset = win_pull(pipe_read, output, output_size, offset, 1);
+    cap_seal(output, output_size, offset);
 
-    /* 超时/取消失效修复（对齐 POSIX 分支语义）：50ms 粒度轮询等待 +
-     * 定期排空管道，deadline/cancel 均生效，进程超时/取消后终止。 */
-    uint64_t deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
-    int timed_out = 0;
-    int canceled = 0;
-
-    for (;;) {
-        if (cancel_token && airy_cancel_token_is_canceled(cancel_token)) {
-            canceled = 1;
-            TerminateProcess(pi.hProcess, 1);
-            break;
-        }
-        if (deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
-            timed_out = 1;
-            TerminateProcess(pi.hProcess, 1);
-            break;
-        }
-        if (output && output_size > 0) {
-            char buf[4096];
-            DWORD avail = 0;
-            if (PeekNamedPipe(pipe_read, NULL, 0, NULL, &avail, NULL) && avail > 0) {
-                DWORD bytes_read = 0;
-                if (ReadFile(pipe_read, buf, sizeof(buf) - 1, &bytes_read, NULL) &&
-                    bytes_read > 0) {
-                    size_t len = (size_t)bytes_read;
-                    if (offset + len >= output_size)
-                        len = output_size - 1 - offset;
-                    __builtin_memcpy(output + offset, buf, len);
-                    offset += len;
-                    output[offset] = '\0';
-                }
-            }
-        }
-        if (WaitForSingleObject(pi.hProcess, 50) == WAIT_OBJECT_0)
-            break;
-    }
-
-    /* 进程已终止后排空残留输出 */
-    if (output && output_size > 0 && !canceled && !timed_out) {
-        char buf[4096];
-        DWORD bytes_read;
-        while (ReadFile(pipe_read, buf, sizeof(buf) - 1, &bytes_read, NULL) && bytes_read > 0) {
-            size_t len = (size_t)bytes_read;
-            if (offset + len >= output_size)
-                len = output_size - 1 - offset;
-            __builtin_memcpy(output + offset, buf, len);
-            offset += len;
-            if (offset + 1 >= output_size)
-                break;
-        }
-        output[offset] = '\0';
-    }
-
-    DWORD exit_code = 1;
     GetExitCodeProcess(pi.hProcess, &exit_code);
-
     CloseHandle(pipe_read);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
@@ -575,132 +588,132 @@ void airy_process_close_pipes(airy_process_info_t *proc)
     }
 }
 
-// Cancellation via short select polling (cancel_token.h has no unregister
-// interface yet, avoiding a dangling stack ctx)
+/* 把仍打开的 stdout/stderr 填入读集；两个都 EOF 时返回 -1。 */
+static int posix_rfds(airy_process_info_t *proc, fd_set *rfds)
+{
+    int max_fd = -1;
+
+    FD_ZERO(rfds);
+    if (proc->stdout_fd >= 0) {
+        FD_SET(proc->stdout_fd, rfds);
+        max_fd = proc->stdout_fd;
+    }
+    if (proc->stderr_fd >= 0) {
+        FD_SET(proc->stderr_fd, rfds);
+        if (proc->stderr_fd > max_fd)
+            max_fd = proc->stderr_fd;
+    }
+    return max_fd;
+}
+
+/* 分片等待上限 100ms；deadline 更近时收缩到剩余时间。EINTR 交由调用方
+ * 重新走一轮，以便重新检查取消与超时。 */
+static int posix_wait(int max_fd, fd_set *rfds, uint64_t deadline_ms)
+{
+    uint32_t slice_ms = 100;
+    struct timeval tv;
+
+    if (deadline_ms > 0) {
+        uint64_t now = airy_time_ms();
+        uint64_t remain = (deadline_ms > now) ? deadline_ms - now : 0;
+
+        if (remain < slice_ms)
+            slice_ms = (uint32_t)remain;
+    }
+    tv.tv_sec = slice_ms / 1000U;
+    tv.tv_usec = (slice_ms % 1000U) * 1000U;
+    return select(max_fd + 1, rfds, NULL, NULL, &tv);
+}
+
+/* 读一段并追加；对端关闭即摘掉该描述符，避免下一轮对 EOF fd 空转。 */
+static size_t posix_take(int *fd, char *output, size_t output_size, size_t off)
+{
+    char buf[4096];
+    ssize_t n = read(*fd, buf, sizeof(buf));
+
+    if (n <= 0) {
+        close(*fd);
+        *fd = -1;
+        return off;
+    }
+    return cap_copy(output, output_size, off, buf, (size_t)n);
+}
+
+/* 两个管道都 EOF 后唯一正常的回收点：先排空、后 waitpid。子进程已退出时
+ * 管道里仍可能有未读数据，提前回收会丢输出（tool_d Test 1 间歇失败的根因）；
+ * 阻塞 waitpid 同时关掉了 EOF 与回收之间的竞态窗口。 */
+static int posix_reap(airy_process_info_t *proc)
+{
+    int status = 0;
+
+    if (waitpid(proc->pid, &status, 0) != proc->pid)
+        return -1;
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+    if (WIFSIGNALED(status))
+        return -WTERMSIG(status);
+    return -1;
+}
+
+/* 一轮事件循环：判取消 → 判超时 → 等可读 → 摘取 → 判 EOF。返回非 0 表示
+ * 继续下一轮；返回 0 表示已进终态，*status 带出结果。取消靠短分片 select
+ * 轮询实现：cancel_token.h 目前没有注销接口，注册回调会留下悬垂栈上下文。 */
+static int posix_cycle(airy_process_info_t *proc, airy_cancel_token_t *tok,
+                       uint64_t deadline_ms, int *timed_out, size_t *off,
+                       char *output, size_t output_size, int *status)
+{
+    fd_set rfds;
+    int max_fd;
+    int ready;
+
+    if (tok && airy_cancel_token_is_canceled(tok)) {
+        airy_process_kill(proc);
+        airy_process_wait(proc, 0, status);
+        *status = AIRY_PROCESS_RC_CANCELED;
+        return 0;
+    }
+    if (!*timed_out && deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
+        *timed_out = 1;
+        airy_process_kill(proc);
+    }
+    max_fd = posix_rfds(proc, &rfds);
+    if (max_fd < 0) {
+        *status = posix_reap(proc);
+        return 0;
+    }
+    ready = posix_wait(max_fd, &rfds, deadline_ms);
+    if (ready < 0)
+        return (errno == EINTR) ? 1 : 0;
+    if (ready == 0)
+        return 1;
+    if (proc->stdout_fd >= 0 && FD_ISSET(proc->stdout_fd, &rfds))
+        *off = posix_take(&proc->stdout_fd, output, output_size, *off);
+    if (proc->stderr_fd >= 0 && FD_ISSET(proc->stderr_fd, &rfds))
+        *off = posix_take(&proc->stderr_fd, output, output_size, *off);
+    return 1;
+}
+
 int airy_process_run_capture_ex(const char *executable, char *const argv[], char *const envp[],
                                 uint32_t timeout_ms, char *output, size_t output_size,
                                 airy_cancel_token_t *cancel_token)
 {
     airy_process_info_t proc;
+    size_t offset = 0;
+    uint64_t deadline_ms;
+    int timed_out = 0;
+    int status = -1;
+
     if (airy_process_start(executable, argv, envp, &proc) != 0)
         return AIRY_ERR_EXEC_FAIL;
+    cap_seal(output, output_size, 0);
+    deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
 
-    size_t offset = 0;
-    if (output && output_size > 0)
-        output[0] = '\0';
-
-    uint64_t deadline_ms = (timeout_ms > 0) ? airy_time_ms() + (uint64_t)timeout_ms : 0;
-    int timed_out = 0;
-    int canceled = 0;
-    int exit_code = -1;
-
-    for (;;) {
-
-        if (cancel_token && airy_cancel_token_is_canceled(cancel_token)) {
-            canceled = 1;
-            airy_process_kill(&proc);
-        }
-
-        if (canceled) {
-            airy_process_wait(&proc, 0, &exit_code);
-            airy_process_close_pipes(&proc);
-            if (output && output_size > 0)
-                output[offset] = '\0';
-            return AIRY_PROCESS_RC_CANCELED;
-        }
-
-        /* Reaping must wait until both pipes hit EOF: a child that has
-         * exited still leaves unread data in the pipe buffer, and reaping
-         * earlier would discard it (output='' with exit_code=0 -- the root
-         * cause of the intermittent tool_d test_sandbox_integration Test 1
-         * failures under parallel ctest). */
-        if (!timed_out && deadline_ms > 0 && airy_time_ms() >= deadline_ms) {
-            timed_out = 1;
-            airy_process_kill(&proc);
-            continue;
-        }
-
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        int max_fd = -1;
-        if (proc.stdout_fd >= 0) {
-            FD_SET(proc.stdout_fd, &rfds);
-            if (proc.stdout_fd > max_fd)
-                max_fd = proc.stdout_fd;
-        }
-        if (proc.stderr_fd >= 0) {
-            FD_SET(proc.stderr_fd, &rfds);
-            if (proc.stderr_fd > max_fd)
-                max_fd = proc.stderr_fd;
-        }
-        if (max_fd < 0) {
-            /* All pipes hit EOF: the child exited (its write ends closed
-             * with the process). This is the only normal reaping point --
-             * drain first, reap last -- so buffered output is fully read
-             * before waitpid, and the blocking call also closes the race
-             * window between EOF and reaping (no zombie, no exit_code=-1
-             * misreport; see tool_d test_sandbox_integration Test 1). */
-            int eof_status = 0;
-            if (waitpid(proc.pid, &eof_status, 0) == proc.pid) {
-                if (WIFEXITED(eof_status))
-                    exit_code = WEXITSTATUS(eof_status);
-                else if (WIFSIGNALED(eof_status))
-                    exit_code = -WTERMSIG(eof_status);
-            }
-            break;
-        }
-
-        uint32_t slice_ms = 100;
-        if (deadline_ms > 0) {
-            uint64_t remain = deadline_ms - airy_time_ms();
-            if (remain < slice_ms)
-                slice_ms = (uint32_t)remain;
-        }
-        struct timeval tv;
-        tv.tv_sec = slice_ms / 1000U;
-        tv.tv_usec = (slice_ms % 1000U) * 1000U;
-        int retval = select(max_fd + 1, &rfds, NULL, NULL, &tv);
-        if (retval < 0) {
-            if (errno == EINTR)
-                continue;
-            break;
-        }
-        if (retval > 0) {
-            char buf[4096];
-            if (proc.stdout_fd >= 0 && FD_ISSET(proc.stdout_fd, &rfds)) {
-                ssize_t n = read(proc.stdout_fd, buf, sizeof(buf));
-                if (n <= 0) {
-                    close(proc.stdout_fd);
-                    proc.stdout_fd = -1;
-                } else if (output && offset + 1 < output_size) {
-                    size_t copy =
-                        (offset + (size_t)n < output_size) ? (size_t)n : output_size - 1 - offset;
-                    __builtin_memcpy(output + offset, buf, copy);
-                    offset += copy;
-                }
-            }
-            if (proc.stderr_fd >= 0 && FD_ISSET(proc.stderr_fd, &rfds)) {
-                ssize_t n = read(proc.stderr_fd, buf, sizeof(buf));
-                if (n <= 0) {
-                    close(proc.stderr_fd);
-                    proc.stderr_fd = -1;
-                } else if (output && offset + 1 < output_size) {
-                    size_t copy =
-                        (offset + (size_t)n < output_size) ? (size_t)n : output_size - 1 - offset;
-                    __builtin_memcpy(output + offset, buf, copy);
-                    offset += copy;
-                }
-            }
-        }
-    }
-
+    while (posix_cycle(&proc, cancel_token, deadline_ms, &timed_out,
+                       &offset, output, output_size, &status))
+        ;
     airy_process_close_pipes(&proc);
-
-    if (output && output_size > 0)
-        output[offset] = '\0';
-    if (canceled)
-        return AIRY_PROCESS_RC_CANCELED;
-    return timed_out ? -2 : exit_code;
+    cap_seal(output, output_size, offset);
+    return timed_out ? -2 : status;
 }
 
 int airy_process_spawn(const char *executable, char *const argv[],
