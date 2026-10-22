@@ -122,88 +122,97 @@ static airy_err_t sd_file_write_service(const sd_service_entry_t *entry)
     return AIRY_SUCCESS;
 }
 
+/* 注册文件读侧字段原语：21 个字段此前各写一遍「取键—类型校验—写入」三段，
+ * 类型判断抄错只会影响单个字段且难以察觉。四个 rd_* 按目标宽度分相，
+ * 调用点因此没有分支。字段缺失或类型不符时保持调用方预置的零值。 */
+static void rd_str(cJSON *o, const char *key, char *dst, size_t cap)
+{
+    const char *s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(o, key));
+
+    if (s)
+        safe_strcpy(dst, s, cap);
+}
+
+static void rd_u32(cJSON *o, const char *key, uint32_t *dst)
+{
+    cJSON *it = cJSON_GetObjectItemCaseSensitive(o, key);
+
+    if (it && cJSON_IsNumber(it))
+        *dst = (uint32_t)it->valuedouble;
+}
+
+static void rd_u64(cJSON *o, const char *key, uint64_t *dst)
+{
+    cJSON *it = cJSON_GetObjectItemCaseSensitive(o, key);
+
+    if (it && cJSON_IsNumber(it))
+        *dst = (uint64_t)it->valuedouble;
+}
+
+static void rd_bool(cJSON *o, const char *key, bool *dst)
+{
+    cJSON *it = cJSON_GetObjectItemCaseSensitive(o, key);
+
+    if (it && cJSON_IsBool(it))
+        *dst = cJSON_IsTrue(it);
+}
+
+static void rd_state(cJSON *o, const char *key, airy_svc_state_t *dst)
+{
+    cJSON *it = cJSON_GetObjectItemCaseSensitive(o, key);
+
+    if (it && cJSON_IsNumber(it))
+        *dst = (airy_svc_state_t)it->valuedouble;
+}
+
+static void rd_inst(sd_instance_t *in, cJSON *o)
+{
+    rd_str(o, "instance_id", in->instance_id, SD_MAX_NAME_LEN);
+    rd_str(o, "endpoint", in->endpoint, SD_MAX_ENDPOINT_LEN);
+    rd_state(o, "state", &in->state);
+    rd_bool(o, "healthy", &in->healthy);
+    rd_u32(o, "weight", &in->weight);
+    rd_u32(o, "active_connections", &in->active_connections);
+    rd_u32(o, "max_connections", &in->max_connections);
+    rd_u64(o, "last_heartbeat", &in->last_heartbeat);
+    rd_u64(o, "register_time", &in->register_time);
+    rd_u32(o, "pid", &in->pid);
+}
+
 static airy_err_t sd_file_read_service(const char *name, sd_service_entry_t *out)
 {
     char path[512];
-    sd_file_path(name, path, sizeof(path));
-
     char *buf = NULL;
-    airy_err_t rc = (airy_err_t)airy_io_read_file(path, &buf, NULL);
+    cJSON *root;
+    cJSON *insts;
+    airy_err_t rc;
+    uint32_t idx = 0;
+
+    sd_file_path(name, path, sizeof(path));
+    rc = (airy_err_t)airy_io_read_file(path, &buf, NULL);
     if (rc != AIRY_SUCCESS)
         return rc;
-
-    cJSON *root = cJSON_Parse(buf);
+    root = cJSON_Parse(buf);
     AIRY_FREE(buf);
     if (!root)
         return AIRY_ERR_PARSE_ERROR;
 
     __builtin_memset(out, 0, sizeof(*out));
-    const char *s;
-    cJSON *it;
+    rd_str(root, "name", out->name, SD_MAX_NAME_LEN);
+    rd_str(root, "version", out->version, sizeof(out->version));
+    rd_str(root, "service_type", out->service_type, SD_MAX_TYPE_LEN);
+    rd_str(root, "tags", out->tags, SD_MAX_TAGS_LEN);
+    rd_str(root, "dependencies", out->dependencies, SD_MAX_DEPS_LEN);
+    rd_u32(root, "capabilities", &out->capabilities);
+    rd_bool(root, "active", &out->active);
+    rd_u64(root, "last_updated", &out->last_updated);
 
-    s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(root, "name"));
-    if (s)
-        safe_strcpy(out->name, s, SD_MAX_NAME_LEN);
-    s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(root, "version"));
-    if (s)
-        safe_strcpy(out->version, s, sizeof(out->version));
-    s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(root, "service_type"));
-    if (s)
-        safe_strcpy(out->service_type, s, SD_MAX_TYPE_LEN);
-    s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(root, "tags"));
-    if (s)
-        safe_strcpy(out->tags, s, SD_MAX_TAGS_LEN);
-    s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(root, "dependencies"));
-    if (s)
-        safe_strcpy(out->dependencies, s, SD_MAX_DEPS_LEN);
-    it = cJSON_GetObjectItemCaseSensitive(root, "capabilities");
-    if (it && cJSON_IsNumber(it))
-        out->capabilities = (uint32_t)it->valuedouble;
-    it = cJSON_GetObjectItemCaseSensitive(root, "active");
-    if (it && cJSON_IsBool(it))
-        out->active = cJSON_IsTrue(it);
-    it = cJSON_GetObjectItemCaseSensitive(root, "last_updated");
-    if (it && cJSON_IsNumber(it))
-        out->last_updated = (uint64_t)it->valuedouble;
-
-    cJSON *insts = cJSON_GetObjectItemCaseSensitive(root, "instances");
+    insts = cJSON_GetObjectItemCaseSensitive(root, "instances");
     if (insts && cJSON_IsArray(insts)) {
-        uint32_t idx = 0;
-        for (cJSON *o = insts->child; o && idx < SD_MAX_INSTANCES; o = o->next, idx++) {
-            sd_instance_t *in = &out->instances[idx];
-            s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(o, "instance_id"));
-            if (s)
-                safe_strcpy(in->instance_id, s, SD_MAX_NAME_LEN);
-            s = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(o, "endpoint"));
-            if (s)
-                safe_strcpy(in->endpoint, s, SD_MAX_ENDPOINT_LEN);
-            it = cJSON_GetObjectItemCaseSensitive(o, "state");
-            if (it && cJSON_IsNumber(it))
-                in->state = (airy_svc_state_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "healthy");
-            if (it && cJSON_IsBool(it))
-                in->healthy = cJSON_IsTrue(it);
-            it = cJSON_GetObjectItemCaseSensitive(o, "weight");
-            if (it && cJSON_IsNumber(it))
-                in->weight = (uint32_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "active_connections");
-            if (it && cJSON_IsNumber(it))
-                in->active_connections = (uint32_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "max_connections");
-            if (it && cJSON_IsNumber(it))
-                in->max_connections = (uint32_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "last_heartbeat");
-            if (it && cJSON_IsNumber(it))
-                in->last_heartbeat = (uint64_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "register_time");
-            if (it && cJSON_IsNumber(it))
-                in->register_time = (uint64_t)it->valuedouble;
-            it = cJSON_GetObjectItemCaseSensitive(o, "pid");
-            if (it && cJSON_IsNumber(it))
-                in->pid = (uint32_t)it->valuedouble;
-        }
-        out->instance_count = idx;
+        for (cJSON *o = insts->child; o && idx < SD_MAX_INSTANCES; o = o->next)
+            rd_inst(&out->instances[idx++], o);
     }
+    out->instance_count = idx;
     cJSON_Delete(root);
     return AIRY_SUCCESS;
 }
