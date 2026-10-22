@@ -36,14 +36,61 @@
             *(offp) = (bufsize);                                                       \
     } while (0)
 
+static void yaml_dump_append(struct yaml_node *, char *, size_t, int, size_t *);
+
+static void yaml_put_indent(char *buf, size_t bufsize, size_t *off, int depth)
+{
+    for (int i = 0; i < depth; i++)
+        YAML_APPEND(off, buf, bufsize, "  ");
+}
+
+static void yaml_dump_mapping(struct yaml_node *node, char *buf, size_t bufsize, int indent,
+                              size_t *off)
+{
+    size_t sz = yaml_size(node);
+    if (sz == 0) {
+        YAML_APPEND(off, buf, bufsize, "{}");
+        return;
+    }
+    YAML_APPEND(off, buf, bufsize, "{\n");
+    for (size_t i = 0; i < sz; i++) {
+        yaml_put_indent(buf, bufsize, off, indent + 1);
+        YAML_APPEND(off, buf, bufsize, "%s: ", node->mapping[i].key);
+        yaml_dump_append(node->mapping[i].value, buf, bufsize, indent + 1, off);
+        if (i < sz - 1)
+            YAML_APPEND(off, buf, bufsize, ",");
+        YAML_APPEND(off, buf, bufsize, "\n");
+    }
+    yaml_put_indent(buf, bufsize, off, indent);
+    YAML_APPEND(off, buf, bufsize, "}");
+}
+
+static void yaml_dump_sequence(struct yaml_node *node, char *buf, size_t bufsize, int indent,
+                               size_t *off)
+{
+    size_t cnt = node->sequence.count;
+    if (cnt == 0) {
+        YAML_APPEND(off, buf, bufsize, "[]");
+        return;
+    }
+    YAML_APPEND(off, buf, bufsize, "[\n");
+    for (size_t i = 0; i < cnt; i++) {
+        yaml_dump_append(node->sequence.items[i].item, buf, bufsize, indent + 1, off);
+        if (i < cnt - 1)
+            YAML_APPEND(off, buf, bufsize, ",");
+        YAML_APPEND(off, buf, bufsize, "\n");
+    }
+    yaml_put_indent(buf, bufsize, off, indent);
+    YAML_APPEND(off, buf, bufsize, "]");
+}
+
 static void yaml_dump_append(struct yaml_node *node, char *buf, size_t bufsize, int indent,
                              size_t *off)
 {
     if (!node || !buf || bufsize == 0 || !off)
         return;
 
-    for (int i = 0; i < indent; i++)
-        YAML_APPEND(off, buf, bufsize, "  ");
+    yaml_put_indent(buf, bufsize, off, indent);
 
     switch (node->type) {
     case YAML_NODE_NONE:
@@ -51,54 +98,18 @@ static void yaml_dump_append(struct yaml_node *node, char *buf, size_t bufsize, 
         break;
     case YAML_NODE_SCALAR: {
         const char *v = node->scalar.value ? node->scalar.value : "";
-        bool needs_quote = (*v == '\0') || strchr(v, ':') || strchr(v, '#') || strchr(v, '[') ||
-                           strchr(v, '{') || strchr(v, ',') || strchr(v, '"') || strchr(v, '\'');
-        if (needs_quote) {
+        if (*v == '\0' || strpbrk(v, ":#[{,\"'") != NULL)
             YAML_APPEND(off, buf, bufsize, "\"%s\"", v);
-        } else {
+        else
             YAML_APPEND(off, buf, bufsize, "%s", v);
-        }
         break;
     }
-    case YAML_NODE_MAPPING: {
-        size_t sz = yaml_size(node);
-        if (sz == 0) {
-            YAML_APPEND(off, buf, bufsize, "{}");
-            break;
-        }
-        YAML_APPEND(off, buf, bufsize, "{\n");
-        for (size_t i = 0; i < sz; i++) {
-            for (int j = 0; j < indent + 1; j++)
-                YAML_APPEND(off, buf, bufsize, "  ");
-            YAML_APPEND(off, buf, bufsize, "%s: ", node->mapping[i].key);
-            yaml_dump_append(node->mapping[i].value, buf, bufsize, indent + 1, off);
-            if (i < sz - 1)
-                YAML_APPEND(off, buf, bufsize, ",");
-            YAML_APPEND(off, buf, bufsize, "\n");
-        }
-        for (int i = 0; i < indent; i++)
-            YAML_APPEND(off, buf, bufsize, "  ");
-        YAML_APPEND(off, buf, bufsize, "}");
+    case YAML_NODE_MAPPING:
+        yaml_dump_mapping(node, buf, bufsize, indent, off);
         break;
-    }
-    case YAML_NODE_SEQUENCE: {
-        size_t cnt = node->sequence.count;
-        if (cnt == 0) {
-            YAML_APPEND(off, buf, bufsize, "[]");
-            break;
-        }
-        YAML_APPEND(off, buf, bufsize, "[\n");
-        for (size_t i = 0; i < cnt; i++) {
-            yaml_dump_append(node->sequence.items[i].item, buf, bufsize, indent + 1, off);
-            if (i < cnt - 1)
-                YAML_APPEND(off, buf, bufsize, ",");
-            YAML_APPEND(off, buf, bufsize, "\n");
-        }
-        for (int i = 0; i < indent; i++)
-            YAML_APPEND(off, buf, bufsize, "  ");
-        YAML_APPEND(off, buf, bufsize, "]");
+    case YAML_NODE_SEQUENCE:
+        yaml_dump_sequence(node, buf, bufsize, indent, off);
         break;
-    }
     }
 }
 

@@ -16,7 +16,6 @@
 #include "logging_compat.h"
 
 #include <ctype.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -37,6 +36,65 @@ extern char **environ;
 
 static uint64_t compute_env_hash(env_source_priv_t *priv);
 
+/* 截取 prefix 之后的键名，返回 '=' 右侧的值指针；无 '=' 返回 NULL。
+ * 键名超长按容量截断，与基线行为一致。 */
+static const char *env_key_of(const char *entry, size_t prefix_len, char *key, size_t cap)
+{
+    const char *eq = strchr(entry, '=');
+    if (!eq)
+        return NULL;
+    size_t len = (size_t)(eq - entry) - prefix_len;
+    if (len >= cap)
+        len = cap - 1;
+    __builtin_memcpy(key, entry + prefix_len, len);
+    key[len] = '\0';
+    return eq + 1;
+}
+
+static void env_lower(char *s)
+{
+    for (; *s; s++)
+        *s = (char)tolower((unsigned char)*s);
+}
+
+/* 双层分隔符（如 __）映射为层级点，单层分隔符保留为词边界。 */
+static void env_key_map(const char *key, const char *sep, char *out, size_t cap)
+{
+    size_t sep_len = strlen(sep);
+    size_t mi = 0;
+    const char *src = key;
+    while (*src && mi < cap - 1) {
+        if (sep_len > 0 && strncmp(src, sep, sep_len) == 0 &&
+            strncmp(src + sep_len, sep, sep_len) == 0) {
+            out[mi++] = '.';
+            src += sep_len * 2;
+        } else {
+            out[mi++] = *src++;
+        }
+    }
+    out[mi] = '\0';
+}
+
+static config_value_t *env_value_parse(const char *val)
+{
+    char *end = NULL;
+    long iv = strtol(val, &end, 10);
+    if (end != val && *end == '\0')
+        return config_value_create_int((int32_t)iv);
+
+    char low[64];
+    size_t len = strlen(val);
+    if (len >= sizeof(low))
+        return config_value_create_string(val);
+    __builtin_memcpy(low, val, len + 1);
+    env_lower(low);
+    if (strcmp(low, "true") == 0)
+        return config_value_create_bool(true);
+    if (strcmp(low, "false") == 0)
+        return config_value_create_bool(false);
+    return config_value_create_string(val);
+}
+
 static config_error_t env_source_load(config_source_t *source, config_context_t *ctx)
 {
     if (!source || !ctx)
@@ -44,84 +102,29 @@ static config_error_t env_source_load(config_source_t *source, config_context_t 
     env_source_priv_t *priv = (env_source_priv_t *)source->priv_data;
     if (!priv)
         return CONFIG_ERROR_INVALID_ARG;
-    char **env = environ;
-    if (!env)
+    if (!environ)
         return CONFIG_SUCCESS;
+
     size_t prefix_len = priv->prefix ? strlen(priv->prefix) : 0;
-    for (size_t idx = 0; env[idx]; idx++) {
-        const char *entry = env[idx];
+    const char *sep = priv->separator ? priv->separator : "_";
+    for (size_t idx = 0; environ[idx]; idx++) {
+        const char *entry = environ[idx];
         if (prefix_len > 0 && strncmp(entry, priv->prefix, prefix_len) != 0)
             continue;
-        const char *eq = strchr(entry, '=');
-        if (!eq)
-            continue;
-        size_t key_len = (size_t)(eq - entry);
+
         char key[512];
-        const char *val = eq + 1;
-        if (prefix_len > 0) {
-            size_t offset = prefix_len;
-            key_len -= offset;
-            if (key_len >= sizeof(key))
-                key_len = sizeof(key) - 1;
-            __builtin_memcpy(key, entry + offset, key_len);
-        } else {
-            if (key_len >= sizeof(key))
-                key_len = sizeof(key) - 1;
-            __builtin_memcpy(key, entry, key_len);
-        }
-        key[key_len] = '\0';
+        const char *val = env_key_of(entry, prefix_len, key, sizeof(key));
+        if (!val)
+            continue;
+        if (!priv->case_sensitive)
+            env_lower(key);
 
-        /* Key mapping: doubled separators (e.g. __) become hierarchy dots,
-         * single separators stay as word boundaries, aligning with YAML
-         * dotted paths. */
+        char mapped[512];
+        env_key_map(key, sep, mapped, sizeof(mapped));
 
-        if (!priv->case_sensitive) {
-            for (char *p = key; *p; p++)
-                *p = (char)tolower((unsigned char)*p);
-        }
-
-        const char *sep = priv->separator ? priv->separator : "_";
-        size_t sep_len = strlen(sep);
-        char double_sep[64];
-        snprintf(double_sep, sizeof(double_sep), "%s%s", sep, sep);
-        size_t dsep_len = sep_len * 2;
-
-        char mapped_key[512];
-        size_t mi = 0;
-        const char *src = key;
-        while (*src && mi < sizeof(mapped_key) - 1) {
-            if (dsep_len > 0 && strncmp(src, double_sep, dsep_len) == 0) {
-                mapped_key[mi++] = '.';
-                src += dsep_len;
-            } else {
-                mapped_key[mi++] = *src++;
-            }
-        }
-        mapped_key[mi] = '\0';
-
-        config_value_t *cv = NULL;
-        char *endptr;
-        long int_val = strtol(val, &endptr, 10);
-        if (*endptr == '\0' && endptr != val) {
-            cv = config_value_create_int((int32_t)int_val);
-        } else {
-
-            char lower_val[64];
-            size_t vlen = strlen(val);
-            if (vlen < sizeof(lower_val)) {
-                for (size_t vi = 0; vi < vlen; vi++)
-                    lower_val[vi] = (char)tolower((unsigned char)val[vi]);
-                lower_val[vlen] = '\0';
-                if (strcmp(lower_val, "true") == 0)
-                    cv = config_value_create_bool(true);
-                else if (strcmp(lower_val, "false") == 0)
-                    cv = config_value_create_bool(false);
-            }
-            if (!cv)
-                cv = config_value_create_string(val);
-        }
+        config_value_t *cv = env_value_parse(val);
         if (cv)
-            config_context_set(ctx, mapped_key, cv);
+            config_context_set(ctx, mapped, cv);
     }
     priv->env_hash = compute_env_hash(priv);
     return CONFIG_SUCCESS;
@@ -192,13 +195,6 @@ static void env_source_destroy(config_source_t *source)
             AIRY_FREE(priv->prefix);
         if (priv->separator)
             AIRY_FREE(priv->separator);
-        if (priv->env_keys) {
-            for (size_t i = 0; i < priv->env_count; i++) {
-                if (priv->env_keys[i])
-                    AIRY_FREE(priv->env_keys[i]);
-            }
-            AIRY_FREE(priv->env_keys);
-        }
         AIRY_FREE(priv);
     }
 
@@ -233,8 +229,6 @@ config_source_t *config_source_create_env(const config_env_source_options_t *opt
     priv->case_sensitive = options->case_sensitive;
     priv->separator =
         options->separator ? duplicate_string(options->separator) : duplicate_string("_");
-    priv->env_keys = NULL;
-    priv->env_count = 0;
 
     if (options->separator && !priv->separator) {
         if (priv->prefix)

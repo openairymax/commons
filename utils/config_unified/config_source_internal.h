@@ -42,8 +42,6 @@ typedef struct {
     char *prefix;
     bool case_sensitive;
     char *separator;
-    char **env_keys;
-    size_t env_count;
     uint64_t env_hash;
 } env_source_priv_t;
 
