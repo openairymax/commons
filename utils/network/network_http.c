@@ -16,10 +16,171 @@
 
 #include "network_common_internal.h"
 
+/* snprintf 返回的是「本应写入」长度，超限时该值大于剩余容量。若直接累加
+ * offset，后续 cap - offset 会下溢成巨大值，越界写穿栈缓冲。所有片段都经
+ * 此一处判定并就地回报，调用点不再各自检查。 */
+static airy_err_t head_put(char *buf, size_t cap, int *off, network_http_response_t *resp,
+                           const char *fmt, ...)
+{
+    va_list ap;
+    int wlen;
+
+    va_start(ap, fmt);
+    wlen = vsnprintf(buf + *off, cap - (size_t)*off, fmt, ap);
+    va_end(ap);
+    if (wlen < 0 || (size_t)wlen >= cap - (size_t)*off) {
+        resp->error = AIRY_ERR_OVERFLOW;
+        resp->error_message = AIRY_STRDUP("HTTP request header too long");
+        return AIRY_ERR_OVERFLOW;
+    }
+    *off += wlen;
+    return AIRY_SUCCESS;
+}
+
+/* 可选头部：值为空视为不发送，使调用点只剩「出错才返回」一条判断。 */
+static airy_err_t head_opt(char *buf, size_t cap, int *off, network_http_response_t *resp,
+                           const char *fmt, const char *val)
+{
+    if (!val)
+        return AIRY_SUCCESS;
+    return head_put(buf, cap, off, resp, fmt, val);
+}
+
+static airy_err_t head_list(char *buf, size_t cap, int *off, network_http_response_t *resp,
+                            const network_http_request_t *req)
+{
+    airy_err_t rc = AIRY_SUCCESS;
+
+    if (!req->headers || req->header_count == 0)
+        return AIRY_SUCCESS;
+    for (size_t i = 0; i < req->header_count && rc == AIRY_SUCCESS; i++)
+        rc = head_opt(buf, cap, off, resp, "%s\r\n", req->headers[i]);
+    return rc;
+}
+
+static airy_err_t http_head(network_connection_t *conn, const network_http_request_t *req,
+                            char *buf, size_t cap, size_t *out_len, network_http_response_t *resp)
+{
+    int off = 0;
+    airy_err_t rc;
+
+    rc = head_put(buf, cap, &off, resp, "%s %s HTTP/1.1\r\n",
+                  req->method ? req->method : "GET", req->path ? req->path : "/");
+    if (rc == AIRY_SUCCESS)
+        rc = head_opt(buf, cap, &off, resp, "Host: %s\r\n", conn->config.host);
+    if (rc == AIRY_SUCCESS)
+        rc = head_opt(buf, cap, &off, resp, "Content-Type: %s\r\n", req->content_type);
+    if (rc == AIRY_SUCCESS && req->body && req->body_len > 0)
+        rc = head_put(buf, cap, &off, resp, "Content-Length: %zu\r\n", req->body_len);
+    if (rc == AIRY_SUCCESS)
+        rc = head_list(buf, cap, &off, resp, req);
+    if (rc == AIRY_SUCCESS)
+        rc = head_put(buf, cap, &off, resp, "\r\n");
+    *out_len = (size_t)off;
+    return rc;
+}
+
+static airy_err_t http_send(network_connection_t *conn, const network_http_request_t *req,
+                            network_http_response_t *resp)
+{
+    char buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
+    size_t len = 0;
+    airy_err_t err;
+
+    err = http_head(conn, req, buf, sizeof(buf), &len, resp);
+    if (err != AIRY_SUCCESS)
+        return err;
+    err = network_send_all(conn, buf, len);
+    if (err != AIRY_SUCCESS) {
+        resp->error = err;
+        resp->error_message = AIRY_STRDUP("Failed to send request headers");
+        return err;
+    }
+    if (!req->body || req->body_len == 0)
+        return AIRY_SUCCESS;
+    err = network_send_all(conn, req->body, req->body_len);
+    if (err != AIRY_SUCCESS) {
+        resp->error = err;
+        resp->error_message = AIRY_STRDUP("Failed to send request body");
+    }
+    return err;
+}
+
+/* 收满一轮响应。连接被重置或连续 10 次读失败时停止重试，已收字节保留，
+ * 由解析阶段按实际长度处理——短响应不等于传输失败。 */
+static size_t http_recv(network_connection_t *conn, char *buf, size_t cap)
+{
+    size_t total = 0;
+    size_t got;
+    int retry = 0;
+    airy_err_t err;
+
+    do {
+        got = 0;
+        err = network_receive(conn, buf + total, cap - total - 1, &got);
+        if (err == AIRY_SUCCESS && got > 0) {
+            total += got;
+            retry = 0;
+        } else if (err != AIRY_SUCCESS) {
+            if (++retry > 10 || err == AIRY_ECONNRESET)
+                break;
+        }
+    } while (got > 0 && total < cap - 1);
+    buf[total] = '\0';
+    return total;
+}
+
+/* 状态行缺失或格式不符时按 200 处理：本模块只做轻量客户端，
+ * 非标准响应体沿用该约定，避免把可达的传输误判为失败。 */
+static int http_status(const char *buf, size_t len)
+{
+    if (len < 12 || __builtin_strncmp(buf, "HTTP/1.", 7) != 0 || buf[8] != ' ')
+        return 200;
+    return (int)strtol(buf + 9, NULL, 10);
+}
+
+static void http_split(network_http_response_t *resp, const char *buf, size_t total)
+{
+    const char *body = strstr(buf, "\r\n\r\n");
+    size_t hlen;
+
+    if (!body) {
+        resp->body = AIRY_MALLOC(total + 1);
+        if (resp->body) {
+            __builtin_memcpy(resp->body, buf, total);
+            ((char *)resp->body)[total] = '\0';
+            resp->body_len = total;
+        }
+        return;
+    }
+    hlen = (size_t)(body - buf) + 4;
+    resp->headers = (char **)AIRY_CALLOC(1, sizeof(char *));
+    if (resp->headers) {
+        resp->headers[0] = (char *)AIRY_MALLOC(hlen + 1);
+        if (resp->headers[0]) {
+            __builtin_memcpy(resp->headers[0], buf, hlen);
+            resp->headers[0][hlen] = '\0';
+        }
+        resp->header_count = 1;
+    }
+    body += 4;
+    total -= (size_t)(body - buf);
+    resp->body = AIRY_MALLOC(total + 1);
+    if (resp->body) {
+        __builtin_memcpy(resp->body, body, total);
+        ((char *)resp->body)[total] = '\0';
+        resp->body_len = total;
+    }
+}
+
 airy_err_t network_http_request(network_connection_t *connection,
                                 const network_http_request_t *request,
                                 network_http_response_t *response)
 {
+    char recv_buffer[65536];
+    size_t total;
+    airy_err_t err;
+
     if (!connection || !request || !response) {
         return AIRY_EINVAL;
     }
@@ -30,137 +191,13 @@ airy_err_t network_http_request(network_connection_t *connection,
 
     AIRY_MEMSET(response, 0, sizeof(network_http_response_t));
 
-    char request_buf[NETWORK_DEFAULT_BUFFER_SIZE * 2];
-    int offset = 0;
-
-    /* Check truncation after every snprintf step: the return value is the
-     * "would-be-written" length, which may be >= remaining capacity when
-     * path/host/custom headers are too long. Naively accumulating would
-     * push offset past the buffer and underflow the subsequent size
-     * argument; abort with an error to keep offset always in range. */
-#define NETWORK_REQ_APPEND(fmt, ...)                                                         \
-    do {                                                                                     \
-        int wlen = snprintf(request_buf + offset, sizeof(request_buf) - (size_t)offset, fmt, \
-                            ##__VA_ARGS__);                                                  \
-        if (wlen < 0 || (size_t)wlen >= sizeof(request_buf) - (size_t)offset) {              \
-            response->error = AIRY_ERR_OVERFLOW;                                             \
-            response->error_message = AIRY_STRDUP("HTTP request header too long");           \
-            return AIRY_ERR_OVERFLOW;                                                        \
-        }                                                                                    \
-        offset += wlen;                                                                      \
-    } while (0)
-
-    NETWORK_REQ_APPEND("%s %s HTTP/1.1\r\n", request->method ? request->method : "GET",
-                       request->path ? request->path : "/");
-
-    if (connection->config.host) {
-        NETWORK_REQ_APPEND("Host: %s\r\n", connection->config.host);
-    }
-
-    /* Content-Type */
-    if (request->content_type) {
-        NETWORK_REQ_APPEND("Content-Type: %s\r\n", request->content_type);
-    }
-
-    /* Content-Length */
-    if (request->body && request->body_len > 0) {
-        NETWORK_REQ_APPEND("Content-Length: %zu\r\n", request->body_len);
-    }
-
-    if (request->headers && request->header_count > 0) {
-        for (size_t i = 0; i < request->header_count; i++) {
-            if (request->headers[i]) {
-                NETWORK_REQ_APPEND("%s\r\n", request->headers[i]);
-            }
-        }
-    }
-
-    NETWORK_REQ_APPEND("\r\n");
-
-#undef NETWORK_REQ_APPEND
-
-    airy_err_t err = network_send_all(connection, request_buf, (size_t)offset);
-    if (err != AIRY_SUCCESS) {
-        response->error = err;
-        response->error_message = AIRY_STRDUP("Failed to send request headers");
+    err = http_send(connection, request, response);
+    if (err != AIRY_SUCCESS)
         return err;
-    }
 
-    if (request->body && request->body_len > 0) {
-        err = network_send_all(connection, request->body, request->body_len);
-        if (err != AIRY_SUCCESS) {
-            response->error = err;
-            response->error_message = AIRY_STRDUP("Failed to send request body");
-            return err;
-        }
-    }
-
-    char recv_buffer[65536];
-    size_t total_received = 0;
-    size_t received = 0;
-    int retry_count = 0;
-
-    do {
-        received = 0;
-        err = network_receive(connection, recv_buffer + total_received,
-                              sizeof(recv_buffer) - total_received - 1, &received);
-        if (err == AIRY_SUCCESS && received > 0) {
-            total_received += received;
-            retry_count = 0;
-        } else if (err != AIRY_SUCCESS) {
-            retry_count++;
-            if (retry_count > 10 || err == AIRY_ECONNRESET) {
-                break;
-            }
-        }
-    } while (received > 0 && total_received < sizeof(recv_buffer) - 1);
-
-    recv_buffer[total_received] = '\0';
-
-    /* Parse HTTP status code manually */
-    if (total_received >= 12) {
-        if (__builtin_strncmp(recv_buffer, "HTTP/1.", 7) == 0 && recv_buffer[8] == ' ') {
-            response->status_code = (int)strtol(recv_buffer + 9, NULL, 10);
-        } else {
-            response->status_code = 200;
-        }
-    } else {
-        response->status_code = 200;
-    }
-
-    /* Separate response headers and body */
-    char *body_start = strstr(recv_buffer, "\r\n\r\n");
-    if (body_start) {
-        size_t header_len = body_start - recv_buffer + 4;
-
-        response->headers = (char **)AIRY_CALLOC(1, sizeof(char *));
-        if (response->headers) {
-            response->headers[0] = (char *)AIRY_MALLOC(header_len + 1);
-            if (response->headers[0]) {
-                __builtin_memcpy(response->headers[0], recv_buffer, header_len);
-                response->headers[0][header_len] = '\0';
-            }
-            response->header_count = 1;
-        }
-
-        body_start += 4;
-        size_t body_len = total_received - (body_start - recv_buffer);
-        response->body = AIRY_MALLOC(body_len + 1);
-        if (response->body) {
-            __builtin_memcpy(response->body, body_start, body_len);
-            ((char *)response->body)[body_len] = '\0';
-            response->body_len = body_len;
-        }
-    } else {
-
-        response->body = AIRY_MALLOC(total_received + 1);
-        if (response->body) {
-            __builtin_memcpy(response->body, recv_buffer, total_received);
-            ((char *)response->body)[total_received] = '\0';
-            response->body_len = total_received;
-        }
-    }
-
+    total = http_recv(connection, recv_buffer, sizeof(recv_buffer));
+    response->status_code = http_status(recv_buffer, total);
+    http_split(response, recv_buffer, total);
     response->error = AIRY_SUCCESS;
     return AIRY_SUCCESS;
 }
