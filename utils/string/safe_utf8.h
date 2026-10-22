@@ -14,6 +14,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,12 @@ bool utf8_validate(const char *str, size_t len);
 
 
 size_t utf8_sanitize(const char *in, size_t len, char *out, size_t out_cap);
+
+
+size_t utf8_seq_len(unsigned char first);
+
+
+bool utf8_decode(const unsigned char *s, size_t avail, size_t *n, uint32_t *cp);
 
 #ifdef __cplusplus
 }

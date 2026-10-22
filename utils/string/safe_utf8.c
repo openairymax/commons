@@ -20,7 +20,7 @@ static const uint32_t kMinCp[5] = {0, 0, 0x80u, 0x800u, 0x10000u};
 static const char kRepl[3] = {(char)0xEF, (char)0xBF, (char)0xBD};
 
 /* 首字节指示的序列长度；非法首字节（含 0x80~0xBF 孤立续字节）返回 0。 */
-static size_t utf8_seq_len(unsigned char first)
+size_t utf8_seq_len(unsigned char first)
 {
     if (first < 0x80) {
         return 1;
@@ -49,7 +49,7 @@ static bool utf8_cont_ok(const unsigned char *s, size_t n)
 }
 
 /* 按 n 字节序列解码码点（n 已由 utf8_seq_len 判定且续字节已核对）。 */
-static uint32_t utf8_decode(const unsigned char *s, size_t n)
+static uint32_t utf8_cp(const unsigned char *s, size_t n)
 {
     uint32_t cp = (n == 1) ? (uint32_t)s[0] : (uint32_t)(s[0] & (0xFFu >> (n + 1)));
     for (size_t j = 1; j < n; j++) {
@@ -70,17 +70,36 @@ static bool utf8_cp_ok(uint32_t cp, uint32_t min_cp)
 /* 判定位置 0 起的单个序列：返回序列长度 n（1~4），*valid 给出合规性。 */
 static size_t utf8_unit(const unsigned char *s, size_t avail, bool *valid)
 {
-    size_t n = utf8_seq_len(s[0]);
-    if (n == 0 || n > avail) {
-        *valid = false;
-        return 1;
-    }
-    if (!utf8_cont_ok(s, n)) {
-        *valid = false;
+    size_t n = 0;
+    uint32_t cp = 0;
+
+    if (utf8_decode(s, avail, &n, &cp)) {
+        *valid = true;
         return n;
     }
-    *valid = utf8_cp_ok(utf8_decode(s, n), kMinCp[n]);
-    return n;
+    *valid = false;
+    size_t len = utf8_seq_len(s[0]);
+    return (len == 0 || len > avail) ? 1 : len;
+}
+
+bool utf8_decode(const unsigned char *s, size_t avail, size_t *n, uint32_t *cp)
+{
+    if (s == NULL || n == NULL || cp == NULL) {
+        return false;
+    }
+
+    size_t len = utf8_seq_len(s[0]);
+    if (len == 0 || len > avail || !utf8_cont_ok(s, len)) {
+        return false;
+    }
+
+    uint32_t v = utf8_cp(s, len);
+    if (!utf8_cp_ok(v, kMinCp[len])) {
+        return false;
+    }
+    *n = len;
+    *cp = v;
+    return true;
 }
 
 bool utf8_validate(const char *str, size_t len)
