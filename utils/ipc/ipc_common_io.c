@@ -35,11 +35,45 @@
 #include <poll.h>
 #endif
 
+static bool ipc_push(ipc_channel_t *channel, const void *buffer, size_t len)
+{
+#ifdef _WIN32
+    size_t left = len;
+    const char *ptr = (const char *)buffer;
+
+    if (channel->hPipe != INVALID_HANDLE_VALUE) {
+        while (left > 0) {
+            DWORD chunk = (left > MAXDWORD) ? MAXDWORD : (DWORD)left;
+            DWORD written = 0;
+            if (!WriteFile(channel->hPipe, ptr, chunk, &written, NULL) || written == 0)
+                break;
+            ptr += written;
+            left -= written;
+        }
+        if (left == 0)
+            return true;
+    }
+    snprintf(channel->error_msg, sizeof(channel->error_msg), "Write failed: %lu", GetLastError());
+    return false;
+#else
+    int fd = (channel->fd_write >= 0) ? channel->fd_write : channel->socket_fd;
+    ssize_t written;
+
+    if (fd >= 0) {
+        written = write(fd, buffer, len);
+        if (written >= 0 && (size_t)written == len)
+            return true;
+    }
+    snprintf(channel->error_msg, sizeof(channel->error_msg), "write() failed: %s",
+             strerror(errno));
+    return false;
+#endif
+}
+
 airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
 {
-    if (!channel || !message) {
+    if (!channel || !message)
         return AIRY_EINVAL;
-    }
 
     if (channel->state != IPC_STATE_OPEN) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Channel not open, state=%d",
@@ -56,9 +90,8 @@ airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
 
     size_t total_size = sizeof(ipc_message_header_t) + message->payload_size;
     void *send_buffer = AIRY_MALLOC(total_size);
-    if (!send_buffer) {
+    if (!send_buffer)
         return AIRY_ENOMEM;
-    }
 
     __builtin_memcpy(send_buffer, &message->header, sizeof(ipc_message_header_t));
 
@@ -67,55 +100,17 @@ airy_err_t ipc_send(ipc_channel_t *channel, const ipc_message_t *message)
                          message->payload_size);
     }
 
-#ifdef _WIN32
-    DWORD bytes_written = 0;
-    BOOL success = FALSE;
-
-    if (channel->hPipe != INVALID_HANDLE_VALUE) {
-        size_t remaining = total_size;
-        char *ptr = (char *)send_buffer;
-        success = TRUE;
-        while (remaining > 0) {
-            DWORD chunk = (remaining > MAXDWORD) ? MAXDWORD : (DWORD)remaining;
-            DWORD chunk_written = 0;
-            if (!WriteFile(channel->hPipe, ptr, chunk, &chunk_written, NULL)) {
-                success = FALSE;
-                break;
-            }
-            ptr += chunk_written;
-            remaining -= chunk_written;
-        }
-        bytes_written = (DWORD)(total_size - remaining);
-    }
-#else
-    ssize_t bytes_written = 0;
-    int fd = (channel->fd_write >= 0) ? channel->fd_write : channel->socket_fd;
-
-    if (fd >= 0) {
-        bytes_written = write(fd, send_buffer, total_size);
-    }
-#endif
+    bool sent = ipc_push(channel, send_buffer, total_size);
 
     AIRY_FREE(send_buffer);
 
-#ifdef _WIN32
-    if (!success || bytes_written < total_size) {
-        snprintf(channel->error_msg, sizeof(channel->error_msg), "Write failed: %lu",
-                 GetLastError());
+    if (!sent) {
         channel->stats.errors++;
         return AIRY_EUNKNOWN;
     }
-#else
-    if (bytes_written < 0 || (size_t)bytes_written < total_size) {
-        snprintf(channel->error_msg, sizeof(channel->error_msg), "write() failed: %s",
-                 strerror(errno));
-        channel->stats.errors++;
-        return AIRY_EUNKNOWN;
-    }
-#endif
 
     channel->stats.messages_sent++;
-    channel->stats.bytes_sent += bytes_written;
+    channel->stats.bytes_sent += total_size;
 
     return AIRY_SUCCESS;
 }
@@ -191,89 +186,73 @@ airy_err_t ipc_notify(ipc_channel_t *channel, const void *notification, size_t l
     return ipc_send(channel, &msg);
 }
 
-airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms)
+static airy_err_t ipc_read_head(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms)
 {
-    if (!channel || !message) {
-        return AIRY_EINVAL;
-    }
-
-    if (channel->state != IPC_STATE_OPEN) {
-        return AIRY_ENOTCONN;
-    }
-
-    AIRY_MEMSET(message, 0, sizeof(ipc_message_t));
-
 #ifdef _WIN32
     DWORD bytes_read = 0;
-    BOOL success = FALSE;
-
-    if (channel->hPipe != INVALID_HANDLE_VALUE) {
-
-        success = ReadFile(channel->hPipe, &message->header, sizeof(ipc_message_header_t),
-                           &bytes_read, NULL);
-
-        if (!success || bytes_read < sizeof(ipc_message_header_t)) {
-            if (GetLastError() == ERROR_BROKEN_PIPE) {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "Pipe broken");
-            } else {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "ReadFile failed: %lu",
-                         GetLastError());
-            }
-            channel->stats.errors++;
-            return AIRY_EUNKNOWN;
-        }
+    if (channel->hPipe == INVALID_HANDLE_VALUE)
+        return AIRY_SUCCESS;
+    if (ReadFile(channel->hPipe, &message->header, sizeof(ipc_message_header_t), &bytes_read,
+                 NULL) &&
+        bytes_read >= sizeof(ipc_message_header_t))
+        return AIRY_SUCCESS;
+    if (GetLastError() == ERROR_BROKEN_PIPE) {
+        snprintf(channel->error_msg, sizeof(channel->error_msg), "Pipe broken");
+    } else {
+        snprintf(channel->error_msg, sizeof(channel->error_msg), "ReadFile failed: %lu",
+                 GetLastError());
     }
+    channel->stats.errors++;
+    return AIRY_EUNKNOWN;
 #else
-    ssize_t bytes_read = 0;
     int fd = (channel->fd_read >= 0) ? channel->fd_read : channel->socket_fd;
-
-    if (fd >= 0) {
-        /* Honor timeout_ms: poll before read so an empty channel returns
-         * AIRY_ETIMEDOUT instead of blocking forever. */
-        struct pollfd pfd;
-        pfd.fd = fd;
-        pfd.events = POLLIN;
-        int pr = poll(&pfd, 1, (int)timeout_ms);
-        if (pr <= 0) {
-            if (pr < 0) {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "poll() failed: %s",
-                         strerror(errno));
-            } else {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "receive timed out");
-            }
-            channel->stats.errors++;
-            return AIRY_ETIMEDOUT;
+    struct pollfd pfd;
+    ssize_t bytes_read;
+    if (fd < 0)
+        return AIRY_SUCCESS;
+    /* Honor timeout_ms: poll before read so an empty channel returns
+     * AIRY_ETIMEDOUT instead of blocking forever. */
+    pfd.fd = fd;
+    pfd.events = POLLIN;
+    int pr = poll(&pfd, 1, (int)timeout_ms);
+    if (pr <= 0) {
+        if (pr < 0) {
+            snprintf(channel->error_msg, sizeof(channel->error_msg), "poll() failed: %s",
+                     strerror(errno));
+        } else {
+            snprintf(channel->error_msg, sizeof(channel->error_msg), "receive timed out");
         }
-
-        bytes_read = read(fd, &message->header, sizeof(ipc_message_header_t));
-
-        if (bytes_read <= 0) {
-            if (bytes_read == 0) {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "EOF - pipe closed");
-            } else {
-                snprintf(channel->error_msg, sizeof(channel->error_msg), "read() failed: %s",
-                         strerror(errno));
-            }
-            channel->stats.errors++;
-            return AIRY_EUNKNOWN;
-        }
-
-        if ((size_t)bytes_read < sizeof(ipc_message_header_t)) {
-
-            snprintf(channel->error_msg, sizeof(channel->error_msg),
-                     "Incomplete header: got %zd bytes", bytes_read);
-            return AIRY_EINVAL;
-        }
+        channel->stats.errors++;
+        return AIRY_ETIMEDOUT;
     }
+    bytes_read = read(fd, &message->header, sizeof(ipc_message_header_t));
+    if (bytes_read <= 0) {
+        if (bytes_read == 0) {
+            snprintf(channel->error_msg, sizeof(channel->error_msg), "EOF - pipe closed");
+        } else {
+            snprintf(channel->error_msg, sizeof(channel->error_msg), "read() failed: %s",
+                     strerror(errno));
+        }
+        channel->stats.errors++;
+        return AIRY_EUNKNOWN;
+    }
+    if ((size_t)bytes_read < sizeof(ipc_message_header_t)) {
+        snprintf(channel->error_msg, sizeof(channel->error_msg), "Incomplete header: got %zd bytes",
+                 bytes_read);
+        return AIRY_EINVAL;
+    }
+    return AIRY_SUCCESS;
 #endif
+}
 
+static airy_err_t ipc_check_head(ipc_channel_t *channel, const ipc_message_t *message)
+{
     if (message->header.aipc.magic != IPC_MAGIC) {
         snprintf(channel->error_msg, sizeof(channel->error_msg), "Invalid magic: 0x%08X",
                  message->header.aipc.magic);
         channel->stats.errors++;
         return AIRY_EINVAL;
     }
-
     if (message->header.aipc.payload_len > channel->config.max_message_size) {
         /* T-23: fail loudly on oversized payloads. Silently skipping the
          * payload used to leave its bytes in the stream, permanently
@@ -284,50 +263,59 @@ airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t 
         channel->stats.errors++;
         return AIRY_EOVERFLOW;
     }
+    return AIRY_SUCCESS;
+}
 
-    if (message->header.aipc.payload_len > 0) {
-        message->payload = AIRY_MALLOC(message->header.aipc.payload_len);
-        if (!message->payload) {
-            return AIRY_ENOMEM;
-        }
-
+static bool ipc_fill(ipc_channel_t *channel, void *buffer, size_t len)
+{
 #ifdef _WIN32
-        DWORD payload_read = 0;
-        if (channel->hPipe != INVALID_HANDLE_VALUE) {
-            success = ReadFile(channel->hPipe, message->payload,
-                               (DWORD)message->header.aipc.payload_len, &payload_read, NULL);
-
-            if (!success || payload_read < message->header.aipc.payload_len) {
-                AIRY_FREE(message->payload);
-                message->payload = NULL;
-                channel->stats.errors++;
-                return AIRY_EUNKNOWN;
-            }
-        }
+    DWORD got = 0;
+    if (channel->hPipe == INVALID_HANDLE_VALUE)
+        return true;
+    return ReadFile(channel->hPipe, buffer, (DWORD)len, &got, NULL) && got >= (DWORD)len;
 #else
-        ssize_t payload_read = 0;
-        if (fd >= 0) {
-            payload_read = read(fd, message->payload, message->header.aipc.payload_len);
+    int fd = (channel->fd_read >= 0) ? channel->fd_read : channel->socket_fd;
+    ssize_t got = (fd < 0) ? 0 : read(fd, buffer, len);
 
-            if (payload_read <= 0 || (size_t)payload_read < message->header.aipc.payload_len) {
-                AIRY_FREE(message->payload);
-                message->payload = NULL;
-                channel->stats.errors++;
-                return AIRY_EUNKNOWN;
-            }
-        }
+    return fd < 0 || (got > 0 && (size_t)got >= len);
 #endif
+}
 
-        message->payload_size = message->header.aipc.payload_len;
+static airy_err_t ipc_read_body(ipc_channel_t *channel, ipc_message_t *message)
+{
+    uint32_t len = message->header.aipc.payload_len;
+    message->payload = AIRY_MALLOC(len);
+    if (!message->payload)
+        return AIRY_ENOMEM;
+    if (!ipc_fill(channel, message->payload, len)) {
+        AIRY_FREE(message->payload);
+        message->payload = NULL;
+        channel->stats.errors++;
+        return AIRY_EUNKNOWN;
     }
+    message->payload_size = len;
+    return AIRY_SUCCESS;
+}
 
-    if (channel->msg_cb) {
-        int result = channel->msg_cb(channel, message, channel->msg_user_data);
-        if (result != 0) {
+airy_err_t ipc_receive(ipc_channel_t *channel, ipc_message_t *message, uint32_t timeout_ms)
+{
+    if (!channel || !message)
+        return AIRY_EINVAL;
+    if (channel->state != IPC_STATE_OPEN)
+        return AIRY_ENOTCONN;
 
-            return AIRY_ECANCELLED;
-        }
-    }
+    AIRY_MEMSET(message, 0, sizeof(ipc_message_t));
+
+    airy_err_t err = ipc_read_head(channel, message, timeout_ms);
+    if (err == AIRY_SUCCESS)
+        err = ipc_check_head(channel, message);
+    if (err == AIRY_SUCCESS && message->header.aipc.payload_len > 0)
+        err = ipc_read_body(channel, message);
+    if (err != AIRY_SUCCESS)
+        return err;
+
+    if (channel->msg_cb && channel->msg_cb(channel, message, channel->msg_user_data) != 0)
+        return AIRY_ECANCELLED;
 
     channel->stats.messages_received++;
     channel->stats.bytes_received += sizeof(ipc_message_header_t) + message->payload_size;
