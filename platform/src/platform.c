@@ -518,13 +518,9 @@ int airy_file_rename(const char *old_path, const char *new_path)
 #endif
 }
 
-int airy_get_sysinfo(airy_sysinfo_t *info)
-{
-    if (!info)
-        return AIRY_EINVAL;
-    AIRY_MEMSET(info, 0, sizeof(*info));
-
 #if AIRY_PLATFORM_WINDOWS
+static void sysinfo_win(airy_sysinfo_t *info)
+{
     SYSTEM_INFO si;
     GetSystemInfo(&si);
     info->cpu_count = si.dwNumberOfProcessors;
@@ -549,7 +545,10 @@ int airy_get_sysinfo(airy_sysinfo_t *info)
         RegQueryValueExA(hk, "ProcessorNameString", NULL, &type, (LPBYTE)info->cpu_model, &sz);
         RegCloseKey(hk);
     }
+}
 #elif defined(__APPLE__) && defined(__MACH__)
+static void sysinfo_mac(airy_sysinfo_t *info)
+{
     AIRY_STRNCPY_TERM(info->os_name, "Darwin", sizeof(info->os_name));
     char ver[64];
     size_t ver_len = sizeof(ver);
@@ -573,8 +572,11 @@ int airy_get_sysinfo(airy_sysinfo_t *info)
     size_t brand_len = sizeof(brand);
     if (sysctlbyname("machdep.cpu.brand_string", brand, &brand_len, NULL, 0) == 0)
         AIRY_STRNCPY_TERM(info->cpu_model, brand, sizeof(info->cpu_model));
+}
 #else
-    /* Linux/POSIX：uname + sysconf + /proc 单源 */
+/* Linux/POSIX：uname + sysconf + /proc 单源 */
+static void posix_os(airy_sysinfo_t *info)
+{
     struct utsname un;
     if (uname(&un) == 0) {
         AIRY_STRNCPY_TERM(info->os_name, un.sysname, sizeof(info->os_name));
@@ -582,49 +584,77 @@ int airy_get_sysinfo(airy_sysinfo_t *info)
     }
     if (gethostname(info->hostname, sizeof(info->hostname)) != 0)
         AIRY_STRNCPY_TERM(info->hostname, "unknown", sizeof(info->hostname));
+}
+
+/* 型号取 /proc/cpuinfo 首个 "model name"，截去行尾换行与超长部分。 */
+static void posix_cpu(airy_sysinfo_t *info)
+{
     long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
     if (ncpu > 0)
         info->cpu_count = (uint32_t)ncpu;
+
+    FILE *cf = fopen("/proc/cpuinfo", "r");
+    if (!cf)
+        return;
+    char line[256];
+    while (fgets(line, sizeof(line), cf)) {
+        if (strncmp(line, "model name", 10) != 0)
+            continue;
+        const char *colon = strchr(line, ':');
+        if (colon) {
+            const char *p = colon + 1;
+            while (*p == ' ' || *p == '\t')
+                p++;
+            size_t n = strlen(p);
+            while (n > 0 && (p[n - 1] == '\n' || p[n - 1] == '\r'))
+                n--;
+            size_t cap = sizeof(info->cpu_model) - 1;
+            if (n > cap)
+                n = cap;
+            __builtin_memcpy(info->cpu_model, p, n);
+            info->cpu_model[n] = '\0';
+        }
+        break;
+    }
+    fclose(cf);
+}
+
+static void posix_mem(airy_sysinfo_t *info)
+{
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGESIZE);
     if (pages > 0 && page_size > 0)
         info->memory_total = (uint64_t)pages * (uint64_t)page_size;
+
     FILE *f = fopen("/proc/meminfo", "r");
-    if (f) {
-        char line[256];
-        while (fgets(line, sizeof(line), f)) {
-            if (strncmp(line, "MemAvailable:", 13) == 0) {
-                unsigned long kb = strtoul(line + 13, NULL, 10);
-                info->memory_free = (uint64_t)kb * 1024;
-                break;
-            }
+    if (!f)
+        return;
+    char line[256];
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "MemAvailable:", 13) == 0) {
+            unsigned long kb = strtoul(line + 13, NULL, 10);
+            info->memory_free = (uint64_t)kb * 1024;
+            break;
         }
-        fclose(f);
     }
-    FILE *cf = fopen("/proc/cpuinfo", "r");
-    if (cf) {
-        char line[256];
-        while (fgets(line, sizeof(line), cf)) {
-            if (strncmp(line, "model name", 10) == 0) {
-                const char *colon = strchr(line, ':');
-                if (colon) {
-                    const char *p = colon + 1;
-                    while (*p == ' ' || *p == '\t')
-                        p++;
-                    size_t n = strlen(p);
-                    while (n > 0 && (p[n - 1] == '\n' || p[n - 1] == '\r'))
-                        n--;
-                    size_t cap = sizeof(info->cpu_model) - 1;
-                    if (n > cap)
-                        n = cap;
-                    __builtin_memcpy(info->cpu_model, p, n);
-                    info->cpu_model[n] = '\0';
-                }
-                break;
-            }
-        }
-        fclose(cf);
-    }
+    fclose(f);
+}
+#endif
+
+int airy_get_sysinfo(airy_sysinfo_t *info)
+{
+    if (!info)
+        return AIRY_EINVAL;
+    AIRY_MEMSET(info, 0, sizeof(*info));
+
+#if AIRY_PLATFORM_WINDOWS
+    sysinfo_win(info);
+#elif defined(__APPLE__) && defined(__MACH__)
+    sysinfo_mac(info);
+#else
+    posix_os(info);
+    posix_cpu(info);
+    posix_mem(info);
 #endif
     return AIRY_SUCCESS;
 }
