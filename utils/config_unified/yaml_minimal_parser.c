@@ -274,101 +274,110 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
     return b.map;
 }
 
-struct yaml_node *parse_value(struct parse_ctx *ctx, int base_indent)
+/* 节点前缀（标签与锚点名）所有权包：解析后随节点移交，未使用者
+ * 由 pv_apply() 统一释放。 */
+struct pv_prefix {
+    char *tag;
+    char *anchor;
+};
+
+static void pv_prefix_parse(struct parse_ctx *ctx, struct pv_prefix *p)
 {
-    skip_ws_nl_comments(ctx);
-    if (at_end(ctx))
-        return alloc_node(ctx->doc, YAML_NODE_NONE);
-
-    char *tag = NULL;
-    char *anchor_name = NULL;
-
+    p->tag = NULL;
+    p->anchor = NULL;
     if (peek(ctx) == '!') {
-        tag = parse_tag(ctx);
+        p->tag = parse_tag(ctx);
         skip_ws(ctx);
     }
-
     if (peek(ctx) == '&') {
         advance(ctx);
-        anchor_name = parse_anchor_name(ctx);
+        p->anchor = parse_anchor_name(ctx);
         skip_ws(ctx);
     }
+}
 
-    if (peek(ctx) == '*')
-        return parse_alias_value(ctx, tag, anchor_name);
-
-    char c = peek(ctx);
-    if (c == '"' || c == '\'')
-        return parse_quoted_value(ctx, c, tag, anchor_name);
-    if (c == '|' || c == '>')
-        return parse_block_scalar_value(ctx, c == '>', tag, anchor_name);
-    if (c == '-') {
-        char ahead = '\0';
-        if (ctx->pos + 1 < ctx->len)
-            ahead = ctx->src[ctx->pos + 1];
-        if (ahead == ' ' || ahead == '\t' || ahead == '\n' || ahead == '\r') {
-            struct yaml_node *seq = parse_sequence(ctx, base_indent);
-            if (seq && anchor_name)
-                register_anchor(ctx, anchor_name, seq);
-            if (seq && tag) {
-                AIRY_FREE(seq->tag);
-                seq->tag = tag;
-                tag = NULL;
-            }
-            AIRY_FREE(anchor_name);
-            AIRY_FREE(tag);
-            return seq;
-        }
+/* 把前缀挂到节点上并清空。alloc_node 以零初始化保证 tag 为空，
+ * 故此处释放对新建节点为无操作，对已有 tag 的节点则避免覆盖泄漏。 */
+static struct yaml_node *pv_apply(struct parse_ctx *ctx, struct pv_prefix *p,
+                                  struct yaml_node *node)
+{
+    if (node && p->anchor)
+        register_anchor(ctx, p->anchor, node);
+    if (node && p->tag) {
+        AIRY_FREE(node->tag);
+        node->tag = p->tag;
+        p->tag = NULL;
     }
-    if (c == '[')
-        return parse_inline_sequence_value(ctx, base_indent, tag, anchor_name);
-    if (c == '{')
-        return parse_inline_mapping_value(ctx, base_indent, tag, anchor_name);
+    AIRY_FREE(p->anchor);
+    AIRY_FREE(p->tag);
+    p->anchor = NULL;
+    p->tag = NULL;
+    return node;
+}
 
+/* '-' 后接空白或换行才是块序列项；"-5" 之类仍按纯量处理 */
+static bool pv_is_seq_dash(struct parse_ctx *ctx)
+{
+    if (peek(ctx) != '-')
+        return false;
+    char ahead = ctx->pos + 1 < ctx->len ? ctx->src[ctx->pos + 1] : '\0';
+    return ahead == ' ' || ahead == '\t' || ahead == '\n' || ahead == '\r';
+}
+
+/* 纯量分支：先试读纯量，若其后紧跟 ':' 则回退按映射解析 */
+static struct yaml_node *pv_plain(struct parse_ctx *ctx, int base_indent,
+                                  struct pv_prefix *p)
+{
     size_t saved_pos = ctx->pos;
     char *scalar = parse_plain_scalar(ctx, base_indent);
     if (!scalar) {
-        AIRY_FREE(tag);
-        AIRY_FREE(anchor_name);
+        AIRY_FREE(p->tag);
+        AIRY_FREE(p->anchor);
         return alloc_node(ctx->doc, YAML_NODE_NONE);
     }
 
     skip_ws(ctx);
     if (peek(ctx) == ':') {
         AIRY_FREE(scalar);
-        scalar = NULL;
         ctx->pos = saved_pos;
-        struct yaml_node *m = parse_mapping(ctx, base_indent);
-        if (m && anchor_name)
-            register_anchor(ctx, anchor_name, m);
-        if (m && tag) {
-            AIRY_FREE(m->tag);
-            m->tag = tag;
-            tag = NULL;
-        }
-        AIRY_FREE(anchor_name);
-        AIRY_FREE(tag);
-        return m;
+        return pv_apply(ctx, p, parse_mapping(ctx, base_indent));
     }
 
     struct yaml_node *n = alloc_node(ctx->doc, YAML_NODE_SCALAR);
-    if (n) {
-        n->scalar.value = scalar;
-        n->scalar.length = strlen(scalar);
-        if (anchor_name) {
-            register_anchor(ctx, anchor_name, n);
-        }
-        if (tag) {
-            n->tag = tag;
-            tag = NULL;
-        }
-    } else {
+    if (!n) {
         AIRY_FREE(scalar);
-        scalar = NULL;
+        AIRY_FREE(p->tag);
+        AIRY_FREE(p->anchor);
+        return NULL;
     }
-    AIRY_FREE(anchor_name);
-    AIRY_FREE(tag);
-    return n;
+    n->scalar.value = scalar;
+    n->scalar.length = strlen(scalar);
+    return pv_apply(ctx, p, n);
+}
+
+struct yaml_node *parse_value(struct parse_ctx *ctx, int base_indent)
+{
+    skip_ws_nl_comments(ctx);
+    if (at_end(ctx))
+        return alloc_node(ctx->doc, YAML_NODE_NONE);
+
+    struct pv_prefix p;
+    pv_prefix_parse(ctx, &p);
+
+    char c = peek(ctx);
+    if (c == '*')
+        return parse_alias_value(ctx, p.tag, p.anchor);
+    if (c == '"' || c == '\'')
+        return parse_quoted_value(ctx, c, p.tag, p.anchor);
+    if (c == '|' || c == '>')
+        return parse_block_scalar_value(ctx, c == '>', p.tag, p.anchor);
+    if (pv_is_seq_dash(ctx))
+        return pv_apply(ctx, &p, parse_sequence(ctx, base_indent));
+    if (c == '[')
+        return parse_inline_sequence_value(ctx, base_indent, p.tag, p.anchor);
+    if (c == '{')
+        return parse_inline_mapping_value(ctx, base_indent, p.tag, p.anchor);
+    return pv_plain(ctx, base_indent, &p);
 }
 
 void skip_yaml_directives(struct parse_ctx *ctx)
