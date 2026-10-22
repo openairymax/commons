@@ -15,6 +15,8 @@
 
 #include "token.h"
 
+#include "safe_utf8.h"
+
 /* 词字符归一：返回小写字符值，非词字符返回 0（词法原语） */
 static int word_char(unsigned char c)
 {
@@ -27,18 +29,6 @@ static int word_char(unsigned char c)
     if (c >= 'A' && c <= 'Z')
         return c + 32;
     return 0;
-}
-
-/* UTF-8 前导字节定序长（词法原语） */
-static size_t utf8_seq_len(unsigned char c)
-{
-    if ((c & 0xE0) == 0xC0)
-        return 2;
-    if ((c & 0xF0) == 0xE0)
-        return 3;
-    if ((c & 0xF8) == 0xF0)
-        return 4;
-    return 1;
 }
 
 /* 冲刷累积中的 ASCII 词（词法原语） */

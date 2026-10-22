@@ -17,84 +17,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "error.h"
+#include "safe_utf8.h"
 
 /**
  * @brief Algorithm info string.
  */
 static const char *ALGORITHM_INFO =
     "AgentRT Token Standard v1.0 - Unified Token Counting Algorithm";
-
-static const struct {
-    unsigned char lo;
-    unsigned char hi;
-    unsigned char mask;
-} u8_lead[] = {
-    {0x00, 0x7F, 0x00},
-    {0xC2, 0xDF, 0x1F},
-    {0xE0, 0xEF, 0x0F},
-    {0xF0, 0xF4, 0x07},
-};
-
-static size_t u8_seqlen(unsigned char c)
-{
-    for (size_t s = 0; s < sizeof(u8_lead) / sizeof(u8_lead[0]); s++) {
-        if (c >= u8_lead[s].lo && c <= u8_lead[s].hi)
-            return s + 1;
-    }
-    return 0;
-}
-
-static int cp_is_valid(uint32_t cp, size_t n)
-{
-    if (n == 3 && cp < 0x800)
-        return 0;
-    if (n == 3 && cp >= 0xD800 && cp <= 0xDFFF)
-        return 0;
-    if (n == 4 && cp < 0x10000)
-        return 0;
-    if (n == 4 && cp > 0x10FFFF)
-        return 0;
-    return 1;
-}
-
-/**
- * @brief Decode a Unicode code point from a UTF-8 multi-byte sequence.
- *
- * @param text Text pointer
- * @param i Current position
- * @param length Text length
- * @param[out] code_point Decoded Unicode code point
- * @param[out] bytes_consumed Number of bytes consumed
- * @return 0 on success, AIRY_EINVAL on failure
- */
-static int utf8_decode(const char *text, size_t i, size_t length, uint32_t *code_point,
-                       size_t *bytes_consumed)
-{
-    if (!text || !code_point || !bytes_consumed)
-        return AIRY_EINVAL;
-    if (i >= length)
-        return AIRY_EINVAL;
-
-    unsigned char c = (unsigned char)text[i];
-    size_t n = u8_seqlen(c);
-    if (n == 0 || i + n > length)
-        return AIRY_EINVAL;
-
-    uint32_t cp = (n == 1) ? (uint32_t)c : (uint32_t)(c & u8_lead[n - 1].mask);
-    for (size_t k = 1; k < n; k++) {
-        unsigned char cc = (unsigned char)text[i + k];
-        if ((cc & 0xC0) != 0x80)
-            return AIRY_EINVAL;
-        cp = (cp << 6) | (uint32_t)(cc & 0x3F);
-    }
-
-    if (!cp_is_valid(cp, n))
-        return AIRY_EINVAL;
-
-    *code_point = cp;
-    *bytes_consumed = n;
-    return 0;
-}
 
 typedef struct {
     uint32_t lo;
@@ -133,7 +62,8 @@ int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_cha
         uint32_t code_point = 0;
         size_t bytes_consumed = 0;
 
-        if (utf8_decode(text, i, length, &code_point, &bytes_consumed) == 0) {
+        if (utf8_decode((const unsigned char *)text + i, length - i, &bytes_consumed,
+                        &code_point)) {
             total_chars++;
             if (code_point < 0x80 && isalpha((int)code_point)) {
                 alpha_chars++;
