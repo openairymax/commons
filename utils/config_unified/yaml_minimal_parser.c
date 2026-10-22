@@ -142,17 +142,102 @@ static void apply_merge_key(struct parse_ctx *ctx, struct yaml_node *map, char *
     AIRY_FREE(key);
 }
 
+/* 映射装配器状态：键缩进在首个键确定，之后所有键共享该缩进 */
+struct ymap_builder {
+    struct yaml_node *map;
+    size_t size;
+    size_t cap;
+    int indent;
+};
+
+static int ymap_init(struct parse_ctx *ctx, struct ymap_builder *b)
+{
+    b->map = alloc_node(ctx->doc, YAML_NODE_MAPPING);
+    b->size = 0;
+    b->cap = 8;
+    b->indent = -1;
+    if (!b->map)
+        return -1;
+    b->map->mapping =
+        (struct yaml_mapping_entry *)AIRY_CALLOC(b->cap, sizeof(struct yaml_mapping_entry));
+    return b->map->mapping ? 0 : -1;
+}
+
+/* 键值入库：复合键（<<）走合并（合并后长度需从节点回读），
+ * 其余按普通条目追加。失败返回 -1（键值所有权留在调用方）。 */
+static int ymap_put(struct parse_ctx *ctx, struct ymap_builder *b, char *key,
+                    struct yaml_node *val)
+{
+    if (strcmp(key, "<<") == 0) {
+        apply_merge_key(ctx, b->map, key, val);
+        b->size = yaml_size(b->map);
+        return 0;
+    }
+    return yaml_mapping_append(&b->map->mapping, &b->size, &b->cap, key, val);
+}
+
+/* 冒号后为空：下一行更深则递归解析子结构，否则落空标量 */
+static int ymap_block(struct parse_ctx *ctx, struct ymap_builder *b, int ind, char *key)
+{
+    int next_ind = count_indent(ctx);
+    if (next_ind > ind) {
+        struct yaml_node *val = parse_value(ctx, ind);
+        if (val)
+            return ymap_put(ctx, b, key, val);
+    }
+    /* 无子结构可并入：合并键直接丢弃（无值可并），其余落空串 */
+    if (strcmp(key, "<<") == 0) {
+        AIRY_FREE(key);
+        return 0;
+    }
+    struct yaml_node *empty = alloc_node(ctx->doc, YAML_NODE_SCALAR);
+    if (empty)
+        empty->scalar.value = AIRY_STRDUP("");
+    return ymap_put(ctx, b, key, empty);
+}
+
+/* 冒号后为同行值：解析失败降级为空标量，NONE 类型提升为 SCALAR */
+static int ymap_inline(struct parse_ctx *ctx, struct ymap_builder *b, int ind, char *key)
+{
+    struct yaml_node *val = parse_value(ctx, ind);
+    if (!val)
+        val = alloc_node(ctx->doc, YAML_NODE_SCALAR);
+    if (val && val->type == YAML_NODE_NONE)
+        val->type = YAML_NODE_SCALAR;
+    if (val && val->type == YAML_NODE_SCALAR && !val->scalar.value)
+        val->scalar.value = AIRY_STRDUP("");
+    return ymap_put(ctx, b, key, val);
+}
+
+/* 解析键并消费其后的 ':'；键缺失/为空/无冒号均结束当前映射 */
+static char *ymap_key(struct parse_ctx *ctx, int ind)
+{
+    char *key = parse_plain_scalar(ctx, ind);
+    if (!key || key[0] == '\0') {
+        AIRY_FREE(key);
+        return NULL;
+    }
+    skip_ws(ctx);
+    if (peek(ctx) != ':') {
+        set_error(ctx, "line %d: expected ':' after key '%s'", ctx->line, key);
+        AIRY_FREE(key);
+        return NULL;
+    }
+    advance(ctx);
+    return key;
+}
+
+/* ':' 之后跳过空白与换行，判断是否走空值分支 */
+static int ymap_no_inline(struct parse_ctx *ctx)
+{
+    skip_ws_and_nl(ctx);
+    return at_end(ctx) || peek(ctx) == '\n' || peek(ctx) == '\r';
+}
+
 struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
 {
-    struct yaml_node *map = alloc_node(ctx->doc, YAML_NODE_MAPPING);
-    if (!map)
-        return NULL;
-
-    size_t cap = 8;
-    map->mapping = (struct yaml_mapping_entry *)AIRY_CALLOC(cap, sizeof(struct yaml_mapping_entry));
-    size_t map_size = 0;
-    int map_indent = -1;
-    if (!map->mapping)
+    struct ymap_builder b;
+    if (ymap_init(ctx, &b) != 0)
         return NULL;
 
     while (!at_end(ctx)) {
@@ -161,7 +246,7 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
             break;
 
         int ind = line_indent(ctx);
-        bool dash_line = map_indent < 0 && current_line_has_dash(ctx, ind);
+        bool dash_line = b.indent < 0 && current_line_has_dash(ctx, ind);
 
         /* Sequence-item content shares the line with its "- " marker, so
          * the first key may sit at the same leading indentation; every
@@ -172,72 +257,21 @@ struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent)
         /* All keys of one mapping share the indent of the first key;
          * a shallower line ends the mapping (e.g. the next sequence
          * item or a sibling key of an outer mapping). */
-        if (map_indent < 0)
-            map_indent = dash_line ? ind + 2 : ind;
-        else if (ind < map_indent)
+        if (b.indent < 0)
+            b.indent = dash_line ? ind + 2 : ind;
+        else if (ind < b.indent)
             break;
 
-        char *key = parse_plain_scalar(ctx, ind);
-        if (!key || key[0] == '\0') {
-            AIRY_FREE(key);
+        char *key = ymap_key(ctx, ind);
+        if (!key)
             break;
-        }
-
-        skip_ws(ctx);
-        if (peek(ctx) != ':') {
-            set_error(ctx, "line %d: expected ':' after key '%s'", ctx->line, key);
-            AIRY_FREE(key);
-            break;
-        }
-        advance(ctx);
-
-        skip_ws_and_nl(ctx);
-        if (at_end(ctx) || peek(ctx) == '\n' || peek(ctx) == '\r') {
-            int next_ind = count_indent(ctx);
-            if (next_ind > ind) {
-                struct yaml_node *val = parse_value(ctx, ind);
-                if (val) {
-                    if (strcmp(key, "<<") == 0) {
-                        apply_merge_key(ctx, map, key, val);
-                        map_size = yaml_size(map);
-                        continue;
-                    }
-                    if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, val) != 0)
-                        return NULL;
-                    continue;
-                }
-            }
-            if (strcmp(key, "<<") == 0) {
-                AIRY_FREE(key);
-                continue;
-            }
-            struct yaml_node *null_node = alloc_node(ctx->doc, YAML_NODE_SCALAR);
-            if (null_node)
-                null_node->scalar.value = AIRY_STRDUP("");
-            if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, null_node) != 0)
-                return NULL;
-            continue;
-        }
-
-        struct yaml_node *val = parse_value(ctx, ind);
-        if (!val)
-            val = alloc_node(ctx->doc, YAML_NODE_SCALAR);
-        if (val && val->type == YAML_NODE_NONE)
-            val->type = YAML_NODE_SCALAR;
-        if (val && val->type == YAML_NODE_SCALAR && !val->scalar.value)
-            val->scalar.value = AIRY_STRDUP("");
-
-        if (strcmp(key, "<<") == 0) {
-            apply_merge_key(ctx, map, key, val);
-            map_size = yaml_size(map);
-            continue;
-        }
-
-        if (yaml_mapping_append(&map->mapping, &map_size, &cap, key, val) != 0)
+        int rc = ymap_no_inline(ctx) ? ymap_block(ctx, &b, ind, key)
+                                     : ymap_inline(ctx, &b, ind, key);
+        if (rc != 0)
             return NULL;
     }
 
-    return map;
+    return b.map;
 }
 
 struct yaml_node *parse_value(struct parse_ctx *ctx, int base_indent)
