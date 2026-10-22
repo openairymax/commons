@@ -87,40 +87,24 @@ static int utf8_decode_code_point(const char *text, size_t i, size_t length, uin
     return AIRY_EINVAL;
 }
 
-static int is_cjk_code_point(uint32_t code_point)
+typedef struct {
+    uint32_t lo;
+    uint32_t hi;
+} cjk_rng_t;
+
+static const cjk_rng_t cjk_rngs[] = {
+    {0x4E00, 0x9FFF},   {0x3400, 0x4DBF},   {0x20000, 0x2A6DF}, {0x2A700, 0x2B73F},
+    {0x2B740, 0x2B81F}, {0x2B820, 0x2CEAF}, {0x2CEB0, 0x2EBEF}, {0x30000, 0x3134F},
+    {0x31350, 0x323AF}, {0xF900, 0xFAFF},   {0x2F800, 0x2FA1F}, {0x3000, 0x303F},
+    {0x3040, 0x309F},   {0x30A0, 0x30FF},   {0xAC00, 0xD7AF},   {0xFF00, 0xFFEF},
+};
+
+static int cp_is_cjk(uint32_t code_point)
 {
-    if (code_point >= 0x4E00 && code_point <= 0x9FFF)
-        return 1;
-    if (code_point >= 0x3400 && code_point <= 0x4DBF)
-        return 1;
-    if (code_point >= 0x20000 && code_point <= 0x2A6DF)
-        return 1;
-    if (code_point >= 0x2A700 && code_point <= 0x2B73F)
-        return 1;
-    if (code_point >= 0x2B740 && code_point <= 0x2B81F)
-        return 1;
-    if (code_point >= 0x2B820 && code_point <= 0x2CEAF)
-        return 1;
-    if (code_point >= 0x2CEB0 && code_point <= 0x2EBEF)
-        return 1;
-    if (code_point >= 0x30000 && code_point <= 0x3134F)
-        return 1;
-    if (code_point >= 0x31350 && code_point <= 0x323AF)
-        return 1;
-    if (code_point >= 0xF900 && code_point <= 0xFAFF)
-        return 1;
-    if (code_point >= 0x2F800 && code_point <= 0x2FA1F)
-        return 1;
-    if (code_point >= 0x3000 && code_point <= 0x303F)
-        return 1;
-    if (code_point >= 0x3040 && code_point <= 0x309F)
-        return 1;
-    if (code_point >= 0x30A0 && code_point <= 0x30FF)
-        return 1;
-    if (code_point >= 0xAC00 && code_point <= 0xD7AF)
-        return 1;
-    if (code_point >= 0xFF00 && code_point <= 0xFFEF)
-        return 1;
+    for (size_t i = 0; i < sizeof(cjk_rngs) / sizeof(cjk_rngs[0]); i++) {
+        if (code_point >= cjk_rngs[i].lo && code_point <= cjk_rngs[i].hi)
+            return 1;
+    }
     return 0;
 }
 
@@ -144,7 +128,7 @@ int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_cha
             total_chars++;
             if (code_point < 0x80 && isalpha((int)code_point)) {
                 alpha_chars++;
-            } else if (is_cjk_code_point(code_point)) {
+            } else if (cp_is_cjk(code_point)) {
                 cjk_chars++;
             }
             i += bytes_consumed;
