@@ -88,16 +88,18 @@ void yaml_destroy_chain(yaml_document_t *doc);
 const char *yaml_get_error(const yaml_document_t *doc);
 
 struct yaml_node *yaml_root(const yaml_document_t *doc);
-struct yaml_node *yaml_get(struct yaml_node *node, const char *key);
-struct yaml_node *yaml_get_index(struct yaml_node *node, size_t index);
-size_t yaml_size(struct yaml_node *node);
+/* 以下访问器只读：接受 const 节点，返回的句柄仍为非 const 借用视图，
+ * 归文档所有，调用方不得释放，也不得据此修改节点。 */
+struct yaml_node *yaml_get(const struct yaml_node *node, const char *key);
+struct yaml_node *yaml_get_index(const struct yaml_node *node, size_t index);
+size_t yaml_size(const struct yaml_node *node);
 
-const char *yaml_as_string(struct yaml_node *node, const char *default_val);
-long long yaml_as_int64(struct yaml_node *node, long long default_val);
-double yaml_as_double(struct yaml_node *node, double default_val);
-bool yaml_as_bool(struct yaml_node *node, bool default_val);
+const char *yaml_as_string(const struct yaml_node *node, const char *default_val);
+long long yaml_as_int64(const struct yaml_node *node, long long default_val);
+double yaml_as_double(const struct yaml_node *node, double default_val);
+bool yaml_as_bool(const struct yaml_node *node, bool default_val);
 
-bool yaml_has_key(struct yaml_node *node, const char *key);
+bool yaml_has_key(const struct yaml_node *node, const char *key);
 
 /* 将 node 树以 YAML 文本追加到 buf（buf 须为已 NUL 终止的缓冲区，可空串；
  * 供"先写注释头再续写正文"的多段组装使用）。结果保证 NUL 终止。 */

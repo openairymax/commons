@@ -20,14 +20,14 @@
 #include <string.h>
 #include "error.h"
 
-const char *yaml_as_string(struct yaml_node *node, const char *default_val)
+const char *yaml_as_string(const struct yaml_node *node, const char *default_val)
 {
     if (!node || node->type != YAML_NODE_SCALAR || !node->scalar.value)
         return default_val;
     return node->scalar.value;
 }
 
-long long yaml_as_int64(struct yaml_node *node, long long default_val)
+long long yaml_as_int64(const struct yaml_node *node, long long default_val)
 {
     if (!node || node->type != YAML_NODE_SCALAR || !node->scalar.value)
         return default_val;
@@ -36,7 +36,7 @@ long long yaml_as_int64(struct yaml_node *node, long long default_val)
     return (endp && *endp == '\0') ? v : default_val;
 }
 
-double yaml_as_double(struct yaml_node *node, double default_val)
+double yaml_as_double(const struct yaml_node *node, double default_val)
 {
     if (!node || node->type != YAML_NODE_SCALAR || !node->scalar.value)
         return default_val;
@@ -45,7 +45,7 @@ double yaml_as_double(struct yaml_node *node, double default_val)
     return (endp && *endp == '\0') ? v : default_val;
 }
 
-bool yaml_as_bool(struct yaml_node *node, bool default_val)
+bool yaml_as_bool(const struct yaml_node *node, bool default_val)
 {
     if (!node || node->type != YAML_NODE_SCALAR || !node->scalar.value)
         return default_val;
