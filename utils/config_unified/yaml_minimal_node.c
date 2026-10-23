@@ -18,7 +18,7 @@
 #include <string.h>
 #include "error.h"
 
-size_t yaml_size(struct yaml_node *node)
+size_t yaml_size(const struct yaml_node *node)
 {
     if (!node)
         return 0;
@@ -39,7 +39,7 @@ size_t yaml_size(struct yaml_node *node)
     }
 }
 
-bool yaml_has_key(struct yaml_node *node, const char *key)
+bool yaml_has_key(const struct yaml_node *node, const char *key)
 {
     if (!node || node->type != YAML_NODE_MAPPING || !key)
         return false;
@@ -51,7 +51,7 @@ bool yaml_has_key(struct yaml_node *node, const char *key)
     return false;
 }
 
-struct yaml_node *yaml_get(struct yaml_node *node, const char *key)
+struct yaml_node *yaml_get(const struct yaml_node *node, const char *key)
 {
     if (!node || node->type != YAML_NODE_MAPPING || !key)
         return NULL;
@@ -63,7 +63,7 @@ struct yaml_node *yaml_get(struct yaml_node *node, const char *key)
     return NULL;
 }
 
-struct yaml_node *yaml_get_index(struct yaml_node *node, size_t index)
+struct yaml_node *yaml_get_index(const struct yaml_node *node, size_t index)
 {
     if (!node || node->type != YAML_NODE_SEQUENCE)
         return NULL;
