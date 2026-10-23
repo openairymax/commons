@@ -24,6 +24,8 @@ set(SOURCES
     utils/observability/logger.c
     utils/observability/trace.c
     utils/error/handler.c
+    # 错误码目录表拆分：纯静态映射单元（内部契约 error_catalog_internal.h）
+    utils/error/error_catalog.c
     # 0.1.19 §3.7.2 N1：ErrorModel v1 错误分类 SSoT（class/JSON 契约）
     utils/error/err_class.c
     utils/io/file_utils.c
