@@ -103,13 +103,13 @@ static inline int shm_open(const char *name, int oflag, mode_t mode)
     (void)name;
     (void)oflag;
     (void)mode;
-    return -1; /* BAN-073 exempt: POSIX API contract (stub) */
+    return -1; /* BAN-073 exempt: no POSIX shm on Win32; fail closed */
 }
 
 static inline int shm_unlink(const char *name)
 {
     (void)name;
-    return -1; /* BAN-073 exempt: POSIX API contract (stub) */
+    return -1; /* BAN-073 exempt: no POSIX shm on Win32; fail closed */
 }
 
 #else
