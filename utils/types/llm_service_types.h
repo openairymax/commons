@@ -74,6 +74,21 @@ typedef struct {
     void *user_data;
 } llm_request_config_t;
 
+/* Endpoint-reported per-request evaluation timings, carried in the
+ * llama.cpp-compatible top-level "timings" object (prompt_n / prompt_ms /
+ * predicted_n / predicted_ms / cache_n). prefill_* and decode_* are the
+ * G47 column split: prompt evaluation vs token generation. kv_cache_tokens
+ * counts tokens reused from the server-side KV slot cache — distinct from
+ * cached_tokens, which is the provider billing detail inside prompt_tokens.
+ * All zero when the endpoint does not report timings. */
+typedef struct {
+    uint32_t prefill_tokens;
+    uint32_t decode_tokens;
+    uint32_t kv_cache_tokens;
+    double prefill_ms;
+    double decode_ms;
+} llm_timings_t;
+
 typedef struct {
     char *id;
     char *model;
@@ -92,6 +107,9 @@ typedef struct {
      * cache_read_input_tokens). Included in prompt_tokens; kept separate
      * so cache hit-rate stays observable. Zero when not reported. */
     uint32_t cached_tokens;
+    /* Per-request prefill/decode measurement echo from the endpoint
+     * (llama.cpp top-level "timings"). Zero when not reported. */
+    llm_timings_t timings;
     double cost_usd;
     /* Completion outcome in the canonical vocabulary defined below.
      * Every provider normalizes its native marker with
