@@ -399,6 +399,33 @@
 #endif
 #define AIRY_ERR_LLM_BAD_REQUEST (-412)
 
+/* C11 输出完整性契约（0.1.20 批次 1b）：流式传输与终结原因的四类违约。
+ * 机制面只报告事实（哪一类不完整），处置策略（重试/降级/拒收）归调用方。
+ * AIRY_ERR_LLM_STREAM_UNDONE：SSE 流结束但未收到 data: [DONE] 终结哨兵，
+ * 接收体可能被静默截断，不得当作完整回复（主动取消豁免，不算断流）。
+ * AIRY_ERR_LLM_TRUNCATED：finish_reason=length，输出撞到 max_tokens/
+ * 槽位上限被服务端截断，正文不完整。
+ * AIRY_ERR_LLM_NO_FINISH：流正常终结但缺失 finish_reason/stop_reason，
+ * 协议违约，完整性不可证。
+ * AIRY_ERR_LLM_CONTENT_FILTERED：finish_reason=content_filter，服务端
+ * 内容安全拦截，回复被截停，重试无益。 */
+#ifdef AIRY_ERR_LLM_STREAM_UNDONE
+#error "AIRY_ERR_LLM_STREAM_UNDONE: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_STREAM_UNDONE (-413)
+#ifdef AIRY_ERR_LLM_TRUNCATED
+#error "AIRY_ERR_LLM_TRUNCATED: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_TRUNCATED (-414)
+#ifdef AIRY_ERR_LLM_NO_FINISH
+#error "AIRY_ERR_LLM_NO_FINISH: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_NO_FINISH (-415)
+#ifdef AIRY_ERR_LLM_CONTENT_FILTERED
+#error "AIRY_ERR_LLM_CONTENT_FILTERED: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_CONTENT_FILTERED (-416)
+
 #ifdef AIRY_ERR_EXEC_BASE
 #error "AIRY_ERR_EXEC_BASE: duplicate SSoT definition"
 #endif
