@@ -62,7 +62,6 @@ commons/utils/token/
 | 函数 | 语义 |
 |------|------|
 | `airy_token_standard_count(text, length, config)` | 估算 token 数。`length == 0` 时自动 `strlen`；`config == NULL` 用默认配置；空串返回 0；`text == NULL` 或配置非法返回 `(size_t)-1`；非空文本至少计 1 |
-| `airy_token_standard_count_batch(texts, lengths, count, out_counts, config)` | 批量估算；`lengths` 可为 `NULL`（逐项自动求长），`NULL` 文本元素计 0；成功返回 0，参数、配置错误或单项计数失败返回 `AIRY_EINVAL`（`count == 0` 亦视为参数错误） |
 | `airy_token_analyze_text(text, length, &cjk, &alpha, &total)` | 输出 CJK 字符数、拉丁字母数、总码点数；非法字节序列逐字节跳过、不计入总数 |
 | `airy_token_get_algorithm_info()` | 返回算法说明字符串 |
 | `airy_token_validate_config(config)` | 校验配置：`model_type` 在枚举范围内、两个 ratio 均为开区间 (0,1)、`ACCURATE` 与 `ESTIMATE` 不同时置位 |

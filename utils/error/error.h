@@ -257,7 +257,6 @@ char *airy_err_chain_to_json(const airy_err_chain_t *chain);
 #define AIRY_ERROR_CONTEXT_T_DEFINED
 /**
  * @brief 错误上下文结构（完整版，含时间戳）
- * @note 与 atoms/coreloopthree/include/error_utils.h 保持一致
  */
 typedef struct airy_err_context {
     airy_err_t code;

@@ -18,19 +18,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Validate that a JSON object field exists and has the right type.
- * @param obj JSON object
- * @param key Field name
- * @param expected_type Expected type
- * @return true if present and correctly typed
- */
-static inline bool validate_json_field(cJSON *obj, const char *key, int expected_type)
-{
-    cJSON *field = cJSON_GetObjectItem(obj, key);
-    return (field != NULL && field->type == expected_type);
-}
-
-/**
  * @brief Get a string field (with default).
  * @param obj JSON object
  * @param key Field name
@@ -95,16 +82,6 @@ static inline bool get_bool_field(cJSON *obj, const char *key, bool default_valu
  * @return 0 on success, -1 on failure
  */
 int validate_required_fields(cJSON *obj, ...);
-
-/**
- * @brief Validate a request ID and return its integer value.
- * @param id JSON request ID field
- * @return Request ID integer value
- */
-static inline int get_request_id(cJSON *id)
-{
-    return cJSON_IsNumber(id) ? id->valueint : 0;
-}
 
 /**
  * @brief Validate the basic structure of a JSON-RPC request.
