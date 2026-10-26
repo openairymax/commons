@@ -62,6 +62,11 @@ typedef struct {
     bool accepts_grammar;
     bool accepts_num_ctx;
     bool accepts_response_format;
+    /* T2 KV 复用透传：llamacpp 族专属的 prompt 缓存与槽位亲和。
+     * accepts_cache_prompt 置位时请求恒带 "cache_prompt": true（部署
+     * 配置面表达策略，机制面忠实执行）；slot_id 仅显式设置才下发。 */
+    bool accepts_cache_prompt;
+    bool accepts_slot_id;
 } local_caps_t;
 
 /* response_format values for the OpenAI-compatible wire field. */
@@ -96,6 +101,10 @@ typedef struct {
     const char *grammar;     /* GBNF 语法串，NULL = 不发送 */
     uint8_t response_format; /* LLM_RF_*，0 = 不发送 */
     uint32_t num_ctx;        /* 上下文窗口，0 = 不发送 */
+    /* T2 会话亲和槽位：slot_set 缺省 false = 不发送；显式设置时支持
+     * 槽位 0（llama.cpp 合法槽位，哨兵位不可省）。 */
+    bool slot_set;           /* true = slot_id 为显式设置 */
+    int slot_id;             /* llama.cpp /slots 槽位号，-1 = 服务端自选 */
     local_caps_t caps;       /* driver 从 provider 配置盖印，调用方勿自填 */
 } llm_request_config_t;
 
