@@ -92,21 +92,6 @@ size_t airy_token_standard_count(const char *text, size_t length,
                                  const airy_token_config_t *config);
 
 /**
- * @brief Batch token counting.
- *
- * Counts tokens for multiple texts in one call for efficiency.
- *
- * @param texts Text array
- * @param lengths Length array (bytes); NULL auto-computes each length
- * @param count Text count
- * @param out_counts Output token count array
- * @param config Token counting config; NULL uses the default
- * @return 0 on success, error code on failure
- */
-int airy_token_standard_count_batch(const char **texts, const size_t *lengths, size_t count,
-                                    size_t *out_counts, const airy_token_config_t *config);
-
-/**
  * @brief Detect text language features.
  *
  * Analyzes the language features of a text to optimize token counting.

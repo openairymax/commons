@@ -13,18 +13,6 @@
 #include "platform_misc.h" /* airy_time_ms (commons facade, 8.2.3 SSoT) */
 
 /**
- * @brief 检查内存泄漏
- *
- * @param[in] dump_to_stderr 是否输出泄漏信息到stderr
- * @return 泄漏的字节数
- */
-static inline size_t airy_check_memory_leaks(bool dump_to_stderr)
-{
-    return memory_check_leaks(dump_to_stderr);
-}
-
-
-/**
  * @brief 初始化扩展内存统计跟踪器（SEC-15）
  */
 static inline int airy_memory_stats_extended_init(memory_stats_extended_t *ext_stats,
@@ -89,49 +77,6 @@ static inline void airy_memory_track_alloc(memory_stats_extended_t *ext_stats, v
 }
 
 /**
- * @brief 记录一次内存释放（SEC-15）
- */
-static inline void airy_memory_track_free(memory_stats_extended_t *ext_stats, void *ptr)
-{
-    if (!ext_stats || !ext_stats->allocation_tracker || !ptr)
-        return;
-
-
-    for (size_t i = 0; i < ext_stats->tracker_count; i++) {
-        alloc_track_entry_t *entry = &ext_stats->allocation_tracker[i];
-        if (entry->ptr == ptr && !entry->freed) {
-            entry->freed = true;
-            ext_stats->total_freed += entry->size;
-            ext_stats->free_count++;
-            ext_stats->current_allocated = ext_stats->total_allocated - ext_stats->total_freed;
-            return;
-        }
-    }
-}
-
-/**
- * @brief 检测疑似内存泄漏（SEC-15）
- */
-static inline size_t airy_check_leaks_scheduled(memory_stats_extended_t *ext_stats,
-                                                uint64_t max_age_ms)
-{
-    if (!ext_stats || !ext_stats->allocation_tracker)
-        return 0;
-
-    size_t suspected = 0;
-    uint64_t now = airy_time_ms();
-
-    for (size_t i = 0; i < ext_stats->tracker_count; i++) {
-        alloc_track_entry_t *entry = &ext_stats->allocation_tracker[i];
-        if (!entry->freed && entry->ptr && (now - entry->alloc_time) > max_age_ms) {
-            suspected += entry->size;
-        }
-    }
-    ext_stats->leak_suspected = suspected;
-    return suspected;
-}
-
-/**
  * @brief 计算当前内存水位级别（SEC-15）
  */
 static inline watermark_level_t airy_memory_calc_watermark(memory_stats_extended_t *ext_stats)
@@ -148,44 +93,6 @@ static inline watermark_level_t airy_memory_calc_watermark(memory_stats_extended
         return WATERMARK_WARNING;
     else
         return WATERMARK_NORMAL;
-}
-
-/**
- * @brief 注册水位变化回调（SEC-15）
- */
-static inline int airy_register_watermark_callback(memory_stats_extended_t *ext_stats,
-                                                   watermark_callback_t callback, void *context)
-{
-    if (!ext_stats || !callback) {
-        return AIRY_EINVAL;
-    }
-
-    for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
-        if (!ext_stats->watermark_callbacks[i].active) {
-            ext_stats->watermark_callbacks[i].callback = callback;
-            ext_stats->watermark_callbacks[i].context = context;
-            ext_stats->watermark_callbacks[i].active = true;
-            return 0; /* AIRY_SUCCESS */
-        }
-    }
-
-    return AIRY_ERR_BUSY;
-}
-
-/**
- * @brief 注销水位变化回调（SEC-15）
- */
-static inline void airy_unregister_watermark_callback(memory_stats_extended_t *ext_stats,
-                                                      watermark_callback_t callback)
-{
-    if (!ext_stats || !callback)
-        return;
-
-    for (int i = 0; i < MAX_WATERMARK_CALLBACKS; i++) {
-        if (ext_stats->watermark_callbacks[i].callback == callback) {
-            ext_stats->watermark_callbacks[i].active = false;
-        }
-    }
 }
 
 /**
@@ -221,39 +128,6 @@ static inline void airy_memory_check_watermark(memory_stats_extended_t *ext_stat
  * 此处仅保留声明，避免与 oom_handler.h 的 AIRY_API 定义冲突。
  */
 oom_response_level_t airy_oom_determine_response(watermark_level_t level);
-
-/**
- * @brief 内存统计定期上报（SEC-15 核心功能）
- */
-static inline void airy_memory_stats_report(memory_stats_extended_t *ext_stats, const char *tag)
-{
-    if (!ext_stats)
-        return;
-    (void)tag; /* tag reserved for future logging integration */
-
-
-    ext_stats->current_watermark = airy_memory_calc_watermark(ext_stats);
-
-
-    double fragment_ratio = 0.0;
-    if (ext_stats->total_allocated > 0) {
-        fragment_ratio = (double)ext_stats->leak_suspected / (double)ext_stats->total_allocated;
-    }
-    (void)fragment_ratio; /* suppressed: fprintf removed in strict mode */
-
-
-    double usage_pct = 0.0;
-    if (ext_stats->total_system_memory > 0) {
-        usage_pct =
-            100.0 * (double)ext_stats->current_allocated / (double)ext_stats->total_system_memory;
-    }
-
-
-    ((void)0) /* fprintf suppressed in strict compliance mode */;
-    (void)usage_pct; /* suppressed: fprintf removed in strict mode */
-
-    ((void)0) /* fprintf suppressed in strict compliance mode */;
-}
 
 /**
  * @brief 销毁扩展内存统计跟踪器（SEC-15）
