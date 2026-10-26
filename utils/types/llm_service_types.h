@@ -87,6 +87,11 @@ typedef struct {
      * (e.g. DeepSeek/OpenAI completion_tokens_details.reasoning_tokens).
      * Zero when the upstream does not report it. */
     uint32_t reasoning_tokens;
+    /* Prompt tokens served from the provider-side prefix cache
+     * (usage.prompt_tokens_details.cached_tokens, or the Messages line's
+     * cache_read_input_tokens). Included in prompt_tokens; kept separate
+     * so cache hit-rate stays observable. Zero when not reported. */
+    uint32_t cached_tokens;
     double cost_usd;
     /* Completion outcome in the canonical vocabulary defined below.
      * Every provider normalizes its native marker with
