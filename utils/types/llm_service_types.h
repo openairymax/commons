@@ -21,6 +21,7 @@
 #ifndef AIRY_RT_LLM_SERVICE_TYPES_H
 #define AIRY_RT_LLM_SERVICE_TYPES_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -52,6 +53,21 @@ typedef struct {
     const char *tool_calls_json;
 } llm_message_t;
 
+/* C11 endpoint capability bits: which optional request fields the endpoint
+ * family accepts. Derived statically from model.yaml endpoint_kind at config
+ * build time; stamped onto the request by the provider driver. Unknown kind
+ * => all-false (fail-safe: never send a field the endpoint may reject). */
+typedef struct {
+    bool accepts_seed;
+    bool accepts_grammar;
+    bool accepts_num_ctx;
+    bool accepts_response_format;
+} local_caps_t;
+
+/* response_format values for the OpenAI-compatible wire field. */
+#define LLM_RF_TEXT 0u         /* absent: field not sent */
+#define LLM_RF_JSON_OBJECT 1u  /* {"type":"json_object"} */
+
 typedef struct {
     const char *model;
     const llm_message_t *messages;
@@ -72,6 +88,15 @@ typedef struct {
      * 请求才允许读写语义缓存（读、写两侧同源同判，缺省 0 = fail-closed）。 */
     int cacheable;
     void *user_data;
+    /* C11 确定性采样与结构化输出字段（尾部追加，无 ABI 破坏）。
+     * 零值 = 未设置 = 不发送：旧调用路径的请求体字节级不变。
+     * 实际下发另受 caps 能力位门控（由 provider driver 盖印）。 */
+    uint32_t seed;           /* 确定性种子，0 = 不发送 */
+    bool temperature_set;    /* true = temperature 为显式设置（含 0.0） */
+    const char *grammar;     /* GBNF 语法串，NULL = 不发送 */
+    uint8_t response_format; /* LLM_RF_*，0 = 不发送 */
+    uint32_t num_ctx;        /* 上下文窗口，0 = 不发送 */
+    local_caps_t caps;       /* driver 从 provider 配置盖印，调用方勿自填 */
 } llm_request_config_t;
 
 /* Endpoint-reported per-request evaluation timings, carried in the
