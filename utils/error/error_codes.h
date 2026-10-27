@@ -426,6 +426,16 @@
 #endif
 #define AIRY_ERR_LLM_CONTENT_FILTERED (-416)
 
+/* D2-9 传输侧断流（0.1.20 批次 6-2，方案别名 AIRY_ESTREAM）。
+ * read 空闲间隔超过 read_idle_ms 说明连接仍在但上游停止产出——与
+ * AIRY_ERR_LLM_STREAM_UNDONE 分界：后者流已自然结束却缺 [DONE] 哨兵，
+ * 属协议违约；本码是传输中途停滞，上游未宣告结束。两者处置不同：
+ * 停滞可重试（幂等前提成立时），缺哨兵不得当作完整回复。 */
+#ifdef AIRY_ERR_LLM_STREAM_STALL
+#error "AIRY_ERR_LLM_STREAM_STALL: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_STREAM_STALL (-417)
+
 #ifdef AIRY_ERR_EXEC_BASE
 #error "AIRY_ERR_EXEC_BASE: duplicate SSoT definition"
 #endif
