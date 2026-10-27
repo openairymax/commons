@@ -67,6 +67,10 @@ typedef struct {
      * 配置面表达策略，机制面忠实执行）；slot_id 仅显式设置才下发。 */
     bool accepts_cache_prompt;
     bool accepts_slot_id;
+    /* C3 thinking 控制：推理型模型的思考段开关与预算（模板变量透传，
+     * vLLM/llama.cpp 经 chat_template_kwargs 承载）。位假即丢弃。 */
+    bool accepts_enable_thinking;
+    bool accepts_thinking_budget;
 } local_caps_t;
 
 /* response_format values for the OpenAI-compatible wire field. */
@@ -106,6 +110,13 @@ typedef struct {
     bool slot_set;           /* true = slot_id 为显式设置 */
     int slot_id;             /* llama.cpp /slots 槽位号，-1 = 服务端自选 */
     local_caps_t caps;       /* driver 从 provider 配置盖印，调用方勿自填 */
+    /* C3 门禁调用确定性（尾部追加，无 ABI 破坏）：思考段控制。
+     * thinking_set 缺省 false = 不发送（旧请求体字节级不变）；显式
+     * 设置且能力位置位才下发。r8 联检：enable_thinking 与
+     * thinking_budget 必须联合验收，单独调整不可复现基线。 */
+    bool thinking_set;        /* true = thinking 控制为显式设置 */
+    bool enable_thinking;     /* false = 请求关闭思考段 */
+    uint32_t thinking_budget; /* 思考 token 预算，0 = 不发送 */
 } llm_request_config_t;
 
 /* Endpoint-reported per-request evaluation timings, carried in the
