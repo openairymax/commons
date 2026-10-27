@@ -51,6 +51,19 @@ extern "C" {
 char *daemon_rpc_json_req(const char *method, const char *params_json);
 
 /**
+ * @brief Resolve the timeout used when the caller passes timeout_ms == 0.
+ *
+ * D2-1 (0.1.20): long-running methods (complete_stream, complete, invoke,
+ * think, execute_tool) get per-method tiers instead of the flat 30s
+ * default; unknown methods and NULL fall back to 30000ms. An explicit
+ * non-zero timeout given by the caller always wins over this table.
+ *
+ * @param method JSON-RPC method name (NULL tolerated)
+ * @return Timeout in milliseconds (never 0)
+ */
+uint32_t daemon_rpc_timeout_for(const char *method);
+
+/**
  * @brief Call a JSON-RPC method on a daemon (Unix socket, synchronous).
  *
  * @param socket_path  Daemon Unix socket path (non-NULL)
@@ -58,7 +71,7 @@ char *daemon_rpc_json_req(const char *method, const char *params_json);
  *                     prefix, e.g. "write")
  * @param params_json  Serialized params object (NULL = empty params)
  * @param out_result_json Serialized result-field string (caller AIRY_FREEs)
- * @param timeout_ms   Timeout in ms, 0 = default 30000ms
+ * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
  * @return AIRY_SUCCESS on success; other codes on failure
  *
  * @note On failure *out_result_json is not set (stays NULL).
@@ -81,7 +94,7 @@ int daemon_rpc_call(const char *socket_path, const char *method, const char *par
  * @param method       JSON-RPC method name (e.g. "invoke")
  * @param params_json  Serialized params object (may be NULL)
  * @param out_result_json Serialized result JSON string (caller AIRY_FREEs)
- * @param timeout_ms   Timeout in ms, 0 = default 30000ms
+ * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
  * @param cancel_token Cancel token (NULL = same as daemon_rpc_call)
  * @param cancel_method    Method name sent on cancel (e.g. "cancel")
  * @param cancel_params_json params JSON of the cancel request (e.g. {"request_id":...})
@@ -121,7 +134,7 @@ typedef void (*daemon_rpc_stream_cb_t)(const char *data, size_t len, void *user_
  * @param params_json  Serialized params object (may be NULL)
  * @param on_chunk     chunk callback (may be NULL to just drain)
  * @param user_data    opaque data passed through to on_chunk
- * @param timeout_ms   Timeout in ms, 0 = default 30000ms
+ * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
  * @return AIRY_SUCCESS on stream completion (EOF); other codes on failure
  *
  * @note POSIX rides AF_UNIX; Windows rides TCP loopback (host:port).
