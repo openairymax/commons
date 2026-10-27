@@ -462,6 +462,14 @@
 #error "AIRY_ERR_EXEC_ENV: duplicate SSoT definition"
 #endif
 #define AIRY_ERR_EXEC_ENV (-508)
+#ifdef AIRY_ERR_EXEC_CYCLE
+#error "AIRY_ERR_EXEC_CYCLE: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_EXEC_CYCLE (-509)
+#ifdef AIRY_ERR_EXEC_INPUT
+#error "AIRY_ERR_EXEC_INPUT: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_EXEC_INPUT (-511)
 
 #ifdef AIRY_ERR_MEM_BASE
 #error "AIRY_ERR_MEM_BASE: duplicate SSoT definition"
