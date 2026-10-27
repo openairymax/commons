@@ -213,6 +213,26 @@ int log_set_default_config(const log_config_t *manager)
 
 /* ==================== Write path ==================== */
 
+/* D2-8 单调时钟：record 的 mono_ms 取 g_mono_floor 与当前 monotonic 值
+ * 的较大者，保证同进程内行序单调不减。下界用 CAS 推进——多线程同时
+ * 打日志时并发读同一下界，只有一方能把下界抬高，另一方重试后取新值。
+ * 注意不能走 atomic_load_explicit：MSVC/WIN32 分支把它截断成 int。 */
+static atomic_uint64_t g_mono_floor = 0;
+
+static uint64_t log_mono_now(void)
+{
+    uint64_t now = airy_time_ms();
+    uint64_t cur = g_mono_floor;
+
+    for (;;) {
+        if (now < cur)
+            return cur; /* 时间源回退（极端时钟异常）：沿用下界保持单调 */
+        if (atomic_compare_exchange_weak_explicit(&g_mono_floor, &cur, now, memory_order_acq_rel,
+                                                  memory_order_acquire))
+            return now;
+    }
+}
+
 static void log_write_core(log_level_t level, const char *module, int line,
                            const char *fmt, va_list args)
 {
@@ -232,6 +252,7 @@ static void log_write_core(log_level_t level, const char *module, int line,
               args); /* flawfinder: ignore - variadic logging wrapper */
 
     log_record_t record = {.timestamp = airy_time_wall_ms(),
+                           .mono_ms = log_mono_now(),
                            .level = level,
                            .module = module,
                            .line = line,

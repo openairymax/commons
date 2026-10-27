@@ -189,6 +189,11 @@ typedef struct {
 
     uint64_t timestamp;
 
+    /* 0.1.20 D2-8：与 timestamp 成对下发。wall 会被 SNTP 校时跳变，
+     * mono 单调不减，二者差值即"本条日志距进程时间原点的真实间隔"，
+     * 用于跨校时对同一事件序列排序。 */
+    uint64_t mono_ms;
+
 
     log_level_t level;
 

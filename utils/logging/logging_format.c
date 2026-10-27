@@ -74,10 +74,12 @@ size_t log_internal_format_message(const log_record_t *record, char *buffer, siz
         reset = ANSI_RESET;
     }
 
-    int len = snprintf(buffer, buffer_size, "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [%s%s%s] [%s:%d]",
+    int len = snprintf(buffer, buffer_size,
+                       "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [mono:%llu] [%s%s%s] [%s:%d]",
                        tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,
-                       tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, ms, color_on,
-                       level_name, reset, record->module, record->line);
+                       tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, ms,
+                       (unsigned long long)record->mono_ms, color_on, level_name, reset,
+                       record->module, record->line);
     if (len < 0)
         return 0;
     if ((size_t)len >= buffer_size)
