@@ -172,6 +172,10 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_EXEC_ENV, "ERR_EXEC_ENV", "Execution environment error", "执行环境错误",
      AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_CYCLE, "ERR_EXEC_CYCLE", "Plan dependency cycle", "计划依赖成环",
+     AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_EXEC_INPUT, "ERR_EXEC_INPUT", "Plan input binding unresolved", "计划输入绑定未解析",
+     AIRY_ERR_SEVERITY_ERROR},
 
     {AIRY_ERR_MEM_WRITE, "ERR_MEM_WRITE", "Memory write error", "内存写入错误",
      AIRY_ERR_SEVERITY_ERROR},
