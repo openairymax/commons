@@ -161,6 +161,13 @@ typedef struct {
      * llm_finish_reason_norm() before returning, so consumers
      * (llm_d / gateway / cli) never branch on provider-specific strings. */
     char *finish_reason;
+    /* Endpoint capacity echo (D2-9): per-slot context window and decode
+     * slot count as discovered from the serving endpoint (llama.cpp
+     * /props). Zero when unknown — cloud families and unprobed endpoints
+     * never fabricate values, so clients can gate on presence, not on a
+     * guessed default. */
+    uint32_t context_window;
+    uint32_t total_slots;
 } llm_response_t;
 
 /**
