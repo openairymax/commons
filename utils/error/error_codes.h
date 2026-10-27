@@ -466,6 +466,10 @@
 #error "AIRY_ERR_EXEC_CYCLE: duplicate SSoT definition"
 #endif
 #define AIRY_ERR_EXEC_CYCLE (-509)
+#ifdef AIRY_ERR_EXEC_PARTIAL
+#error "AIRY_ERR_EXEC_PARTIAL: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_EXEC_PARTIAL (-510)
 #ifdef AIRY_ERR_EXEC_INPUT
 #error "AIRY_ERR_EXEC_INPUT: duplicate SSoT definition"
 #endif
