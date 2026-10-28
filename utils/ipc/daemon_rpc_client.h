@@ -61,7 +61,7 @@ char *daemon_rpc_json_req(const char *method, const char *params_json);
  * @param method JSON-RPC method name (NULL tolerated)
  * @return Timeout in milliseconds (never 0)
  */
-uint32_t daemon_rpc_timeout_for(const char *method);
+uint32_t rpc_timeout_for(const char *method);
 
 /**
  * @brief Call a JSON-RPC method on a daemon (Unix socket, synchronous).
@@ -71,7 +71,7 @@ uint32_t daemon_rpc_timeout_for(const char *method);
  *                     prefix, e.g. "write")
  * @param params_json  Serialized params object (NULL = empty params)
  * @param out_result_json Serialized result-field string (caller AIRY_FREEs)
- * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
+ * @param timeout_ms   Timeout in ms, 0 = rpc_timeout_for(method)
  * @return AIRY_SUCCESS on success; other codes on failure
  *
  * @note On failure *out_result_json is not set (stays NULL).
@@ -94,7 +94,7 @@ int daemon_rpc_call(const char *socket_path, const char *method, const char *par
  * @param method       JSON-RPC method name (e.g. "invoke")
  * @param params_json  Serialized params object (may be NULL)
  * @param out_result_json Serialized result JSON string (caller AIRY_FREEs)
- * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
+ * @param timeout_ms   Timeout in ms, 0 = rpc_timeout_for(method)
  * @param cancel_token Cancel token (NULL = same as daemon_rpc_call)
  * @param cancel_method    Method name sent on cancel (e.g. "cancel")
  * @param cancel_params_json params JSON of the cancel request (e.g. {"request_id":...})
@@ -134,7 +134,7 @@ typedef void (*daemon_rpc_stream_cb_t)(const char *data, size_t len, void *user_
  * @param params_json  Serialized params object (may be NULL)
  * @param on_chunk     chunk callback (may be NULL to just drain)
  * @param user_data    opaque data passed through to on_chunk
- * @param timeout_ms   Timeout in ms, 0 = daemon_rpc_timeout_for(method)
+ * @param timeout_ms   Timeout in ms, 0 = rpc_timeout_for(method)
  * @return AIRY_SUCCESS on stream completion (EOF); other codes on failure
  *
  * @note POSIX rides AF_UNIX; Windows rides TCP loopback (host:port).
