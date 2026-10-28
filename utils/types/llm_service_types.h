@@ -54,9 +54,9 @@ typedef struct {
 } llm_message_t;
 
 /* C11 endpoint capability bits: which optional request fields the endpoint
- * family accepts. Derived statically from model.yaml endpoint_kind at config
- * build time; stamped onto the request by the provider driver. Unknown kind
- * => all-false (fail-safe: never send a field the endpoint may reject). */
+ * accepts. Declared explicitly in model.yaml capabilities, stamped onto the
+ * request by the provider driver. An undeclared bit stays false (fail-safe:
+ * never send a field the endpoint may reject). */
 typedef struct {
     bool accepts_seed;
     bool accepts_grammar;
