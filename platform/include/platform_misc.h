@@ -46,6 +46,12 @@ AIRY_API uint64_t airy_time_ns(void);
 AIRY_API uint64_t airy_time_ms(void);
 
 /**
+ * @brief Get monotonic clock resolution (nanoseconds per tick)
+ * @return resolution in nanoseconds, never zero
+ */
+AIRY_API uint64_t airy_time_res_ns(void);
+
+/**
  * @brief Sleep for the given number of milliseconds
  * @param ms milliseconds
  */
