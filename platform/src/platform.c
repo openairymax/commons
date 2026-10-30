@@ -507,12 +507,33 @@ int airy_file_remove(const char *path)
 #endif
 }
 
+/* 原子替换原语（SSoT）：POSIX rename(2) 在目标存在时原子替换，读方只会
+ * 看到旧文件或完整新文件。Windows CRT rename 在目标存在时直接失败，故用
+ * MoveFileExA REPLACE_EXISTING|WRITE_THROUGH——同卷单次替换，无「新旧两侧
+ * 同时缺位」的崩溃窗口，且改名落盘后才返回。Win32 错误码映射回 errno，
+ * 调用方得以沿用 POSIX 判据。 */
 int airy_file_rename(const char *old_path, const char *new_path)
 {
     if (!old_path || !new_path)
         return AIRY_EINVAL;
 #if AIRY_PLATFORM_WINDOWS
-    return MoveFileExA(old_path, new_path, MOVEFILE_REPLACE_EXISTING) ? 0 : -1;
+    if (MoveFileExA(old_path, new_path,
+                    MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        return 0;
+    switch (GetLastError()) {
+    case ERROR_FILE_NOT_FOUND:
+    case ERROR_PATH_NOT_FOUND:
+        errno = ENOENT;
+        break;
+    case ERROR_ACCESS_DENIED:
+    case ERROR_SHARING_VIOLATION:
+        errno = EACCES;
+        break;
+    default:
+        errno = EIO;
+        break;
+    }
+    return -1;
 #else
     return rename(old_path, new_path) == 0 ? 0 : -1;
 #endif

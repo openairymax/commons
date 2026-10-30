@@ -428,7 +428,7 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     fputs("}\n", fp);
     fclose(fp);
 
-    if (rename(tmppath, filepath) != 0) {
+    if (airy_file_rename(tmppath, filepath) != 0) {
         unlink(tmppath);
         airy_mtx_lock(&g_checkpoint_mutex);
         g_checkpoint_stats.failed_checkpoints++;
