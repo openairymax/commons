@@ -5,6 +5,8 @@ set(SOURCES
     # platform 兼容层按功能域拆分：主文件/同步原语/进程/路径
     # 2026-08-27 目录整理：实现集中到 src/，include/ 仅保留公共头
     platform/src/platform.c
+    # 文件级原语域：删除与原子替换改名（全树落盘替换唯一入口）
+    platform/src/platform_file.c
     platform/src/platform_sync.c
     platform/src/platform_process.c
     # 匿名管道原语域（0.1.19 §224: 从进程域解出，G24 文件长度收敛）
