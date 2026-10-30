@@ -307,38 +307,6 @@ static int test_file_stat(void)
     return 0;
 }
 
-/* 原子替换语义必须在三端一致：目标已存在时改名须成功且内容整体换成新值。
- * 该用例刻意放在跨平台段——Windows CRT rename 目标存在即失败的缺陷此前
- * 因判据全部位于 POSIX 段而无从暴露。 */
-static int test_file_replace(void)
-{
-    const char *src = "platform-repl-src.tmp";
-    const char *dst = "platform-repl-dst.tmp";
-    FILE *f = fopen(src, "wb");
-    TEST_ASSERT(f != NULL, "src create should succeed");
-    fputs("new", f);
-    fclose(f);
-    f = fopen(dst, "wb");
-    TEST_ASSERT(f != NULL, "dst create should succeed");
-    fputs("old-content", f);
-    fclose(f);
-
-    TEST_ASSERT(airy_file_rename(src, dst) == 0,
-                "rename over existing destination should succeed");
-    TEST_ASSERT(!airy_file_exists(src), "source should be gone after rename");
-    airy_file_stat_t st;
-    TEST_ASSERT(airy_file_stat(dst, &st) == 0 && st.exists && st.size == 3,
-                "destination should hold only the new content");
-
-    errno = 0;
-    TEST_ASSERT(airy_file_rename("platform-repl-absent.tmp", dst) != 0,
-                "rename of missing source should fail");
-    TEST_ASSERT(errno == ENOENT, "missing source should report ENOENT");
-
-    airy_file_remove(dst);
-    return 0;
-}
-
 static int test_pipe_io(void)
 {
     int fds[2] = {-1, -1};
@@ -406,6 +374,39 @@ static int test_spawn_env_cwd(void)
     return 0;
 }
 #endif /* !_WIN32 */
+
+/* 原子替换语义必须在三端一致：目标已存在时改名须成功且内容整体换成新值。
+ * 该用例只用跨平台文件原语，必须落在本段——放进 POSIX 段会让 Windows 只
+ * 看到调用而不见定义（LNK2001），W4「CRT rename 目标存在即失败」这一缺陷
+ * 恰恰因此长期无判据暴露。 */
+static int test_file_replace(void)
+{
+    const char *src = "platform-repl-src.tmp";
+    const char *dst = "platform-repl-dst.tmp";
+    FILE *f = fopen(src, "wb");
+    TEST_ASSERT(f != NULL, "src create should succeed");
+    fputs("new", f);
+    fclose(f);
+    f = fopen(dst, "wb");
+    TEST_ASSERT(f != NULL, "dst create should succeed");
+    fputs("old-content", f);
+    fclose(f);
+
+    TEST_ASSERT(airy_file_rename(src, dst) == 0,
+                "rename over existing destination should succeed");
+    TEST_ASSERT(!airy_file_exists(src), "source should be gone after rename");
+    airy_file_stat_t st;
+    TEST_ASSERT(airy_file_stat(dst, &st) == 0 && st.exists && st.size == 3,
+                "destination should hold only the new content");
+
+    errno = 0;
+    TEST_ASSERT(airy_file_rename("platform-repl-absent.tmp", dst) != 0,
+                "rename of missing source should fail");
+    TEST_ASSERT(errno == ENOENT, "missing source should report ENOENT");
+
+    airy_file_remove(dst);
+    return 0;
+}
 
 /* 2026-08-24 强化测试：airy_get_sysinfo（含 CPU 型号）、线程命名、文件锁 */
 static int test_sysinfo(void)
