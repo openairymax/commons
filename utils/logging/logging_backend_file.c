@@ -94,7 +94,7 @@ static void log_file_rotate_if_needed(void)
         }
         snprintf(new_path, sizeof(new_path), "%s.%d", path, i + 1);
         /* P2-1：rename 失败（目标为目录/跨设备）不再静默吞掉 */
-        if (rename(old_path, new_path) != 0 && errno != ENOENT)
+        if (airy_file_rename(old_path, new_path) != 0 && errno != ENOENT)
             rename_failed = 1;
     }
 

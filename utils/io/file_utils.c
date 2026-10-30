@@ -10,6 +10,7 @@
 #include "io.h"
 #include "airy_memory.h"
 #include "airy_dirent.h"
+#include "platform.h"
 #include "platform_paths.h"
 
 #include <stdio.h>
@@ -118,18 +119,10 @@ int airy_io_write_file(const char *path, const void *data, size_t len)
         return -1;
     }
 
-#ifndef _WIN32
-    if (rename(tmppath, path) != 0) {
+    if (airy_file_rename(tmppath, path) != 0) {
         remove(tmppath);
         return -1;
     }
-#else
-    /* MoveFileExA 可原子替换已存在的目标（C 标准 rename 在目标存在时会失败） */
-    if (!MoveFileExA(tmppath, path, MOVEFILE_REPLACE_EXISTING)) {
-        remove(tmppath);
-        return -1;
-    }
-#endif
     return 0;
 }
 

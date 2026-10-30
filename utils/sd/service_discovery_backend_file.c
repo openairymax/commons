@@ -117,7 +117,7 @@ static airy_err_t sd_file_write_service(const sd_service_entry_t *entry)
     AIRY_FREE(json);
     if (written != len || rc != 0)
         return AIRY_ERR_SYS_FILE;
-    if (rename(tmp, path) != 0)
+    if (airy_file_rename(tmp, path) != 0)
         return AIRY_ERR_SYS_FILE;
     return AIRY_SUCCESS;
 }
