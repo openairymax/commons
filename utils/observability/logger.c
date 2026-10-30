@@ -76,13 +76,6 @@ void airy_log_write(int level, const char *file, int line, const char *fmt, ...)
     va_end(args);
 }
 
-void airy_log_write_va(int level, const char *file, int line, const char *fmt, va_list args)
-{
-    ensure_log_initialized();
-    log_level_t new_level = (log_level_t)level;
-    log_write_va(new_level, file, line, fmt, args);
-}
-
 #if defined(__GNUC__) || defined(__clang__)
 static void __attribute__((constructor)) logging_module_constructor(void)
 {

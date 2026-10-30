@@ -149,37 +149,6 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
     return token_count;
 }
 
-int airy_token_std_count_batch(const char **texts, const size_t *lengths, size_t count,
-                               size_t *out_counts, const airy_token_config_t *config)
-{
-    if (!texts || !out_counts || count == 0) {
-        return AIRY_EINVAL;
-    }
-
-    airy_token_config_t default_config = AIRY_TOKEN_CONFIG_DEFAULT;
-    const airy_token_config_t *cfg = config ? config : &default_config;
-
-    if (airy_token_validate_config(cfg) != 0) {
-        return AIRY_EINVAL;
-    }
-
-    for (size_t i = 0; i < count; i++) {
-        if (!texts[i]) {
-            out_counts[i] = 0;
-            continue;
-        }
-
-        size_t length = lengths ? lengths[i] : 0;
-        out_counts[i] = airy_token_standard_count(texts[i], length, cfg);
-
-        if (out_counts[i] == (size_t)-1) {
-            return AIRY_EINVAL;
-        }
-    }
-
-    return 0;
-}
-
 const char *airy_token_get_algorithm_info(void)
 {
     return ALGORITHM_INFO;
