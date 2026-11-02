@@ -264,6 +264,43 @@ static int test_sanitize_argument_edges(void)
     return 0;
 }
 
+/**
+ * @brief Byte truncation must fall back to a complete UTF-8 sequence boundary.
+ */
+static int test_prefix_len_rounds_down(void)
+{
+    /* 「你好」：E4 BD A0 E5 A5 BD */
+    const char chinese[] = {(char)0xE4, (char)0xBD, (char)0xA0,
+                            (char)0xE5, (char)0xA5, (char)0xBD};
+
+    /* emoji U+1F600：F0 9F 98 80 */
+    const char emoji[] = {(char)0xF0, (char)0x9F, (char)0x98, (char)0x80};
+
+    TEST_ASSERT(utf8_prefix_len("abc", 3) == 3, "Complete ASCII passes through");
+    TEST_ASSERT(utf8_prefix_len("abc", 2) == 2, "ASCII cut lands on a boundary");
+    TEST_ASSERT(utf8_prefix_len("abc", 0) == 0, "Zero length yields zero");
+
+    /* 4 字节：完整「你」+「好」的首字节，回退到 3 */
+    TEST_ASSERT(utf8_prefix_len(chinese, 4) == 3, "Partial 3-byte char is dropped");
+    /* 5 字节：完整「你」+「好」的两个字节，回退到 3 */
+    TEST_ASSERT(utf8_prefix_len(chinese, 5) == 3, "Two bytes into a 3-byte char is dropped");
+    TEST_ASSERT(utf8_prefix_len(chinese, 6) == 6, "Whole string is a boundary");
+
+    /* 4 字节 emoji 被截到 3 字节：整段丢弃 */
+    TEST_ASSERT(utf8_prefix_len(emoji, 3) == 0, "Truncated 4-byte char is dropped");
+    TEST_ASSERT(utf8_prefix_len(emoji, 4) == 4, "Complete 4-byte char is kept");
+
+    /* 孤立续字节与非法首字节 */
+    const char lone_cont[] = {(char)0x80, (char)0x80};
+    const char bad_tail[] = {'A', (char)0xFF};
+    TEST_ASSERT(utf8_prefix_len(lone_cont, 2) == 0, "Lone continuations are dropped");
+    TEST_ASSERT(utf8_prefix_len(bad_tail, 2) == 1, "Invalid tail byte is dropped");
+
+    TEST_ASSERT(utf8_prefix_len(NULL, 4) == 0, "NULL input yields zero");
+
+    return 0;
+}
+
 int main(void)
 {
     printf("=== UTF-8 validation and sanitisation tests ===\n");
@@ -276,6 +313,7 @@ int main(void)
     TEST_RUN(test_sanitize_replaces_invalid);
     TEST_RUN(test_sanitize_truncates_safely);
     TEST_RUN(test_sanitize_argument_edges);
+    TEST_RUN(test_prefix_len_rounds_down);
 
     printf("\n=== Results: %d passed, %d failed ===\n", passed_tests, failed_tests);
     return failed_tests == 0 ? 0 : 1;

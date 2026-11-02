@@ -102,6 +102,25 @@ bool utf8_decode(const unsigned char *s, size_t avail, size_t *n, uint32_t *cp)
     return true;
 }
 
+size_t utf8_prefix_len(const char *s, size_t len)
+{
+    if (s == NULL || len == 0) {
+        return 0;
+    }
+
+    /* 先跨过尾部续字节，定位可能残缺序列的首字节。 */
+    size_t k = len;
+    while (k > 0 && ((unsigned char)s[k - 1] & 0xC0) == 0x80) {
+        k--;
+    }
+    if (k == 0) {
+        return 0;
+    }
+
+    size_t need = utf8_seq_len((unsigned char)s[k - 1]);
+    return (need == 0 || len - (k - 1) < need) ? k - 1 : len;
+}
+
 bool utf8_validate(const char *str, size_t len)
 {
     if (str == NULL) {
