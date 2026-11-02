@@ -22,6 +22,10 @@
 
 #define AIRY_DEFAULT_TIMEOUT_MS 30000
 #define AIRY_DEFAULT_TIMEOUT_SEC 30
+/* think/orchestrate 管线超时 SSoT：think_d 服务端（svc.c 内置缺省）与
+ * airy_cli 客户端（/orch 等待预算量子）共同默认；运行时被 model.yaml
+ * [think] timeout_ms / env AIRY_THINK_TIMEOUT_MS 覆盖。 */
+#define AIRY_THINK_TIMEOUT_DEFAULT_MS 120000
 #define AIRY_SHUTDOWN_TIMEOUT_MS 5000
 #define AIRY_HEALTHCHECK_INTERVAL_MS 5000
 #define AIRY_HEARTBEAT_INTERVAL_MS 30000
