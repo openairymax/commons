@@ -11,7 +11,7 @@
  * 共引，杜绝双份手写漂移。
  *
  * 结构：每工具一个 AIRY_TOOL_JSON_<ID> 片段宏；AIRY_TOOLS_JSON_SOURCE
- * 为 16 工具全量拼接。消费者按策略选取子集时必须引用片段宏，禁止手写
+ * 为 17 工具全量拼接。消费者按策略选取子集时必须引用片段宏，禁止手写
  * schema 文本。
  *
  * SSoT 规则：片段的 id / description / parameters（含 required 数组）
@@ -155,13 +155,31 @@
     "default 128, max 256\"}}," \
     "\"required\":[\"expression\",\"xmin\",\"xmax\"]}}}"
 
-/* 全量目录（16 工具，与 tool_d BTOOL 注册同序）。 */
+#define AIRY_TOOL_JSON_TOOL_CREATE \
+    "{\"type\":\"function\",\"function\":{\"name\":\"tool_create\"," \
+    "\"description\":\"Create a reusable tool from a script (shebang required). " \
+    "The script is saved and registered immediately, and can be called by name " \
+    "in later turns\"," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{" \
+    "\"name\":{\"type\":\"string\",\"description\":\"Tool name, [A-Za-z0-9_]{1,32}\"}," \
+    "\"description\":{\"type\":\"string\",\"description\":\"What the tool does, " \
+    "shown to the model on later turns\"}," \
+    "\"script\":{\"type\":\"string\",\"description\":\"Full script body starting " \
+    "with a shebang line, e.g. #!/bin/sh; the JSON arguments object is passed as " \
+    "the first argument ($1)\"}," \
+    "\"params\":{\"type\":\"array\",\"description\":\"Declared parameters, " \
+    "1-16 entries\",\"items\":{\"type\":\"object\",\"properties\":{" \
+    "\"name\":{\"type\":\"string\"},\"type\":{\"type\":\"string\"}," \
+    "\"required\":{\"type\":\"boolean\"}}},\"maxItems\":16}}," \
+    "\"required\":[\"name\",\"description\",\"script\"]}}}"
+
+/* 全量目录（17 工具，与 tool_d BTOOL 注册同序）。 */
 #define AIRY_TOOLS_JSON_SOURCE \
     "[" AIRY_TOOL_JSON_FS_READ "," AIRY_TOOL_JSON_FS_WRITE "," AIRY_TOOL_JSON_FS_LIST \
     "," AIRY_TOOL_JSON_SHELL_RUN "," AIRY_TOOL_JSON_WEB_FETCH "," AIRY_TOOL_JSON_FS_GLOB \
     "," AIRY_TOOL_JSON_FS_GREP "," AIRY_TOOL_JSON_FS_EDIT "," AIRY_TOOL_JSON_FS_DELETE \
     "," AIRY_TOOL_JSON_WEB_SEARCH "," AIRY_TOOL_JSON_GIT_EXEC "," AIRY_TOOL_JSON_GIT_DIFF \
     "," AIRY_TOOL_JSON_GIT_APPLY "," AIRY_TOOL_JSON_MATHS_EVAL "," AIRY_TOOL_JSON_MATHS_STATS \
-    "," AIRY_TOOL_JSON_MATHS_PLOT "]"
+    "," AIRY_TOOL_JSON_MATHS_PLOT "," AIRY_TOOL_JSON_TOOL_CREATE "]"
 
 #endif /* AIRY_RT_TOOL_SCHEMA_H */
