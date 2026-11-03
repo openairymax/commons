@@ -57,31 +57,13 @@ set(UNIT_TEST_SOURCES
     unit/test_err_class.c
 )
 
-# IPC 域测试（test_ipc.c，已改 cmocka_stub 适配）：与主库条件对齐——
-# commons/CMakeLists.txt 将 ipc 实现整批 if(NOT WIN32) 排除（POSIX-only），
-# Windows 下注册 test_ipc 必然 LNK2001（windows-build #101 实证），
-# 支持缺口解除前（Windows ipc 实现）不得在 Windows 编译。
-if(NOT WIN32)
-    list(APPEND UNIT_TEST_SOURCES unit/test_ipc.c)
-endif()
+# 旧 IPC 通道族测试随实现于 0.1.20 退役（实现零生产消费者，见 commons/CMakeLists.txt）。
 
 # 单元测试可执行文件
 foreach(test_source ${UNIT_TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
 
     add_executable(${test_name} ${test_source})
-
-    # test_ipc.c 已按功能域拆分，需一并编译各域文件
-    if(test_source STREQUAL "unit/test_ipc.c")
-        target_sources(${test_name} PRIVATE
-            unit/test_ipc_channel.c
-            unit/test_ipc_send.c
-            unit/test_ipc_server.c
-            unit/test_ipc_shm_mq.c
-            unit/test_ipc_message.c
-            unit/test_ipc_rpc.c
-        )
-    endif()
 
     # test_service_discovery.c 已按功能域拆分，需一并编译各域文件
     if(test_source STREQUAL "unit/test_service_discovery.c")

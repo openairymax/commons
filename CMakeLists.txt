@@ -149,15 +149,9 @@ set(SOURCES
     utils/svc/svc_common_registry.c
     utils/svc/svc_common_ops.c
 )
-if(NOT WIN32)
-    list(APPEND SOURCES utils/ipc/ipc_common.c)
-    list(APPEND SOURCES utils/ipc/ipc_common_io.c) # Phase 2.3a: 消息收发域（从 ipc_common.c 拆分）
-    list(APPEND SOURCES utils/ipc/ipc_common_message.c)
-    list(APPEND SOURCES utils/ipc/ipc_server_client.c)
-    list(APPEND SOURCES utils/ipc/ipc_shm.c)
-    list(APPEND SOURCES utils/ipc/ipc_mq.c)
-    list(APPEND SOURCES utils/ipc/ipc_rpc.c)
-endif()
+# 旧 IPC 通道族（channel/server/client/shm/mq/rpc + common）已于 0.1.20 退役：
+# A-IPC 收口后生产侧唯一通道为 daemon_rpc_client（unix socket + JSON-RPC），
+# 旧族全仓零生产消费者（仅自身单测），且 POSIX-only 与三端屏蔽目标背离。
 # 熔断器（circuit_breaker）全平台编译：仅依赖 airy_mtx_t 与标准库，无
 # POSIX 依赖（原误并入上方 NOT WIN32 组）。#118 实证 MSVC 下
 # airy_coreloopthree orchestrator 引用 cb_*（cb_manager_create 等）时
