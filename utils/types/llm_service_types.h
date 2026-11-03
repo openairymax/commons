@@ -184,7 +184,20 @@ typedef struct {
  */
 void llm_response_free(llm_response_t *resp);
 
-typedef void (*llm_stream_callback_t)(const char *chunk, void *user_data);
+/**
+ * @brief Streaming chunk sink.
+ *
+ * Return 0 to keep the stream running. Any non-zero value cancels the
+ * stream at every layer: the provider stops reading upstream, the daemon
+ * stops writing to the client and the transport reports AIRY_ERR_CANCELED
+ * instead of an I/O failure. Without this return path a vanished client
+ * keeps billing upstream tokens until the provider finishes on its own.
+ *
+ * @param chunk NUL-terminated stream fragment (raw text or RS control frame)
+ * @param user_data Caller-owned context
+ * @return 0 to continue, non-zero to cancel
+ */
+typedef int (*llm_stream_callback_t)(const char *chunk, void *user_data);
 
 /* Canonical finish_reason vocabulary for the whole stack. Native upstream
  * markers are mapped onto these four values at the provider edge. */
