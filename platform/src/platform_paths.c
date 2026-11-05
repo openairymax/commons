@@ -52,11 +52,32 @@ static void paths_resolve_one(const char *subdir, char *out, size_t out_size)
         snprintf(out, out_size, "%s", g_home_dir);
 }
 
+/* 运行时目录是唯一接受外部覆盖的子目录：部署方常把 socket/pid 放到
+ * tmpfs 或 /var/run（bootstrap -r 即此契约），而分发物（bin/lib）与用户面
+ * （config/data/log/work/cache/tmp）必须与安装根同源，跨根会撕裂安装。
+ * 旧实现无条件用 $AIRY_HOME/run 覆盖，使 -r 被静默丢弃：daemon 绑定
+ * $AIRY_HOME/run，而编排脚本按 -r 探测 socket，健康检查必红并群停。
+ * 显式非空 AIRY_RUNTIME_DIR 即权威；未设置（或空串）时回落到安装根派生。
+ * 0.1.6c 的父环境残留保护不受影响——bootstrap 在 spawn 前已从 AIRY_HOME
+ * 强制派生并 export，进入本函数的值已是归一化后的最终目录。 */
+static void paths_resolve_run(void)
+{
+    const char *run_env = getenv("AIRY_RUNTIME_DIR");
+    if (!run_env || run_env[0] == '\0') {
+        paths_resolve_one(AIRY_HOME_SUBDIR_RUN, g_run_dir, sizeof(g_run_dir));
+        return;
+    }
+    snprintf(g_run_dir, sizeof(g_run_dir), "%s", run_env);
+    size_t n = strlen(g_run_dir);
+    while (n > 1 && (g_run_dir[n - 1] == '/' || g_run_dir[n - 1] == '\\'))
+        g_run_dir[--n] = '\0';
+}
+
 static void paths_resolve_all(void)
 {
     paths_resolve_one(AIRY_HOME_SUBDIR_BIN, g_bin_dir, sizeof(g_bin_dir));
     paths_resolve_one(AIRY_HOME_SUBDIR_LIB, g_lib_dir, sizeof(g_lib_dir));
-    paths_resolve_one(AIRY_HOME_SUBDIR_RUN, g_run_dir, sizeof(g_run_dir));
+    paths_resolve_run();
     paths_resolve_one(AIRY_HOME_SUBDIR_LOG, g_log_dir, sizeof(g_log_dir));
     paths_resolve_one(AIRY_HOME_SUBDIR_CONFIG, g_cfg_dir, sizeof(g_cfg_dir));
     paths_resolve_one(AIRY_HOME_SUBDIR_DATA, g_data_dir, sizeof(g_data_dir));
