@@ -64,6 +64,9 @@
 #define AIRY_RS_K_STATUS     "status"
 #define AIRY_RS_K_DURATION   "duration_ms"
 #define AIRY_RS_K_USE_TICKS  "use_ticks"
+/* 完整工具轨迹（tool/arguments/result/ok），与 RPC result.tool_trace 同构；
+ * 流式客户端无法从 tool_end 的摘要还原参数与结果，故终态帧整体回传一次。 */
+#define AIRY_RS_K_TOOL_TRACE "tool_trace"
 
 /* error */
 #define AIRY_RS_K_CODE       "code"
