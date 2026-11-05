@@ -154,9 +154,9 @@ int daemon_rpc_call_stream(const char *socket_path, const char *method, const ch
  * @param idle_ms  Max silence between chunks, 0 or > total_ms = total_ms
  * @param total_ms Hard ceiling for the whole call, 0 = rpc_timeout_for(method)
  */
-int daemon_rpc_call_stream_idle(const char *socket_path, const char *method,
-                                const char *params_json, daemon_rpc_stream_cb_t on_chunk,
-                                void *user_data, uint32_t idle_ms, uint32_t total_ms);
+int rpc_stream_idle(const char *socket_path, const char *method, const char *params_json,
+                    daemon_rpc_stream_cb_t on_chunk, void *user_data, uint32_t idle_ms,
+                    uint32_t total_ms);
 
 #ifdef __cplusplus
 }
