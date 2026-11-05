@@ -44,7 +44,9 @@ struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries,
      * and free_node() walk a mapping until its first NULL key: without
      * clearing, the freshly exposed slots keep whatever the previous
      * owner left there and the mapping looks longer than it is, which
-     * makes free_node() release those stale pointers. */
+     * makes free_node() release those stale pointers.  Callers must keep
+     * new_capacity above the used count, so at least one cleared slot
+     * always terminates the walk. */
     AIRY_MEMSET(&grown[used], 0, (new_capacity - used) * sizeof(struct yaml_mapping_entry));
     return grown;
 }
