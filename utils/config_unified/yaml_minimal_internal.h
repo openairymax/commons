@@ -67,11 +67,18 @@ struct yaml_mapping_entry *yaml_mapping_grow(struct yaml_mapping_entry *entries,
 void set_error(struct parse_ctx *ctx, const char *fmt, ...);
 
 /* 映射装配机制件：容量不足时倍增扩容，随后写入键值并推进长度。
+ *
+ * 扩容判据预留哨兵槽（*count + 1 >= *cap）：yaml_size() 与 free_node()
+ * 都把首个 key==NULL 当作映射终点，数组一旦被条目写满，终点判定就会
+ * 越过分配块读取堆上的陈旧字节，调用方随即把它当作 key 解引用。0.1.20
+ * 的 16 键模型行崩溃即此：重复的 capabilities 让该行条目数正好等于
+ * 扩容后的容量，扫描 provider 键时读到前一段字符串残留。
+ *
  * 扩容失败返回 -1（键值所有权留在调用方，按各自失败路径收尾）。 */
 static inline int yaml_mapping_append(struct yaml_mapping_entry **entries, size_t *count,
                                       size_t *cap, char *key, struct yaml_node *value)
 {
-    if (*count >= *cap) {
+    if (*count + 1 >= *cap) {
         *cap *= 2;
         *entries = yaml_mapping_grow(*entries, *count, *cap);
         if (!*entries)
@@ -107,8 +114,10 @@ struct yaml_node *deep_copy_node(yaml_document_t *doc, struct yaml_node *src);
 struct yaml_node *parse_value(struct parse_ctx *ctx, int base_indent);
 struct yaml_node *parse_sequence(struct parse_ctx *ctx, int base_indent);
 struct yaml_node *parse_mapping(struct parse_ctx *ctx, int base_indent);
-void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
-                        struct yaml_node *source);
+/* 合并源映射条目到目标映射（深拷贝）；返回目标数组合并后的容量，0 表示
+ * 结构非法或扩容失败（此时目标数组状态未定，调用方按失败处理）。 */
+size_t merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
+                          struct yaml_node *source);
 void skip_yaml_directives(struct parse_ctx *ctx);
 bool is_document_marker(struct parse_ctx *ctx, const char *marker);
 void skip_document_marker(struct parse_ctx *ctx, const char *marker);

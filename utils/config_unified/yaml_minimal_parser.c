@@ -71,22 +71,24 @@ struct yaml_node *parse_sequence(struct parse_ctx *ctx, int base_indent)
     return seq;
 }
 
-void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
-                        struct yaml_node *source)
+size_t merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
+                          struct yaml_node *source)
 {
     if (!doc || !target || !source || target->type != YAML_NODE_MAPPING ||
         source->type != YAML_NODE_MAPPING)
-        return;
+        return 0;
 
     size_t src_sz = yaml_size(source);
     size_t tgt_sz = yaml_size(target);
+    /* 容量必须严格大于并入后的条目数：末尾零槽是 yaml_size()/free_node()
+     * 的终点判据，写满即越界。 */
     size_t cap = tgt_sz + 1;
-    while (cap < tgt_sz + src_sz)
+    while (cap <= tgt_sz + src_sz)
         cap *= 2;
 
     target->mapping = yaml_mapping_grow(target->mapping, tgt_sz, cap);
     if (!target->mapping)
-        return;
+        return 0;
 
     for (size_t i = 0; i < src_sz; i++) {
         bool found = false;
@@ -99,16 +101,18 @@ void merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
             }
         }
         if (!found) {
-            if (tgt_current >= cap) {
-                cap *= 2;
-                target->mapping = yaml_mapping_grow(target->mapping, tgt_current, cap);
+            if (tgt_current + 1 >= cap) {
+                size_t next = cap * 2;
+                target->mapping = yaml_mapping_grow(target->mapping, tgt_current, next);
                 if (!target->mapping)
-                    return;
+                    return 0;
+                cap = next;
             }
             target->mapping[tgt_current].key = AIRY_STRDUP(source->mapping[i].key);
             target->mapping[tgt_current].value = deep_copy_node(doc, source->mapping[i].value);
         }
     }
+    return cap;
 }
 
 /* True when the current line starts with a block-sequence marker
@@ -129,17 +133,29 @@ static bool current_line_has_dash(struct parse_ctx *ctx, int ind)
 /* 复合键（<<）合并机制件：序列值逐项并入目标映射，其余值整体并
  * 入，随后释放键串。val 已注册于 doc->all_nodes，其生命周期由
  * yaml_destroy() 统一回收（merge_mapping_into 深拷贝并入后不再
- * 引用 val）。 */
-static void apply_merge_key(struct parse_ctx *ctx, struct yaml_node *map, char *key,
-                            struct yaml_node *val)
+ * 引用 val）。合并会重分配目标数组，*cap 随之更新为真实容量。 */
+static int apply_merge_key(struct parse_ctx *ctx, struct yaml_node *map, char *key,
+                           struct yaml_node *val, size_t *cap)
 {
     if (val->type == YAML_NODE_SEQUENCE) {
-        for (size_t si = 0; si < val->sequence.count; si++)
-            merge_mapping_into(ctx->doc, map, val->sequence.items[si].item);
+        for (size_t si = 0; si < val->sequence.count; si++) {
+            size_t one = merge_mapping_into(ctx->doc, map, val->sequence.items[si].item);
+            if (!one) {
+                AIRY_FREE(key);
+                return -1;
+            }
+            *cap = one;
+        }
     } else {
-        merge_mapping_into(ctx->doc, map, val);
+        size_t one = merge_mapping_into(ctx->doc, map, val);
+        if (!one) {
+            AIRY_FREE(key);
+            return -1;
+        }
+        *cap = one;
     }
     AIRY_FREE(key);
+    return 0;
 }
 
 /* 映射装配器状态：键缩进在首个键确定，之后所有键共享该缩进 */
@@ -163,13 +179,14 @@ static int ymap_init(struct parse_ctx *ctx, struct ymap_builder *b)
     return b->map->mapping ? 0 : -1;
 }
 
-/* 键值入库：复合键（<<）走合并（合并后长度需从节点回读），
+/* 键值入库：复合键（<<）走合并（合并后长度需从节点回读，容量随之更新），
  * 其余按普通条目追加。失败返回 -1（键值所有权留在调用方）。 */
 static int ymap_put(struct parse_ctx *ctx, struct ymap_builder *b, char *key,
                     struct yaml_node *val)
 {
     if (strcmp(key, "<<") == 0) {
-        apply_merge_key(ctx, b->map, key, val);
+        if (apply_merge_key(ctx, b->map, key, val, &b->cap) != 0)
+            return -1;
         b->size = yaml_size(b->map);
         return 0;
     }
