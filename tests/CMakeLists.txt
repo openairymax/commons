@@ -43,6 +43,9 @@ set(UNIT_TEST_SOURCES
     unit/test_hindex.c
     # 统一配置（§72 schema 默认值施加契约：按类型填充/幂等/既有键保持/服务接线）
     unit/test_config_unified.c
+    # AIRY_HOME 路径体系（运行时目录覆盖优先级：显式 AIRY_RUNTIME_DIR 权威，
+    # 未设置时派生；解析为进程级一次性状态，故下方按环境分两次注册）
+    unit/test_platform_paths.c
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
     unit/test_svc_common.c
     unit/test_svc_stop.c
@@ -124,9 +127,29 @@ foreach(test_source ${UNIT_TEST_SOURCES})
         airy_core
     )
 
-    add_test(
-        NAME "commons_test_${test_name}"
-        COMMAND ${test_name}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    )
+    # 路径体系用例需按环境分进程注册（见文件末尾），通用注册会落到真实
+    # $HOME/.airymaxrt，故对其跳过。
+    if(NOT test_source STREQUAL "unit/test_platform_paths.c")
+        add_test(
+            NAME "commons_test_${test_name}"
+            COMMAND ${test_name}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        )
+    endif()
 endforeach()
+
+# AIRY_HOME 路径体系：同一可执行体、两套环境（解析为进程级一次性状态）。
+if(TARGET test_platform_paths)
+    set(AIRY_PATHS_TEST_HOME "${CMAKE_CURRENT_BINARY_DIR}/paths-test-home")
+    add_test(NAME commons_test_platform_paths_derive
+             COMMAND test_platform_paths
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_tests_properties(commons_test_platform_paths_derive PROPERTIES
+        ENVIRONMENT "AIRY_HOME=${AIRY_PATHS_TEST_HOME};AIRY_RUNTIME_DIR=")
+
+    add_test(NAME commons_test_platform_paths_override
+             COMMAND test_platform_paths
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_tests_properties(commons_test_platform_paths_override PROPERTIES
+        ENVIRONMENT "AIRY_HOME=${AIRY_PATHS_TEST_HOME};AIRY_RUNTIME_DIR=${CMAKE_CURRENT_BINARY_DIR}/paths-test-run")
+endif()

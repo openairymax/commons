@@ -96,7 +96,8 @@ extern "C" {
  * Directory layout:
  *   $AIRY_HOME/bin      - executables (agentrt, agent_d, llm_d, mem_d, airy_cli)
  *   $AIRY_HOME/lib      - runtime dependencies (airymax_agents, openlab, sdk-python)
- *   $AIRY_HOME/run      - Unix sockets, PID files (volatile)
+ *   $AIRY_HOME/run      - Unix sockets, PID files (volatile); overridable via
+ *                         the AIRY_RUNTIME_DIR environment variable (-r)
  *   $AIRY_HOME/config   - agentrt.yaml, model.yaml, secrets.env (user config)
  *   $AIRY_HOME/agents   - user agent definitions
  *   $AIRY_HOME/data/agentrt - ★ runtime data unified root (2026-08-25):
@@ -135,13 +136,15 @@ const char *airy_lib_dir(void);
 const char *airy_runtime_dir(void);
 
 /**
- * @brief Resolve runtime socket path: $AIRY_HOME/run/<name>
+ * @brief Resolve runtime socket path: $AIRY_RUNTIME_DIR/<name>
  *        (AIRY_HOME path system).
  *
  * Consolidates daemon socket locations: the legacy macro
  * AIRY_RUNTIME_DIR "/<name>.sock" is a compile-time constant (default
  * /tmp/agentrt) and does not follow AIRY_HOME deployments. This helper
- * appends airy_runtime_dir() at runtime so the socket always lands in
+ * appends airy_runtime_dir() at runtime so the socket always lands in the
+ * resolved runtime directory: an explicitly exported AIRY_RUNTIME_DIR
+ * (e.g. bootstrap -r /var/run/agentrt) takes precedence, otherwise
  * $AIRY_HOME/run.
  *
  * @param name socket file name (e.g. "agent.sock")
