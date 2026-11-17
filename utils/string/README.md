@@ -11,8 +11,9 @@
 - **安全字符串层 `safe_string_utils.h`**（14 个函数）：替代 `strcpy`/`strcat`/
   `sprintf` 等不安全 libc 函数的带界校验版本，附敏感缓冲区清理与输入校验；
 - **UTF-8 安全层 `safe_utf8.h`**（2 个函数）：RFC 3629 合规性校验与非法序列净化；
-- **JSON 顶层键定位件 `json_key.h`**（`airy_json_key`，header-only）：无 cJSON
-  依赖的顶层键值定位机制件，收敛全树各模块自研的 `strstr` 键提取副本；
+- **JSON 键定位件 `json_key.h`**（`airy_json_key_find`/`airy_json_key_bool`，
+  header-only）：无 cJSON 依赖的路径定位机制件（层级路径与歧义检测），收敛
+  全树各模块自研的 `strstr` 键提取副本；
 - **通用文本算法层 `text_utils.h`**（5 个函数）：域无关的大小写转换、忽略大小写
   子串搜索、相似度与关键词切分；
 - **兼容头 `string_compat.h`**：`ssize_t`（MSVC）与 `snprintf` 映射的 OS 屏蔽垫片。
@@ -72,19 +73,22 @@ string/
 | `utf8_validate(str, len)` | 判定字节流是否合规 RFC 3629：拒绝 overlong 编码、代理对（U+D800–U+DFFF）、超出 U+10FFFF 的值、截断尾字节与非法续字节；遇 NUL 提前结束 |
 | `utf8_sanitize(in, len, out, out_cap)` | 将非法序列替换为 `U+FFFD`（`EF BF BD`）后写入 `out`，容量不足时安全截断；返回写入字节数，参数非法或容量为 0 时返回 0 |
 
-## JSON 顶层键定位件（`json_key.h`）
+## JSON 键定位件（`json_key.h`）
 
-`static inline const char *airy_json_key(const char *json, const char *key)`：在
-未强制依赖 cJSON 的模块中定位 JSON 对象成员值的起始位置，供解码外部或不可信
-JSON 文本使用（强制依赖 cJSON 的模块应优先用
-[`utils/cjson/cjson_helpers.h`](../cjson/cjson_helpers.h) 的结构化解析）。
+`airy_json_key_find(json, path, out_ptr, out_len)`：在未强制依赖 cJSON 的模块中
+按路径定位 JSON 成员值，供解码外部或不可信 JSON 文本使用（强制依赖 cJSON 的
+模块应优先用 [`utils/cjson/cjson_helpers.h`](../cjson/cjson_helpers.h) 的结构化解析）。
+`airy_json_key_bool(json, path, out_bool)` 取布尔字面量；旧签名
+`airy_json_key(json, key)` 保留，内部按顶层键走新解析（排障开关
+`AIRY_JSON_KEY_LEGACY=1` 可恢复旧的无层级首命中）。
 
 | 行为 | 语义 |
 |------|------|
-| 键匹配 | 以带引号完整键 `"key"` 精确匹配，`"turn"` 不会命中 `"current_turn"` |
-| 键判定 | 只认「跳过空白后紧随 `:`」的匹配，据此跳过值域内嵌的同名字面量 |
-| 返回值 | 越过 `:` 与空白后的值首字符指针；未找到或参数非法返回 `NULL` |
-| 依赖 | 仅 `<ctype.h>`/`<stddef.h>`/`<string.h>`，**无 cJSON 依赖**；非完整 JSON 解析器 |
+| 路径语法 | `name` / `a.b` / `a.b[0].c`，可带前导 `$` 或 `.` |
+| 键匹配 | 以带引号完整键精确匹配，`"turn"` 不会命中 `"current_turn"` |
+| 值边界 | 字符串按引号与转义整体跳过，值域内嵌的 `"key":` 不参与匹配；切片含字符串引号/容器括号，标量不含尾随空白 |
+| 结果码 | `AIRY_JSON_OK` / `EINVAL` / `EFORMAT` / `ENOTFOUND` / `EAMBIG`（同层重复键，不取首个）/ `ENOTBOOL` |
+| 依赖 | 仅 `<ctype.h>`/`<stddef.h>`/`<stdlib.h>`/`<string.h>`，**无 cJSON 依赖**；非完整 JSON 解析器 |
 
 ## 通用文本算法层（`text_utils.h`）
 

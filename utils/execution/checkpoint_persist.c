@@ -288,11 +288,16 @@ static void write_json_value(FILE *fp, const char *str)
 
 static char *json_extract_string(const char *json, const char *key)
 {
-    const char *p = airy_json_key(json, key);
+    const char *p;
+    const char *end;
+    size_t n;
 
-    if (!p || *p != '"')
+    if (airy_json_key_find(json, key, &p, &n) != AIRY_JSON_OK)
+        return NULL;
+    if (n < 2 || *p != '"')
         return NULL;
     p++;
+    end = p + n - 2;
 
     size_t cap = 512;
     char *val = (char *)AIRY_MALLOC(cap);
@@ -302,7 +307,7 @@ static char *json_extract_string(const char *json, const char *key)
     }
     size_t len = 0;
 
-    while (*p && *p != '"' && *p != '\n') {
+    while (p < end && *p != '\n') {
         if (*p == '\\' && *(p + 1)) {
             p++;
             char esc = '\\';
@@ -355,12 +360,15 @@ static char *json_extract_string(const char *json, const char *key)
 
 static uint64_t json_extract_uint64(const char *json, const char *key)
 {
-    const char *p = airy_json_key(json, key);
+    const char *p;
+    const char *end;
+    size_t n;
     uint64_t v = 0;
 
-    if (!p)
+    if (airy_json_key_find(json, key, &p, &n) != AIRY_JSON_OK)
         return 0;
-    while (*p >= '0' && *p <= '9') {
+    end = p + n;
+    while (p < end && *p >= '0' && *p <= '9') {
         v = v * 10 + (uint64_t)(*p - '0');
         p++;
     }
