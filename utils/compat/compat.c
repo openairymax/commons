@@ -178,7 +178,7 @@ const char *airy_build_info(void)
 
 #define AIRY_BID_MAX 160
 
-/* 清单读取三值：0 命中，-1 无此键，-2 文件不可开（调用方据此换候选路径）。 */
+/* 清单读取：0 命中，-1 无此键或文件不可读（候选序由调用方推进）。 */
 static int bid_read(const char *path, const char *key, char *out, size_t cap)
 {
     FILE *fp;
@@ -188,7 +188,7 @@ static int bid_read(const char *path, const char *key, char *out, size_t cap)
 
     fp = fopen(path, "rb");
     if (fp == NULL)
-        return -2;
+        return -1;
     while (fgets(line, sizeof(line), fp) != NULL) {
         char *val;
         if (strncmp(line, key, klen) != 0 || line[klen] != '=')
