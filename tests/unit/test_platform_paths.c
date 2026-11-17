@@ -70,6 +70,52 @@ int main(void)
     if (expect_path(airy_log_dir(), want_log, "log dir"))
         return 1;
 
+    /* 0.1.21 A-6：只读快照契约。十项必须与逐项访问器同源（指针同一），
+     * 否则医生/门禁与安装器会看到两套根；且查询不得触发目录创建。 */
+    char want_lib[AIRY_PATH_MAX], want_cfg[AIRY_PATH_MAX], want_data[AIRY_PATH_MAX];
+    char want_tmp[AIRY_PATH_MAX], want_cache[AIRY_PATH_MAX], want_ws[AIRY_PATH_MAX];
+    snprintf(want_lib, sizeof(want_lib), "%s/lib", home);
+    snprintf(want_cfg, sizeof(want_cfg), "%s/config", home);
+    snprintf(want_data, sizeof(want_data), "%s/data", home);
+    snprintf(want_tmp, sizeof(want_tmp), "%s/data/agentrt/tmp", home);
+    snprintf(want_cache, sizeof(want_cache), "%s/data/agentrt/cache", home);
+    snprintf(want_ws, sizeof(want_ws), "%s/data/agentrt/workspaces", home);
+
+    airy_paths_view_t v;
+    if (airy_paths_query(NULL) != AIRY_EINVAL) {
+        fprintf(stderr, "✗FAIL: airy_paths_query(NULL) must be AIRY_EINVAL\n");
+        return 1;
+    }
+    if (airy_paths_query(&v) != AIRY_SUCCESS) {
+        fprintf(stderr, "✗FAIL: airy_paths_query failed\n");
+        return 1;
+    }
+    const struct {
+        const char *got;
+        const char *want;
+        const char *what;
+    } rows[] = {
+        {v.home, home, "query home"},
+        {v.bin, want_bin, "query bin"},
+        {v.lib, want_lib, "query lib"},
+        {v.run, want_run, "query run"},
+        {v.log, want_log, "query log"},
+        {v.config, want_cfg, "query config"},
+        {v.data, want_data, "query data"},
+        {v.tmp, want_tmp, "query tmp"},
+        {v.cache, want_cache, "query cache"},
+        {v.workspace, want_ws, "query workspace"},
+    };
+    for (size_t i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        if (expect_path(rows[i].got, rows[i].want, rows[i].what))
+            return 1;
+    }
+    if (v.home != airy_home_dir() || v.run != airy_runtime_dir() ||
+        v.log != airy_log_dir() || v.workspace != airy_workspace_root_dir()) {
+        fprintf(stderr, "✗FAIL: query view must alias accessor buffers\n");
+        return 1;
+    }
+
     /* 初始化会把解析结果回写环境变量供 getenv 消费方使用：回写值必须与
      * 解析值一致，否则 daemon 绑定目录与编排脚本探测目录分叉（-r 失效
      * 的原始形态）。 */
