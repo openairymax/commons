@@ -137,6 +137,25 @@ static void gpu_drv_ver(const char *drv, char *out, size_t cap)
     fclose(fp);
 }
 
+/* 专用显存总量（amdgpu/xe 暴露 mem_info_vram_total）；不可得返回 0，
+ * 表示「未知」而非「没有」——iGPU 共享内存与 NVIDIA 专有驱动均属此类。 */
+static uint64_t gpu_vram(const char *devdir)
+{
+    char path[384];
+    char line[32];
+    unsigned long long v = 0;
+    FILE *fp;
+
+    snprintf(path, sizeof(path), "%s/mem_info_vram_total", devdir);
+    fp = fopen(path, "r");
+    if (!fp)
+        return 0;
+    if (fgets(line, sizeof(line), fp))
+        v = strtoull(line, NULL, 10);
+    fclose(fp);
+    return (uint64_t)v;
+}
+
 /* 只接受 cardN（排除 card0-DP-1 这类连接器节点）。 */
 static int gpu_is_card(const char *name)
 {
@@ -190,6 +209,7 @@ static uint32_t gpu_scan_drm(airy_gpu_cap_t *cap, uint32_t *virt)
             dev->device_id = device;
             snprintf(dev->driver, sizeof(dev->driver), "%s", drv);
             gpu_drv_ver(drv, dev->driver_ver, sizeof(dev->driver_ver));
+            dev->vram_bytes = gpu_vram(devdir);
             snprintf(dev->model, sizeof(dev->model), "%s %s %04x:%04x",
                      gpu_kind_name(dev->kind), drv, vendor, device);
             cap->dev_count++;

@@ -67,6 +67,7 @@ typedef struct {
     uint16_t device_id;
     char driver[32];
     char driver_ver[32];
+    uint64_t vram_bytes;   /**< 专用显存；共享内存/内核不暴露时为 0（未知）。 */
     char model[128];
 } airy_gpu_dev_t;
 
