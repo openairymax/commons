@@ -16,6 +16,8 @@ set(SOURCES
     platform/src/platform_paths.c
     # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
     platform/src/platform_time.c
+    # 加速器能力探测（0.1.21 B-0）：sysfs/drm 硬件层 + OpenAI 兼容端点层
+    platform/src/platform_gpu.c
     # 0c A 类直搬：平台扩展实现（airy_dl_*/airy_sock_*/进程/线程别名等，
     # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
     platform/src/platform_compat.c
