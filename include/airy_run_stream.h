@@ -43,6 +43,9 @@
 
 /* cognition 层 */
 #define AIRY_RS_TYPE_PLAN      "plan"
+/* C-16：本轮工具目录快照（catalog_source / tools / available / denied）。
+ * 静态 bootstrap 与实时目录必须可区分，前端据此提示降级。 */
+#define AIRY_RS_TYPE_CATALOG   "catalog"
 
 /* execution 层 */
 #define AIRY_RS_TYPE_TOOL_START "tool_start"
@@ -54,6 +57,17 @@
 #define AIRY_RS_TYPE_MESSAGE     "message"
 
 /* ---- 各事件类型 data 负载键名 ---- */
+
+/* catalog（C-16 工具目录协商） */
+#define AIRY_RS_K_CATALOG_SOURCE "catalog_source"
+#define AIRY_RS_K_TOOLS          "tools"
+#define AIRY_RS_K_AVAILABLE      "available"
+#define AIRY_RS_K_DENIED         "denied"
+#define AIRY_RS_K_DENIED_REASON  "denied_reason"
+
+/* catalog_source 取值：live = list_tools 实时目录；static = 内置 SSoT 回落 */
+#define AIRY_RS_CATALOG_SOURCE_LIVE   "live"
+#define AIRY_RS_CATALOG_SOURCE_STATIC "static"
 
 /* run_start */
 #define AIRY_RS_K_PROMPT     "prompt"

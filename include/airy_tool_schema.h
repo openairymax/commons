@@ -11,7 +11,7 @@
  * 共引，杜绝双份手写漂移。
  *
  * 结构：每工具一个 AIRY_TOOL_JSON_<ID> 片段宏；AIRY_TOOLS_JSON_SOURCE
- * 为 17 工具全量拼接。消费者按策略选取子集时必须引用片段宏，禁止手写
+ * 为 18 工具全量拼接。消费者按策略选取子集时必须引用片段宏，禁止手写
  * schema 文本。
  *
  * SSoT 规则：片段的 id / description / parameters（含 required 数组）
@@ -173,13 +173,37 @@
     "\"required\":{\"type\":\"boolean\"}}},\"maxItems\":16}}," \
     "\"required\":[\"name\",\"description\",\"script\"]}}}"
 
-/* 全量目录（17 工具，与 tool_d BTOOL 注册同序）。 */
+/* 特权执行：schema 只做模型侧提示，授权判定在 tool_d（白名单 + ACL +
+ * 审批四重条件），故此处不描述权限细节。 */
+#define AIRY_TOOL_JSON_PRIV_EXEC \
+    "{\"type\":\"function\",\"function\":{\"name\":\"priv_exec\"," \
+    "\"description\":\"Run a whitelisted system administration program " \
+    "(dnf/rpm/systemctl) with root privileges outside the tool sandbox; requires " \
+    "ACL authorization and is audited\"," \
+    "\"parameters\":{\"type\":\"object\",\"properties\":{" \
+    "\"program\":{\"type\":\"string\",\"enum\":[\"dnf\",\"rpm\",\"systemctl\"]}," \
+    "\"args\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"maxItems\":32}}," \
+    "\"required\":[\"program\",\"args\"]}}}"
+
+/* 全量目录（18 工具，与 tool_d BTOOL 注册同序）。 */
 #define AIRY_TOOLS_JSON_SOURCE \
     "[" AIRY_TOOL_JSON_FS_READ "," AIRY_TOOL_JSON_FS_WRITE "," AIRY_TOOL_JSON_FS_LIST \
     "," AIRY_TOOL_JSON_SHELL_RUN "," AIRY_TOOL_JSON_WEB_FETCH "," AIRY_TOOL_JSON_FS_GLOB \
     "," AIRY_TOOL_JSON_FS_GREP "," AIRY_TOOL_JSON_FS_EDIT "," AIRY_TOOL_JSON_FS_DELETE \
     "," AIRY_TOOL_JSON_WEB_SEARCH "," AIRY_TOOL_JSON_GIT_EXEC "," AIRY_TOOL_JSON_GIT_DIFF \
     "," AIRY_TOOL_JSON_GIT_APPLY "," AIRY_TOOL_JSON_MATHS_EVAL "," AIRY_TOOL_JSON_MATHS_STATS \
-    "," AIRY_TOOL_JSON_MATHS_PLOT "," AIRY_TOOL_JSON_TOOL_CREATE "]"
+    "," AIRY_TOOL_JSON_MATHS_PLOT "," AIRY_TOOL_JSON_TOOL_CREATE \
+    "," AIRY_TOOL_JSON_PRIV_EXEC "]"
+
+/* C-16：目录不可用原因（wire 值，与 list_tools 条目的 denied_reason 同源）。
+ *
+ * policy 预留给 cupolas ACL 层的显式拒绝；本版没有生产者，因此工具目录
+ * 不会发射该值（不伪造策略拒绝）。missing_handler = 工具没有可执行体或
+ * builtin: 标记不在内置分派表；missing_binary = 可执行文件路径不可执行；
+ * network = 依赖守护进程不可达（tool_d 可用性谓词判定）。 */
+#define AIRY_TOOL_DENIED_POLICY  "policy"
+#define AIRY_TOOL_DENIED_HANDLER "missing_handler"
+#define AIRY_TOOL_DENIED_BINARY  "missing_binary"
+#define AIRY_TOOL_DENIED_NETWORK "network"
 
 #endif /* AIRY_RT_TOOL_SCHEMA_H */
