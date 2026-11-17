@@ -33,6 +33,8 @@
     "Base directory. A relative path resolves against the tool service working directory (default '.')."
 #define AIRY_TOOL_CWD_DESC \
     "Working directory for the command. A relative path resolves against the tool service working directory."
+#define AIRY_TOOL_STRICT_DESC \
+    "POSIX strict semantics: set -e plus pipefail, so a failing command or pipeline stage fails the call (default true; false restores plain sh -c semantics)."
 #define AIRY_TOOL_MKDIRS_DESC "Create missing parent directories (default true)."
 
 #define AIRY_TOOL_JSON_FS_READ \
@@ -59,7 +61,8 @@
     "{\"type\":\"function\",\"function\":{\"name\":\"shell_run\"," \
     "\"description\":\"Execute a shell command and capture its output\"," \
     "\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}," \
-    "\"cwd\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_CWD_DESC "\"}}," \
+    "\"cwd\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_CWD_DESC "\"}," \
+    "\"shell_strict\":{\"type\":\"boolean\",\"description\":\"" AIRY_TOOL_STRICT_DESC "\"}}," \
     "\"required\":[\"command\"]}}}"
 
 #define AIRY_TOOL_JSON_WEB_FETCH \
