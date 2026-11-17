@@ -81,6 +81,8 @@ set(SOURCES
     utils/config_unified/core_config_value.c
     utils/config_unified/config_service.c
     utils/config_unified/config_service_validator.c
+    # 配置生效自证（0.1.21 A-8）：声明 = 注册 = 生效 三段对账 + 生效指纹
+    utils/config_unified/config_attest.c
     utils/config_unified/config_source.c
     utils/config_unified/config_source_env.c
     utils/config_unified/config_source_memory.c
