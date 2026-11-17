@@ -45,6 +45,8 @@ set(UNIT_TEST_SOURCES
     unit/test_hindex.c
     # 统一配置（§72 schema 默认值施加契约：按类型填充/幂等/既有键保持/服务接线）
     unit/test_config_unified.c
+    # 配置生效自证（0.1.21 A-8）：三值判定/逃生开关/指纹可复现与可区分
+    unit/test_config_attest.c
     # AIRY_HOME 路径体系（运行时目录覆盖优先级：显式 AIRY_RUNTIME_DIR 权威，
     # 未设置时派生；解析为进程级一次性状态，故下方按环境分两次注册）
     unit/test_platform_paths.c
