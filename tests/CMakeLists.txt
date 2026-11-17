@@ -12,6 +12,8 @@ set(UNIT_TEST_SOURCES
     unit/test_platform.c
     # 时间服务：逻辑墙钟 / 时区 / SNTP 校对 / 周期同步（2026-08-30）
     unit/test_platform_time.c
+    # 加速器能力探测（0.1.21 B-0）：归类/虚拟排除/三值完备/可重复
+    unit/test_platform_gpu.c
     unit/test_error.c
     unit/test_logger.c
     unit/test_token.c
