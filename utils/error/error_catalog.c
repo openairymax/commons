@@ -223,6 +223,8 @@ static const error_info_t g_error_info[] = {
      AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_COORD_RETRY_EXCEED, "ERR_COORD_RETRY_EXCEED", "Retry limit exceeded", "超出重试限制",
      AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_ERR_PLAN_EMPTY, "ERR_PLAN_EMPTY", "Plan has no executable step", "计划为空（无节点可执行）",
+     AIRY_ERR_SEVERITY_ERROR},
 
     {AIRY_ERR_PROTOCOL, "ERR_PROTOCOL", "Protocol violation (magic/version/reserved)",
      "协议违规（magic/version/reserved 字段不匹配）", AIRY_ERR_SEVERITY_ERROR},

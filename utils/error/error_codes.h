@@ -690,6 +690,14 @@
 #endif
 #define AIRY_ERR_COORD_RETRY_EXCEED (-806)
 
+/* C-2（0.1.21）：计划为空是输入语义错误，不是资源耗尽。零节点计划此前被
+ * 调用方兜底映射为 AIRY_ERR_OUT_OF_MEMORY，用户看到「内存不足」，
+ * 掩盖了"本就没有可执行的步骤"这一事实；本码给出可判读且可去重的失败原因。 */
+#ifdef AIRY_ERR_PLAN_EMPTY
+#error "AIRY_ERR_PLAN_EMPTY: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_PLAN_EMPTY (-807)
+
 /* 协议/校验错误 (-900 到 -909)
  *
  * P0.22.1 (ARE L2)：IPC Bus 统一消息头校验失败的专属错误码段。
