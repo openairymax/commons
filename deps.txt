@@ -10,7 +10,7 @@
 # 约束:
 #   - 本图必须为 DAG：airy_depgraph 构建期 Kahn 拓扑排序 + 环检测，
 #     有环即 fail（报环路径），禁止绕过。
-#   - 契约层（[SC]，commons/include/airymax/*.h，节点名 "include"）
+#   - 契约层（[SC]，commons/include/linux/airymax/*.h，节点名 "include"）
 #     必须自包含（无依赖）：其头文件须能在内核态独立编译，不得 include
 #     用户态 platform/utils 头。
 #   - 新增子域必须在此登记；公共头引用的依赖必须在此声明——airy_depgraph
@@ -24,9 +24,9 @@ cjson:
 cognition:
 compat: include
 compliance:
-config_unified: include
+config_unified: error types include
 cost:
-effect: include
+effect:
 error: types
 execution: error include
 ext: error include
@@ -34,20 +34,20 @@ id:
 ime:
 include:
 io:
-ipc: error memory types include cjson compat sync platform
+ipc: error memory cjson compat sync platform
 logging: compat error memory observability platform
 memory: error platform include
 network: error types
 observability: include
 platform: compat include
-print: logging
+print:
 quality: error
-resource: error memory include
+resource:
 sd: include
 security:
-strategy: memory string
+strategy:
 string: include
-sync: platform memory include
+sync: platform include
 task:
 token:
 types: include
