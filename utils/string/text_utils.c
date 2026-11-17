@@ -15,6 +15,7 @@
 #include "text_utils.h"
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,30 +89,112 @@ float airy_text_similar(const char *s1, const char *s2)
     return (float)longest / (float)denom;
 }
 
+/* UTF-8 码点解码：合法序列按 1~4 字节消费；截断/非法首字节按单字节
+ * 处理，避免在残缺序列上读到 NUL 之后。 */
+static size_t kw_utf8_dec(const unsigned char *s, uint32_t *cp)
+{
+    if (s[0] < 0x80) {
+        *cp = s[0];
+        return 1;
+    }
+    if ((s[0] & 0xE0) == 0xC0 && (s[1] & 0xC0) == 0x80) {
+        *cp = ((uint32_t)(s[0] & 0x1F) << 6) | (uint32_t)(s[1] & 0x3F);
+        return 2;
+    }
+    if ((s[0] & 0xF0) == 0xE0 && (s[1] & 0xC0) == 0x80 && (s[2] & 0xC0) == 0x80) {
+        *cp = ((uint32_t)(s[0] & 0x0F) << 12) | ((uint32_t)(s[1] & 0x3F) << 6) |
+              (uint32_t)(s[2] & 0x3F);
+        return 3;
+    }
+    if ((s[0] & 0xF8) == 0xF0 && (s[1] & 0xC0) == 0x80 && (s[2] & 0xC0) == 0x80 &&
+        (s[3] & 0xC0) == 0x80) {
+        *cp = ((uint32_t)(s[0] & 0x07) << 18) | ((uint32_t)(s[1] & 0x3F) << 12) |
+              ((uint32_t)(s[2] & 0x3F) << 6) | (uint32_t)(s[3] & 0x3F);
+        return 4;
+    }
+    *cp = s[0];
+    return 1;
+}
+
+/* 分隔判定：ASCII 沿用旧口径，另把 CJK 标点区段视为分隔，避免整句
+ * 汉字粘成一个词项。 */
+static int kw_is_sep(uint32_t cp)
+{
+    if (cp < 0x80)
+        return strchr(" ,.!?;:\t\n\r", (int)cp) != NULL;
+    return (cp >= 0x2000 && cp <= 0x206F) || (cp >= 0x3000 && cp <= 0x303F) ||
+           (cp >= 0xFF00 && cp <= 0xFF65) || cp == 0x00B7;
+}
+
+/* 词项判定：≥2 码点且至少一个字母/数字/CJK 表意字；单字虚词因此
+ * 天然出局，纯符号串也不入集。 */
+static int kw_accept(const char *tok)
+{
+    const unsigned char *p = (const unsigned char *)tok;
+    size_t n = 0;
+    int content = 0;
+
+    while (*p) {
+        uint32_t cp = 0;
+        size_t len = kw_utf8_dec(p, &cp);
+
+        n++;
+        if (cp < 0x80 ? isalnum((int)cp) != 0
+                      : (cp >= 0x3400 && cp <= 0x4DBF) || (cp >= 0x4E00 && cp <= 0x9FFF) ||
+                            (cp >= 0xF900 && cp <= 0xFAFF))
+            content = 1;
+        p += len;
+    }
+    return n >= 2 && content;
+}
+
+/* 收尾当前词项：命中小写入集，缓冲清零供下一词使用。 */
+static void kw_flush(char *tok, size_t *tlen, char **keywords, size_t *count,
+                     size_t max_keywords)
+{
+    if (*tlen == 0)
+        return;
+    tok[*tlen] = '\0';
+    *tlen = 0;
+    if (*count >= max_keywords || !kw_accept(tok))
+        return;
+    keywords[*count] = AIRY_STRDUP(tok);
+    if (!keywords[*count])
+        return;
+    airy_text_lower(keywords[*count]);
+    (*count)++;
+}
+
 size_t airy_text_keywords(const char *text, char **keywords, size_t max_keywords)
 {
     if (!text || !keywords || max_keywords == 0)
         return 0;
 
     size_t count = 0;
-    char *copy = AIRY_STRDUP(text);
-    if (!copy)
+    size_t tlen = 0;
+    size_t cap = strlen(text) + 1;
+    char *tok = (char *)AIRY_MALLOC(cap);
+    if (!tok)
         return 0;
 
-    char *saveptr = NULL;
-    char *token = strtok_r(copy, " ,.!?;:\t\n\r", &saveptr);
-    while (token && count < max_keywords) {
-        if (strlen(token) > 2) {
-            keywords[count] = AIRY_STRDUP(token);
-            if (keywords[count]) {
-                airy_text_lower(keywords[count]);
-                count++;
-            }
-        }
-        token = strtok_r(NULL, " ,.!?;:\t\n\r", &saveptr);
-    }
+    const unsigned char *p = (const unsigned char *)text;
+    while (*p) {
+        uint32_t cp = 0;
+        size_t len = kw_utf8_dec(p, &cp);
 
-    AIRY_FREE(copy);
+        if (kw_is_sep(cp)) {
+            kw_flush(tok, &tlen, keywords, &count, max_keywords);
+            p += len;
+            continue;
+        }
+        if (tlen + len >= cap)
+            break;
+        AIRY_MEMCPY(tok + tlen, p, len);
+        tlen += len;
+        p += len;
+    }
+    kw_flush(tok, &tlen, keywords, &count, max_keywords);
+    AIRY_FREE(tok);
     return count;
 }
 
