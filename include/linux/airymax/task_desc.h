@@ -27,8 +27,8 @@
 #ifndef _UAPI_AIRYMAX_TASK_DESC_H
 #define _UAPI_AIRYMAX_TASK_DESC_H
 
-#include <airymax/uapi_compat.h>
-#include <airymax/error.h>
+#include <linux/airymax/uapi_compat.h>
+#include <linux/airymax/error.h>
 
 #include <stddef.h> /* size_t */
 /* ─── Constants ──────────────────────────────────────────────────────── */

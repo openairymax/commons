@@ -1,6 +1,6 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
  * A-ULP (Unified Logging and Printk Subsystem) — [SC] shared contract header.
  *
@@ -11,7 +11,7 @@
 #ifndef _UAPI_AIRYMAX_LOG_TYPES_H
 #define _UAPI_AIRYMAX_LOG_TYPES_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* ─── Magic ──────────────────────────────────────────────────────────── */
 #define AIRY_LOG_MAGIC          0x414C4F47  /* 'ALOG' */

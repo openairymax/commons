@@ -30,7 +30,7 @@
 #include "airyrt_version.h"
 #include "types.h"
 #include "compat.h"
-#include <airymax/ipc.h>
+#include <linux/airymax/ipc.h>
 
 /* ============================================================================
  * 基础类型

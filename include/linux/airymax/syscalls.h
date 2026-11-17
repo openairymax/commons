@@ -1,6 +1,6 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
  * Syscall numbering — [SC] shared contract header.
  *
@@ -15,7 +15,7 @@
 #ifndef _UAPI_AIRYMAX_SYSCALLS_H
 #define _UAPI_AIRYMAX_SYSCALLS_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* ─── Core Syscalls (548-551) ────────────────────────────────────────── */
 #define AIRY_SYS_CALL            548   /* IPC send/recv */

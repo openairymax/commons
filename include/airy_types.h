@@ -34,7 +34,7 @@
  * （sc-dual-ci 逐字节校验的是 [SC] 头自身，不受本文件影响）。
  * AIRY_EIPC_*、AIRY_ECAP_*、AIRY_FAULT_* 等 [SC] 专有码保留正幅值
  * （跨态专用，用户态引用时取负返回）。 */
-#include "airymax/error.h"
+#include "linux/airymax/error.h"
 
 /* 用户态 POSIX errno 负值（重定义 [SC] 同名码；值域与 Linux errno 一致，
  * 即 S-1 收敛前的用户态权威值，全部存量调用点（return AIRY_E* 族）恢复正确） */
@@ -71,7 +71,7 @@
 #undef AIRY_ECANCELED
 #define AIRY_ECANCELED (-125) /* POSIX ECANCELED=125（用户态新增负值，[SC] 原为正幅值 19） */
 
-#include <airymax/ipc.h> /* AIRY_IPC_MAGIC (0x41524531 'ARE1') */
+#include <linux/airymax/ipc.h> /* AIRY_IPC_MAGIC (0x41524531 'ARE1') */
 
 #include "airy_abi.h"
 

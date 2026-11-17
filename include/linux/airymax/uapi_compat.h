@@ -1,6 +1,6 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
  * A-UAPI Compat: three-way type bridge for [SC] shared contract headers.
  *
@@ -8,7 +8,7 @@
  * that must compile identically in kernel-space, Linux user-space, and
  * non-Linux platforms (macOS, Windows agentrt).
  *
- *   #ifdef __KERNEL__      -> #include <linux/types.h>   (provides __u32 etc.)
+ *   #ifdef __KERNEL__      -> #include <linux/types.h>   (fixed-width types)
  *   #elif defined(__linux__) -> #include <linux/types.h>  (same UAPI types)
  *   #else                  -> typedef from <stdint.h>    (macOS/Windows)
  */
@@ -17,14 +17,21 @@
 #define _UAPI_AIRYMAX_UAPI_COMPAT_H
 
 #ifdef __KERNEL__
-	/* Kernel-space: use Linux kernel UAPI types */
+	/* Kernel-space: <linux/types.h> supplies the fixed-width types and
+	 * <linux/stddef.h> supplies offsetof() for the layout assertions that
+	 * the [SC] contract headers carry. Kbuild searches include/ before
+	 * include/uapi/, so <linux/stddef.h> resolves to the kernel-internal
+	 * definition (not the UAPI stub), which is the only offsetof provider
+	 * available under -nostdinc. */
 	#include <linux/types.h>
+	#include <linux/stddef.h>   /* offsetof, used by layout _Static_asserts in [SC] headers */
 	#define _AIRY_UAPI_COMPAT_TYPES_SET 1
 #elif defined(__linux__)
 	/* Linux user-space: <linux/types.h> is the authoritative source of
-	 * __u32/__u64/... types. Include it directly rather than redefining
-	 * with <stdint.h> types, which may differ in type identity (e.g. on
-	 * 64-bit, uint64_t = unsigned long vs __u64 = unsigned long long). */
+	 * the fixed-width UAPI types. Include it directly rather than
+	 * redefining with <stdint.h> types, which may differ in type identity
+	 * (e.g. on 64-bit, uint64_t = unsigned long vs __u64 = unsigned long
+	 * long). */
 	#include <linux/types.h>
 	#include <stddef.h>   /* offsetof, used by layout _Static_asserts in [SC] headers */
 	#define _AIRY_UAPI_COMPAT_TYPES_SET 1
@@ -50,9 +57,10 @@
  *
  * C11's _Alignas cannot be placed after a struct type definition (it
  * only applies to variable declarations), so compiler extensions are
- * unavoidable for struct-level alignment. This macro is the single
- * sanctioned exception to OS-IRON-016's prohibition on __attribute__
- * in UAPI headers — all other __attribute__ uses remain prohibited.
+ * unavoidable for struct-level alignment. AIRY_ALIGNED (defined here) and
+ * AIRY_API (defined below) are the sanctioned compiler-portability
+ * exceptions to OS-IRON-016's prohibition on __attribute__ in UAPI
+ * headers — all other __attribute__ uses remain prohibited.
  *
  * Usage (placement after closing brace, same as __attribute__):
  *
@@ -73,7 +81,7 @@
  * AirymaxOS cannot reuse __aligned(N) directly in [SC] headers because
  * macOS/Windows user-space builds do not include <linux/types.h>.
  *
- * 注意：与 commons/utils/compat/compat.h 的 AIRY_ALIGNED 同名，
+ * 注意：与 commons/utils/compat/include/compat.h 的 AIRY_ALIGNED 同名，
  * 用 #ifndef 保护避免跨头重复定义（2026-08-14 构建修复）。
  */
 #ifndef AIRY_ALIGNED
@@ -94,6 +102,25 @@
 #endif
 #endif /* AIRY_ALIGNED */
 
+/* ─── Symbol Export Macro (OS-IRON-016 sanctioned exception) ────────────
+ *
+ * AIRY_API marks a function as part of the exported [SC] ABI. It expands
+ * to the default symbol-visibility attribute on GCC>=4 / Clang so that
+ * exports survive a -fvisibility=hidden library build, and to nothing on
+ * compilers without visibility support — keeping the UAPI header
+ * compiler-agnostic. Form follows 30-interfaces/01-syscalls.md §3.1.
+ *
+ * Guarded with #ifndef so a library build may override it (e.g.
+ * -DAIRY_API=...) without a redefinition warning.
+ */
+#ifndef AIRY_API
+#if defined(__GNUC__) && __GNUC__ >= 4
+	#define AIRY_API __attribute__((visibility("default")))
+#else
+	#define AIRY_API
+#endif
+#endif /* AIRY_API */
+
 /* ─── Compile-time Assertion (E1, seL4 assert.h 对齐) ────────────────────
  *
  * AIRY_COMPILE_ASSERT(cond, msg) — 双模式编译期契约断言，用于 [SC]
@@ -113,46 +140,42 @@
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 	#define AIRY_COMPILE_ASSERT(cond, msg) _Static_assert(cond, msg)
 #else
+	/* C90 兜底：负长度数组触发编译错误。typedef 名必须逐次唯一，否则同一
+	 * 头里两处断言会在同一个编译单元里重定义同名 typedef，clang 的
+	 * -Wtypedef-redefinition 会把 UAPI 头自检（-std=c90 -Wall）判红。
+	 * __COUNTER__ 保证跨头唯一，缺失时退回 __LINE__。 */
+	#define AIRY_JOIN_(a, b) a##b
+	#define AIRY_JOIN(a, b) AIRY_JOIN_(a, b)
+	#ifdef __COUNTER__
+		#define AIRY_ASSERT_ID __COUNTER__
+	#else
+		#define AIRY_ASSERT_ID __LINE__
+	#endif
 	#define AIRY_COMPILE_ASSERT(cond, msg) \
-		typedef char airy_ca_[(cond) ? 1 : -1]
+		typedef char AIRY_JOIN(airy_ca_, AIRY_ASSERT_ID)[(cond) ? 1 : -1]
 #endif
 
 /* ─── [DSL] Degraded Survival Layer Fallback Block ──────────────────────
- * When AIRY_SC_FALLBACK is defined, this block must survive on its own
- * ([DSL] §5.3): it may not rely on any symbol from the [SC] body. The
- * stdint mapping below repeats the main-bridge user-space typedefs on
- * purpose — the guard macro short-circuits it while the body is intact,
- * and restores the fixed-width types if the body is corrupted. This
- * deliberate duplication is recorded in the G26 exemption list as
- * "dsl-selfcontain". See [DSL] §2.2 (two-way bridge duty).
+ * When AIRY_SC_FALLBACK is defined the bridge is contracted down to the
+ * two paths [DSL] §2.2 guarantees: __KERNEL__ and __linux__. Non-Linux
+ * hosts keep the <stdint.h> mapping above so agentrt cross-platform
+ * builds still compile, but they are outside the degraded guarantee and
+ * are not part of AIRY_DSL_UAPI_BRANCHES.
+ *
+ * The block is declarative only: the main bridge above already selected
+ * the authoritative type source for every branch. Re-typedefing here was
+ * unreachable (every branch sets _AIRY_UAPI_COMPAT_TYPES_SET) and would
+ * change type identity on 64-bit Linux (long vs long long), so the
+ * invariant is asserted rather than re-established.
  */
 #ifdef AIRY_SC_FALLBACK
-	#ifdef __KERNEL__
-		/* Kernel branch unchanged — <linux/types.h> is authoritative. */
-	#else
-		/* User-space branches: if the main bridge already provided the
-		 * fixed-width types (_AIRY_UAPI_COMPAT_TYPES_SET), keep them —
-		 * re-typedefing from <stdint.h> would change type identity on
-		 * 64-bit Linux (long vs long long) and conflict (the old per-type
-		 * `#ifndef __u64` guards cannot detect typedefs, only macros).
-		 * The stdint mapping below is the fallback when types are absent. */
-		#ifndef _AIRY_UAPI_COMPAT_TYPES_SET
-			#define _AIRY_DSL_UAPI_COMPAT_DONE
-			#include <stdint.h>
-			#include <stddef.h>
-			typedef int32_t   __s32;
-			typedef uint32_t  __u32;
-			typedef int64_t   __s64;
-			typedef uint64_t  __u64;
-			typedef int16_t   __s16;
-			typedef uint16_t  __u16;
-			typedef int8_t    __s8;
-			typedef uint8_t   __u8;
-		#endif
+	#ifndef _AIRY_UAPI_COMPAT_TYPES_SET
+		#error "AIRY_SC_FALLBACK: type bridge did not establish fixed-width types"
 	#endif
-	#define AIRY_DSL_UAPI_BRANCHES  2  /* __KERNEL__ vs user-space */
 
-	#warning "AIRY_SC_FALLBACK active: uapi_compat.h degraded to two-way bridge (__KERNEL__ vs user-space)"
+	#define AIRY_DSL_UAPI_BRANCHES  2  /* __KERNEL__ vs __linux__ */
+
+	#warning "AIRY_SC_FALLBACK active: uapi_compat.h degraded to two-way bridge (__KERNEL__ / __linux__)"
 #endif /* AIRY_SC_FALLBACK */
 
 #endif /* _UAPI_AIRYMAX_UAPI_COMPAT_H */

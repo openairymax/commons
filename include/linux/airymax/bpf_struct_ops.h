@@ -1,37 +1,19 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * bpf_struct_ops.h — Supplementary shared contract header (NOT a [SC]
- * core header). Defines struct_ops state machine + common_value layout
- * shared between agentrt userspace BPF loader and agent-linux kernel
- * struct_ops framework.
+ * bpf_struct_ops.h — supplementary shared contract header (not a [SC]
+ * core header). Defines the struct_ops state machine and common_value
+ * layout shared byte-identically between the agentrt userspace BPF
+ * loader and the agent-linux kernel struct_ops framework.
  *
- * SSoT: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md
- *       §2.7 (supplementary shared file, not among the 10 [SC] core
- *       headers listed in OS-IRON-014).
- *
- * Physical host: kernel/include/uapi/linux/airymax/bpf_struct_ops.h
- * Sharing: physical sharing, byte-identical between agentrt and
- *          agent-linux (like [SC] headers but scoped to struct_ops
- *          state synchronisation).
- *
- * Design rationale: sched_tac userspace scheduler reuses this state
- * enum to read the registration state of BPF struct_ops function
- * tables exposed by the kernel, without accessing kernel private data.
- * agentrt userspace policy engine uses it to parse the `state` field
- * of sched_tac/macrosuperv struct_ops tables to decide whether the
- * userspace scheduler is online.
- *
- * v1.0.1: 4-state machine (INIT/REGISTERED/ACTIVE/DRAINING). The state
- *         transitions are kernel-driven; agentrt userspace is read-only
- *         consumer via BTF.
+ * Design rationale: docs/AirymaxOS/50-engineering-standards/120-cross-project-code-sharing.md §2.7
  */
 
 #ifndef _UAPI_AIRYMAX_BPF_STRUCT_OPS_H
 #define _UAPI_AIRYMAX_BPF_STRUCT_OPS_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* ─── struct_ops State Machine (4 states) ──────────────────────────────
  *
