@@ -97,6 +97,8 @@ static const error_info_t g_error_info[] = {
     {AIRY_ERR_SYS_PROCESS, "ERR_SYS_PROCESS", "Process error", "进程错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_FILE, "ERR_SYS_FILE", "File error", "文件错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_SYS_TIME, "ERR_SYS_TIME", "Time error", "时间错误", AIRY_ERR_SEVERITY_ERROR},
+    {AIRY_EBUDGET, "ERR_EBUDGET", "Execution budget exhausted (resumable)",
+     "执行预算耗尽（可续跑）", AIRY_ERR_SEVERITY_WARNING},
 
     {AIRY_ERR_KERN_IPC, "ERR_KERN_IPC", "IPC error", "IPC 错误", AIRY_ERR_SEVERITY_ERROR},
     {AIRY_ERR_KERN_TASK, "ERR_KERN_TASK", "Task error", "任务错误", AIRY_ERR_SEVERITY_ERROR},
