@@ -120,6 +120,8 @@
 #define AIRY_RS_K_STEP_INDEX       "step_index"
 #define AIRY_RS_K_STEP_STATUS      "step_status"
 #define AIRY_RS_K_STEP_COUNT       "step_count"
+/* step 帧的子目标文本（0-based step_index；文本取自计划步骤 title/goal/action） */
+#define AIRY_RS_K_STEP             "step"
 #define AIRY_RS_K_REASON           "reason"
 
 /* tool_start */
