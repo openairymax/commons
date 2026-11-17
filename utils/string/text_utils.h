@@ -59,6 +59,25 @@ size_t airy_text_keywords(const char *text, char **keywords, size_t max_keywords
  */
 void airy_text_kw_free(char **keywords, size_t count);
 
+/**
+ * @brief 读取回填预算（字节），默认 8192，可用 AIRY_BACKFILL_BUDGET 覆盖。
+ *
+ * 取值夹在 [1024, 1 MiB]：过小会切掉错误上下文，过大会让链事件与回填
+ * 撑爆单条消息。环境值非法时回落默认值。
+ */
+size_t airy_text_budget_bytes(void);
+
+/**
+ * @brief 按预算保留头尾，中间以省略标记替换，结果为堆字符串。
+ *
+ * 用于工具输出回填：长输出若整段进上下文会挤掉后续轮次，字节级截断
+ * 又会把多字节字符切半（LLM 接口以 400 拒绝非法 UTF-8）。这里保留头
+ * 3/5 与尾 2/5，两处都回退到完整 UTF-8 字符边界，中间写入含丢弃字节
+ * 数的标记。@p budget 为 0 时取 airy_text_budget_bytes()；未超预算则
+ * 原样复制。返回 NULL 表示入参为 NULL 或分配失败。
+ */
+char *airy_text_budget(const char *s, size_t budget);
+
 #ifdef __cplusplus
 }
 #endif
