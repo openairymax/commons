@@ -44,7 +44,12 @@ int airy_text_icontains(const char *haystack, const char *needle);
 float airy_text_similar(const char *s1, const char *s2);
 
 /**
- * @brief Tokenise text into lowercased keywords of more than two bytes.
+ * @brief Tokenise text into lowercased keywords (UTF-8 aware).
+ *
+ * 分隔符为 ASCII 空白/标点与 CJK 标点（U+2000–U+206F、U+3000–U+303F、
+ * U+FF00–U+FF65、U+00B7）。词项须含至少 2 个码点，且至少含一个字母、
+ * 数字或 CJK 表意字——单字虚词（在/的/了/和/与/用/把/将）与纯符号词
+ * 不再入集，避免以虚词充当实体参与匹配。仅 ASCII 字母被小写化。
  * @param text Input text
  * @param keywords Output array receiving heap strings
  * @param max_keywords Capacity of @p keywords
