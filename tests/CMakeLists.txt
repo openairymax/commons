@@ -39,6 +39,8 @@ set(UNIT_TEST_SOURCES
     unit/test_string_utf8.c
     # 回填预算（C-23：默认 8 KB 可配 + 头尾保留 + UTF-8 边界回退）
     unit/test_text_budget.c
+    # 关键词切分（0.1.21 C-13：码点计数、CJK 分隔、单字虚词出局）
+    unit/test_text_keywords.c
     # 跨进程服务发现（g14 随权威实现自 daemons 迁入；自含测试框架）
     unit/test_service_discovery.c
     # 任务大厅事件磁盘格式 SSoT（§60 hall 事件写侧契约：命名/gseq 续接/prev_file/ACL）
