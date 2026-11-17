@@ -58,12 +58,15 @@ typedef enum {
 
 #define AIRY_GPU_MAX_DEVS 8u
 
-/** 单块加速器。model 为空时上层按 kind+driver 拼展示名。 */
+/** 单块加速器。model 为空时上层按 kind+driver 拼展示名。
+ *  driver 为空表示设备在、内核驱动未绑定（B-3 的「驱动不可用」判据）；
+ *  driver_ver 取自 /sys/module/<driver>/version，内核不回传时为空。 */
 typedef struct {
     airy_accel_kind_t kind;
     uint16_t vendor_id;
     uint16_t device_id;
     char driver[32];
+    char driver_ver[32];
     char model[128];
 } airy_gpu_dev_t;
 
