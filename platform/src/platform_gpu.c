@@ -116,6 +116,27 @@ static void gpu_drv_name(const char *devdir, char *out, size_t cap)
     snprintf(out, cap, "%s", base);
 }
 
+/* 内核模块版本（/sys/module/<drv>/version）；不提供该属性的驱动留空。 */
+static void gpu_drv_ver(const char *drv, char *out, size_t cap)
+{
+    char path[128];
+    char line[64];
+    FILE *fp;
+
+    out[0] = '\0';
+    if (!drv || !drv[0])
+        return;
+    snprintf(path, sizeof(path), "/sys/module/%s/version", drv);
+    fp = fopen(path, "r");
+    if (!fp)
+        return;
+    if (fgets(line, sizeof(line), fp)) {
+        line[strcspn(line, "\r\n")] = '\0';
+        snprintf(out, cap, "%s", line);
+    }
+    fclose(fp);
+}
+
 /* 只接受 cardN（排除 card0-DP-1 这类连接器节点）。 */
 static int gpu_is_card(const char *name)
 {
@@ -168,6 +189,7 @@ static uint32_t gpu_scan_drm(airy_gpu_cap_t *cap, uint32_t *virt)
             dev->vendor_id = vendor;
             dev->device_id = device;
             snprintf(dev->driver, sizeof(dev->driver), "%s", drv);
+            gpu_drv_ver(drv, dev->driver_ver, sizeof(dev->driver_ver));
             snprintf(dev->model, sizeof(dev->model), "%s %s %04x:%04x",
                      gpu_kind_name(dev->kind), drv, vendor, device);
             cap->dev_count++;
