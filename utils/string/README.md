@@ -93,7 +93,7 @@ JSON 文本使用（强制依赖 cJSON 的模块应优先用
 | `airy_text_lower(str)` | 就地把 ASCII 大写转小写（`(unsigned char)` 转型，非 ASCII 字节按字节序不动）；返回入参 |
 | `airy_text_icontains(haystack, needle)` | 忽略大小写的子串包含判定，命中返回 1，否则 0；任一参数为 `NULL` 返回 0 |
 | `airy_text_similar(s1, s2)` | 基于最长公共子串的相似度（0–1）；空串或 `NULL` 返回 0.0 |
-| `airy_text_keywords(text, keywords, max_keywords)` | 按空白与标点切分、忽略长度 ≤2 的词元，小写化后堆写入 `keywords`；返回词元数 |
+| `airy_text_keywords(text, keywords, max_keywords)` | 按 ASCII 与 CJK 标点切分；词项须≥2 个 UTF-8 码点且含字母/数字/CJK 表意字（单字虚词与纯符号词不入集），小写化后堆写入 `keywords`；返回词元数 |
 | `airy_text_kw_free(keywords, count)` | 释放 `airy_text_keywords` 写出的关键词数组（逐项经 `AIRY_FREE`） |
 
 ## 兼容头（`string_compat.h`）
