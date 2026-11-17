@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "../../include/airy_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -99,13 +101,24 @@ typedef enum {
 
 /** @brief Tool-execution result (non-streaming). */
 typedef struct {
-    int success;
+    /* C-2：0 = 成功；非 0 = 首个失败原因（AIRY_ERR_* 负值）。字段名承担
+     * 类型的全部语义，禁止再以布尔口径读写（历史上 strstr("true") 误判
+     * 曾使工具回路恒报失败）。 */
+    airy_err_t err_code;
     char *output;
     char *error;
     int exit_code;
     uint64_t duration_ms;
     tool_result_class_t failure_class;
 } tool_result_t;
+
+/* 派生只读判据：ok ⇔ err_code == 0。以访问器而非结构字段实现——C 无
+ * 只读字段，若把 ok 落成字段，两次赋值之间必然出现与 err_code 不一致的
+ * 漂移窗口。 */
+static inline int tool_result_ok(const tool_result_t *result)
+{
+    return result != NULL && result->err_code == 0;
+}
 
 /**
  * @brief Streaming-output callback.
