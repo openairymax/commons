@@ -321,6 +321,27 @@ const char *airy_workspace_root_dir(void)
     return g_workspace_dir;
 }
 
+/* 0.1.21 A-6：路径体系唯一查询入口（只读快照）。
+ * 与 airy_paths_init 的分工：init 建目录并回写环境变量（有副作用），
+ * query 只解析并返回指针（无副作用），供自检/门禁等只读消费方使用。 */
+int airy_paths_query(airy_paths_view_t *out)
+{
+    if (!out)
+        return AIRY_EINVAL;
+    paths_ensure_resolved();
+    out->home = g_home_dir;
+    out->bin = g_bin_dir;
+    out->lib = g_lib_dir;
+    out->run = g_run_dir;
+    out->log = g_log_dir;
+    out->config = g_cfg_dir;
+    out->data = g_data_dir;
+    out->tmp = g_tmp_dir;
+    out->cache = g_cache_dir;
+    out->workspace = g_workspace_dir;
+    return AIRY_SUCCESS;
+}
+
 static int paths_mkdir_p(const char *path)
 {
     if (!path || path[0] == '\0')

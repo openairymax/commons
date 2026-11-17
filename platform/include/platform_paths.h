@@ -178,6 +178,35 @@ const char *airy_cache_dir(void);
 const char *airy_workspace_root_dir(void);
 
 /**
+ * @brief 路径体系只读视图（0.1.21 A-6）：一次性取全部十项
+ *
+ * 逐个调用 airy_*_dir() 会在并发初始化路径上重复加锁，且调用方容易
+ * 漏项；本结构让 shell 侧（airy_cli paths --json）与 C 侧拿到同一份
+ * 快照，避免各自拼路径导致「安装器一套、自检另一套」的双根分叉。
+ * 指针指向进程级静态缓冲，生命周期同进程；不分配、不拷贝、不建目录。
+ */
+typedef struct {
+    const char *home;
+    const char *bin;
+    const char *lib;
+    const char *run;
+    const char *log;
+    const char *config;
+    const char *data;
+    const char *tmp;
+    const char *cache;
+    const char *workspace;
+} airy_paths_view_t;
+
+/**
+ * @brief 查询路径体系快照（只读，不创建目录）
+ *
+ * @param out 非 NULL 输出参数；成功时十项全部非 NULL
+ * @return AIRY_SUCCESS；out 为 NULL 时 AIRY_EINVAL
+ */
+int airy_paths_query(airy_paths_view_t *out);
+
+/**
  * @brief Initialize the AIRY_HOME path system
  *
  * Resolves each directory path and creates them (mkdir -p), while also
