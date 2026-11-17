@@ -141,6 +141,29 @@ static int test_outer_rounding(void)
     return 0;
 }
 
+static int test_log_side_effect_free(void)
+{
+    unsigned before[AIRY_BUDGET_LAYERS];
+    int fixed_before;
+
+    budget_clear();
+    env_set("AIRY_TIMEOUT_PROVIDER_MS", "80000");
+    fixed_before = airy_budget_verify();
+    for (int i = 0; i < AIRY_BUDGET_LAYERS; i++)
+        before[i] = airy_budget_ms((airy_budget_layer_t)i);
+
+    /* 日志只读解析结果：调用前后生效预算与钳制次数必须一致。 */
+    airy_budget_log("unit");
+    airy_budget_log(NULL);
+
+    TEST_ASSERT(airy_budget_verify() == fixed_before, "log: clamp count unchanged");
+    for (int i = 0; i < AIRY_BUDGET_LAYERS; i++)
+        TEST_ASSERT(airy_budget_ms((airy_budget_layer_t)i) == before[i],
+                    "log: layer budget unchanged");
+    TEST_ASSERT(airy_budget_ms(AIRY_BUDGET_PROVIDER) == 80000u, "log: override survives");
+    return 0;
+}
+
 int main(void)
 {
     TEST_RUN(test_default_tree);
@@ -150,6 +173,7 @@ int main(void)
     TEST_RUN(test_clamp_raises_outer);
     TEST_RUN(test_think_margin);
     TEST_RUN(test_outer_rounding);
+    TEST_RUN(test_log_side_effect_free);
 
     budget_clear();
     printf("\n%d passed, %d failed\n", passed_tests, failed_tests);
