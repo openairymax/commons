@@ -41,5 +41,6 @@
 #include "platform_misc.h"
 #include "platform_time.h"
 #include "platform_sandbox.h"
+#include "platform_gpu.h"
 
 #endif /* AIRY_RT_PLATFORM_H */
