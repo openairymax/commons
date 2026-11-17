@@ -43,6 +43,13 @@
 
 /* cognition 层 */
 #define AIRY_RS_TYPE_PLAN      "plan"
+/* C-15：统一任务编排入口的任务生命周期帧。
+ * - step：单步计划状态（step_index / step_status / title）；
+ * - task_state：task 一级状态（state / mode / mode_reason / task_id）；
+ * - plan_unavailable：计划不可得时的显式降级（携带 reason，禁止静默降级）。 */
+#define AIRY_RS_TYPE_STEP             "step"
+#define AIRY_RS_TYPE_TASK_STATE       "task_state"
+#define AIRY_RS_TYPE_PLAN_UNAVAILABLE "plan_unavailable"
 /* C-16：本轮工具目录快照（catalog_source / tools / available / denied）。
  * 静态 bootstrap 与实时目录必须可区分，前端据此提示降级。 */
 #define AIRY_RS_TYPE_CATALOG   "catalog"
@@ -100,6 +107,20 @@
 #define AIRY_RS_K_STEPS      "steps"
 #define AIRY_RS_K_STEP_ID    "id"
 #define AIRY_RS_K_STEP_TITLE "title"
+
+/* task.submit / task_state / step / plan_unavailable（C-15） */
+#define AIRY_RS_K_TASK_ID          "task_id"
+#define AIRY_RS_K_PLAN_ID          "plan_id"
+#define AIRY_RS_K_MODE             "mode"
+#define AIRY_RS_K_MODE_REASON      "mode_reason"
+#define AIRY_RS_K_GCCP_CONFIRMED   "gccp_confirmed"
+#define AIRY_RS_K_GCCP_MISSING     "gccp_missing"
+#define AIRY_RS_K_SUCCESS_CRITERIA "success_criteria"
+#define AIRY_RS_K_STATE            "state"
+#define AIRY_RS_K_STEP_INDEX       "step_index"
+#define AIRY_RS_K_STEP_STATUS      "step_status"
+#define AIRY_RS_K_STEP_COUNT       "step_count"
+#define AIRY_RS_K_REASON           "reason"
 
 /* tool_start */
 #define AIRY_RS_K_TOOL       "tool"
