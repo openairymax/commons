@@ -67,6 +67,11 @@
 /* 完整工具轨迹（tool/arguments/result/ok），与 RPC result.tool_trace 同构；
  * 流式客户端无法从 tool_end 的摘要还原参数与结果，故终态帧整体回传一次。 */
 #define AIRY_RS_K_TOOL_TRACE "tool_trace"
+/* 预算协商与续跑（C-14）：轮次计量进终态帧；Paused 时 resume_token 必随
+ * run_end 与 error 两处下发，客户端才不必重发全量历史。 */
+#define AIRY_RS_K_ROUNDS_USED  "rounds_used"
+#define AIRY_RS_K_ROUNDS_LIMIT "rounds_limit"
+#define AIRY_RS_K_RESUME_TOKEN "resume_token"
 
 /* error */
 #define AIRY_RS_K_CODE       "code"
@@ -74,6 +79,7 @@
 #define AIRY_RS_K_DETAIL     "detail"
 #define AIRY_RS_K_RECOVER    "recoverable"
 #define AIRY_RS_K_SUGGEST    "suggest_action"
+#define AIRY_RS_K_ERROR_CODE "error_code"
 
 /* plan */
 #define AIRY_RS_K_PLAN       "plan"
