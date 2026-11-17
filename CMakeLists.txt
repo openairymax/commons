@@ -400,8 +400,8 @@ install(DIRECTORY utils/ext/ DESTINATION include/agentrt/utils/ext
 install(DIRECTORY utils/ime/ DESTINATION include/agentrt/ime
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(FILES utils/ime/data/airy_ime.dat DESTINATION share/agentrt/ime)
-# P0-01: [SC] 共享契约层头文件（IRON-9 v2）
-install(DIRECTORY include/airymax/ DESTINATION include/airymax)
+# P0-01: [SC] 共享契约层头文件（IRON-9 v2；物理宿主 = kernel UAPI 路径）
+install(DIRECTORY include/linux/airymax/ DESTINATION include/linux/airymax)
 # M1-1a: 工具目录 OpenAI tools schema 单一权威（agent_d/gateway/tool_d 共引）
 install(FILES include/airy_tool_schema.h DESTINATION include/agentrt)
 # M1-1d: agent.run_stream v1 事件帧协议 schema 单一权威（agent_d/gateway/sdk-rust 共引）

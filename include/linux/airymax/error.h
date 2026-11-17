@@ -1,29 +1,21 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
- * A-UEF (Unified Error and Fault Framework) — [SC] shared contract header.
+ * error.h — A-UEF unified error and fault framework, [SC] shared header.
  *
- * Two disjoint code-spaces:
- *   Error  space (negative int32_t): recoverable errors, POSIX-compatible.
- *          AIRY_E* constants are positive magnitudes (like POSIX errno);
- *          callers return -AIRY_E* to produce the negative error value.
- *   Fault  space (positive __u32): unrecoverable faults,
- *          hardware/security/invariants.
+ * Two disjoint code-spaces: Error (negative int32_t, recoverable,
+ * POSIX-compatible — AIRY_E* are positive magnitudes, callers return
+ * -AIRY_E*) and Fault (positive u32, unrecoverable). 本头为 [SC]
+ * 契约头，禁止与 agentrt 通用错误码在同一编译单元混用。
  *
- * [DSL] fallback block: 38 POSIX codes active when AIRY_SC_FALLBACK is defined,
- * mapping to 5 core codes (EINVAL, ENOMEM, EBUSY, ECANCELED, EAGAIN).
- *
- * 注意：本头为 [SC] 共享契约头（AirymaxOS UAPI），错误码为「正数幅值」，
- * 调用方返回 -AIRY_E*。agentrt 用户态通用错误码权威源为
- * commons/include/airy_types.h（POSIX errno 负值，直接返回）。
- * 两者分属不同体系，禁止在同一编译单元混用（sc-dual-ci 校验两端逐字节一致）。
+ * Design rationale: docs/AirymaxOS/30-interfaces/08-sc-error-contract.md
  */
 
 #ifndef _UAPI_AIRYMAX_ERROR_H
 #define _UAPI_AIRYMAX_ERROR_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* ─── Error type ─────────────────────────────────────────────────────── */
 typedef __s32 airy_err_t;
@@ -163,7 +155,27 @@ typedef __s32 airy_err_t;
 #define AIRY_ESYS_DISABLED    223   /* Syscall disabled in [DSL] mode */
 #define AIRY_ESYS_ABI         224   /* ABI mismatch */
 
-/* ─── Reserved Sub-spaces (241 to 300) ───────────────────────────────────
+/* ─── Encoding Error Codes (sub-space: 241 to 260) ──────────────────────
+ * Strict UTF-8 validation of text crossing a kernel boundary.  The
+ * codes name the first illegal sequence so a caller can distinguish a
+ * structural fault from a policy refusal without rescanning the input.
+ * See 180-i18n/02-encoding-spec.md §7 and 08-sc-error-contract.md.
+ */
+#define AIRY_EENC_INVALID     241   /* Malformed UTF-8 sequence */
+#define AIRY_EENC_OVERLONG    242   /* Overlong encoding */
+#define AIRY_EENC_SURROGATE   243   /* UTF-16 surrogate code point */
+#define AIRY_EENC_NONCHAR     244   /* Unicode noncharacter */
+#define AIRY_EENC_RANGE       245   /* Code point beyond U+10FFFF */
+#define AIRY_EENC_BOM         246   /* U+FEFF byte order mark */
+
+/* ─── Lockdown Error Codes (sub-space: 261 to 280) ──────────────────────
+ * Policy refusals raised by the Airymax lockdown ladder.  A refusal is
+ * not a security violation: callers must propagate the value and must
+ * not raise a fault (see 110-security/09-lockdown.md §5).
+ */
+#define AIRY_ELOCKDOWN        261   /* Interface blocked at the active lockdown level */
+
+/* ─── Reserved Sub-spaces (262 to 300) ───────────────────────────────────
  * Reserved for future Airymax subsystems. Do not allocate without
  * updating docs/AirymaxOS/30-interfaces/08-sc-error-contract.md.
  */
@@ -175,6 +187,7 @@ typedef __s32 airy_err_t;
 #define AIRY_FAULT_TIMEOUT           0x1004  /* Agent heartbeat timeout */
 #define AIRY_FAULT_ABNORMAL_CAP      0x1005  /* Abnormal capability usage */
 #define AIRY_FAULT_VM_FAULT          0x1006  /* VM page fault in Agent */
+#define AIRY_FAULT_DOUBLE_FAULT      0x100C  /* Macro-Supervisor loss */
 
 /* ─── Helper macros ──────────────────────────────────────────────────── */
 #define AIRY_ERR_OK(err)    ((err) == AIRY_EOK)
@@ -184,7 +197,7 @@ typedef __s32 airy_err_t;
 #ifdef AIRY_SC_FALLBACK
 	/*
 	 * When [SC] headers are unavailable (boot/rescue mode),
-	 * fallback to 5 core POSIX codes mapped from 38 POSIX codes.
+	 * map 38 POSIX codes onto 7 core codes.
 	 */
 	#define AIRY_DSL_E2BIG        AIRY_EINVAL
 	#define AIRY_DSL_ECHILD       AIRY_EINVAL

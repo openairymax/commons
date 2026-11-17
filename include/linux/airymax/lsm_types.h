@@ -1,6 +1,6 @@
-/* SPDX-FileCopyrightText: 2025-2026 SPHARX Ltd. */
-/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
+ * Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
  *
  * Pure C LSM type contract — [SC] shared contract header.
  *
@@ -11,7 +11,7 @@
 #ifndef _UAPI_AIRYMAX_LSM_TYPES_H
 #define _UAPI_AIRYMAX_LSM_TYPES_H
 
-#include <airymax/uapi_compat.h>
+#include <linux/airymax/uapi_compat.h>
 
 /* ─── LSM Hook Coverage ──────────────────────────────────────────────── */
 /*
@@ -74,6 +74,17 @@ struct airy_cap_slot {
 } AIRY_ALIGNED(64);
 
 #define AIRY_CAP_MAX_AGENTS     1024
+
+/* ─── sec_d Agent Id ──────────────────────────────────────────────────
+ *
+ * sec_d compiles every Badge and is the only legal destination of an
+ * AIRY_IPC_OP_CAP_REQUEST. Agent ids occupy [0, AIRY_CAP_MAX_AGENTS):
+ * 0 means unbound (a kernel thread, or a broadcast in the header) and 1
+ * is the management agent kept in degraded mode, so sec_d takes the last
+ * slot. macro_d's sequential allocator must never hand it to an ordinary
+ * agent, and tying the value to the table size keeps the two in step.
+ */
+#define AIRY_SEC_D_TASK_ID      ((__u64)AIRY_CAP_MAX_AGENTS - 1)
 
 /* ─── Capability Check Callback Signature ────────────────────────────── */
 /*

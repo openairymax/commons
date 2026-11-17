@@ -15,7 +15,7 @@
  * implemented once in corekern clock.c).
  */
 
-#include <airymax/task_desc.h>
+#include <linux/airymax/task_desc.h>
 
 #include <platform_misc.h>
 
