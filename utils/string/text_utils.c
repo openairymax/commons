@@ -15,11 +15,13 @@
 #include "text_utils.h"
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* Unified base library compatibility layer */
 #include "airy_memory.h"
+#include "safe_utf8.h"
 #include "string_compat.h"
 
 char *airy_text_lower(char *str)
@@ -121,4 +123,61 @@ void airy_text_kw_free(char **keywords, size_t count)
         if (keywords[i])
             AIRY_FREE(keywords[i]);
     }
+}
+
+#define AIRY_TEXT_BUDGET_DEF 8192u
+#define AIRY_TEXT_BUDGET_MIN 1024u
+#define AIRY_TEXT_BUDGET_MAX (1024u * 1024u)
+
+size_t airy_text_budget_bytes(void)
+{
+    const char *v = getenv("AIRY_BACKFILL_BUDGET");
+    if (!v || !v[0])
+        return AIRY_TEXT_BUDGET_DEF;
+    char *end = NULL;
+    unsigned long n = strtoul(v, &end, 10);
+    if (end == v || (end && *end != '\0'))
+        return AIRY_TEXT_BUDGET_DEF;
+    if (n < AIRY_TEXT_BUDGET_MIN)
+        return AIRY_TEXT_BUDGET_MIN;
+    if (n > AIRY_TEXT_BUDGET_MAX)
+        return AIRY_TEXT_BUDGET_MAX;
+    return (size_t)n;
+}
+
+char *airy_text_budget(const char *s, size_t budget)
+{
+    if (!s)
+        return NULL;
+    size_t len = strlen(s);
+    if (budget == 0)
+        budget = airy_text_budget_bytes();
+    if (len <= budget)
+        return AIRY_STRDUP(s);
+
+    size_t head_max = budget * 3 / 5;
+    size_t tail_max = budget - head_max;
+    size_t head_len = utf8_prefix_len(s, head_max);
+    size_t tail_pos = len - tail_max;
+    while (tail_pos < len && ((unsigned char)s[tail_pos] & 0xC0) == 0x80)
+        tail_pos++;
+    if (tail_pos <= head_len)
+        tail_pos = head_len;
+
+    size_t dropped = len - head_len - (len - tail_pos);
+    char mark[64];
+    int mlen = snprintf(mark, sizeof(mark), "\n…[truncated %zu bytes]…\n", dropped);
+    if (mlen <= 0)
+        return AIRY_STRDUP(s);
+
+    size_t tail_len = len - tail_pos;
+    size_t total = head_len + (size_t)mlen + tail_len;
+    char *out = (char *)AIRY_MALLOC(total + 1);
+    if (!out)
+        return NULL;
+    __builtin_memcpy(out, s, head_len);
+    __builtin_memcpy(out + head_len, mark, (size_t)mlen);
+    __builtin_memcpy(out + head_len + (size_t)mlen, s + tail_pos, tail_len);
+    out[total] = '\0';
+    return out;
 }
