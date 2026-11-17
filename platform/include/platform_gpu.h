@@ -23,7 +23,11 @@
 #define AIRY_RT_PLATFORM_GPU_H
 
 #include "platform_base.h"
-#include "types.h"
+/* 显式相对路径：裸 "types.h" 在 MSVC 的引号包含规则下会先命中 includer
+ * 目录（如 daemons/llm_d/src/config/types.h），形成 provider_caps.h →
+ * platform_gpu.h → types.h 的环，airy_accel_kind_t 尚未声明即被使用
+ * （C2061）。与 utils/error/error.h 的相对包含口径一致。 */
+#include "../../utils/types/types.h"
 
 
 #ifdef __cplusplus
