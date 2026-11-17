@@ -77,6 +77,9 @@ typedef struct {
     int stream;
     const char *agent_id;
     void *user_data;
+    /* C-11：本次执行预算（秒）。0 = 用工具元数据 timeout_sec；>0 时由
+     * 服务层按策略上限夹取后覆盖本次执行预算（作业句柄与同步执行共用）。 */
+    int timeout_sec;
 } tool_execute_request_t;
 
 /**
