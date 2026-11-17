@@ -244,6 +244,12 @@
 #error "AIRY_ERR_SYS_PROCESS: duplicate SSoT definition"
 #endif
 #define AIRY_ERR_SYS_PROCESS (-123)
+/* 执行预算耗尽（C-14）：工具环的轮次用尽，但已执行步骤与中间正文完整，
+ * 携带 resume_token 可原地续跑。与 -102（资源分配失败、无中间产物）分界。 */
+#ifdef AIRY_EBUDGET
+#error "AIRY_EBUDGET: duplicate SSoT definition"
+#endif
+#define AIRY_EBUDGET (-124)
 #ifdef AIRY_ERR_SYS_FILE
 #error "AIRY_ERR_SYS_FILE: duplicate SSoT definition"
 #endif
