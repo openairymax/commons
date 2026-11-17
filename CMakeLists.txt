@@ -83,6 +83,8 @@ set(SOURCES
     utils/config_unified/config_service_validator.c
     # 配置生效自证（0.1.21 A-8）：声明 = 注册 = 生效 三段对账 + 生效指纹
     utils/config_unified/config_attest.c
+    # 超时预算树（0.1.21 C-21）：单一预算源 + 层间单调钳制 + think 余量
+    utils/config_unified/airy_budget.c
     utils/config_unified/config_source.c
     utils/config_unified/config_source_env.c
     utils/config_unified/config_source_memory.c
