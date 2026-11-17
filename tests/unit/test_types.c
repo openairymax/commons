@@ -504,6 +504,22 @@ static void test_ver_ssot(void **state)
     assert_true(strcmp(AIRYRT_VERSION, "0.0.0-dev") != 0);
 }
 
+static void test_build_id(void **state)
+{
+    (void)state;
+
+    /*
+     * 发行标识契约（A-1）：airy_build_id() 恒以 "v<版本>" 起头；构建清单
+     * 缺失时如实降级为 release=unknown（不伪造身份）；同一进程内稳定。
+     */
+    const char *bid = airy_build_id();
+
+    assert_non_null(bid);
+    assert_true(bid[0] == 'v');
+    assert_true(strstr(bid, " release=") != NULL || strstr(bid, " run") != NULL);
+    assert_string_equal(bid, airy_build_id());
+}
+
 static void test_macro_time(void **state)
 {
     (void)state;
@@ -558,6 +574,7 @@ int main(void)
         cmocka_unit_test(test_macro_minmax),
         cmocka_unit_test(test_macro_align),
         cmocka_unit_test(test_ver_ssot),
+        cmocka_unit_test(test_build_id),
         cmocka_unit_test(test_macro_time),
     };
 

@@ -176,6 +176,82 @@ const char *airy_build_info(void)
     return build_info;
 }
 
+#define AIRY_BID_MAX 160
+
+/* 清单读取三值：0 命中，-1 无此键，-2 文件不可开（调用方据此换候选路径）。 */
+static int bid_read(const char *path, const char *key, char *out, size_t cap)
+{
+    FILE *fp;
+    char line[256];
+    size_t klen = strlen(key);
+    int ret = -1;
+
+    fp = fopen(path, "rb");
+    if (fp == NULL)
+        return -2;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        char *val;
+        if (strncmp(line, key, klen) != 0 || line[klen] != '=')
+            continue;
+        val = line + klen + 1;
+        val[strcspn(val, "\r\n")] = '\0';
+        if (val[0] != '\0') {
+            snprintf(out, cap, "%s", val);
+            ret = 0;
+        }
+        break;
+    }
+    fclose(fp);
+    return ret;
+}
+
+static int bid_read_any(const char *key, char *out, size_t cap)
+{
+    /* 候选序口径：命中即止（各文件只承载各自键，故不可遇缺即停）。 */
+    static const char *const tail[] = {
+        "current/release.env", "release.env", "share/agentrt/build.env",
+    };
+    const char *env = getenv("AIRY_RELEASE_ENV");
+    const char *home = getenv("AIRY_HOME");
+    char path[AIRY_BID_MAX];
+
+    if (env != NULL && env[0] != '\0')
+        return bid_read(env, key, out, cap);
+    if (home == NULL || home[0] == '\0')
+        return -1;
+    for (size_t i = 0; i < sizeof(tail) / sizeof(tail[0]); i++) {
+        snprintf(path, sizeof(path), "%s/%s", home, tail[i]);
+        if (bid_read(path, key, out, cap) == 0)
+            return 0;
+    }
+    return -1;
+}
+
+const char *airy_build_id(void)
+{
+    static char id[AIRY_BID_MAX];
+    char ver[64] = {0};
+    char bid[96] = {0};
+    const char *v;
+
+    if (id[0] != '\0')
+        return id;
+
+    (void)bid_read_any("AIRY_RELEASE_ID", ver, sizeof(ver));
+    if (ver[0] == '\0')
+        (void)bid_read_any("AIRY_VERSION", ver, sizeof(ver));
+    (void)bid_read_any("AIRY_BUILD_ID", bid, sizeof(bid));
+
+    v = ver[0] != '\0' ? ver : AIRYRT_VERSION;
+    if (v[0] == 'v' || v[0] == 'V')
+        v++;
+    if (bid[0] != '\0')
+        snprintf(id, sizeof(id), "v%s %s", v, bid);
+    else
+        snprintf(id, sizeof(id), "v%s release=unknown", v);
+    return id;
+}
+
 #ifdef _WIN32
 #include <windows.h>
 #include "airy_memory.h"

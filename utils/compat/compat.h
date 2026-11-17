@@ -399,6 +399,20 @@ AIRY_API const char *airy_version_string(void);
  */
 AIRY_API const char *airy_build_info(void);
 
+/**
+ * @brief Get the release build identifier, e.g. "v0.1.21 run123.1-g1a2b3c4d5e6f".
+ *
+ * Reads AIRY_BUILD_ID / AIRY_RELEASE_ID / AIRY_VERSION from the first
+ * manifest that carries the key: `AIRY_RELEASE_ENV`, else
+ * `$AIRY_HOME/current/release.env`, `$AIRY_HOME/release.env` or
+ * `$AIRY_HOME/share/agentrt/build.env` (CI build identity, shipped in the
+ * package). Without a manifest the value degrades to
+ * "v<AIRYRT_VERSION> release=unknown" so a source build never claims a
+ * release identity. The value is composed once per process and is therefore
+ * stable across calls.
+ */
+AIRY_API const char *airy_build_id(void);
+
 #ifdef __cplusplus
 }
 #endif
