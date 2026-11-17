@@ -436,6 +436,15 @@
 #endif
 #define AIRY_ERR_LLM_STREAM_STALL (-417)
 
+/* B-2（0.1.21）：provider 声明了加速器能力，但后端地址未配置。
+ * 与 AIRY_ERR_LLM_PROVIDER_FAIL 分界：后者是「已连上后端但调用失败」，
+ * 本码是「没有可连的后端」——请求在发出任何网络 I/O 前即返回，调用方
+ * 据此走降级或给出配置指引，不得重试同一端点。 */
+#ifdef AIRY_ERR_LLM_BACKEND_UNCONFIGURED
+#error "AIRY_ERR_LLM_BACKEND_UNCONFIGURED: duplicate SSoT definition"
+#endif
+#define AIRY_ERR_LLM_BACKEND_UNCONFIGURED (-418)
+
 #ifdef AIRY_ERR_EXEC_BASE
 #error "AIRY_ERR_EXEC_BASE: duplicate SSoT definition"
 #endif
