@@ -145,7 +145,7 @@ static int test_invalid_params(void)
     airy_attest_result_t res;
     TEST_ASSERT(airy_attest_run(&opts, &no_key, 1, &res) == AIRY_ERR_INVALID_PARAM,
                 "item without key must be rejected");
-    TEST_ASSERT(airy_attest_verdict_name((airy_attest_verdict_t)99) != NULL,
+    TEST_ASSERT(att_verdict((airy_attest_verdict_t)99) != NULL,
                 "verdict name never NULL");
     return 0;
 }

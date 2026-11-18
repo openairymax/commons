@@ -54,7 +54,7 @@ static int attest_item_open(const airy_attest_item_t *item)
     return 1;
 }
 
-const char *airy_attest_verdict_name(airy_attest_verdict_t verdict)
+const char *att_verdict(airy_attest_verdict_t verdict)
 {
     if ((int)verdict < 0 || (size_t)verdict >= sizeof(k_verdict_name) / sizeof(k_verdict_name[0]))
         return k_verdict_name[AIRY_ATTEST_REJECT];
@@ -108,7 +108,7 @@ int airy_attest_run(const airy_attest_opts_t *opts, const airy_attest_item_t *it
     (void)snprintf(out->fingerprint, sizeof(out->fingerprint), "%016llx",
                    (unsigned long long)hash);
     AIRY_LOG_INFO("attest[%s]: verdict=%s checked=%d ok=%d warn=%d fail=%d fp=%s", owner,
-                  airy_attest_verdict_name(out->verdict), out->checked, out->ok, out->warned,
+                  att_verdict(out->verdict), out->checked, out->ok, out->warned,
                   out->failed, out->fingerprint);
 
     return out->verdict == AIRY_ATTEST_REJECT ? AIRY_ERR_SVC_CONFIG : AIRY_SUCCESS;
