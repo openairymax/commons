@@ -29,10 +29,15 @@ static int failed_tests = 0;
 
 static void set_budget_env(const char *v)
 {
+#ifdef _WIN32
+    /* MSVC 无 setenv/unsetenv：空串即删除该环境变量。 */
+    _putenv_s("AIRY_BACKFILL_BUDGET", v ? v : "");
+#else
     if (v)
         setenv("AIRY_BACKFILL_BUDGET", v, 1);
     else
         unsetenv("AIRY_BACKFILL_BUDGET");
+#endif
 }
 
 static int test_budget_config(void)
