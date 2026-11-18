@@ -319,14 +319,14 @@ static void gpu_detect(airy_gpu_cap_t *cap)
 
     l3 = gpu_ep_models(ep, port);
     if (l3) {
-        cap->layers |= AIRY_GPU_L2_RUNTIME | AIRY_GPU_L3_OPENAI;
+        cap->layers |= AIRY_GPU_L2_RUNTIME | AIRY_GPU_L3_STDAPI;
         snprintf(cap->backend, sizeof(cap->backend), "%s:%d", ep, port);
         cap->verdict = (cap->devs[0].kind == AIRY_ACCEL_NVIDIA) ? AIRY_GPU_R1 : AIRY_GPU_R2;
         return;
     }
     cap->verdict = AIRY_GPU_R3;
     snprintf(cap->reason, sizeof(cap->reason),
-             "加速器在，但 %s:%d 无 OpenAI 兼容应答；本机不得宣称 GPU 服务", ep, port);
+             "加速器在，但 %s:%d 无标准兼容应答；本机不得宣称 GPU 服务", ep, port);
 }
 
 #else /* _WIN32 || __APPLE__ */
