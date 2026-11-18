@@ -127,10 +127,22 @@
 #define AIRY_RS_REASON_PROVIDER "provider_unreachable"
 #define AIRY_RS_REASON_AGENT    "agent_error"
 
-/* 建议动作：retry 原样重发；resume 凭 resume_token 续跑；inspect 人工排障。 */
+/* 建议动作：retry 原样重发；resume 凭 resume_token 续跑；inspect 人工排障；
+ * adjust 按判据逐项修复产物后重新提交（C-17，确定性失败不可原样重试）。 */
 #define AIRY_RS_NEXT_RETRY   "retry"
 #define AIRY_RS_NEXT_RESUME  "resume"
 #define AIRY_RS_NEXT_INSPECT "inspect"
+#define AIRY_RS_NEXT_ADJUST  "adjust"
+
+/* 完成判据复核（C-17）：verifier 由 tool_d 在独立上下文只读执行，逐项回传
+ * {type, expect, actual, pass}。状态 unverified 表示复核未能取证（verifier
+ * 不可用），既非通过也非失败，客户端不得当作 completed 展示。 */
+#define AIRY_RS_K_VERIFICATION   "verification"
+#define AIRY_RS_ORIGIN_VERIFIER  "verifier"
+#define AIRY_RS_REASON_UNMET     "criteria_unmet"
+#define AIRY_RS_REASON_UNVERIFIED "verifier_unavailable"
+#define AIRY_RS_STATE_UNVERIFIED "unverified"
+#define AIRY_RS_STATE_NEEDS_CRITERIA "needs_criteria"
 
 /* usage（D-11）：run_end.usage 结构化计量，source 区分 provider 实报与估算。 */
 #define AIRY_RS_K_USAGE       "usage"
