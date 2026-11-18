@@ -80,6 +80,10 @@ typedef struct {
     /* C-11：本次执行预算（秒）。0 = 用工具元数据 timeout_sec；>0 时由
      * 服务层按策略上限夹取后覆盖本次执行预算（作业句柄与同步执行共用）。 */
     int timeout_sec;
+    /* D-9：高危工具（shell_run/tool_create/包管理类命令）的显式放行标记。
+     * 0 = 未放行（默认走审批，拒绝则 fail-closed）；1 = 调用方显式声明
+     * 接受风险（仍写审计，approval 记为 allow_dangerous）。 */
+    int allow_dangerous;
 } tool_execute_request_t;
 
 /**
@@ -113,6 +117,9 @@ typedef struct {
     int exit_code;
     uint64_t duration_ms;
     tool_result_class_t failure_class;
+    /* D-9 审计透出：审批来源与沙箱层级（定长，随结果按值复制）。 */
+    char approval[32];
+    char sandbox[16];
 } tool_result_t;
 
 /* 派生只读判据：ok ⇔ err_code == 0。以访问器而非结构字段实现——C 无
