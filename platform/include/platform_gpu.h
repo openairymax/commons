@@ -58,7 +58,7 @@ typedef enum {
 /** 已打通的探测层位标（bitmask，供上层判断可宣称到哪一步）。 */
 #define AIRY_GPU_L1_HW      0x1u
 #define AIRY_GPU_L2_RUNTIME 0x2u
-#define AIRY_GPU_L3_OPENAI  0x4u
+#define AIRY_GPU_L3_STDAPI  0x4u
 
 #define AIRY_GPU_MAX_DEVS 8u
 
