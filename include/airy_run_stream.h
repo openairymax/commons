@@ -102,6 +102,45 @@
 #define AIRY_RS_K_SUGGEST    "suggest_action"
 #define AIRY_RS_K_ERROR_CODE "error_code"
 
+/* 失败载荷（D-10）：run_end 与 error 两处同形下发。分层只补字段不改 code，
+ * 客户端据 origin/retryable/next_action 决定重试、续跑还是人工介入。 */
+#define AIRY_RS_K_FAILURE      "failure"
+#define AIRY_RS_K_ORIGIN       "origin"
+#define AIRY_RS_K_RETRYABLE    "retryable"
+#define AIRY_RS_K_BUDGET_USED  "budget_used"
+#define AIRY_RS_K_BUDGET_TOTAL "budget_total"
+#define AIRY_RS_K_NODE         "affected_node"
+#define AIRY_RS_K_NEXT_ACTION  "next_action"
+
+/* 失败始发层：tool = 工具执行，agent = 编排/预算，gateway = 准入与转发，
+ * provider = 模型流。 */
+#define AIRY_RS_ORIGIN_TOOL     "tool"
+#define AIRY_RS_ORIGIN_AGENT    "agent"
+#define AIRY_RS_ORIGIN_GATEWAY  "gateway"
+#define AIRY_RS_ORIGIN_PROVIDER "provider"
+
+/* 机器可读失败原因（稳定枚举，新增只增不改）。 */
+#define AIRY_RS_REASON_BUDGET   "budget_exhausted"
+#define AIRY_RS_REASON_TOOL     "tool_fuse"
+#define AIRY_RS_REASON_DENIED   "approval_denied"
+#define AIRY_RS_REASON_EMPTY    "empty_result"
+#define AIRY_RS_REASON_PROVIDER "provider_unreachable"
+#define AIRY_RS_REASON_AGENT    "agent_error"
+
+/* 建议动作：retry 原样重发；resume 凭 resume_token 续跑；inspect 人工排障。 */
+#define AIRY_RS_NEXT_RETRY   "retry"
+#define AIRY_RS_NEXT_RESUME  "resume"
+#define AIRY_RS_NEXT_INSPECT "inspect"
+
+/* usage（D-11）：run_end.usage 结构化计量，source 区分 provider 实报与估算。 */
+#define AIRY_RS_K_USAGE       "usage"
+#define AIRY_RS_K_USAGE_PROMPT "prompt"
+#define AIRY_RS_K_USAGE_COMP  "completion"
+#define AIRY_RS_K_USAGE_TOTAL "total"
+#define AIRY_RS_K_USAGE_SRC   "source"
+#define AIRY_RS_USAGE_PROVIDER "provider"
+#define AIRY_RS_USAGE_ESTIMATE "estimated"
+
 /* plan */
 #define AIRY_RS_K_PLAN       "plan"
 #define AIRY_RS_K_STEPS      "steps"
