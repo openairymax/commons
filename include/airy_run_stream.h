@@ -174,6 +174,10 @@
 /* step 帧的子目标文本（0-based step_index；文本取自计划步骤 title/goal/action） */
 #define AIRY_RS_K_STEP             "step"
 #define AIRY_RS_K_REASON           "reason"
+/* 取消追溯（D-13 / E-20）：cancelled 终态必须能回答「谁在何时取消的」，
+ * 只留 state=cancelled 会让跨客户端、看板与回放无法区分用户取消与关机。 */
+#define AIRY_RS_K_CANCELLED_BY     "cancelled_by"
+#define AIRY_RS_K_CANCELLED_AT     "cancelled_at"
 
 /* tool_start */
 #define AIRY_RS_K_TOOL       "tool"
