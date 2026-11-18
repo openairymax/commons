@@ -212,7 +212,7 @@ void airy_text_kw_free(char **keywords, size_t count)
 #define AIRY_TEXT_BUDGET_MIN 1024u
 #define AIRY_TEXT_BUDGET_MAX (1024u * 1024u)
 
-size_t airy_text_budget_bytes(void)
+size_t text_budget(void)
 {
     const char *v = getenv("AIRY_BACKFILL_BUDGET");
     if (!v || !v[0])
@@ -234,7 +234,7 @@ char *airy_text_budget(const char *s, size_t budget)
         return NULL;
     size_t len = strlen(s);
     if (budget == 0)
-        budget = airy_text_budget_bytes();
+        budget = text_budget();
     if (len <= budget)
         return AIRY_STRDUP(s);
 

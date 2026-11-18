@@ -43,21 +43,21 @@ static void set_budget_env(const char *v)
 static int test_budget_config(void)
 {
     set_budget_env(NULL);
-    TEST_ASSERT(airy_text_budget_bytes() == 8192, "默认预算应为 8 KB");
+    TEST_ASSERT(text_budget() == 8192, "默认预算应为 8 KB");
 
     set_budget_env("16384");
-    TEST_ASSERT(airy_text_budget_bytes() == 16384, "环境值应生效");
+    TEST_ASSERT(text_budget() == 16384, "环境值应生效");
 
     set_budget_env("512");
-    TEST_ASSERT(airy_text_budget_bytes() == 1024, "过小值夹到 1 KiB");
+    TEST_ASSERT(text_budget() == 1024, "过小值夹到 1 KiB");
 
     set_budget_env("10485760");
-    TEST_ASSERT(airy_text_budget_bytes() == 1024 * 1024, "过大值夹到 1 MiB");
+    TEST_ASSERT(text_budget() == 1024 * 1024, "过大值夹到 1 MiB");
 
     set_budget_env("16k");
-    TEST_ASSERT(airy_text_budget_bytes() == 8192, "非法值回落默认");
+    TEST_ASSERT(text_budget() == 8192, "非法值回落默认");
     set_budget_env("");
-    TEST_ASSERT(airy_text_budget_bytes() == 8192, "空值回落默认");
+    TEST_ASSERT(text_budget() == 8192, "空值回落默认");
     set_budget_env(NULL);
     return 0;
 }

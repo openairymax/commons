@@ -93,7 +93,7 @@ int airy_attest_run(const airy_attest_opts_t *opts, const airy_attest_item_t *it
 /**
  * @brief 判定三值的稳定名称，用于日志与状态输出（永不返回 NULL）。
  */
-const char *airy_attest_verdict_name(airy_attest_verdict_t verdict);
+const char *att_verdict(airy_attest_verdict_t verdict);
 
 #ifdef __cplusplus
 }
