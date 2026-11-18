@@ -250,6 +250,13 @@
 #error "AIRY_EBUDGET: duplicate SSoT definition"
 #endif
 #define AIRY_EBUDGET (-124)
+/* 完成判据未满足（C-17）：模型自报完成后，tool_d verifier 在独立上下文
+ * 复核失败。与 -124 分界：判据未过是确定性失败，重跑不改变结果，必须
+ * 修复产物后重新提交；也不可与 -125（用户取消）混同。 */
+#ifdef AIRY_EUNMET
+#error "AIRY_EUNMET: duplicate SSoT definition"
+#endif
+#define AIRY_EUNMET (-126)
 #ifdef AIRY_ERR_SYS_FILE
 #error "AIRY_ERR_SYS_FILE: duplicate SSoT definition"
 #endif
