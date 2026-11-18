@@ -69,11 +69,6 @@ set(SOURCES
     utils/compat/airy_regex_parse.c
     utils/compat/airy_regex_compile.c
     utils/cognition/agent_vocab.c
-    # network 模块按功能域拆分：连接 IO/HTTP/连接池/DNS
-    utils/network/network_common.c
-    utils/network/network_http.c
-    utils/network/network_pool.c
-    utils/network/network_dns.c
     utils/uuid/uuid_generator.c
     # config_unified 按功能域组织（2026-08-27）：core（核心上下文）/service（配置服务）/source（配置源）/parse（格式解析）
     utils/config_unified/core_config.c
@@ -112,8 +107,6 @@ set(SOURCES
     utils/ext/airy_providers.c
     # 阶段 3: 品牌化 ID（trace_id/msg_id 结构化命名，类型层不可互赋）
     utils/id/airy_id.c
-    # 阶段 4: 轻量内置拼音输入法词典（全拼，本地只读，无 IME 设备中文输入）
-    utils/ime/airy_ime.c
     # 0c A 类直搬（daemons/common → commons，IRON-6 归位；原在 svc_common 全平台编译）
     utils/ipc/jsonrpc_helpers.c    # JSON-RPC 2.0 辅助
     utils/ipc/method_dispatcher.c  # 方法分发器（注册表模式）
@@ -224,7 +217,6 @@ set(_inc_dirs
     utils/config_unified
     utils/execution
     utils/cognition
-    utils/network
     utils/ipc
     utils/sd
     utils/svc
@@ -237,8 +229,6 @@ set(_inc_dirs
     utils/cjson
     # 阶段 2: 统一扩展注册表头
     utils/ext
-    # 阶段 4: 内置拼音输入法头
-    utils/ime
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2）
     include
 )
@@ -291,7 +281,6 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/config_unified
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/execution
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cognition
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/network
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ipc
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/sd
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/svc
@@ -304,8 +293,6 @@ target_include_directories(airy_common PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/cjson
     # 阶段 2: 统一扩展注册表头
     ${CMAKE_CURRENT_SOURCE_DIR}/utils/ext
-    # 阶段 4: 内置拼音输入法头
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils/ime
     # P0-01: [SC] 共享契约层头文件（IRON-9 v2，6 核心 + 1 补充 + uapi_compat）
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -380,8 +367,6 @@ install(DIRECTORY utils/cache/ DESTINATION include/agentrt/utils/cache
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/compat/ DESTINATION include/agentrt/utils/compat
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(DIRECTORY utils/network/ DESTINATION include/agentrt/utils/network
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/ipc/ DESTINATION include/agentrt/utils/ipc
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/sd/ DESTINATION include/agentrt/utils/sd
@@ -396,10 +381,6 @@ install(DIRECTORY utils/cjson/ DESTINATION include/agentrt/utils/cjson
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
 install(DIRECTORY utils/ext/ DESTINATION include/agentrt/utils/ext
         FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-# 阶段 4: 内置拼音输入法头与词典安装（词典随安装分发，本地只读）
-install(DIRECTORY utils/ime/ DESTINATION include/agentrt/ime
-        FILES_MATCHING PATTERN "*.h" PATTERN "*_internal.h" EXCLUDE)
-install(FILES utils/ime/data/airy_ime.dat DESTINATION share/agentrt/ime)
 # P0-01: [SC] 共享契约层头文件（IRON-9 v2；物理宿主 = kernel UAPI 路径）
 install(DIRECTORY include/linux/airymax/ DESTINATION include/linux/airymax)
 # M1-1a: 工具目录 OpenAI tools schema 单一权威（agent_d/gateway/tool_d 共引）
