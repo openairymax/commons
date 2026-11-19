@@ -152,31 +152,46 @@ static void yaml_append_separator(bool is_folded, char **buf, size_t *cap, size_
     }
 }
 
+static int yaml_count_indent(struct parse_ctx *ctx)
+{
+    int n = 0;
+    while (!at_end(ctx) && peek(ctx) == ' ') {
+        n++;
+        advance(ctx);
+    }
+    return n;
+}
+
+static bool yaml_short_line(struct parse_ctx *ctx, char line_char, char **buf, size_t *cap,
+                            size_t *len, bool *ok)
+{
+    if (line_char == '\n' || line_char == '\r') {
+        yaml_skip_eol(ctx);
+        *ok = yaml_buf_append(buf, cap, len, '\n');
+        return true;
+    }
+    if (line_char == ' ' || line_char == '\t') {
+        *ok = true;
+        return true;
+    }
+    return false;
+}
+
 /* Read a single block scalar line into buf; returns false when the block
  * ends (EOF or dedent) or when the growing buffer ran out of memory. */
 static bool yaml_read_block_line(struct parse_ctx *ctx, bool is_folded, int *block_indent,
                                  char **buf, size_t *cap, size_t *len,
                                  int *first_line_indent, bool *has_content)
 {
-    int line_ind = 0;
-    while (!at_end(ctx) && peek(ctx) == ' ') {
-        line_ind++;
-        advance(ctx);
-    }
+    int line_ind = yaml_count_indent(ctx);
 
     if (at_end(ctx))
         return false;
 
     char line_char = peek(ctx);
-    if (line_char == '\n' || line_char == '\r') {
-        yaml_skip_eol(ctx);
-        if (!yaml_buf_append(buf, cap, len, '\n'))
-            return false;
-        return true;
-    }
-
-    if (line_char == ' ' || line_char == '\t')
-        return true;
+    bool ok = true;
+    if (yaml_short_line(ctx, line_char, buf, cap, len, &ok))
+        return ok;
 
     if (*block_indent < 0) {
         if (*first_line_indent < 0) {
@@ -305,6 +320,18 @@ struct yaml_node *parse_inline_sequence_value(struct parse_ctx *ctx, int base_in
     return finish_node(ctx, seq, tag, anchor_name);
 }
 
+static struct yaml_node *yaml_flow_value(struct parse_ctx *ctx, int indent)
+{
+    struct yaml_node *v = parse_value(ctx, indent);
+    if (!v)
+        v = alloc_node(ctx->doc, YAML_NODE_SCALAR);
+    if (v && v->type == YAML_NODE_NONE)
+        v->type = YAML_NODE_SCALAR;
+    if (v && v->type == YAML_NODE_SCALAR && !v->scalar.value)
+        v->scalar.value = AIRY_STRDUP("");
+    return v;
+}
+
 struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_indent,
                                              char *tag, char *anchor_name)
 {
@@ -329,13 +356,7 @@ struct yaml_node *parse_inline_mapping_value(struct parse_ctx *ctx, int base_ind
         if (peek(ctx) == ':')
             advance(ctx);
         skip_ws(ctx);
-        struct yaml_node *v = parse_value(ctx, base_indent + 100);
-        if (!v)
-            v = alloc_node(ctx->doc, YAML_NODE_SCALAR);
-        if (v && v->type == YAML_NODE_NONE)
-            v->type = YAML_NODE_SCALAR;
-        if (v && v->type == YAML_NODE_SCALAR && !v->scalar.value)
-            v->scalar.value = AIRY_STRDUP("");
+        struct yaml_node *v = yaml_flow_value(ctx, base_indent + 100);
         if (yaml_mapping_append(&map->mapping, &msz, &cap, k, v) != 0)
             return NULL;
         skip_ws(ctx);

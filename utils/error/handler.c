@@ -413,6 +413,28 @@ airy_err_t airy_err_register_i18n(const airy_err_i18n_entry_t *entries, size_t c
     return AIRY_OK;
 }
 
+/* 推进 snprintf 偏移；负数或截断都收敛到 buf_size（后续不再追加）。 */
+static size_t json_off_advance(int n, size_t offset, size_t buf_size)
+{
+    if (n < 0)
+        return buf_size;
+    if ((size_t)n >= buf_size - offset)
+        return buf_size;
+    return offset + (size_t)n;
+}
+
+/* 转义 JSON 字符串中的引号与反斜杠，结果始终以 NUL 结尾。 */
+static void json_escape_into(char *dst, size_t dst_size, const char *msg)
+{
+    size_t k = 0;
+    for (size_t j = 0; j < strlen(msg) && k < dst_size - 1; j++) {
+        if (msg[j] == '"' || msg[j] == '\\')
+            dst[k++] = '\\';
+        dst[k++] = msg[j];
+    }
+    dst[dst_size - 1] = '\0';
+}
+
 char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t lang)
 {
 
@@ -451,36 +473,19 @@ char *airy_err_chain_to_json_i18n(const airy_err_chain_t *chain, airy_language_t
         const airy_err_context_entry_t *ctx = &chain->contexts[i];
 
         char escaped_msg[2048] = {0};
-        const char *msg = ctx->message ? ctx->message : "";
-        for (size_t j = 0, k = 0; j < strlen(msg) && k < sizeof(escaped_msg) - 1; j++) {
-            if (msg[j] == '"' || msg[j] == '\\') {
-                escaped_msg[k++] = '\\';
-            }
-            escaped_msg[k++] = msg[j];
-        }
-        escaped_msg[sizeof(escaped_msg) - 1] = '\0';
+        json_escape_into(escaped_msg, sizeof(escaped_msg), ctx->message ? ctx->message : "");
 
         n = snprintf(buf + offset, buf_size - offset,
                      "%s{\"file\": \"%s\", \"line\": %d, \"function\": \"%s\", \"code\": %d, "
                      "\"message\": \"%s\"}",
                      i > 0 ? ", " : "", ctx->file ? ctx->file : "", ctx->line,
                      ctx->function ? ctx->function : "", ctx->error_code, escaped_msg);
-        if (n < 0) {
-            offset = buf_size;
-        } else if ((size_t)n >= buf_size - offset) {
-            offset = buf_size;
-        } else {
-            offset += (size_t)n;
-        }
+        offset = json_off_advance(n, offset, buf_size);
     }
 
     if (offset < buf_size) {
         n = snprintf(buf + offset, buf_size - offset, "]}");
-        if (n < 0 || (size_t)n >= buf_size - offset) {
-            offset = buf_size;
-        } else {
-            offset += (size_t)n;
-        }
+        offset = json_off_advance(n, offset, buf_size);
     }
 
     buf[buf_size - 1] = '\0';

@@ -213,30 +213,15 @@ int line_indent(struct parse_ctx *ctx)
     return indent;
 }
 
+static bool yaml_special_char(char c)
+{
+    static const char k_chars[] = "{}[],&*#|>\"'%@`\n\r";
+    return c != '\0' && memchr(k_chars, c, sizeof(k_chars) - 1) != NULL;
+}
+
 bool is_plain_scalar_char(char c)
 {
-    switch (c) {
-    case '{':
-    case '}':
-    case '[':
-    case ']':
-    case ',':
-    case '&':
-    case '*':
-    case '#':
-    case '|':
-    case '>':
-    case '"':
-    case '\'':
-    case '%':
-    case '@':
-    case '`':
-    case '\n':
-    case '\r':
-        return false;
-    default:
-        return !isspace((unsigned char)c);
-    }
+    return !yaml_special_char(c) && !isspace((unsigned char)c);
 }
 
 char *parse_quoted_string(struct parse_ctx *ctx, char quote)
@@ -285,6 +270,23 @@ char *parse_quoted_string(struct parse_ctx *ctx, char quote)
     return buf;
 }
 
+static bool plain_colon_break(const struct parse_ctx *ctx, char c)
+{
+    if (c != ':')
+        return false;
+    if (ctx->pos + 1 >= ctx->len)
+        return true;
+    char next = ctx->src[ctx->pos + 1];
+    return next == ' ' || next == '\t' || next == '\n' || next == '\r';
+}
+
+static size_t plain_trim(char *buf, size_t len)
+{
+    while (len > 0 && (buf[len - 1] == ' ' || buf[len - 1] == '\t'))
+        len--;
+    return len;
+}
+
 char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent)
 {
     size_t cap = 256;
@@ -300,9 +302,7 @@ char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent)
          * whitespace or the end of the input; anywhere else it is an
          * ordinary scalar character, so plain scalars such as URLs
          * ("https://host:port/path") survive intact. */
-        if (c == ':' && (ctx->pos + 1 >= ctx->len ||
-                         ctx->src[ctx->pos + 1] == ' ' || ctx->src[ctx->pos + 1] == '\t' ||
-                         ctx->src[ctx->pos + 1] == '\n' || ctx->src[ctx->pos + 1] == '\r'))
+        if (plain_colon_break(ctx, c))
             break;
         if (c == '#' && len > 0 && buf[len - 1] == ' ')
             break;
@@ -317,8 +317,7 @@ char *parse_plain_scalar(struct parse_ctx *ctx, int end_indent)
         buf[len++] = c;
     }
 
-    while (len > 0 && (buf[len - 1] == ' ' || buf[len - 1] == '\t'))
-        len--;
+    len = plain_trim(buf, len);
     buf[len] = '\0';
 
     if (len == 0) {

@@ -124,6 +124,24 @@ log_level_t log_level_from_string(const char *str)
 
 /* ==================== Lifecycle ==================== */
 
+static bool log_color_from_env(void)
+{
+    const char *env_color = getenv("AIRY_LOG_COLOR");
+    if (env_color) {
+        return !(strcmp(env_color, "0") == 0 || strcmp(env_color, "no") == 0 ||
+                 strcmp(env_color, "false") == 0 || strcmp(env_color, "off") == 0 ||
+                 strcmp(env_color, "never") == 0);
+    }
+#if defined(_WIN32)
+    /* log_internal_is_terminal() 在 Windows 分支恒返回 false，且 UCRT
+     * 不提供 POSIX fd 宏（STDOUT_FILENO/STDERR_FILENO），此处直接
+     * 关闭颜色，避免引用未声明标识符（C2065）。 */
+    return false;
+#else
+    return log_internal_is_terminal(STDOUT_FILENO) || log_internal_is_terminal(STDERR_FILENO);
+#endif
+}
+
 int log_init(const log_config_t *manager)
 {
     if (g_logging_state.initialized) {
@@ -144,29 +162,7 @@ int log_init(const log_config_t *manager)
     g_tls_trace_id[0] = '\0';
     g_tls_span_id[0] = '\0';
 
-    {
-        const char *env_color = getenv("AIRY_LOG_COLOR");
-        if (env_color) {
-
-            if (strcmp(env_color, "0") == 0 || strcmp(env_color, "no") == 0 ||
-                strcmp(env_color, "false") == 0 || strcmp(env_color, "off") == 0 ||
-                strcmp(env_color, "never") == 0) {
-                g_log_use_color = false;
-            } else {
-                g_log_use_color = true;
-            }
-        } else {
-#if defined(_WIN32)
-            /* log_internal_is_terminal() 在 Windows 分支恒返回 false，且 UCRT
-             * 不提供 POSIX fd 宏（STDOUT_FILENO/STDERR_FILENO），此处直接
-             * 关闭颜色，避免引用未声明标识符（C2065）。 */
-            g_log_use_color = false;
-#else
-            g_log_use_color =
-                log_internal_is_terminal(STDOUT_FILENO) || log_internal_is_terminal(STDERR_FILENO);
-#endif
-        }
-    }
+    g_log_use_color = log_color_from_env();
 
     if (manager) {
         __builtin_memcpy(&g_logging_state.manager, manager, sizeof(log_config_t));

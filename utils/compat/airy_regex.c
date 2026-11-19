@@ -53,6 +53,52 @@ typedef struct {
     int overflow;
 } airy_re_vm_t;
 
+static int airy_re_run(airy_re_vm_t *vm, airy_re_inst_t *pc, const char *sp);
+
+static int re_char_ops(airy_re_vm_t *vm, airy_re_inst_t **pcp, const char **spp)
+{
+    airy_re_inst_t *pc = *pcp;
+    const char *sp = *spp;
+    switch (pc->op) {
+    case AIRY_RE_I_CHAR:
+        if (!(*sp && (unsigned char)*sp == (unsigned char)pc->c))
+            return -1;
+        break;
+    case AIRY_RE_I_ANY:
+        if (!*sp)
+            return -1;
+        break;
+    case AIRY_RE_I_CLASS: {
+        const unsigned char *tbl = &vm->re->tables[(size_t)pc->c * 32];
+        unsigned char cc = (unsigned char)*sp;
+        if (!(cc && (tbl[cc >> 3] & (unsigned char)(1u << (cc & 7)))))
+            return -1;
+        break;
+    }
+    default:
+        return 0;
+    }
+    *spp = sp + 1;
+    *pcp = pc->a;
+    return 1;
+}
+
+static int re_split(airy_re_vm_t *vm, airy_re_inst_t *pc, const char *sp)
+{
+    int save_caps[2 * AIRY_RE_MAX_GROUPS];
+    __builtin_memcpy(save_caps, vm->caps, sizeof(save_caps));
+    const char *save_sp = sp;
+    if (airy_re_run(vm, pc->a, sp))
+        return 1;
+    if (vm->overflow)
+        return 0;
+    __builtin_memcpy(vm->caps, save_caps, sizeof(save_caps));
+    sp = save_sp;
+    if (airy_re_run(vm, pc->b, sp))
+        return 1;
+    return 0;
+}
+
 static int airy_re_run(airy_re_vm_t *vm, airy_re_inst_t *pc, const char *sp)
 {
     if (++vm->depth > AIRY_RE_MAX_DEPTH) {
@@ -65,37 +111,14 @@ static int airy_re_run(airy_re_vm_t *vm, airy_re_inst_t *pc, const char *sp)
             vm->depth--;
             return 1; /* end of program: match */
         }
-        switch (pc->op) {
-        case AIRY_RE_I_CHAR:
-            if (*sp && (unsigned char)*sp == (unsigned char)pc->c) {
-                sp++;
-                pc = pc->a;
-            } else {
-                vm->depth--;
-                return 0;
-            }
-            break;
-        case AIRY_RE_I_ANY:
-            if (*sp) {
-                sp++;
-                pc = pc->a;
-            } else {
-                vm->depth--;
-                return 0;
-            }
-            break;
-        case AIRY_RE_I_CLASS: {
-            const unsigned char *tbl = &vm->re->tables[(size_t)pc->c * 32];
-            unsigned char cc = (unsigned char)*sp;
-            if (cc && (tbl[cc >> 3] & (unsigned char)(1u << (cc & 7)))) {
-                sp++;
-                pc = pc->a;
-            } else {
-                vm->depth--;
-                return 0;
-            }
-            break;
+        int rc = re_char_ops(vm, &pc, &sp);
+        if (rc < 0) {
+            vm->depth--;
+            return 0;
         }
+        if (rc > 0)
+            continue;
+        switch (pc->op) {
         case AIRY_RE_I_ANCHOR:
             if (pc->c == '^') {
                 if (sp == vm->s) {
@@ -117,25 +140,11 @@ static int airy_re_run(airy_re_vm_t *vm, airy_re_inst_t *pc, const char *sp)
             vm->caps[pc->c] = (int)(sp - vm->start);
             pc = pc->a;
             break;
-        case AIRY_RE_I_SPLIT: {
-            int save_caps[2 * AIRY_RE_MAX_GROUPS];
-            __builtin_memcpy(save_caps, vm->caps, sizeof(save_caps));
-            const char *save_sp = sp;
-            if (airy_re_run(vm, pc->a, sp))
+        case AIRY_RE_I_SPLIT:
+            if (re_split(vm, pc, sp))
                 return 1;
-            if (vm->overflow) {
-                vm->depth--;
-                return 0;
-            }
-            __builtin_memcpy(vm->caps, save_caps, sizeof(save_caps));
-            sp = save_sp;
-            if (airy_re_run(vm, pc->b, sp)) {
-                vm->depth--;
-                return 1;
-            }
             vm->depth--;
             return 0;
-        }
         case AIRY_RE_I_JMP:
             pc = pc->a;
             break;

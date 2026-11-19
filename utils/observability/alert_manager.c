@@ -387,6 +387,21 @@ AIRY_API int am_acknowledge(const char *name)
     return 0;
 }
 
+static bool am_rule_match(const am_rule_t *rule, const char *metric_name, uint64_t now)
+{
+    if (!rule->enabled)
+        return false;
+
+    if (strcmp(rule->metric_name, metric_name) != 0)
+        return false;
+
+    if (rule->last_triggered > 0 &&
+        (now - rule->last_triggered) < (uint64_t)rule->cooldown_seconds * 1000)
+        return false;
+
+    return true;
+}
+
 AIRY_API int am_evaluate(const char *metric_name, double value)
 {
     if (!metric_name)
@@ -399,14 +414,7 @@ AIRY_API int am_evaluate(const char *metric_name, double value)
 
     for (uint32_t i = 0; i < g_am.rule_count; i++) {
         am_rule_t *rule = &g_am.rules[i];
-        if (!rule->enabled)
-            continue;
-
-        if (strcmp(rule->metric_name, metric_name) != 0)
-            continue;
-
-        if (rule->last_triggered > 0 &&
-            (now - rule->last_triggered) < (uint64_t)rule->cooldown_seconds * 1000)
+        if (!am_rule_match(rule, metric_name, now))
             continue;
 
         bool condition_met = false;

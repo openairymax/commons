@@ -83,6 +83,19 @@ int airy_token_analyze_text(const char *text, size_t length, size_t *out_cjk_cha
     return 0;
 }
 
+/* 按字符构成比例估算 token 数；accurate 时对 CJK 采用更细分段。 */
+static size_t token_ratio_est(size_t cjk_chars, size_t alpha_chars, size_t total_chars,
+                              const airy_token_config_t *cfg, bool accurate)
+{
+    if (cjk_chars > total_chars * cfg->cjk_ratio) {
+        return accurate ? (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f)
+                        : (size_t)(total_chars / 1.5f);
+    }
+    if (alpha_chars > total_chars * cfg->alpha_ratio)
+        return (size_t)(total_chars / 4.0f);
+    return (size_t)(total_chars / 3.0f);
+}
+
 size_t airy_token_standard_count(const char *text, size_t length, const airy_token_config_t *config)
 {
     if (!text) {
@@ -123,23 +136,11 @@ size_t airy_token_standard_count(const char *text, size_t length, const airy_tok
             break;
 
         default:
-            if (cjk_chars > total_chars * cfg->cjk_ratio) {
-                token_count = (size_t)(cjk_chars / 1.5f + (total_chars - cjk_chars) / 4.0f);
-            } else if (alpha_chars > total_chars * cfg->alpha_ratio) {
-                token_count = (size_t)(total_chars / 4.0f);
-            } else {
-                token_count = (size_t)(total_chars / 3.0f);
-            }
+            token_count = token_ratio_est(cjk_chars, alpha_chars, total_chars, cfg, true);
             break;
         }
     } else {
-        if (cjk_chars > total_chars * cfg->cjk_ratio) {
-            token_count = (size_t)(total_chars / 1.5f);
-        } else if (alpha_chars > total_chars * cfg->alpha_ratio) {
-            token_count = (size_t)(total_chars / 4.0f);
-        } else {
-            token_count = (size_t)(total_chars / 3.0f);
-        }
+        token_count = token_ratio_est(cjk_chars, alpha_chars, total_chars, cfg, false);
     }
 
     if (token_count == 0 && total_chars > 0) {
@@ -212,6 +213,44 @@ int airy_token_set_precision(airy_token_precision_t precision, airy_token_config
     return 0;
 }
 
+/* token 维度配额检查：返回 0 通过，2/3/4 对应分钟/小时/天超限。 */
+static int token_quota_tokens(const airy_token_quota_t *quota, size_t requested_tokens,
+                              const airy_token_usage_t *current_usage)
+{
+    if (quota->max_tokens_per_minute > 0 &&
+        current_usage->tokens_used_per_minute + requested_tokens > quota->max_tokens_per_minute) {
+        return 2;
+    }
+    if (quota->max_tokens_per_hour > 0 &&
+        current_usage->tokens_used_per_hour + requested_tokens > quota->max_tokens_per_hour) {
+        return 3;
+    }
+    if (quota->max_tokens_per_day > 0 &&
+        current_usage->tokens_used_per_day + requested_tokens > quota->max_tokens_per_day) {
+        return 4;
+    }
+    return 0;
+}
+
+/* 请求数维度配额检查：返回 0 通过，5/6/7 对应分钟/小时/天超限。 */
+static int token_quota_reqs(const airy_token_quota_t *quota,
+                            const airy_token_usage_t *current_usage)
+{
+    if (quota->max_requests_per_minute > 0 &&
+        current_usage->requests_used_per_minute + 1 > quota->max_requests_per_minute) {
+        return 5;
+    }
+    if (quota->max_requests_per_hour > 0 &&
+        current_usage->requests_used_per_hour + 1 > quota->max_requests_per_hour) {
+        return 6;
+    }
+    if (quota->max_requests_per_day > 0 &&
+        current_usage->requests_used_per_day + 1 > quota->max_requests_per_day) {
+        return 7;
+    }
+    return 0;
+}
+
 int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tokens,
                            const airy_token_usage_t *current_usage)
 {
@@ -224,36 +263,12 @@ int airy_token_check_quota(const airy_token_quota_t *quota, size_t requested_tok
     }
 
     if (current_usage) {
-        if (quota->max_tokens_per_minute > 0 &&
-            current_usage->tokens_used_per_minute + requested_tokens >
-                quota->max_tokens_per_minute) {
-            return 2;
-        }
-
-        if (quota->max_tokens_per_hour > 0 &&
-            current_usage->tokens_used_per_hour + requested_tokens > quota->max_tokens_per_hour) {
-            return 3;
-        }
-
-        if (quota->max_tokens_per_day > 0 &&
-            current_usage->tokens_used_per_day + requested_tokens > quota->max_tokens_per_day) {
-            return 4;
-        }
-
-        if (quota->max_requests_per_minute > 0 &&
-            current_usage->requests_used_per_minute + 1 > quota->max_requests_per_minute) {
-            return 5;
-        }
-
-        if (quota->max_requests_per_hour > 0 &&
-            current_usage->requests_used_per_hour + 1 > quota->max_requests_per_hour) {
-            return 6;
-        }
-
-        if (quota->max_requests_per_day > 0 &&
-            current_usage->requests_used_per_day + 1 > quota->max_requests_per_day) {
-            return 7;
-        }
+        int rc = token_quota_tokens(quota, requested_tokens, current_usage);
+        if (rc != 0)
+            return rc;
+        rc = token_quota_reqs(quota, current_usage);
+        if (rc != 0)
+            return rc;
     }
 
     return 0;

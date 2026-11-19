@@ -98,16 +98,20 @@ int yaml_parse_string(yaml_document_t *doc, const char *input, size_t len)
     return doc->root ? 0 : -1;
 }
 
+static size_t yaml_skip_bom(const char *input, size_t len)
+{
+    if (len >= 3 && (unsigned char)input[0] == 0xEF && (unsigned char)input[1] == 0xBB &&
+        (unsigned char)input[2] == 0xBF)
+        return 3;
+    return 0;
+}
+
 int yaml_parse_multi(yaml_document_t *doc, const char *input, size_t len)
 {
     if (!doc || !input)
         return AIRY_EINVAL;
 
-    size_t start_pos = 0;
-    if (len >= 3 && (unsigned char)input[0] == 0xEF && (unsigned char)input[1] == 0xBB &&
-        (unsigned char)input[2] == 0xBF) {
-        start_pos = 3;
-    }
+    size_t start_pos = yaml_skip_bom(input, len);
 
     size_t effective_len = (len > 0) ? len : strlen(input);
 

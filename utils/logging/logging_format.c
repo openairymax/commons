@@ -49,6 +49,19 @@ bool log_internal_is_terminal(int fd)
 #endif
 }
 
+/* 追加格式化片段；返回新的长度，出错返回 -1（保留原有截断语义）。 */
+static int fmt_append(char *buffer, size_t buffer_size, int len, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(buffer + len, buffer_size - (size_t)len, fmt, ap);
+    va_end(ap);
+    if (n < 0)
+        return -1;
+    len += n;
+    return ((size_t)len >= buffer_size) ? (int)buffer_size - 1 : len;
+}
+
 size_t log_internal_format_message(const log_record_t *record, char *buffer, size_t buffer_size,
                                    bool color)
 {
@@ -74,45 +87,35 @@ size_t log_internal_format_message(const log_record_t *record, char *buffer, siz
         reset = ANSI_RESET;
     }
 
-    int len = snprintf(buffer, buffer_size,
-                       "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [mono:%llu] [%s%s%s] [%s:%d]",
-                       tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,
-                       tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, ms,
-                       (unsigned long long)record->mono_ms, color_on, level_name, reset,
-                       record->module, record->line);
+    int len = fmt_append(buffer, buffer_size, 0,
+                         "[%04d-%02d-%02d %02d:%02d:%02d.%03d] [mono:%llu] [%s%s%s] [%s:%d]",
+                         tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,
+                         tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec, ms,
+                         (unsigned long long)record->mono_ms, color_on, level_name, reset,
+                         record->module, record->line);
     if (len < 0)
         return 0;
-    if ((size_t)len >= buffer_size)
-        len = (int)buffer_size - 1;
 
     if (record->trace_id && record->trace_id[0] != '\0') {
-        len += snprintf(buffer + len, buffer_size - (size_t)len, " [trace:%s]", record->trace_id);
+        len = fmt_append(buffer, buffer_size, len, " [trace:%s]", record->trace_id);
         if (len < 0)
             return 0;
-        if ((size_t)len >= buffer_size)
-            len = (int)buffer_size - 1;
     }
 
     if (record->span_id && record->span_id[0] != '\0') {
-        len += snprintf(buffer + len, buffer_size - (size_t)len, " [span:%s]", record->span_id);
+        len = fmt_append(buffer, buffer_size, len, " [span:%s]", record->span_id);
         if (len < 0)
             return 0;
-        if ((size_t)len >= buffer_size)
-            len = (int)buffer_size - 1;
     }
 
-    len += snprintf(buffer + len, buffer_size - (size_t)len, " [thread:%llu] [process:%u]",
-                    (unsigned long long)record->thread_id, (unsigned)record->process_id);
+    len = fmt_append(buffer, buffer_size, len, " [thread:%llu] [process:%u]",
+                     (unsigned long long)record->thread_id, (unsigned)record->process_id);
     if (len < 0)
         return 0;
-    if ((size_t)len >= buffer_size)
-        len = (int)buffer_size - 1;
 
-    len += snprintf(buffer + len, buffer_size - (size_t)len, " %s\n", record->message);
+    len = fmt_append(buffer, buffer_size, len, " %s\n", record->message);
     if (len < 0)
         return 0;
-    if ((size_t)len >= buffer_size)
-        len = (int)buffer_size - 1;
 
     return (size_t)len;
 }

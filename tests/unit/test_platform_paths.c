@@ -31,33 +31,14 @@ static int expect_path(const char *got, const char *want, const char *what)
     return 0;
 }
 
-int main(void)
+static int check_basic_paths(const char *home, const char *want_run)
 {
-    const char *home = getenv("AIRY_HOME");
-    const char *run_env = getenv("AIRY_RUNTIME_DIR");
-    if (!home || home[0] == '\0') {
-        fprintf(stderr, "✗FAIL: AIRY_HOME must be set by ctest\n");
-        return 1;
-    }
-
-    const int overridden = (run_env && run_env[0] != '\0');
-    char want_run[AIRY_PATH_MAX];
-    if (overridden)
-        snprintf(want_run, sizeof(want_run), "%s", run_env);
-    else
-        snprintf(want_run, sizeof(want_run), "%s/run", home);
-
     char want_sock[AIRY_PATH_MAX];
     char want_bin[AIRY_PATH_MAX];
     char want_log[AIRY_PATH_MAX];
     snprintf(want_sock, sizeof(want_sock), "%s/monit.sock", want_run);
     snprintf(want_bin, sizeof(want_bin), "%s/bin", home);
     snprintf(want_log, sizeof(want_log), "%s/data/agentrt/logs", home);
-
-    printf("===========================================\n");
-    printf("  platform paths: %s\n",
-           overridden ? "explicit AIRY_RUNTIME_DIR" : "derived from AIRY_HOME");
-    printf("===========================================\n");
 
     if (expect_path(airy_home_dir(), home, "home dir"))
         return 1;
@@ -69,16 +50,23 @@ int main(void)
         return 1;
     if (expect_path(airy_log_dir(), want_log, "log dir"))
         return 1;
+    return 0;
+}
 
-    /* 0.1.21 A-6：只读快照契约。十项必须与逐项访问器同源（指针同一），
-     * 否则医生/门禁与安装器会看到两套根；且查询不得触发目录创建。 */
-    char want_lib[AIRY_PATH_MAX], want_cfg[AIRY_PATH_MAX], want_data[AIRY_PATH_MAX];
-    char want_tmp[AIRY_PATH_MAX], want_cache[AIRY_PATH_MAX], want_ws[AIRY_PATH_MAX];
+/* 0.1.21 A-6：只读快照契约。十项必须与逐项访问器同源（指针同一），
+ * 否则医生/门禁与安装器会看到两套根；且查询不得触发目录创建。 */
+static int check_query_view(const char *home, const char *want_run)
+{
+    char want_bin[AIRY_PATH_MAX], want_lib[AIRY_PATH_MAX], want_cfg[AIRY_PATH_MAX];
+    char want_data[AIRY_PATH_MAX], want_tmp[AIRY_PATH_MAX], want_cache[AIRY_PATH_MAX];
+    char want_log[AIRY_PATH_MAX], want_ws[AIRY_PATH_MAX];
+    snprintf(want_bin, sizeof(want_bin), "%s/bin", home);
     snprintf(want_lib, sizeof(want_lib), "%s/lib", home);
     snprintf(want_cfg, sizeof(want_cfg), "%s/config", home);
     snprintf(want_data, sizeof(want_data), "%s/data", home);
     snprintf(want_tmp, sizeof(want_tmp), "%s/data/agentrt/tmp", home);
     snprintf(want_cache, sizeof(want_cache), "%s/data/agentrt/cache", home);
+    snprintf(want_log, sizeof(want_log), "%s/data/agentrt/logs", home);
     snprintf(want_ws, sizeof(want_ws), "%s/data/agentrt/workspaces", home);
 
     airy_paths_view_t v;
@@ -115,10 +103,14 @@ int main(void)
         fprintf(stderr, "✗FAIL: query view must alias accessor buffers\n");
         return 1;
     }
+    return 0;
+}
 
-    /* 初始化会把解析结果回写环境变量供 getenv 消费方使用：回写值必须与
-     * 解析值一致，否则 daemon 绑定目录与编排脚本探测目录分叉（-r 失效
-     * 的原始形态）。 */
+/* 初始化会把解析结果回写环境变量供 getenv 消费方使用：回写值必须与
+ * 解析值一致，否则 daemon 绑定目录与编排脚本探测目录分叉（-r 失效
+ * 的原始形态）。 */
+static int check_export(const char *want_run)
+{
     if (airy_paths_init() != AIRY_SUCCESS) {
         fprintf(stderr, "✗FAIL: airy_paths_init failed\n");
         return 1;
@@ -126,6 +118,36 @@ int main(void)
     if (expect_path(getenv("AIRY_RUNTIME_DIR"), want_run, "exported AIRY_RUNTIME_DIR"))
         return 1;
     if (expect_path(airy_runtime_dir(), want_run, "runtime dir after init"))
+        return 1;
+    return 0;
+}
+
+int main(void)
+{
+    const char *home = getenv("AIRY_HOME");
+    const char *run_env = getenv("AIRY_RUNTIME_DIR");
+    if (!home || home[0] == '\0') {
+        fprintf(stderr, "✗FAIL: AIRY_HOME must be set by ctest\n");
+        return 1;
+    }
+
+    const int overridden = (run_env && run_env[0] != '\0');
+    char want_run[AIRY_PATH_MAX];
+    if (overridden)
+        snprintf(want_run, sizeof(want_run), "%s", run_env);
+    else
+        snprintf(want_run, sizeof(want_run), "%s/run", home);
+
+    printf("===========================================\n");
+    printf("  platform paths: %s\n",
+           overridden ? "explicit AIRY_RUNTIME_DIR" : "derived from AIRY_HOME");
+    printf("===========================================\n");
+
+    if (check_basic_paths(home, want_run))
+        return 1;
+    if (check_query_view(home, want_run))
+        return 1;
+    if (check_export(want_run))
         return 1;
 
     printf("✔PASS: runtime=%s home=%s\n", want_run, home);
