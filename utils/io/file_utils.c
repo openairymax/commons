@@ -163,6 +163,29 @@ int airy_io_ensure_dir(const char *path)
     return 0;
 }
 
+static void file_list_free(char **files, size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+        AIRY_FREE(files[i]);
+    AIRY_FREE(files);
+}
+
+static int file_list_add(char ***files, size_t *count, size_t *cap, const char *name)
+{
+    if (*count >= *cap) {
+        *cap *= 2;
+        char **grown = (char **)AIRY_REALLOC(*files, *cap * sizeof(char *));
+        if (!grown)
+            return -1;
+        *files = grown;
+    }
+    (*files)[*count] = AIRY_STRDUP(name);
+    if (!(*files)[*count])
+        return -1;
+    (*count)++;
+    return 0;
+}
+
 int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
 {
     if (!path || !out_files || !out_count)
@@ -184,27 +207,11 @@ int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
 
     do {
         if (!(find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-            if (count >= capacity) {
-                capacity *= 2;
-                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
-                if (!new_files) {
-                    for (size_t i = 0; i < count; i++)
-                        AIRY_FREE(files[i]);
-                    AIRY_FREE(files);
-                    FindClose(hFind);
-                    return AIRY_EINVAL;
-                }
-                files = new_files;
-            }
-            files[count] = AIRY_STRDUP(find_data.cFileName);
-            if (!files[count]) {
-                for (size_t i = 0; i < count; i++)
-                    AIRY_FREE(files[i]);
-                AIRY_FREE(files);
+            if (file_list_add(&files, &count, &capacity, find_data.cFileName) != 0) {
+                file_list_free(files, count);
                 FindClose(hFind);
                 return AIRY_EINVAL;
             }
-            count++;
         }
     } while (FindNextFileA(hFind, &find_data));
 
@@ -225,27 +232,11 @@ int airy_io_list_files(const char *path, char ***out_files, size_t *out_count)
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
-            if (count >= capacity) {
-                capacity *= 2;
-                char **new_files = (char **)AIRY_REALLOC(files, capacity * sizeof(char *));
-                if (!new_files) {
-                    for (size_t i = 0; i < count; i++)
-                        AIRY_FREE(files[i]);
-                    AIRY_FREE(files);
-                    closedir(dir);
-                    return AIRY_EINVAL;
-                }
-                files = new_files;
-            }
-            files[count] = AIRY_STRDUP(entry->d_name);
-            if (!files[count]) {
-                for (size_t i = 0; i < count; i++)
-                    AIRY_FREE(files[i]);
-                AIRY_FREE(files);
+            if (file_list_add(&files, &count, &capacity, entry->d_name) != 0) {
+                file_list_free(files, count);
                 closedir(dir);
                 return AIRY_EINVAL;
             }
-            count++;
         }
     }
     closedir(dir);

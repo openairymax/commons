@@ -15,23 +15,25 @@
 #include "config_parse_internal.h"
 #include "yaml_minimal.h"
 
+static void flatten_text(const char *prefix, const char *val, config_context_t *ctx)
+{
+    config_value_t *cv = config_value_create_string(val ? val : "");
+    if (cv)
+        config_context_set(ctx, prefix, cv);
+}
+
 static void flatten_node(const struct yaml_node *node, const char *prefix, config_context_t *ctx)
 {
     if (!node)
         return;
 
     if (node->type == YAML_NODE_SCALAR) {
-        const char *val = node->scalar.value ? node->scalar.value : "";
-        config_value_t *cv = config_value_create_string(val);
-        if (cv)
-            config_context_set(ctx, prefix, cv);
+        flatten_text(prefix, node->scalar.value, ctx);
         return;
     }
 
     if (node->type == YAML_NODE_MAPPING && node->mapping == NULL) {
-        config_value_t *cv = config_value_create_string("");
-        if (cv)
-            config_context_set(ctx, prefix, cv);
+        flatten_text(prefix, "", ctx);
         return;
     }
 
@@ -49,9 +51,7 @@ static void flatten_node(const struct yaml_node *node, const char *prefix, confi
 
     if (node->type == YAML_NODE_SEQUENCE) {
         if (node->sequence.items == NULL || node->sequence.count == 0) {
-            config_value_t *cv = config_value_create_string("");
-            if (cv)
-                config_context_set(ctx, prefix, cv);
+            flatten_text(prefix, "", ctx);
             return;
         }
         for (size_t i = 0; i < node->sequence.count; i++) {

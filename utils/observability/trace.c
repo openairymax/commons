@@ -267,6 +267,35 @@ void airy_trace_add_event(airy_trace_span_t *span, const char *name, const char 
     trace_mutex_unlock(&span->mutex);
 }
 
+static size_t trace_emit_events(char *buffer, size_t buffer_size, size_t offset,
+                               trace_event_t *event)
+{
+    offset += snprintf(buffer + offset, buffer_size - offset, "    \"events\": [\n");
+
+    int first_event = 1;
+    while (event) {
+        if (!first_event) {
+            offset += snprintf(buffer + offset, buffer_size - offset, ",\n");
+        }
+        first_event = 0;
+
+        offset += snprintf(buffer + offset, buffer_size - offset,
+                           "      {\"name\": \"%s\", \"timestamp\": %lld", event->name,
+                           (long long)event->timestamp);
+
+        if (event->attributes[0]) {
+            offset += snprintf(buffer + offset, buffer_size - offset, ", \"attributes\": %s",
+                               event->attributes);
+        }
+
+        offset += snprintf(buffer + offset, buffer_size - offset, "}");
+        event = event->next;
+    }
+
+    offset += snprintf(buffer + offset, buffer_size - offset, "\n    ]");
+    return offset;
+}
+
 char *airy_trace_export(void)
 {
     if (init_trace_system() != 0) {
@@ -326,30 +355,7 @@ char *airy_trace_export(void)
                                                              "running");
 
         if (span->event_count > 0) {
-            offset += snprintf(buffer + offset, buffer_size - offset, "    \"events\": [\n");
-
-            trace_event_t *event = span->events;
-            int first_event = 1;
-            while (event) {
-                if (!first_event) {
-                    offset += snprintf(buffer + offset, buffer_size - offset, ",\n");
-                }
-                first_event = 0;
-
-                offset += snprintf(buffer + offset, buffer_size - offset,
-                                   "      {\"name\": \"%s\", \"timestamp\": %lld", event->name,
-                                   (long long)event->timestamp);
-
-                if (event->attributes[0]) {
-                    offset += snprintf(buffer + offset, buffer_size - offset,
-                                       ", \"attributes\": %s", event->attributes);
-                }
-
-                offset += snprintf(buffer + offset, buffer_size - offset, "}");
-                event = event->next;
-            }
-
-            offset += snprintf(buffer + offset, buffer_size - offset, "\n    ]");
+            offset = trace_emit_events(buffer, buffer_size, offset, span->events);
         }
 
         offset += snprintf(buffer + offset, buffer_size - offset, "\n  }");

@@ -70,6 +70,19 @@ airy_err_t airy_checkpoint_delete(const char *task_id, uint64_t seq_num)
     return (deleted > 0) ? AIRY_SUCCESS : AIRY_ENOENT;
 }
 
+static void cp_sort_seqs(uint64_t *seqs, size_t cnt)
+{
+    for (size_t i = 1; i < cnt; i++) {
+        uint64_t key = seqs[i];
+        size_t j = i;
+        while (j > 0 && seqs[j - 1] > key) {
+            seqs[j] = seqs[j - 1];
+            j--;
+        }
+        seqs[j] = key;
+    }
+}
+
 airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***out_cps,
                                 size_t *out_count)
 {
@@ -89,15 +102,7 @@ airy_err_t airy_checkpoint_list(const char *task_id, airy_task_checkpoint_t ***o
         return AIRY_ENOENT;
     }
 
-    for (size_t i = 1; i < cnt; i++) {
-        uint64_t key = seqs[i];
-        size_t j = i;
-        while (j > 0 && seqs[j - 1] > key) {
-            seqs[j] = seqs[j - 1];
-            j--;
-        }
-        seqs[j] = key;
-    }
+    cp_sort_seqs(seqs, cnt);
 
     /* Restore checkpoints one by one. collect_task_seqs gives a snapshot
      * taken while scanning the directory; files may be removed concurrently.
@@ -152,6 +157,52 @@ airy_err_t airy_checkpoint_ids(char ***out_task_ids, size_t *out_count)
     return AIRY_SUCCESS;
 }
 
+/* 按 mtime 清理过期 checkpoint 文件；now_sec 为 CLOCK_REALTIME 基线。 */
+static void cp_sweep_old(uint64_t max_age_sec, uint64_t now_sec)
+{
+#ifdef _WIN32
+    char pattern[MAX_CHECKPOINT_PATH];
+    snprintf(pattern, sizeof(pattern), "%s/*.json", g_checkpoint_storage_path);
+
+    WIN32_FIND_DATAA find_data;
+    HANDLE hFind = FindFirstFileA(pattern, &find_data);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            char filepath[MAX_CHECKPOINT_PATH];
+            snprintf(filepath, sizeof(filepath), "%s/%s", g_checkpoint_storage_path,
+                     find_data.cFileName);
+            ULARGE_INTEGER ft;
+            ft.LowPart = find_data.ftLastWriteTime.dwLowDateTime;
+            ft.HighPart = find_data.ftLastWriteTime.dwHighDateTime;
+            uint64_t mod_sec = (ft.QuadPart / 10000000ULL) - 11644473600ULL;
+            if (mod_sec <= now_sec && (now_sec - mod_sec) > max_age_sec)
+                DeleteFileA(filepath);
+        } while (FindNextFile(hFind, &find_data));
+        FindClose(hFind);
+    }
+#else
+    DIR *dir = opendir(g_checkpoint_storage_path);
+    if (dir) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            size_t nlen = strlen(entry->d_name);
+            if (nlen < 5 || strcmp(entry->d_name + nlen - 5, ".json") != 0)
+                continue;
+            char filepath[MAX_CHECKPOINT_PATH];
+            snprintf(filepath, sizeof(filepath), "%s/%s", g_checkpoint_storage_path,
+                     entry->d_name);
+            struct stat st;
+            if (stat(filepath, &st) != 0)
+                continue;
+            uint64_t mtime = (uint64_t)st.st_mtime;
+            if (mtime <= now_sec && (now_sec - mtime) > max_age_sec)
+                remove(filepath);
+        }
+        closedir(dir);
+    }
+#endif
+}
+
 airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
 {
     if (!g_checkpoint_initialized)
@@ -168,47 +219,7 @@ airy_err_t airy_checkpoint_cleanup(uint64_t max_age_sec, size_t max_cnt)
     uint64_t now_sec = (uint64_t)time(NULL);
 
     if (max_age_sec > 0) {
-        char pattern[MAX_CHECKPOINT_PATH];
-        snprintf(pattern, sizeof(pattern), "%s/*.json", g_checkpoint_storage_path);
-
-#ifdef _WIN32
-        WIN32_FIND_DATAA find_data;
-        HANDLE hFind = FindFirstFileA(pattern, &find_data);
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                char filepath[MAX_CHECKPOINT_PATH];
-                snprintf(filepath, sizeof(filepath), "%s/%s", g_checkpoint_storage_path,
-                         find_data.cFileName);
-                ULARGE_INTEGER ft;
-                ft.LowPart = find_data.ftLastWriteTime.dwLowDateTime;
-                ft.HighPart = find_data.ftLastWriteTime.dwHighDateTime;
-                uint64_t mod_sec = (ft.QuadPart / 10000000ULL) - 11644473600ULL;
-                if (mod_sec <= now_sec && (now_sec - mod_sec) > max_age_sec)
-                    DeleteFileA(filepath);
-            } while (FindNextFile(hFind, &find_data));
-            FindClose(hFind);
-        }
-#else
-        DIR *dir = opendir(g_checkpoint_storage_path);
-        if (dir) {
-            struct dirent *entry;
-            while ((entry = readdir(dir)) != NULL) {
-                size_t nlen = strlen(entry->d_name);
-                if (nlen < 5 || strcmp(entry->d_name + nlen - 5, ".json") != 0)
-                    continue;
-                char filepath[MAX_CHECKPOINT_PATH];
-                snprintf(filepath, sizeof(filepath), "%s/%s", g_checkpoint_storage_path,
-                         entry->d_name);
-                struct stat st;
-                if (stat(filepath, &st) != 0)
-                    continue;
-                uint64_t mtime = (uint64_t)st.st_mtime;
-                if (mtime <= now_sec && (now_sec - mtime) > max_age_sec)
-                    remove(filepath);
-            }
-            closedir(dir);
-        }
-#endif
+        cp_sweep_old(max_age_sec, now_sec);
     }
 
     if (max_cnt > 0 && g_checkpoint_stats.total_checkpoints > max_cnt)

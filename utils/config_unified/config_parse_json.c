@@ -68,6 +68,47 @@ static char json_escape_char(char c)
     }
 }
 
+static bool json_hex4(const char *p, const char *end, unsigned int *out)
+{
+    if (p + 4 >= end)
+        return false;
+    unsigned int code = 0;
+    for (int i = 0; i < 4; i++) {
+        char h = p[1 + i];
+        code <<= 4;
+        if (h >= '0' && h <= '9')
+            code |= (unsigned int)(h - '0');
+        else if (h >= 'a' && h <= 'f')
+            code |= (unsigned int)(h - 'a' + 10);
+        else if (h >= 'A' && h <= 'F')
+            code |= (unsigned int)(h - 'A' + 10);
+        else
+            return false;
+    }
+    *out = code;
+    return true;
+}
+
+static size_t json_put_utf8(char *buf, size_t buf_size, size_t len, unsigned int code)
+{
+    if (code < 0x80) {
+        if (len < buf_size - 1)
+            buf[len++] = (char)code;
+    } else if (code < 0x800) {
+        if (len < buf_size - 2) {
+            buf[len++] = (char)(0xC0 | (code >> 6));
+            buf[len++] = (char)(0x80 | (code & 0x3F));
+        }
+    } else {
+        if (len < buf_size - 3) {
+            buf[len++] = (char)(0xE0 | (code >> 12));
+            buf[len++] = (char)(0x80 | ((code >> 6) & 0x3F));
+            buf[len++] = (char)(0x80 | (code & 0x3F));
+        }
+    }
+    return len;
+}
+
 static config_error_t parse_json_string(const char **pp, const char *end, char *buf,
                                         size_t buf_size)
 {
@@ -90,37 +131,11 @@ static config_error_t parse_json_string(const char **pp, const char *end, char *
             if (len < buf_size - 1)
                 buf[len++] = esc;
         } else if (**pp == 'u') {
-            if (*pp + 4 >= end)
-                return CONFIG_ERROR_PARSE;
             unsigned int code = 0;
-            for (int i = 0; i < 4; i++) {
-                char h = *(*pp + 1 + (size_t)i);
-                code <<= 4;
-                if (h >= '0' && h <= '9')
-                    code |= (unsigned int)(h - '0');
-                else if (h >= 'a' && h <= 'f')
-                    code |= (unsigned int)(h - 'a' + 10);
-                else if (h >= 'A' && h <= 'F')
-                    code |= (unsigned int)(h - 'A' + 10);
-                else
-                    return CONFIG_ERROR_PARSE;
-            }
+            if (!json_hex4(*pp, end, &code))
+                return CONFIG_ERROR_PARSE;
             *pp += 4;
-            if (code < 0x80) {
-                if (len < buf_size - 1)
-                    buf[len++] = (char)code;
-            } else if (code < 0x800) {
-                if (len < buf_size - 2) {
-                    buf[len++] = (char)(0xC0 | (code >> 6));
-                    buf[len++] = (char)(0x80 | (code & 0x3F));
-                }
-            } else {
-                if (len < buf_size - 3) {
-                    buf[len++] = (char)(0xE0 | (code >> 12));
-                    buf[len++] = (char)(0x80 | ((code >> 6) & 0x3F));
-                    buf[len++] = (char)(0x80 | (code & 0x3F));
-                }
-            }
+            len = json_put_utf8(buf, buf_size, len, code);
         }
         (*pp)++;
     }
@@ -323,6 +338,24 @@ static config_error_t parse_json_array(const char **pp, const char *end, config_
     return CONFIG_ERROR_PARSE;
 }
 
+static config_error_t json_obj_key(const char **pp, const char *end, char *key,
+                                   size_t key_size)
+{
+    skip_whitespace(pp, end);
+    if (*pp >= end || **pp != '"')
+        return CONFIG_ERROR_PARSE;
+
+    config_error_t err = parse_json_string(pp, end, key, key_size);
+    if (err != CONFIG_SUCCESS)
+        return err;
+
+    skip_whitespace(pp, end);
+    if (*pp >= end || **pp != ':')
+        return CONFIG_ERROR_PARSE;
+    (*pp)++;
+    return CONFIG_SUCCESS;
+}
+
 static config_error_t parse_json_object(const char **pp, const char *end, config_context_t *ctx,
                                         const char *prefix)
 {
@@ -336,19 +369,10 @@ static config_error_t parse_json_object(const char **pp, const char *end, config
     }
 
     while (*pp < end) {
-        skip_whitespace(pp, end);
-        if (*pp >= end || **pp != '"')
-            return CONFIG_ERROR_PARSE;
-
         char key[512];
-        config_error_t err = parse_json_string(pp, end, key, sizeof(key));
+        config_error_t err = json_obj_key(pp, end, key, sizeof(key));
         if (err != CONFIG_SUCCESS)
             return err;
-
-        skip_whitespace(pp, end);
-        if (*pp >= end || **pp != ':')
-            return CONFIG_ERROR_PARSE;
-        (*pp)++;
 
         char full_key[768];
         if (!join_key(full_key, sizeof(full_key), prefix, key))

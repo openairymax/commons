@@ -165,6 +165,43 @@ static airy_re_inst_t *airy_re_compile_repeat(airy_re_comp_t *co, airy_re_ast_t 
     return seq;
 }
 
+static airy_re_inst_t *airy_re_group(airy_re_comp_t *co, airy_re_ast_t *n,
+                                     airy_re_inst_t *after)
+{
+    airy_re_inst_t *save0 = airy_re_inst_new(co, AIRY_RE_I_SAVE);
+    if (!save0)
+        return NULL;
+    save0->c = n->gid * 2;
+    airy_re_inst_t *save1 = airy_re_inst_new(co, AIRY_RE_I_SAVE);
+    if (!save1)
+        return NULL;
+    save1->c = n->gid * 2 + 1;
+    save1->a = after;
+    /* The group body is a concat list, not a single node. */
+    airy_re_inst_t *body = airy_re_compile_seq(co, n->a, save1);
+    if (!body)
+        return NULL;
+    save0->a = body;
+    return save0;
+}
+
+static airy_re_inst_t *airy_re_alt(airy_re_comp_t *co, airy_re_ast_t *n, airy_re_inst_t *after)
+{
+    /* Each alternative is a concat list. */
+    airy_re_inst_t *b1 = airy_re_compile_seq(co, n->a, after);
+    if (!b1)
+        return NULL;
+    airy_re_inst_t *b2 = airy_re_compile_seq(co, n->b, after);
+    if (!b2)
+        return NULL;
+    airy_re_inst_t *sp = airy_re_inst_new(co, AIRY_RE_I_SPLIT);
+    if (!sp)
+        return NULL;
+    sp->a = b1;
+    sp->b = b2;
+    return sp;
+}
+
 /* Compile one AST node with its continuation 'after'. Returns the first
  * instruction of the compiled fragment, or NULL on error. */
 static airy_re_inst_t *airy_re_compile_one(airy_re_comp_t *co, airy_re_ast_t *n,
@@ -207,38 +244,10 @@ static airy_re_inst_t *airy_re_compile_one(airy_re_comp_t *co, airy_re_ast_t *n,
         ip->a = after;
         return ip;
     }
-    case AIRY_RE_A_GROUP: {
-        airy_re_inst_t *save0 = airy_re_inst_new(co, AIRY_RE_I_SAVE);
-        if (!save0)
-            return NULL;
-        save0->c = n->gid * 2;
-        airy_re_inst_t *save1 = airy_re_inst_new(co, AIRY_RE_I_SAVE);
-        if (!save1)
-            return NULL;
-        save1->c = n->gid * 2 + 1;
-        save1->a = after;
-        /* The group body is a concat list, not a single node. */
-        airy_re_inst_t *body = airy_re_compile_seq(co, n->a, save1);
-        if (!body)
-            return NULL;
-        save0->a = body;
-        return save0;
-    }
-    case AIRY_RE_A_ALT: {
-        /* Each alternative is a concat list. */
-        airy_re_inst_t *b1 = airy_re_compile_seq(co, n->a, after);
-        if (!b1)
-            return NULL;
-        airy_re_inst_t *b2 = airy_re_compile_seq(co, n->b, after);
-        if (!b2)
-            return NULL;
-        airy_re_inst_t *sp = airy_re_inst_new(co, AIRY_RE_I_SPLIT);
-        if (!sp)
-            return NULL;
-        sp->a = b1;
-        sp->b = b2;
-        return sp;
-    }
+    case AIRY_RE_A_GROUP:
+        return airy_re_group(co, n, after);
+    case AIRY_RE_A_ALT:
+        return airy_re_alt(co, n, after);
     case AIRY_RE_A_REPEAT:
         return airy_re_compile_repeat(co, n, after);
     default:

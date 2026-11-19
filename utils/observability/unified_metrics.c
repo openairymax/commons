@@ -59,6 +59,17 @@ static um_metric_entry_t *find_metric(um_module_metrics_t *mod, const char *name
     return NULL;
 }
 
+static bool um_name_char_ok(char ch)
+{
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
+           ch == '_';
+}
+
+static bool um_sep_char_ok(char ch)
+{
+    return ch == '.' || ch == '-' || ch == ' ';
+}
+
 static int sanitize_prom_name(const char *in, char *out, size_t out_size)
 {
     if (!in || !out || out_size == 0)
@@ -66,10 +77,9 @@ static int sanitize_prom_name(const char *in, char *out, size_t out_size)
     size_t j = 0;
     for (size_t i = 0; in[i] && j < out_size - 1; i++) {
         char ch = in[i];
-        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') ||
-            ch == '_') {
+        if (um_name_char_ok(ch)) {
             out[j++] = ch;
-        } else if (ch == '.' || ch == '-' || ch == ' ') {
+        } else if (um_sep_char_ok(ch)) {
             out[j++] = '_';
         }
     }

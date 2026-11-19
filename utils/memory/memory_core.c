@@ -362,6 +362,38 @@ static void memory_retrack(void *ptr, size_t size, const char *tag, const memory
     memory_add_debug_info(ptr, size, sizeof(void *), tag, __FILE__, __LINE__, __func__);
 }
 
+/* 保存并摘除旧指针的调试信息；返回是否已保存。 */
+static bool mem_detach_debug(void *ptr, struct memory_debug_info *di, memory_trace_t *saved)
+{
+    if (!di || !g_state.debug_enabled)
+        return false;
+
+    saved->alignment = di->alignment;
+    saved->line = di->line;
+    if (di->tag)
+        AIRY_STRNCPY_TERM(saved->tag, di->tag, sizeof(saved->tag));
+    if (di->file)
+        AIRY_STRNCPY_TERM(saved->file, di->file, sizeof(saved->file));
+    if (di->function)
+        AIRY_STRNCPY_TERM(saved->func, di->function, sizeof(saved->func));
+    memory_remove_debug_info(ptr);
+    return true;
+}
+
+/* 按 realloc 前后指针与尺寸变化更新统计。 */
+static void mem_realloc_stats(void *old_ptr, void *new_ptr, size_t old_size, size_t new_size)
+{
+    if (new_ptr != old_ptr) {
+        if (old_size > 0)
+            memory_update_stats_free(old_size);
+        memory_update_stats_alloc(new_size);
+    } else if (new_size > old_size) {
+        memory_update_stats_alloc(new_size - old_size);
+    } else if (new_size < old_size) {
+        memory_update_stats_free(old_size - new_size);
+    }
+}
+
 void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 {
     if (ptr == NULL) {
@@ -384,19 +416,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
 
     void *old_ptr = ptr;
     memory_trace_t saved = {0};
-    bool debug_info_saved = false;
-    if (debug_info && g_state.debug_enabled) {
-        debug_info_saved = true;
-        saved.alignment = debug_info->alignment;
-        saved.line = debug_info->line;
-        if (debug_info->tag)
-            AIRY_STRNCPY_TERM(saved.tag, debug_info->tag, sizeof(saved.tag));
-        if (debug_info->file)
-            AIRY_STRNCPY_TERM(saved.file, debug_info->file, sizeof(saved.file));
-        if (debug_info->function)
-            AIRY_STRNCPY_TERM(saved.func, debug_info->function, sizeof(saved.func));
-        memory_remove_debug_info(old_ptr);
-    }
+    bool debug_info_saved = mem_detach_debug(old_ptr, debug_info, &saved);
 
     void *new_ptr = realloc(ptr, new_size);
     if (new_ptr == NULL) {
@@ -408,18 +428,7 @@ void *memory_realloc(void *ptr, size_t new_size, const char *tag)
         return NULL;
     }
 
-    if (new_ptr != ptr) {
-        if (old_size > 0) {
-            memory_update_stats_free(old_size);
-        }
-        memory_update_stats_alloc(new_size);
-    } else {
-        if (new_size > old_size) {
-            memory_update_stats_alloc(new_size - old_size);
-        } else if (new_size < old_size) {
-            memory_update_stats_free(old_size - new_size);
-        }
-    }
+    mem_realloc_stats(old_ptr, new_ptr, old_size, new_size);
 
     memory_retrack(new_ptr, new_size, tag, debug_info_saved ? &saved : NULL);
 

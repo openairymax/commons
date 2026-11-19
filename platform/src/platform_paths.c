@@ -342,6 +342,36 @@ int airy_paths_query(airy_paths_view_t *out)
     return AIRY_SUCCESS;
 }
 
+/* 逐级创建中间目录（失败不返回，末级创建时统一判定）。 */
+static void paths_mkdir_parents(char *tmp)
+{
+    /* 同时识别 '/' 与 '\\'，兼容 Windows 风格 AIRY_HOME 路径 */
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p != '/' && *p != '\\')
+            continue;
+        *p = '\0';
+#if AIRY_PLATFORM_WINDOWS
+        _mkdir(tmp);
+#else
+        mkdir(tmp, 0755);
+#endif
+        *p = '/';
+    }
+}
+
+/* 创建末级目录：EEXIST 视为成功。 */
+static int paths_mkdir_leaf(const char *tmp)
+{
+#if AIRY_PLATFORM_WINDOWS
+    if (_mkdir(tmp) != 0 && errno != EEXIST)
+        return -1;
+#else
+    if (mkdir(tmp, 0755) != 0 && errno != EEXIST)
+        return -1;
+#endif
+    return 0;
+}
+
 static int paths_mkdir_p(const char *path)
 {
     if (!path || path[0] == '\0')
@@ -356,25 +386,9 @@ static int paths_mkdir_p(const char *path)
     while (len > 1 && (tmp[len - 1] == '/' || tmp[len - 1] == '\\'))
         tmp[--len] = '\0';
 
-    /* 同时识别 '/' 与 '\\'，兼容 Windows 风格 AIRY_HOME 路径 */
-    for (char *p = tmp + 1; *p; p++) {
-        if (*p != '/' && *p != '\\')
-            continue;
-        *p = '\0';
-#if AIRY_PLATFORM_WINDOWS
-        _mkdir(tmp);
-#else
-        mkdir(tmp, 0755);
-#endif
-        *p = '/';
-    }
-#if AIRY_PLATFORM_WINDOWS
-    if (_mkdir(tmp) != 0 && errno != EEXIST)
+    paths_mkdir_parents(tmp);
+    if (paths_mkdir_leaf(tmp) != 0)
         return AIRY_ERR_SYS_FILE;
-#else
-    if (mkdir(tmp, 0755) != 0 && errno != EEXIST)
-        return AIRY_ERR_SYS_FILE;
-#endif
     return AIRY_SUCCESS;
 }
 
@@ -389,6 +403,27 @@ static int paths_mkdir_p(const char *path)
 #define AIRY_TMP_CLEAN_CAP 256
 
 /* 递归删除目录树（内联实现，避免 platform→utils/io 的层次倒置）。 */
+static int paths_rm_rf(const char *path);
+
+/* "." 与 ".." 目录项判定。 */
+static int path_is_dot(const char *name)
+{
+    return name[0] == '.' && (name[1] == '\0' || (name[1] == '.' && name[2] == '\0'));
+}
+
+/* 删除 path 下的单个条目：0=成功/已消失，-1=失败。 */
+static int paths_rm_entry(const char *path, const char *name)
+{
+    char child[AIRY_PATH_MAX];
+    snprintf(child, sizeof(child), "%s/%s", path, name);
+    PLATFORM_STAT_STRUCT cst;
+    if (PLATFORM_STAT(child, &cst) != 0)
+        return 0;
+    if (S_ISDIR(cst.st_mode))
+        return paths_rm_rf(child);
+    return (remove(child) == 0) ? 0 : -1;
+}
+
 static int paths_rm_rf(const char *path)
 {
     if (!path || !path[0])
@@ -403,22 +438,10 @@ static int paths_rm_rf(const char *path)
     if (!dir)
         return -1;
     struct dirent *entry;
-    char child[AIRY_PATH_MAX];
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.' &&
-            (entry->d_name[1] == '\0' ||
-             (entry->d_name[1] == '.' && entry->d_name[2] == '\0')))
+        if (path_is_dot(entry->d_name))
             continue;
-        snprintf(child, sizeof(child), "%s/%s", path, entry->d_name);
-        PLATFORM_STAT_STRUCT cst;
-        if (PLATFORM_STAT(child, &cst) != 0)
-            continue;
-        if (S_ISDIR(cst.st_mode)) {
-            if (paths_rm_rf(child) != 0) {
-                closedir(dir);
-                return -1;
-            }
-        } else if (remove(child) != 0) {
+        if (paths_rm_entry(path, entry->d_name) != 0) {
             closedir(dir);
             return -1;
         }

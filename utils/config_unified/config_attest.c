@@ -61,14 +61,50 @@ const char *att_verdict(airy_attest_verdict_t verdict)
     return k_verdict_name[verdict];
 }
 
+static const char *attest_owner(const airy_attest_opts_t *opts)
+{
+    return (opts && opts->owner && opts->owner[0]) ? opts->owner : "unknown";
+}
+
+static int attest_escape(const airy_attest_opts_t *opts)
+{
+    return (opts && opts->allow_unknown) ? 1 : 0;
+}
+
+static void attest_outcome(const char *owner, const airy_attest_item_t *item, int escape,
+                           airy_attest_result_t *out)
+{
+    if (escape) {
+        out->warned++;
+        AIRY_LOG_WARN("attest[%s]: %s declared='%s' effective='%s' reg=%d 未闭合（逃生开关生效）",
+                      owner, item->key, item->declared ? item->declared : "",
+                      item->effective ? item->effective : "", item->in_registry);
+    } else {
+        out->failed++;
+        AIRY_LOG_ERROR("attest[%s]: %s declared='%s' effective='%s' reg=%d 未闭合（拒绝启动）",
+                       owner, item->key, item->declared ? item->declared : "",
+                       item->effective ? item->effective : "", item->in_registry);
+    }
+}
+
+static void attest_finalize(airy_attest_result_t *out)
+{
+    if (out->failed > 0)
+        out->verdict = AIRY_ATTEST_REJECT;
+    else if (out->warned > 0)
+        out->verdict = AIRY_ATTEST_ESCAPED;
+    else
+        out->verdict = AIRY_ATTEST_PASS;
+}
+
 int airy_attest_run(const airy_attest_opts_t *opts, const airy_attest_item_t *items, size_t n,
                     airy_attest_result_t *out)
 {
     if (!out || (n > 0 && !items))
         return AIRY_ERR_INVALID_PARAM;
 
-    const char *owner = (opts && opts->owner && opts->owner[0]) ? opts->owner : "unknown";
-    const int escape = (opts && opts->allow_unknown) ? 1 : 0;
+    const char *owner = attest_owner(opts);
+    const int escape = attest_escape(opts);
 
     __builtin_memset(out, 0, sizeof(*out));
     uint64_t hash = ATTEST_FNV_BASIS;
@@ -85,25 +121,10 @@ int airy_attest_run(const airy_attest_opts_t *opts, const airy_attest_item_t *it
             out->ok++;
             continue;
         }
-        if (escape) {
-            out->warned++;
-            AIRY_LOG_WARN("attest[%s]: %s declared='%s' effective='%s' reg=%d 未闭合（逃生开关生效）",
-                          owner, item->key, item->declared ? item->declared : "",
-                          item->effective ? item->effective : "", item->in_registry);
-        } else {
-            out->failed++;
-            AIRY_LOG_ERROR("attest[%s]: %s declared='%s' effective='%s' reg=%d 未闭合（拒绝启动）",
-                           owner, item->key, item->declared ? item->declared : "",
-                           item->effective ? item->effective : "", item->in_registry);
-        }
+        attest_outcome(owner, item, escape, out);
     }
 
-    if (out->failed > 0)
-        out->verdict = AIRY_ATTEST_REJECT;
-    else if (out->warned > 0)
-        out->verdict = AIRY_ATTEST_ESCAPED;
-    else
-        out->verdict = AIRY_ATTEST_PASS;
+    attest_finalize(out);
 
     (void)snprintf(out->fingerprint, sizeof(out->fingerprint), "%016llx",
                    (unsigned long long)hash);

@@ -255,6 +255,47 @@ static void svc_stop_timeout_handler(int signum)
 }
 #endif /* !_WIN32 */
 
+#ifdef AIRY_OS_UNIX
+/* Force-stop 超时后的线程收敛：尝试 join，EBUSY 视为死锁并取消。 */
+static void svc_join_threads(airy_svc_internal_t *service)
+{
+    if (service->threads && service->thread_count > 0) {
+        AIRY_LOG_WARN("Service '%s' attempting deadlock recovery for %d threads", service->name,
+                      (int)service->thread_count);
+        for (size_t i = 0; i < service->thread_count; i++) {
+            pthread_t tid = service->threads[i];
+            if (tid) {
+                void *retval = NULL;
+                int join_rc = pthread_tryjoin_np(tid, &retval);
+                if (join_rc == EBUSY) {
+                    AIRY_LOG_ERROR("Service '%s' thread[%zu] deadlocked - cancelling", service->name,
+                                   i);
+                    pthread_cancel(tid);
+                    pthread_join(tid, NULL);
+                } else if (join_rc == 0) {
+                    AIRY_LOG_INFO("Service '%s' thread[%zu] joined with retval=%p", service->name, i,
+                                  retval);
+                }
+            }
+        }
+    }
+}
+#endif
+
+static void svc_stop_commit(airy_svc_internal_t *service, airy_err_t err, bool force, bool zombie)
+{
+    airy_mtx_lock(&service->state_mutex);
+    if (err == AIRY_SUCCESS || force) {
+        service->state = zombie ? AIRY_SVC_STATE_ZOMBIE : AIRY_SVC_STATE_STOPPED;
+        AIRY_LOG_INFO("Service '%s' stopped %s", service->name,
+                      force ? (zombie ? "(ZOMBIE)" : "(forced)") : "gracefully");
+    } else {
+        service->state = AIRY_SVC_STATE_ERROR;
+        AIRY_LOG_ERROR("Service '%s' stop failed: %d", service->name, err);
+    }
+    airy_mtx_unlock(&service->state_mutex);
+}
+
 airy_err_t airy_svc_stop(airy_svc_t svc, bool force)
 {
     if (!svc) {
@@ -301,26 +342,7 @@ airy_err_t airy_svc_stop(airy_svc_t svc, bool force)
                           service->name, FORCE_STOP_TIMEOUT_SEC);
 
 #ifdef AIRY_OS_UNIX
-                if (service->threads && service->thread_count > 0) {
-                    AIRY_LOG_WARN("Service '%s' attempting deadlock recovery for %d threads",
-                             service->name, (int)service->thread_count);
-                    for (size_t i = 0; i < service->thread_count; i++) {
-                        pthread_t tid = service->threads[i];
-                        if (tid) {
-                            void *retval = NULL;
-                            int join_rc = pthread_tryjoin_np(tid, &retval);
-                            if (join_rc == EBUSY) {
-                                AIRY_LOG_ERROR("Service '%s' thread[%zu] deadlocked - cancelling",
-                                          service->name, i);
-                                pthread_cancel(tid);
-                                pthread_join(tid, NULL);
-                            } else if (join_rc == 0) {
-                                AIRY_LOG_INFO("Service '%s' thread[%zu] joined with retval=%p",
-                                         service->name, i, retval);
-                            }
-                        }
-                    }
-                }
+                svc_join_threads(service);
 #endif
             }
         }
@@ -340,17 +362,7 @@ airy_err_t airy_svc_stop(airy_svc_t svc, bool force)
 #endif /* _WIN32 */
     }
 
-    airy_mtx_lock(&service->state_mutex);
-    if (err == AIRY_SUCCESS || force) {
-        service->state = zombie ? AIRY_SVC_STATE_ZOMBIE : AIRY_SVC_STATE_STOPPED;
-        AIRY_LOG_INFO("Service '%s' stopped %s", service->name,
-                 force ? (zombie ? "(ZOMBIE)" : "(forced)") : "gracefully");
-    } else {
-        service->state = AIRY_SVC_STATE_ERROR;
-        AIRY_LOG_ERROR("Service '%s' stop failed: %d", service->name, err);
-    }
-
-    airy_mtx_unlock(&service->state_mutex);
+    svc_stop_commit(service, err, force, zombie);
 
     return err;
 }

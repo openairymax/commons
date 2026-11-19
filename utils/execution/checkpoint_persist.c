@@ -29,6 +29,19 @@ int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t
     return (n > 0 && (size_t)n < size) ? 0 : AIRY_ERR_OVERFLOW;
 }
 
+static bool cp_parse_seq(const char *mid, size_t sep, size_t mid_len, uint64_t *out_seq)
+{
+    uint64_t seq = 0;
+    for (size_t i = sep; i < mid_len; i++) {
+        char c = mid[i];
+        if (c < '0' || c > '9')
+            return false;
+        seq = seq * 10 + (uint64_t)(c - '0');
+    }
+    *out_seq = seq;
+    return true;
+}
+
 /* File name format checkpoint_{task_id}_{seq}.json. task_id may itself
  * contain '_', so the sequence number is the trailing segment after the
  * last '_' and must be all digits; task_id is everything before it. This
@@ -62,12 +75,8 @@ static bool parse_cp_name(const char *name, char *tid, size_t tid_sz, uint64_t *
         return false;
 
     uint64_t seq = 0;
-    for (size_t i = sep; i < mid_len; i++) {
-        char c = mid[i];
-        if (c < '0' || c > '9')
-            return false;
-        seq = seq * 10 + (uint64_t)(c - '0');
-    }
+    if (!cp_parse_seq(mid, sep, mid_len, &seq))
+        return false;
 
     AIRY_MEMCPY(tid, mid, tlen);
     tid[tlen] = '\0';
@@ -286,6 +295,22 @@ static void write_json_value(FILE *fp, const char *str)
     fputc('"', fp);
 }
 
+static char json_unescape(char c)
+{
+    switch (c) {
+    case 'n':
+        return '\n';
+    case 't':
+        return '\t';
+    case 'r':
+        return '\r';
+    case '"':
+        return '"';
+    default:
+        return '\\';
+    }
+}
+
 static char *json_extract_string(const char *json, const char *key)
 {
     const char *p;
@@ -310,23 +335,7 @@ static char *json_extract_string(const char *json, const char *key)
     while (p < end && *p != '\n') {
         if (*p == '\\' && *(p + 1)) {
             p++;
-            char esc = '\\';
-            switch (*p) {
-            case 'n':
-                esc = '\n';
-                break;
-            case 't':
-                esc = '\t';
-                break;
-            case 'r':
-                esc = '\r';
-                break;
-            case '"':
-                esc = '"';
-                break;
-            default:
-                break;
-            }
+            char esc = json_unescape(*p);
             if (len + 2 >= cap) {
                 cap *= 2;
                 val = (char *)AIRY_REALLOC(val, cap);
@@ -468,6 +477,45 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     return AIRY_SUCCESS;
 }
 
+static uint64_t cp_resolve_seq(const char *task_id, uint64_t sequence_num)
+{
+    if (sequence_num != 0)
+        return sequence_num;
+    uint64_t seq = find_latest_seq(task_id);
+    if (seq == 0) {
+        AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
+                 "task_id=%s",
+                 task_id);
+    }
+    return seq;
+}
+
+/* 把 JSON 中的 state/session/seq/timestamp 字段回填到 checkpoint。 */
+static void cp_apply_fields(airy_task_checkpoint_t *cp, const char *json_buf)
+{
+    char *state_str = json_extract_string(json_buf, "state");
+    char *sj = json_extract_string(json_buf, "state_json");
+
+    if (state_str) {
+        cp->state = string_to_state(state_str);
+        AIRY_FREE(state_str);
+    }
+    if (sj) {
+        cp->state_json = sj;
+        cp->state_size = strlen(sj);
+        cp->checksum = calculate_checksum(sj, strlen(sj));
+    }
+
+    char *sid = json_extract_string(json_buf, "session_id");
+    if (sid) {
+        AIRY_STRNCPY_TERM(cp->session_id, sid, sizeof(cp->session_id));
+        AIRY_FREE(sid);
+        sid = NULL;
+    }
+    cp->sequence_num = json_extract_uint64(json_buf, "sequence_num");
+    cp->timestamp = json_extract_uint64(json_buf, "timestamp");
+}
+
 airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
                                    airy_task_checkpoint_t **out_cp)
 {
@@ -480,16 +528,9 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     /* sequence_num == 0 means restore the latest checkpoint: scan the
      * directory for the highest seq. sequence_num > 0 restores the
      * checkpoint with that specific sequence number. */
-    uint64_t actual_seq = sequence_num;
-    if (sequence_num == 0) {
-        actual_seq = find_latest_seq(task_id);
-        if (actual_seq == 0) {
-            AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
-                     "task_id=%s",
-                     task_id);
-            return AIRY_ENOENT;
-        }
-    }
+    uint64_t actual_seq = cp_resolve_seq(task_id, sequence_num);
+    if (actual_seq == 0)
+        return AIRY_ENOENT;
 
     char filepath[MAX_CHECKPOINT_PATH];
     if (build_filepath_with_seq(task_id, actual_seq, filepath, sizeof(filepath)) != 0)
@@ -542,29 +583,8 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
         return AIRY_ENOMEM;
     }
 
-    char *state_str = json_extract_string(json_buf, "state");
-    char *sj = json_extract_string(json_buf, "state_json");
-
     init_fields(cp, task_id, "", 0);
-
-    if (state_str) {
-        cp->state = string_to_state(state_str);
-        AIRY_FREE(state_str);
-    }
-    if (sj) {
-        cp->state_json = sj;
-        cp->state_size = strlen(sj);
-        cp->checksum = calculate_checksum(sj, strlen(sj));
-    }
-
-    char *sid = json_extract_string(json_buf, "session_id");
-    if (sid) {
-        AIRY_STRNCPY_TERM(cp->session_id, sid, sizeof(cp->session_id));
-        AIRY_FREE(sid);
-        sid = NULL;
-    }
-    cp->sequence_num = json_extract_uint64(json_buf, "sequence_num");
-    cp->timestamp = json_extract_uint64(json_buf, "timestamp");
+    cp_apply_fields(cp, json_buf);
 
     AIRY_FREE(json_buf);
     json_buf = NULL;

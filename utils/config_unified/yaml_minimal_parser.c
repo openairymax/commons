@@ -71,6 +71,17 @@ struct yaml_node *parse_sequence(struct parse_ctx *ctx, int base_indent)
     return seq;
 }
 
+static bool yaml_map_has_key(const struct yaml_node *target, const char *key)
+{
+    if (!key)
+        return false;
+    for (size_t j = 0; j < yaml_size(target); j++) {
+        if (target->mapping[j].key && strcmp(target->mapping[j].key, key) == 0)
+            return true;
+    }
+    return false;
+}
+
 size_t merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
                           struct yaml_node *source)
 {
@@ -91,16 +102,8 @@ size_t merge_mapping_into(yaml_document_t *doc, struct yaml_node *target,
         return 0;
 
     for (size_t i = 0; i < src_sz; i++) {
-        bool found = false;
         size_t tgt_current = yaml_size(target);
-        for (size_t j = 0; j < tgt_current; j++) {
-            if (target->mapping[j].key && source->mapping[i].key &&
-                strcmp(target->mapping[j].key, source->mapping[i].key) == 0) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
+        if (!yaml_map_has_key(target, source->mapping[i].key)) {
             if (tgt_current + 1 >= cap) {
                 size_t next = cap * 2;
                 target->mapping = yaml_mapping_grow(target->mapping, tgt_current, next);

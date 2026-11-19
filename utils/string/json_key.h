@@ -64,6 +64,36 @@ static inline const char *airy_json_str_end(const char *p)
     return NULL;
 }
 
+/* 容器/标量的边界字符：逗号、闭合括号或空白。 */
+static inline int airy_json_stop_char(char c)
+{
+    return c == ',' || c == '}' || c == ']' || c == ' ' || c == '\t' || c == '\n' ||
+           c == '\r';
+}
+
+/* 从 '{'/'[' 跳到匹配的闭合括号之后；未闭合返回 NULL。 */
+static inline const char *airy_json_cont_end(const char *p)
+{
+    char close = (*p == '{') ? '}' : ']';
+    int depth = 0;
+
+    for (const char *s = p; *s; s++) {
+        if (*s == '"') {
+            s = airy_json_str_end(s);
+            if (!s)
+                return NULL;
+            s--;
+            continue;
+        }
+        if (*s == *p) {
+            depth++;
+        } else if (*s == close && --depth == 0) {
+            return s + 1;
+        }
+    }
+    return NULL;
+}
+
 /* 返回值的结束位置（不含尾随空白）；标量止于分隔符或空白。 */
 static inline const char *airy_json_val_end(const char *p)
 {
@@ -73,32 +103,43 @@ static inline const char *airy_json_val_end(const char *p)
         return NULL;
     if (*p == '"')
         return airy_json_str_end(p);
-    if (*p == '{' || *p == '[') {
-        char close = (*p == '{') ? '}' : ']';
-        int depth = 0;
-
-        for (s = p; *s; s++) {
-            if (*s == '"') {
-                s = airy_json_str_end(s);
-                if (!s)
-                    return NULL;
-                s--;
-                continue;
-            }
-            if (*s == *p) {
-                depth++;
-            } else if (*s == close && --depth == 0) {
-                return s + 1;
-            }
-        }
-        return NULL;
-    }
+    if (*p == '{' || *p == '[')
+        return airy_json_cont_end(p);
     for (s = p; *s; s++) {
-        if (*s == ',' || *s == '}' || *s == ']' || *s == ' ' || *s == '\t' ||
-            *s == '\n' || *s == '\r')
+        if (airy_json_stop_char(*s))
             break;
     }
     return s == p ? NULL : s;
+}
+
+/* 解析一个 "key": value 成员；pp 指向起始引号，成功时推进到成员之后。 */
+static inline int airy_json_member(const char **pp, const char **keyp, size_t *klenp,
+                                   const char **valp, const char **endp)
+{
+    const char *p = *pp;
+
+    if (*p != '"')
+        return AIRY_JSON_EFORMAT;
+    const char *ke = airy_json_str_end(p);
+    if (!ke)
+        return AIRY_JSON_EFORMAT;
+    const char *v = airy_json_ws(ke);
+    if (*v != ':')
+        return AIRY_JSON_EFORMAT;
+    v = airy_json_ws(v + 1);
+    const char *ve = airy_json_val_end(v);
+    if (!ve)
+        return AIRY_JSON_EFORMAT;
+    *keyp = p + 1;
+    *klenp = (size_t)(ke - p - 2);
+    *valp = v;
+    *endp = ve;
+    return AIRY_JSON_OK;
+}
+
+static inline int airy_json_key_eq(const char *kp, size_t cur_len, const char *key, size_t klen)
+{
+    return cur_len == klen && memcmp(kp, key, klen) == 0;
 }
 
 /* 在对象内按成员名取唯一命中；重复键报 EAMBIG，缺键报 ENOTFOUND。 */
@@ -115,23 +156,15 @@ static inline int airy_json_obj_get(const char *obj, const char *key, size_t kle
     if (*p == '}')
         return AIRY_JSON_ENOTFOUND;
     for (;;) {
-        const char *ke;
+        const char *kp;
         const char *v;
         const char *ve;
+        size_t cur_len;
 
-        if (*p != '"')
-            return AIRY_JSON_EFORMAT;
-        ke = airy_json_str_end(p);
-        if (!ke)
-            return AIRY_JSON_EFORMAT;
-        v = airy_json_ws(ke);
-        if (*v != ':')
-            return AIRY_JSON_EFORMAT;
-        v = airy_json_ws(v + 1);
-        ve = airy_json_val_end(v);
-        if (!ve)
-            return AIRY_JSON_EFORMAT;
-        if ((size_t)(ke - p - 2) == klen && memcmp(p + 1, key, klen) == 0) {
+        int rc = airy_json_member(&p, &kp, &cur_len, &v, &ve);
+        if (rc != AIRY_JSON_OK)
+            return rc;
+        if (airy_json_key_eq(kp, cur_len, key, klen)) {
             if (hit)
                 return AIRY_JSON_EAMBIG;
             hit = v;
@@ -191,69 +224,53 @@ static inline int airy_json_arr_get(const char *arr, size_t idx,
     }
 }
 
-/**
- * @brief 按路径定位值，返回值切片（不写终止符）。
- *
- * 路径语法：`name`、`a.b`、`a.b[0].c`，可带前导 `$` 或 `.`。字符串值的
- * 切片含首尾引号；对象/数组含完整括号；标量不含尾随空白。
- */
-static inline int airy_json_key_find(const char *json, const char *path,
-                                     const char **out_ptr, size_t *out_len)
+static inline int airy_json_find_init(const char *json, const char *path, const char **curp)
 {
-    const char *cur;
-    size_t cur_len = 0;
-
-    if (out_ptr)
-        *out_ptr = NULL;
-    if (out_len)
-        *out_len = 0;
     if (!json || !path || !*path)
         return AIRY_JSON_EINVAL;
-    cur = airy_json_ws(json);
-    while (*path) {
-        const char *seg;
-        size_t seg_len;
-        const char *v;
-        size_t vlen;
-        int rc;
+    *curp = airy_json_ws(json);
+    return AIRY_JSON_OK;
+}
 
-        if (*path == '$' || *path == '.') {
-            path++;
-            continue;
-        }
-        seg = path;
-        while (*path && *path != '.' && *path != '[')
-            path++;
-        seg_len = (size_t)(path - seg);
-        if (seg_len == 0)
-            return AIRY_JSON_EINVAL;
-        if (*cur != '{')
-            return AIRY_JSON_ENOTFOUND;
-        rc = airy_json_obj_get(cur, seg, seg_len, &v, &vlen);
-        if (rc != AIRY_JSON_OK)
-            return rc;
-        cur = v;
-        cur_len = vlen;
-        while (*path == '[') {
-            size_t idx = 0;
+/* 返回 1=取到下一段，0=路径结束，-1=路径语法错。 */
+static inline int airy_json_seg_next(const char **pathp, const char **segp, size_t *seg_lenp)
+{
+    while (**pathp == '$' || **pathp == '.')
+        (*pathp)++;
+    if (!**pathp)
+        return 0;
+    const char *seg = *pathp;
+    while (**pathp && **pathp != '.' && **pathp != '[')
+        (*pathp)++;
+    *segp = seg;
+    *seg_lenp = (size_t)(*pathp - seg);
+    if (*seg_lenp == 0)
+        return -1;
+    return 1;
+}
 
-            path++;
-            if (!isdigit((unsigned char)*path))
-                return AIRY_JSON_EINVAL;
-            while (isdigit((unsigned char)*path)) {
-                idx = idx * 10 + (size_t)(*path - '0');
-                path++;
-            }
-            if (*path != ']')
-                return AIRY_JSON_EINVAL;
-            path++;
-            rc = airy_json_arr_get(cur, idx, &v, &vlen);
-            if (rc != AIRY_JSON_OK)
-                return rc;
-            cur = v;
-            cur_len = vlen;
-        }
+static inline int airy_json_arr_step(const char **pathp, size_t *idxp)
+{
+    const char *path = *pathp;
+    size_t idx = 0;
+
+    path++;
+    if (!isdigit((unsigned char)*path))
+        return AIRY_JSON_EINVAL;
+    while (isdigit((unsigned char)*path)) {
+        idx = idx * 10 + (size_t)(*path - '0');
+        path++;
     }
+    if (*path != ']')
+        return AIRY_JSON_EINVAL;
+    *pathp = path + 1;
+    *idxp = idx;
+    return AIRY_JSON_OK;
+}
+
+static inline int airy_json_resolve(const char *cur, size_t cur_len, const char **out_ptr,
+                                    size_t *out_len)
+{
     if (cur_len == 0) {
         const char *ve = airy_json_val_end(cur);
 
@@ -266,6 +283,60 @@ static inline int airy_json_key_find(const char *json, const char *path,
     if (out_len)
         *out_len = cur_len;
     return AIRY_JSON_OK;
+}
+
+/**
+ * @brief 按路径定位值，返回值切片（不写终止符）。
+ *
+ * 路径语法：`name`、`a.b`、`a.b[0].c`，可带前导 `$` 或 `.`。字符串值的
+ * 切片含首尾引号；对象/数组含完整括号；标量不含尾随空白。
+ */
+static inline int airy_json_key_find(const char *json, const char *path,
+                                     const char **out_ptr, size_t *out_len)
+{
+    const char *cur;
+    size_t cur_len = 0;
+    int rc;
+
+    if (out_ptr)
+        *out_ptr = NULL;
+    if (out_len)
+        *out_len = 0;
+    rc = airy_json_find_init(json, path, &cur);
+    if (rc != AIRY_JSON_OK)
+        return rc;
+    while (*path) {
+        const char *seg;
+        size_t seg_len;
+        const char *v;
+        size_t vlen;
+
+        rc = airy_json_seg_next(&path, &seg, &seg_len);
+        if (rc < 0)
+            return AIRY_JSON_EINVAL;
+        if (rc == 0)
+            break;
+        if (*cur != '{')
+            return AIRY_JSON_ENOTFOUND;
+        rc = airy_json_obj_get(cur, seg, seg_len, &v, &vlen);
+        if (rc != AIRY_JSON_OK)
+            return rc;
+        cur = v;
+        cur_len = vlen;
+        while (*path == '[') {
+            size_t idx = 0;
+
+            rc = airy_json_arr_step(&path, &idx);
+            if (rc != AIRY_JSON_OK)
+                return rc;
+            rc = airy_json_arr_get(cur, idx, &v, &vlen);
+            if (rc != AIRY_JSON_OK)
+                return rc;
+            cur = v;
+            cur_len = vlen;
+        }
+    }
+    return airy_json_resolve(cur, cur_len, out_ptr, out_len);
 }
 
 /** @brief 按路径取布尔字面量；非 true/false 返回 ENOTBOOL。 */
