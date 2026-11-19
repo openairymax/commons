@@ -249,104 +249,109 @@ static int evt_readback(const char *path, const char *id)
 }
 #endif
 
-int hall_evt_commit(const hall_evt_req_t *req)
+/* 根目录解析：显式根优先，否则用全局根；两者皆空即丢弃事件。 */
+static const char *evt_root_of(const hall_evt_req_t *req)
 {
-    if (!req || !evt_args_ok(req->task, req->category, req->content))
-        return -1;
-    const char *tenant = (req->tenant && req->tenant[0]) ? req->tenant : EVT_TENANT;
-    const char *owner = (req->owner && req->owner[0]) ? req->owner : EVT_OWNER;
-    if (!hall_comp_valid(tenant)) {
-        AIRY_LOG_WARN("hall_event: invalid tenant (path traversal blocked)");
-        return -1;
-    }
     if (evt_ensure() != 0)
-        return -1;
+        return NULL;
     const char *root = (req->root && req->root[0]) ? req->root : g_evt_root;
     if (!root[0]) {
         AIRY_LOG_WARN("hall_event: hall root unavailable, event dropped");
-        return -1;
+        return NULL;
     }
+    return root;
+}
 
-    airy_mtx_lock(&g_evt_lock);
+/* 组装事件头并创建目标目录：seq/prev/gseq 都在目录就绪后才确定。 */
+static int evt_prepare(const hall_evt_req_t *req, const char *root, hall_evt_t *evt, char *ts,
+                       size_t ts_sz, char *dir, size_t dir_sz, char *prev, size_t prev_sz)
+{
+    AIRY_MEMSET(evt, 0, sizeof(*evt));
+    evt->tenant = (req->tenant && req->tenant[0]) ? req->tenant : EVT_TENANT;
+    evt->task = req->task;
+    evt->category = req->category;
+    evt->node = req->node;
+    evt->owner = (req->owner && req->owner[0]) ? req->owner : EVT_OWNER;
+    evt->content = req->content;
 
-    if (airy_io_mkdir_p(root, 0755) != 0) {
-        airy_mtx_unlock(&g_evt_lock);
-        AIRY_LOG_WARN("hall_event: mkdir failed (path=%s)", root);
+    int dn = snprintf(dir, dir_sz, "%s/%s/%s/%s", root, evt->tenant, req->task, req->category);
+    if (dn < 0 || (size_t)dn >= dir_sz)
         return -1;
-    }
-
-    hall_evt_t evt;
-    AIRY_MEMSET(&evt, 0, sizeof(evt));
-    evt.tenant = tenant;
-    evt.task = req->task;
-    evt.category = req->category;
-    evt.node = req->node;
-    evt.owner = owner;
-    evt.content = req->content;
-    evt.gseq = (unsigned long long)hall_gseq_next(root);
-
-    char ts[HALL_EVT_TS_LEN];
-    hall_clock_utc(ts, sizeof(ts));
-    evt.ts_utc = ts;
-
-    char dir[HALL_EVT_PATH_MAX];
-    int dn = snprintf(dir, sizeof(dir), "%s/%s/%s/%s", root, tenant, req->task, req->category);
-    if (dn < 0 || (size_t)dn >= sizeof(dir)) {
-        airy_mtx_unlock(&g_evt_lock);
-        return -1;
-    }
     if (airy_io_mkdir_p(dir, 0755) != 0) {
-        airy_mtx_unlock(&g_evt_lock);
         AIRY_LOG_WARN("hall_event: mkdir failed (path=%s)", dir);
         return -1;
     }
 
-    char prev[HALL_EVT_ID_MAX];
-    evt.seq = evt_dir_scan(dir, prev, sizeof(prev));
-    evt.prev = prev;
+    evt->seq = evt_dir_scan(dir, prev, prev_sz);
+    evt->prev = prev;
+    hall_clock_utc(ts, ts_sz);
+    evt->ts_utc = ts;
+    evt->gseq = (unsigned long long)hall_gseq_next(root);
+    return 0;
+}
 
-    char id[HALL_EVT_ID_MAX];
-    if (hall_evt_name(id, sizeof(id), &evt) != 0) {
-        airy_mtx_unlock(&g_evt_lock);
-        return -1;
-    }
-
+/* 序列化落盘；成功后回填 out_id，并在调试构建下做写后可读断言。 */
+static int evt_persist(const hall_evt_req_t *req, const hall_evt_t *evt, const char *dir,
+                       const char *id)
+{
     size_t cap = strlen(req->content) + HALL_EVT_HDR_MAX;
     char *json = (char *)AIRY_MALLOC(cap);
-    if (!json) {
-        airy_mtx_unlock(&g_evt_lock);
+    if (!json)
         return -1;
-    }
-    if (hall_evt_build(&evt, json, cap) != 0) {
+    if (hall_evt_build(evt, json, cap) != 0) {
         AIRY_FREE(json);
-        airy_mtx_unlock(&g_evt_lock);
         return -1;
     }
 
     char path[HALL_EVT_PATH_MAX];
     int pn = snprintf(path, sizeof(path), "%s/%s", dir, id);
-    if (pn < 0 || (size_t)pn >= sizeof(path)) {
-        AIRY_FREE(json);
-        airy_mtx_unlock(&g_evt_lock);
-        return -1;
-    }
-    int rc = airy_io_write_file(path, json, strlen(json));
+    int rc = (pn < 0 || (size_t)pn >= sizeof(path))
+                 ? -1
+                 : airy_io_write_file(path, json, strlen(json));
     AIRY_FREE(json);
-    if (rc == 0 && req->out_id && req->out_id_sz > 0)
-        AIRY_STRNCPY_TERM(req->out_id, id, req->out_id_sz);
-    airy_mtx_unlock(&g_evt_lock);
     if (rc != 0) {
         AIRY_LOG_WARN("hall_event: write failed (path=%s)", path);
         return -1;
     }
+    if (req->out_id && req->out_id_sz > 0)
+        AIRY_STRNCPY_TERM(req->out_id, id, req->out_id_sz);
 
 #ifndef NDEBUG
     /* 单一真相源事件流断言：写后必可读，file.id 位于 header 开头。 */
-    if (evt_readback(path, id) != 0)
-        return -1;
-#endif
-
+    return evt_readback(path, id);
+#else
     return 0;
+#endif
+}
+
+int hall_evt_commit(const hall_evt_req_t *req)
+{
+    if (!req || !evt_args_ok(req->task, req->category, req->content))
+        return -1;
+    const char *tenant = (req->tenant && req->tenant[0]) ? req->tenant : EVT_TENANT;
+    if (!hall_comp_valid(tenant)) {
+        AIRY_LOG_WARN("hall_event: invalid tenant (path traversal blocked)");
+        return -1;
+    }
+    const char *root = evt_root_of(req);
+    if (!root)
+        return -1;
+
+    airy_mtx_lock(&g_evt_lock);
+
+    hall_evt_t evt;
+    char ts[HALL_EVT_TS_LEN];
+    char dir[HALL_EVT_PATH_MAX];
+    char prev[HALL_EVT_ID_MAX];
+    char id[HALL_EVT_ID_MAX];
+    int rc = evt_prepare(req, root, &evt, ts, sizeof(ts), dir, sizeof(dir), prev, sizeof(prev));
+    if (rc == 0 && hall_evt_name(id, sizeof(id), &evt) != 0)
+        rc = -1;
+    if (rc == 0)
+        rc = evt_persist(req, &evt, dir, id);
+
+    airy_mtx_unlock(&g_evt_lock);
+    return rc;
 }
 
 int hall_evt_write(const char *task_id, const char *category, const char *node_id,
