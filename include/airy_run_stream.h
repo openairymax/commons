@@ -113,11 +113,12 @@
 #define AIRY_RS_K_NEXT_ACTION  "next_action"
 
 /* 失败始发层：tool = 工具执行，agent = 编排/预算，gateway = 准入与转发，
- * provider = 模型流。 */
+ * provider = 模型流，config = 部署配置缺失/非法。 */
 #define AIRY_RS_ORIGIN_TOOL     "tool"
 #define AIRY_RS_ORIGIN_AGENT    "agent"
 #define AIRY_RS_ORIGIN_GATEWAY  "gateway"
 #define AIRY_RS_ORIGIN_PROVIDER "provider"
+#define AIRY_RS_ORIGIN_CONFIG   "config"
 
 /* 机器可读失败原因（稳定枚举，新增只增不改）。 */
 #define AIRY_RS_REASON_BUDGET   "budget_exhausted"
@@ -126,6 +127,13 @@
 #define AIRY_RS_REASON_EMPTY    "empty_result"
 #define AIRY_RS_REASON_PROVIDER "provider_unreachable"
 #define AIRY_RS_REASON_AGENT    "agent_error"
+/* 未配置可用模型（model.yaml 缺失/无生效条目，且未给 AIRY_AGENT_MODEL）：
+ * 属部署配置问题，重试无效，必须按提示补配置。 */
+#define AIRY_RS_REASON_CONFIG   "config_missing"
+/* 模型服务可达但拒绝了请求（鉴权失败、模型名不存在、配额/限流、5xx）：
+ * 与 provider_unreachable 区分——0.1.19 §3.7.2 N1 要求只有传输类失败
+ * 才能对用户说「服务不可达」，否则会把鉴权错误误导成网络问题。 */
+#define AIRY_RS_REASON_PROVIDER_ERR "provider_error"
 
 /* 建议动作：retry 原样重发；resume 凭 resume_token 续跑；inspect 人工排障；
  * adjust 按判据逐项修复产物后重新提交（C-17，确定性失败不可原样重试）。 */
