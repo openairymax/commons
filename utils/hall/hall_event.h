@@ -133,7 +133,39 @@ int hall_evt_name(char *out, size_t sz, const hall_evt_t *evt);
 int hall_evt_build(const hall_evt_t *evt, char *out, size_t out_sz);
 
 /**
- * @brief 写入一条 hall 事件（完整写路径）。
+ * @brief 一条 hall 事件的提交请求（全部字段为借用，不接管所有权）。
+ *
+ * 与 hall_evt_t 的区别：本结构只表达「调用方想写什么」，ts/seq/gseq/prev
+ * 由写侧 SSoT 在临界区内统一分配，调用方无法注入序号（跨写者不撞号的
+ * 前提）。root/tenant/owner 可显式指定，供 runtime 复用自有存储根。
+ */
+typedef struct {
+    const char *root;     /* 事件根；NULL/空 → airy_data_dir()/agentrt/hall */
+    const char *tenant;   /* 租户；NULL/空 → "default" */
+    const char *task;     /* 任务分组键（必填） */
+    const char *category; /* 类别名（必填） */
+    const char *node;     /* blueprint 节点 id；NULL → "" */
+    const char *owner;    /* owner_role；NULL/空 → "cognition" */
+    const char *content;  /* content 段 JSON 对象串（必填） */
+    char *out_id;         /* 回填事件文件名；NULL 表示不需要 */
+    size_t out_id_sz;     /* out_id 缓冲长度 */
+} hall_evt_req_t;
+
+/**
+ * @brief 提交一条 hall 事件（完整写路径，写侧唯一入口）。
+ *
+ * 内部完成：路径穿越校验 → gseq 水位线预留与递增 → 目录递归创建 → seq
+ * 续接与 prev_file 解析 → envelope 组装 → 原子写（tmp+fsync+rename）→
+ * debug 构建下写后回读断言。序号（ts/seq/gseq/prev）全部在临界区内按磁盘
+ * 现状分配，因此同根多写者进程不会撞号。
+ *
+ * @param req 提交请求，见 hall_evt_req_t
+ * @return 0 成功；-1 失败（best-effort 契约，调用方不因此中断自身流程）
+ */
+int hall_evt_commit(const hall_evt_req_t *req);
+
+/**
+ * @brief 写入一条 hall 事件（默认根/租户/属主下的便捷包装）。
  *
  * 内部完成：路径穿越校验 → gseq 水位线预留与递增 → 目录递归创建 → seq
  * 续接与 prev_file 解析 → envelope 组装 → 原子写（tmp+fsync+rename）→

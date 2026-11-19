@@ -49,6 +49,8 @@ set(SOURCES
     utils/string/text_utils.c
     # 0.1.19 §60：任务大厅事件磁盘格式 SSoT（写侧机制件）
     utils/hall/hall_event.c
+    # 0.1.21 R15：gseq 编号机制（水位线预留 + 跨进程分配）
+    utils/hall/hall_evt_gseq.c
     # 0.1.19 §130：字符串→下标开放寻址哈希索引 SSoT（djb2 + 墓碑）
     utils/ds/hindex.c
     utils/sync/sync.c
