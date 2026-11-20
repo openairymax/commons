@@ -61,16 +61,6 @@ const char *att_verdict(airy_attest_verdict_t verdict)
     return k_verdict_name[verdict];
 }
 
-static const char *attest_owner(const airy_attest_opts_t *opts)
-{
-    return (opts && opts->owner && opts->owner[0]) ? opts->owner : "unknown";
-}
-
-static int attest_escape(const airy_attest_opts_t *opts)
-{
-    return (opts && opts->allow_unknown) ? 1 : 0;
-}
-
 static void attest_outcome(const char *owner, const airy_attest_item_t *item, int escape,
                            airy_attest_result_t *out)
 {
@@ -103,8 +93,8 @@ int airy_attest_run(const airy_attest_opts_t *opts, const airy_attest_item_t *it
     if (!out || (n > 0 && !items))
         return AIRY_ERR_INVALID_PARAM;
 
-    const char *owner = attest_owner(opts);
-    const int escape = attest_escape(opts);
+    const char *owner = (opts && opts->owner && opts->owner[0]) ? opts->owner : "unknown";
+    const int escape = (opts && opts->allow_unknown) ? 1 : 0;
 
     __builtin_memset(out, 0, sizeof(*out));
     uint64_t hash = ATTEST_FNV_BASIS;

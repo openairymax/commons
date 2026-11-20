@@ -342,23 +342,6 @@ int airy_paths_query(airy_paths_view_t *out)
     return AIRY_SUCCESS;
 }
 
-/* 逐级创建中间目录（失败不返回，末级创建时统一判定）。 */
-static void paths_mkdir_parents(char *tmp)
-{
-    /* 同时识别 '/' 与 '\\'，兼容 Windows 风格 AIRY_HOME 路径 */
-    for (char *p = tmp + 1; *p; p++) {
-        if (*p != '/' && *p != '\\')
-            continue;
-        *p = '\0';
-#if AIRY_PLATFORM_WINDOWS
-        _mkdir(tmp);
-#else
-        mkdir(tmp, 0755);
-#endif
-        *p = '/';
-    }
-}
-
 /* 创建末级目录：EEXIST 视为成功。 */
 static int paths_mkdir_leaf(const char *tmp)
 {
@@ -386,7 +369,18 @@ static int paths_mkdir_p(const char *path)
     while (len > 1 && (tmp[len - 1] == '/' || tmp[len - 1] == '\\'))
         tmp[--len] = '\0';
 
-    paths_mkdir_parents(tmp);
+    /* 同时识别 '/' 与 '\\'，兼容 Windows 风格 AIRY_HOME 路径 */
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p != '/' && *p != '\\')
+            continue;
+        *p = '\0';
+#if AIRY_PLATFORM_WINDOWS
+        _mkdir(tmp);
+#else
+        mkdir(tmp, 0755);
+#endif
+        *p = '/';
+    }
     if (paths_mkdir_leaf(tmp) != 0)
         return AIRY_ERR_SYS_FILE;
     return AIRY_SUCCESS;

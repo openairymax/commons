@@ -477,19 +477,6 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
     return AIRY_SUCCESS;
 }
 
-static uint64_t cp_resolve_seq(const char *task_id, uint64_t sequence_num)
-{
-    if (sequence_num != 0)
-        return sequence_num;
-    uint64_t seq = find_latest_seq(task_id);
-    if (seq == 0) {
-        AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
-                 "task_id=%s",
-                 task_id);
-    }
-    return seq;
-}
-
 /* 把 JSON 中的 state/session/seq/timestamp 字段回填到 checkpoint。 */
 static void cp_apply_fields(airy_task_checkpoint_t *cp, const char *json_buf)
 {
@@ -528,7 +515,15 @@ airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
     /* sequence_num == 0 means restore the latest checkpoint: scan the
      * directory for the highest seq. sequence_num > 0 restores the
      * checkpoint with that specific sequence number. */
-    uint64_t actual_seq = cp_resolve_seq(task_id, sequence_num);
+    uint64_t actual_seq = sequence_num;
+    if (actual_seq == 0) {
+        actual_seq = find_latest_seq(task_id);
+        if (actual_seq == 0) {
+            AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
+                     "task_id=%s",
+                     task_id);
+        }
+    }
     if (actual_seq == 0)
         return AIRY_ENOENT;
 

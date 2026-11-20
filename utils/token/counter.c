@@ -174,40 +174,6 @@ size_t airy_token_counter_count_batch(airy_token_counter_t *counter, const char 
     return 0;
 }
 
-/* side="left"：保留尾部并加前缀省略号。 */
-static char *trunc_keep_tail(const char *text, size_t length, size_t target_chars)
-{
-    char *result = AIRY_MALLOC(target_chars + 4);
-    if (result) {
-        __builtin_memcpy(result, text + length - target_chars, target_chars);
-        result[target_chars] = '\0';
-        snprintf(result + target_chars, 4, "...");
-    }
-    return result;
-}
-
-/* side="middle"：保留首尾，中间插入截断标记。 */
-static char *trunc_keep_mid(const char *text, size_t length, size_t target_chars)
-{
-    size_t half = target_chars / 2;
-    char *result = AIRY_MALLOC(target_chars + 8);
-    if (!result) {
-        return NULL;
-    }
-    __builtin_memcpy(result, text, half);
-    result[half] = '\0';
-    snprintf(result + half, target_chars + 8 - half, "...[truncated]...");
-    size_t remaining_space = target_chars + 8 - (half + 15);
-    if (remaining_space > 0) {
-        size_t copy_len = (target_chars - half) < (remaining_space - 1) ?
-                              (target_chars - half) :
-                              (remaining_space - 1);
-        __builtin_memcpy(result + half + 15, text + length - (target_chars - half), copy_len);
-        result[half + 15 + copy_len] = '\0';
-    }
-    return result;
-}
-
 /* 默认：保留头部并追加省略号。 */
 static char *trunc_keep_head(const char *text, size_t target_chars)
 {
@@ -249,9 +215,30 @@ char *airy_token_counter_truncate(airy_token_counter_t *counter, const char *tex
     char *result = NULL;
 
     if (side && strcmp(side, "left") == 0) {
-        result = trunc_keep_tail(text, length, target_chars);
+        result = AIRY_MALLOC(target_chars + 4);
+        if (result) {
+            __builtin_memcpy(result, text + length - target_chars, target_chars);
+            result[target_chars] = '\0';
+            snprintf(result + target_chars, 4, "...");
+        }
     } else if (side && strcmp(side, "middle") == 0) {
-        result = trunc_keep_mid(text, length, target_chars);
+        size_t half = target_chars / 2;
+        result = AIRY_MALLOC(target_chars + 8);
+        if (!result) {
+            airy_mtx_unlock(&counter->mutex);
+            return NULL;
+        }
+        __builtin_memcpy(result, text, half);
+        result[half] = '\0';
+        snprintf(result + half, target_chars + 8 - half, "...[truncated]...");
+        size_t remaining_space = target_chars + 8 - (half + 15);
+        if (remaining_space > 0) {
+            size_t copy_len = (target_chars - half) < (remaining_space - 1) ?
+                                  (target_chars - half) :
+                                  (remaining_space - 1);
+            __builtin_memcpy(result + half + 15, text + length - (target_chars - half), copy_len);
+            result[half + 15 + copy_len] = '\0';
+        }
     } else {
         result = trunc_keep_head(text, target_chars);
     }

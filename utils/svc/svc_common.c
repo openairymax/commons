@@ -282,20 +282,6 @@ static void svc_join_threads(airy_svc_internal_t *service)
 }
 #endif
 
-static void svc_stop_commit(airy_svc_internal_t *service, airy_err_t err, bool force, bool zombie)
-{
-    airy_mtx_lock(&service->state_mutex);
-    if (err == AIRY_SUCCESS || force) {
-        service->state = zombie ? AIRY_SVC_STATE_ZOMBIE : AIRY_SVC_STATE_STOPPED;
-        AIRY_LOG_INFO("Service '%s' stopped %s", service->name,
-                      force ? (zombie ? "(ZOMBIE)" : "(forced)") : "gracefully");
-    } else {
-        service->state = AIRY_SVC_STATE_ERROR;
-        AIRY_LOG_ERROR("Service '%s' stop failed: %d", service->name, err);
-    }
-    airy_mtx_unlock(&service->state_mutex);
-}
-
 airy_err_t airy_svc_stop(airy_svc_t svc, bool force)
 {
     if (!svc) {
@@ -362,7 +348,16 @@ airy_err_t airy_svc_stop(airy_svc_t svc, bool force)
 #endif /* _WIN32 */
     }
 
-    svc_stop_commit(service, err, force, zombie);
+    airy_mtx_lock(&service->state_mutex);
+    if (err == AIRY_SUCCESS || force) {
+        service->state = zombie ? AIRY_SVC_STATE_ZOMBIE : AIRY_SVC_STATE_STOPPED;
+        AIRY_LOG_INFO("Service '%s' stopped %s", service->name,
+                      force ? (zombie ? "(ZOMBIE)" : "(forced)") : "gracefully");
+    } else {
+        service->state = AIRY_SVC_STATE_ERROR;
+        AIRY_LOG_ERROR("Service '%s' stop failed: %d", service->name, err);
+    }
+    airy_mtx_unlock(&service->state_mutex);
 
     return err;
 }
