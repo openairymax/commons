@@ -157,12 +157,6 @@ airy_uuid_error_t airy_uuid_with_prefix(const char *prefix, char *out_buf, size_
     return AIRY_UUID_SUCCESS;
 }
 
-/* 十六进制字符判定。 */
-static int uuid_hex_char(char c)
-{
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
 /* 连字符位置判定。 */
 static int uuid_sep_pos(int i)
 {
@@ -191,7 +185,7 @@ int airy_uuid_is_valid(const char *uuid)
             if (c != '-') {
                 return 0;
             }
-        } else if (!uuid_hex_char(c)) {
+        } else if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
             return 0;
         }
     }

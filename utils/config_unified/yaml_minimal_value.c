@@ -152,16 +152,6 @@ static void yaml_append_separator(bool is_folded, char **buf, size_t *cap, size_
     }
 }
 
-static int yaml_count_indent(struct parse_ctx *ctx)
-{
-    int n = 0;
-    while (!at_end(ctx) && peek(ctx) == ' ') {
-        n++;
-        advance(ctx);
-    }
-    return n;
-}
-
 static bool yaml_short_line(struct parse_ctx *ctx, char line_char, char **buf, size_t *cap,
                             size_t *len, bool *ok)
 {
@@ -183,7 +173,11 @@ static bool yaml_read_block_line(struct parse_ctx *ctx, bool is_folded, int *blo
                                  char **buf, size_t *cap, size_t *len,
                                  int *first_line_indent, bool *has_content)
 {
-    int line_ind = yaml_count_indent(ctx);
+    int line_ind = 0;
+    while (!at_end(ctx) && peek(ctx) == ' ') {
+        line_ind++;
+        advance(ctx);
+    }
 
     if (at_end(ctx))
         return false;

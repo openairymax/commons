@@ -165,53 +165,6 @@ static const char *sanitize_value_start(const char *p)
     return p;
 }
 
-/** @brief 在 pos 处匹配字段并写出脱敏片段；1=命中，0=未命中，-1=溢出。 */
-static int sanitize_field(const char **posp, char **outp, char *out_end, size_t buffer_size)
-{
-    const char *pos = *posp;
-    char *out = *outp;
-
-    for (size_t i = 0; i < g_pattern_count; i++) {
-        const char *match = find_pattern(pos, &g_patterns[i]);
-        if (!match || match != pos)
-            continue;
-
-        const char *after_pattern = pos + strlen(g_patterns[i].pattern);
-        const char *value_start = sanitize_value_start(after_pattern);
-        const char *value_end = find_value_end(value_start);
-        if (!value_end)
-            value_end = value_start + strlen(value_start);
-
-        size_t field_name_len = (size_t)(after_pattern - pos);
-        size_t repl_len = strlen(g_patterns[i].replacement);
-
-        size_t needed = field_name_len + 1 + repl_len + 1;
-        if ((size_t)(out_end - out) < needed) {
-            *out = '\0';
-            SVC_LOG_ERROR("C-L02: SANITIZER: SANITIZE-FAIL reason=overflow buffer_size=%zu "
-                          "needed=%zu",
-                          buffer_size, needed);
-            return -1;
-        }
-
-        __builtin_memcpy(out, pos, field_name_len);
-        out += field_name_len;
-
-        *out++ = '=';
-
-        __builtin_memcpy(out, g_patterns[i].replacement, repl_len);
-        out += repl_len;
-
-        *out = '\0';
-
-        *posp = value_end;
-        *outp = out;
-        return 1;
-    }
-
-    return 0;
-}
-
 /** @brief Core sanitization logic. */
 static int sanitize_core(const char *message, char *buffer, size_t buffer_size)
 {
@@ -227,12 +180,46 @@ static int sanitize_core(const char *message, char *buffer, size_t buffer_size)
     const char *pos = message;
 
     while (*pos && out < out_end) {
-        int rc = sanitize_field(&pos, &out, out_end, buffer_size);
-        if (rc < 0)
-            return AIRY_ERR_OVERFLOW;
-        if (rc > 0)
-            continue;
-        *out++ = *pos++;
+        bool matched = false;
+        for (size_t i = 0; i < g_pattern_count; i++) {
+            const char *match = find_pattern(pos, &g_patterns[i]);
+            if (!match || match != pos)
+                continue;
+
+            const char *after_pattern = pos + strlen(g_patterns[i].pattern);
+            const char *value_start = sanitize_value_start(after_pattern);
+            const char *value_end = find_value_end(value_start);
+            if (!value_end)
+                value_end = value_start + strlen(value_start);
+
+            size_t field_name_len = (size_t)(after_pattern - pos);
+            size_t repl_len = strlen(g_patterns[i].replacement);
+
+            size_t needed = field_name_len + 1 + repl_len + 1;
+            if ((size_t)(out_end - out) < needed) {
+                *out = '\0';
+                SVC_LOG_ERROR("C-L02: SANITIZER: SANITIZE-FAIL reason=overflow buffer_size=%zu "
+                              "needed=%zu",
+                              buffer_size, needed);
+                return AIRY_ERR_OVERFLOW;
+            }
+
+            __builtin_memcpy(out, pos, field_name_len);
+            out += field_name_len;
+
+            *out++ = '=';
+
+            __builtin_memcpy(out, g_patterns[i].replacement, repl_len);
+            out += repl_len;
+
+            *out = '\0';
+
+            pos = value_end;
+            matched = true;
+            break;
+        }
+        if (!matched)
+            *out++ = *pos++;
     }
 
     *out = '\0';
