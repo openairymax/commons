@@ -103,8 +103,8 @@ typedef struct method_desc {
  * 任一方法注册失败即返回，并记录失败的方法名；调用方在启动期应据此
  * 失败，避免服务带着缺失的方法面继续运行。
  */
-int method_dispatcher_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
-                                   size_t count);
+int disp_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
+                      size_t count);
 
 /**
  * @brief Dispatch a JSON-RPC request to the matching handler.

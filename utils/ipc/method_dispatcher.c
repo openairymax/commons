@@ -129,15 +129,15 @@ int method_dispatcher_register(method_dispatcher_t *disp, const char *method, me
     return 0;
 }
 
-int method_dispatcher_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
-                                   size_t count)
+int disp_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
+                      size_t count)
 {
     if (!descs && count != 0)
         return AIRY_ERR_INVALID_PARAM;
     for (size_t i = 0; i < count; i++) {
         int rc = method_dispatcher_register(disp, descs[i].name, descs[i].handler, NULL);
         if (rc != 0) {
-            SVC_LOG_ERROR("method_dispatcher_register_all: '%s' rejected rc=%d", descs[i].name, rc);
+            SVC_LOG_ERROR("disp_register_all: '%s' rejected rc=%d", descs[i].name, rc);
             return rc;
         }
     }
