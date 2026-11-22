@@ -94,6 +94,22 @@
 #define AIRY_PORT_NOTIFY_D 2045
 #define AIRY_PORT_SUPERVISOR_D 2046
 
+/* 本地推理端点目录 SSoT（外部生态惯例口，不属上列受辖带）。
+ *
+ * 三处「本地」语义不同，禁止互相顶替：providers 适配器缺省走
+ * vLLM/OpenAI 兼容口 8080；platform_gpu 端点探测缺省平台加速服务口
+ * 8000；自托管 llama-server 用 11435，Ollama 保留 11434。TUI 与
+ * Python 侧以同值常量引用，CI 值一致性门禁逐项比对四组字面量。 */
+#define AIRY_EP_LOCAL_PROVIDERS_PORT 8080
+#define AIRY_EP_LOCAL_PLATFORM_PORT 8000
+#define AIRY_EP_SELFHOST_PORT 11435
+#define AIRY_EP_OLLAMA_PORT 11434
+
+#define AIRY_EP_STR_(x) #x
+#define AIRY_EP_STR(x) AIRY_EP_STR_(x)
+#define AIRY_EP_LOCAL_PROVIDERS_URL \
+    "http://127.0.0.1:" AIRY_EP_STR(AIRY_EP_LOCAL_PROVIDERS_PORT) "/v1"
+
 #define AIRY_DEFAULT_TOKEN_TTL_SEC 3600
 #define AIRY_DEFAULT_REFRESH_THRESHOLD 300
 #define AIRY_DEFAULT_RPS_LIMIT 100

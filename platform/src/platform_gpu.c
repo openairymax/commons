@@ -11,6 +11,7 @@
  */
 
 #include "platform_gpu.h"
+#include "airy_defaults.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +31,7 @@
 #endif
 
 #define GPU_EP_DEFAULT "127.0.0.1"
-#define GPU_EP_PORT    8000
+#define GPU_EP_PORT    AIRY_EP_LOCAL_PLATFORM_PORT
 #define GPU_EP_MS      200
 
 /* 虚拟显示/渲染设备：会出现在 /dev/dri 与 sysfs，但不提供算力。 */
@@ -298,11 +299,63 @@ static int gpu_ep_models(const char *host, int port)
     return strstr(buf, " 200") != NULL && strstr(buf, "\"data\"") != NULL;
 }
 
+/* 运行时在位证据：驱动节点或厂商用户态运行库。PCI 设备与
+ * /v1/models 应答都不能单独证明本机加速器可服务，二者须同时成立。 */
+static int gpu_rt_nvidia(void)
+{
+    static const char *const libs[] = {
+#if defined(__x86_64__)
+        "/usr/lib/x86_64-linux-gnu/libcuda.so.1",
+#elif defined(__aarch64__)
+        "/usr/lib/aarch64-linux-gnu/libcuda.so.1",
+#elif defined(__riscv) || defined(__riscv64__)
+        "/usr/lib/riscv64-linux-gnu/libcuda.so.1",
+#endif
+        "/usr/lib64/libcuda.so.1",
+        "/usr/lib/libcuda.so.1",
+        "/usr/local/cuda/lib64/libcuda.so.1",
+    };
+
+    if (access("/dev/nvidiactl", F_OK) == 0 || access("/dev/nvidia0", F_OK) == 0)
+        return 1;
+    for (size_t i = 0; i < sizeof(libs) / sizeof(libs[0]); i++)
+        if (access(libs[i], F_OK) == 0)
+            return 1;
+    return 0;
+}
+
+static int gpu_rt_ok(airy_accel_kind_t kind)
+{
+    switch (kind) {
+    case AIRY_ACCEL_NVIDIA:
+        return gpu_rt_nvidia();
+    case AIRY_ACCEL_AMD:
+        return access("/dev/kfd", F_OK) == 0;
+    case AIRY_ACCEL_INTEL:
+        return access("/usr/lib/x86_64-linux-gnu/libze_loader.so.1", F_OK) == 0 ||
+               access("/usr/lib/aarch64-linux-gnu/libze_loader.so.1", F_OK) == 0 ||
+               access("/usr/lib64/libze_loader.so.1", F_OK) == 0 ||
+               access("/usr/lib/libze_loader.so.1", F_OK) == 0;
+    default:
+        return 0;
+    }
+}
+
+/* 异构多卡只要求最低可服务集合：任一设备运行时在位即可。 */
+static int gpu_rt_any(const airy_gpu_cap_t *cap)
+{
+    for (uint32_t i = 0; i < cap->dev_count; i++)
+        if (gpu_rt_ok(cap->devs[i].kind))
+            return 1;
+    return 0;
+}
+
 static void gpu_detect(airy_gpu_cap_t *cap)
 {
-    const char *ep = "127.0.0.1";
+    const char *ep = GPU_EP_DEFAULT;
     int port = GPU_EP_PORT;
     uint32_t virt = 0;
+    int rt;
     int l3;
 
     if (gpu_scan_drm(cap, &virt) == 0) {
@@ -317,16 +370,27 @@ static void gpu_detect(airy_gpu_cap_t *cap)
     }
     cap->layers |= AIRY_GPU_L1_HW;
 
+    rt = gpu_rt_any(cap);
     l3 = gpu_ep_models(ep, port);
-    if (l3) {
-        cap->layers |= AIRY_GPU_L2_RUNTIME | AIRY_GPU_L3_STDAPI;
+    if (rt)
+        cap->layers |= AIRY_GPU_L2_RUNTIME;
+    if (l3)
+        cap->layers |= AIRY_GPU_L3_STDAPI;
+    if (rt && l3) {
         snprintf(cap->backend, sizeof(cap->backend), "%s:%d", ep, port);
         cap->verdict = (cap->devs[0].kind == AIRY_ACCEL_NVIDIA) ? AIRY_GPU_R1 : AIRY_GPU_R2;
         return;
     }
+
     cap->verdict = AIRY_GPU_R3;
-    snprintf(cap->reason, sizeof(cap->reason),
-             "加速器在，但 %s:%d 无标准兼容应答；本机不得宣称 GPU 服务", ep, port);
+    if (!rt)
+        snprintf(cap->reason, sizeof(cap->reason),
+                 "加速器在，但未检出厂商运行时（/dev/nvidiactl、/dev/kfd 或 "
+                 "libcuda/libze）；本机不得宣称算力");
+    else
+        snprintf(cap->reason, sizeof(cap->reason),
+                 "运行时在位，但 %s:%d 无标准兼容应答；本机不得宣称 GPU 服务",
+                 ep, port);
 }
 
 #else /* _WIN32 || __APPLE__ */
