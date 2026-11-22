@@ -119,6 +119,10 @@ extern "C" {
  */
 
 #define AIRY_DEFAULT_HOME_DIR ".airymaxrt"
+/* Windows 用户本地数据根下的目录名（%LOCALAPPDATA%\airymaxrt）：Windows
+ * 不以点前缀隐藏目录，且本地数据应随 LOCALAPPDATA 漫游/清理策略走。
+ * Rust/TUI 侧 paths.rs 与 install.ps1 必须同规则（S-P1-04）。 */
+#define AIRY_WIN_HOME_DIR "airymaxrt"
 #define AIRY_HOME_SUBDIR_BIN "bin"
 #define AIRY_HOME_SUBDIR_LIB "lib"
 #define AIRY_HOME_SUBDIR_RUN "run"

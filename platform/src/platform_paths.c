@@ -250,6 +250,28 @@ static int paths_read_install_home(const char *path, char *out, size_t out_size)
     return 0;
 }
 
+/* 默认安装根（仅在既无 $AIRY_HOME 也无法从 install.env 发现时使用）：
+ *   Windows  %LOCALAPPDATA%\airymaxrt → %USERPROFILE%\.airymaxrt → 临时根
+ *   POSIX    $HOME/.airymaxrt → 临时根
+ * Windows 优先本地数据根是 S-P1-04 的判据：点前缀目录在 Windows 不隐藏，
+ * 且用户级数据应随 LOCALAPPDATA 的清理/迁移策略走。返回 0 表示需要临时根。 */
+static int paths_default_home(char *out, size_t out_size)
+{
+#if AIRY_PLATFORM_WINDOWS
+    const char *local = getenv("LOCALAPPDATA");
+    if (local && local[0] != '\0') {
+        snprintf(out, out_size, "%s/%s", local, AIRY_WIN_HOME_DIR);
+        return 1;
+    }
+#endif
+    const char *user_home = paths_user_home();
+    if (user_home && user_home[0] != '\0') {
+        snprintf(out, out_size, "%s/%s", user_home, AIRY_DEFAULT_HOME_DIR);
+        return 1;
+    }
+    return 0;
+}
+
 static void paths_ensure_resolved(void)
 {
     if (atomic_load_explicit(&g_paths_initialized, memory_order_acquire))
@@ -261,13 +283,8 @@ static void paths_ensure_resolved(void)
             snprintf(g_home_dir, sizeof(g_home_dir), "%s", home_env);
         } else if (paths_discover_install_home(g_home_dir, sizeof(g_home_dir))) {
             /* 安装根发现（install.env）：解析完成，跳过默认值分支 */
-        } else {
-            const char *user_home = paths_user_home();
-            if (user_home && user_home[0] != '\0') {
-                snprintf(g_home_dir, sizeof(g_home_dir), "%s/%s", user_home, AIRY_DEFAULT_HOME_DIR);
-            } else {
-                paths_tmp_home(g_home_dir, sizeof(g_home_dir));
-            }
+        } else if (!paths_default_home(g_home_dir, sizeof(g_home_dir))) {
+            paths_tmp_home(g_home_dir, sizeof(g_home_dir));
         }
         paths_resolve_all();
         atomic_store_explicit(&g_paths_initialized, 1, memory_order_release);
