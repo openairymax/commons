@@ -51,7 +51,7 @@ static int grow_handlers(method_dispatcher_t *disp)
                       disp->method_count, disp->max_methods);
         return AIRY_ERR_UNKNOWN;
     }
-    memset(grown + disp->max_methods, 0, (next - disp->max_methods) * sizeof(*grown));
+    AIRY_MEMSET(grown + disp->max_methods, 0, (next - disp->max_methods) * sizeof(*grown));
     disp->handlers = grown;
     disp->max_methods = next;
     return 0;
