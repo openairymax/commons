@@ -38,6 +38,10 @@
 #define AIRY_DEFAULT_BACKOFF_FACTOR 2
 #define AIRY_DEFAULT_JITTER_RATIO 10
 
+/* 生成采样默认 SSoT：请求未显式设置、模型条目也未声明时由 daemon
+ * （envelope 唯一写入点）兜底。客户端不得复刻该字面量。 */
+#define AIRY_LLM_DEFAULT_TEMPERATURE 0.7
+
 
 #define AIRY_DEFAULT_RECV_BUFFER 65536
 #define AIRY_DEFAULT_COMMAND_BUFFER 4096
