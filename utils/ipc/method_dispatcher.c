@@ -39,6 +39,24 @@ static int find_method_index(method_dispatcher_t *disp, const char *method)
     return AIRY_ERR_NOT_FOUND;
 }
 
+/* 方法表按注册数扩容：容量只是初始值，不是可用方法数的上限。此前写死
+ * 32 且满即拒，tool_d 的 skill.uninstall 因此长期注册失败。 */
+static int grow_handlers(method_dispatcher_t *disp)
+{
+    size_t next = disp->max_methods * 2;
+    struct method_handler *grown =
+        (struct method_handler *)AIRY_REALLOC(disp->handlers, next * sizeof(*grown));
+    if (!grown) {
+        SVC_LOG_ERROR("method_dispatcher_register: grow failed count=%zu max=%zu",
+                      disp->method_count, disp->max_methods);
+        return AIRY_ERR_UNKNOWN;
+    }
+    memset(grown + disp->max_methods, 0, (next - disp->max_methods) * sizeof(*grown));
+    disp->handlers = grown;
+    disp->max_methods = next;
+    return 0;
+}
+
 method_dispatcher_t *method_dispatcher_create(size_t max_methods)
 {
     if (max_methods == 0) {
@@ -90,25 +108,39 @@ int method_dispatcher_register(method_dispatcher_t *disp, const char *method, me
                       (void *)disp, (void *)method, (void *)(uintptr_t)handler);
         return AIRY_ERR_INVALID_PARAM;
     }
-    if (disp->method_count >= disp->max_methods) {
-        SVC_LOG_ERROR(
-            "method_dispatcher_register: max methods reached count=%zu max=%zu method='%s'",
-            disp->method_count, disp->max_methods, method);
-        return AIRY_ERR_OVERFLOW;
-    }
-
     int existing = find_method_index(disp, method);
     if (existing >= 0) {
         SVC_LOG_WARN("method_dispatcher_register: method '%s' already registered at index=%d",
                      method, existing);
         return AIRY_ERR_UNKNOWN;
     }
+    if (disp->method_count >= disp->max_methods && grow_handlers(disp) != 0)
+        return AIRY_ERR_UNKNOWN;
 
     disp->handlers[disp->method_count].method = AIRY_STRDUP(method);
+    if (!disp->handlers[disp->method_count].method) {
+        SVC_LOG_ERROR("method_dispatcher_register: name alloc failed method='%s'", method);
+        return AIRY_ERR_UNKNOWN;
+    }
     disp->handlers[disp->method_count].handler = handler;
     disp->handlers[disp->method_count].user_data = user_data;
     disp->method_count++;
 
+    return 0;
+}
+
+int method_dispatcher_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
+                                   size_t count)
+{
+    if (!descs && count != 0)
+        return AIRY_ERR_INVALID_PARAM;
+    for (size_t i = 0; i < count; i++) {
+        int rc = method_dispatcher_register(disp, descs[i].name, descs[i].handler, NULL);
+        if (rc != 0) {
+            SVC_LOG_ERROR("method_dispatcher_register_all: '%s' rejected rc=%d", descs[i].name, rc);
+            return rc;
+        }
+    }
     return 0;
 }
 

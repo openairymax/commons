@@ -55,10 +55,10 @@ typedef void (*method_fn)(cJSON *params, int id, void *user_data);
 
 /**
  * @brief Create a method-dispatcher instance.
- * @param max_methods Max number of supported methods
+ * @param max_methods Initial method-table capacity (grows on demand)
  * @return Dispatcher pointer, NULL on failure
  *
- * Internally allocates a hash table plus array storage, O(1) space
+ * 容量只是初始值：注册超过该值时表按倍率扩容，方法数没有上限。
  */
 method_dispatcher_t *method_dispatcher_create(size_t max_methods);
 
@@ -76,13 +76,35 @@ void method_dispatcher_destroy(method_dispatcher_t *disp);
  * @param method Method name (e.g. "complete", "register")
  * @param handler Handler function pointer
  * @param user_data User data passed to the handler (may be NULL)
- * @return 0 on success, -1 on failure (already exists or invalid params)
+ * @return 0 on success, non-zero on failure (duplicate name, invalid
+ *         params or allocation failure)
  *
- * If the method already exists, the old handler is overwritten with a
- * warning log
+ * 调用方必须检查返回值：注册失败意味着该方法无法被分发，启动期应据此
+ * 失败而非静默继续。注册应在服务对外提供请求前完成。
  */
 int method_dispatcher_register(method_dispatcher_t *disp, const char *method, method_fn handler,
                                void *user_data);
+
+/**
+ * @brief Method descriptor for table-driven registration.
+ */
+typedef struct method_desc {
+    const char *name;  /**< Method name */
+    method_fn handler; /**< Handler function */
+} method_desc_t;
+
+/**
+ * @brief Register a whole method table.
+ * @param disp Dispatcher instance
+ * @param descs Method descriptors
+ * @param count Number of descriptors
+ * @return 0 when every method registered, non-zero on the first failure
+ *
+ * 任一方法注册失败即返回，并记录失败的方法名；调用方在启动期应据此
+ * 失败，避免服务带着缺失的方法面继续运行。
+ */
+int method_dispatcher_register_all(method_dispatcher_t *disp, const method_desc_t *descs,
+                                   size_t count);
 
 /**
  * @brief Dispatch a JSON-RPC request to the matching handler.
