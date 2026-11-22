@@ -28,12 +28,17 @@ extern "C" {
 #if AIRY_PLATFORM_WINDOWS
 #define AIRY_PATH_SEP '\\'
 #define AIRY_PATH_SEP_STR "\\"
+/* 环境变量中的目录列表分隔符（PATH 等），与文件路径分隔符不同 */
+#define AIRY_ENV_SEP ';'
+#define AIRY_ENV_SEP_STR ";"
 #ifndef AIRY_PATH_MAX
 #define AIRY_PATH_MAX 260
 #endif
 #else
 #define AIRY_PATH_SEP '/'
 #define AIRY_PATH_SEP_STR "/"
+#define AIRY_ENV_SEP ':'
+#define AIRY_ENV_SEP_STR ":"
 #ifndef AIRY_PATH_MAX
 #define AIRY_PATH_MAX 4096
 #endif
