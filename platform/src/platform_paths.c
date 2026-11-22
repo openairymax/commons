@@ -180,6 +180,31 @@ static const char *paths_user_home(void)
     return getenv("HOME");
 }
 
+/* S-P1-02：既无 AIRY_HOME 也无用户主目录时，绝不能回退 CWD 相对路径——
+ * daemon 与客户端 cwd 不同会把同一份数据写成两个根。兜底根取系统临时
+ * 目录下的 uid 隔离目录（绝对路径，同机多用户不互相覆盖），与 Rust/TUI
+ * 侧 paths.rs 的规则保持一致。 */
+static void paths_tmp_home(char *out, size_t out_size)
+{
+#if AIRY_PLATFORM_WINDOWS
+    char tmp[MAX_PATH];
+    DWORD k = GetTempPathA((DWORD)sizeof(tmp), tmp);
+    if (k == 0 || k >= (DWORD)sizeof(tmp))
+        snprintf(tmp, sizeof(tmp), "%s", ".\\");
+    snprintf(out, out_size, "%s%s", tmp, AIRY_DEFAULT_HOME_DIR);
+#else
+    const char *tmp = getenv("TMPDIR");
+    size_t len;
+    if (!tmp || !tmp[0])
+        tmp = "/tmp";
+    len = strlen(tmp);
+    while (len > 1 && tmp[len - 1] == '/')
+        len--;
+    snprintf(out, out_size, "%.*s/%s-%ld",
+             (int)len, tmp, AIRY_DEFAULT_HOME_DIR, (long)getuid());
+#endif
+}
+
 /* 从 install.env（build.sh/install.sh 生成的安装信息文件）发现固化安装根。
  * 自锚定 SSoT（2026-09-16）：仅以可执行文件位置逐级上溯 install.env
  * （安装布局 $AIRY_HOME/bin/<bin>、dev 布局 <root>/build/<sub>/<bin>），
@@ -241,7 +266,7 @@ static void paths_ensure_resolved(void)
             if (user_home && user_home[0] != '\0') {
                 snprintf(g_home_dir, sizeof(g_home_dir), "%s/%s", user_home, AIRY_DEFAULT_HOME_DIR);
             } else {
-                snprintf(g_home_dir, sizeof(g_home_dir), "%s", AIRY_DEFAULT_HOME_DIR);
+                paths_tmp_home(g_home_dir, sizeof(g_home_dir));
             }
         }
         paths_resolve_all();
