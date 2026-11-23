@@ -7,6 +7,10 @@
  *
  * 0.1.19 S74：随 svc 生命周期机制族权威实现自 daemons/common/tests 迁入
  * commons；自含测试框架（本地桩与计数宏），无跨域 harness 依赖。
+ *
+ * 0.1.21 S-P2-05：全部断言改为对实现的具名期望。此前的「返回值是布尔」
+ * 「成功或非零」「句柄或 NULL」一类写法恒真，无论实现怎么错都变绿，
+ * 等于没有测试；现在逐条钉住状态迁移、错误码与指针恒等。
  */
 
 #include <stdbool.h>
@@ -14,6 +18,7 @@
 #include <string.h>
 
 #include "svc_common.h"
+#include "airyrt_version.h"
 
 static int g_tests_run;
 static int g_tests_passed;
@@ -104,16 +109,17 @@ static void test_svc_create_destroy(void)
 
     airy_svc_t svc = NULL;
     airy_err_t err = airy_svc_create(&svc, "test_service", &iface, &config);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_create 可调用");
-    TEST_ASSERT(svc != NULL || svc == NULL, "create返回句柄或NULL（取决于实现）");
+    TEST_ASSERT_EQ(err, AIRY_SUCCESS, "create 成功返回 AIRY_SUCCESS");
+    TEST_ASSERT(svc != NULL, "create 交出非空句柄");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_CREATED, "新建服务处于 CREATED");
+    TEST_ASSERT(!airy_svc_is_running(svc), "新建服务未运行");
+    TEST_ASSERT(!airy_svc_is_ready(svc), "新建服务未就绪");
+    TEST_ASSERT(strcmp(airy_svc_get_name(svc), "test_service") == 0, "get_name 与入参一致");
+    TEST_ASSERT(strcmp(airy_svc_get_version(svc), "1.0.0") == 0, "get_version 与配置一致");
 
-    if (svc) {
-        airy_svc_destroy(svc);
-        TEST_ASSERT(1, "airy_svc_destroy 不崩溃");
-    }
-
-    airy_svc_destroy(NULL);
-    TEST_ASSERT(1, "destroy(NULL) 安全");
+    airy_svc_destroy(svc);
+    airy_svc_destroy(NULL); /* 空句柄销毁须安全返回 */
+    TEST_ASSERT(airy_svc_find("test_service") == NULL, "销毁后注册表中不再可见");
 }
 
 static void test_svc_full_lifecycle(void)
@@ -123,41 +129,59 @@ static void test_svc_full_lifecycle(void)
     airy_svc_interface_t iface = make_dummy_interface();
     airy_svc_config_t config = {.name = "lifecycle_svc",
                                 .version = "2.0.0",
-                                .capabilities = AIRY_SVC_CAP_NONE,
+                                .capabilities = AIRY_SVC_CAP_PAUSEABLE,
                                 .max_concurrent = 4,
                                 .timeout_ms = 3000};
 
     airy_svc_t svc = NULL;
-    airy_err_t err = airy_svc_create(&svc, "lifecycle_svc", &iface, &config);
-    if (!svc) {
-        TEST_ASSERT(1, "create返回NULL，跳过后续测试");
+    TEST_ASSERT_EQ(airy_svc_create(&svc, "lifecycle_svc", &iface, &config), AIRY_SUCCESS,
+                   "create 成功");
+    TEST_ASSERT(svc != NULL, "create 交出非空句柄");
+    if (!svc)
         return;
-    }
 
-    err = airy_svc_init(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_init 可调用");
+    TEST_ASSERT_EQ(airy_svc_init(svc), AIRY_SUCCESS, "init 成功");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_READY, "init 后进入 READY");
+    TEST_ASSERT(airy_svc_is_ready(svc), "READY 即就绪");
+    TEST_ASSERT(!airy_svc_is_running(svc), "READY 尚未运行");
 
-    err = airy_svc_start(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_start 可调用");
+    TEST_ASSERT_EQ(airy_svc_start(svc), AIRY_SUCCESS, "start 成功");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_RUNNING, "start 后进入 RUNNING");
+    TEST_ASSERT(airy_svc_is_running(svc), "RUNNING 即运行中");
+    TEST_ASSERT(!airy_svc_is_ready(svc), "RUNNING 不再报就绪");
 
-    airy_svc_state_t state = airy_svc_get_state(svc);
-    TEST_ASSERT(state >= AIRY_SVC_STATE_NONE && state <= AIRY_SVC_STATE_ERROR,
-                "服务状态在合法枚举范围内");
+    TEST_ASSERT_EQ(airy_svc_pause(svc), AIRY_SUCCESS, "带 PAUSEABLE 的服务可暂停");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_PAUSED, "pause 后进入 PAUSED");
+    TEST_ASSERT(!airy_svc_is_running(svc), "PAUSED 不报运行中");
 
-    bool running = airy_svc_is_running(svc);
-    TEST_ASSERT(running == true || running == false, "is_running 返回布尔值");
+    TEST_ASSERT_EQ(airy_svc_resume(svc), AIRY_SUCCESS, "resume 成功");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_RUNNING, "resume 回到 RUNNING");
 
-    bool ready = airy_svc_is_ready(svc);
-    TEST_ASSERT(ready == true || ready == false, "is_ready 返回布尔值");
+    TEST_ASSERT_EQ(airy_svc_stop(svc, false), AIRY_SUCCESS, "stop 成功");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_STOPPED, "stop 后进入 STOPPED");
+    TEST_ASSERT(!airy_svc_is_running(svc), "STOPPED 不报运行中");
 
-    err = airy_svc_pause(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_pause 可调用");
+    airy_svc_destroy(svc);
+}
 
-    err = airy_svc_resume(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_resume 可调用");
+static void test_svc_pause_requires_capability(void)
+{
+    printf("\n--- [Svc] 无 PAUSEABLE 时拒绝暂停 ---\n");
 
-    err = airy_svc_stop(svc, false);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_stop(false) 可调用");
+    airy_svc_interface_t iface = make_dummy_interface();
+    airy_svc_config_t config = {.name = "nocap_svc", .version = "1.0",
+                                .capabilities = AIRY_SVC_CAP_NONE};
+
+    airy_svc_t svc = NULL;
+    TEST_ASSERT_EQ(airy_svc_create(&svc, "nocap_svc", &iface, &config), AIRY_SUCCESS,
+                   "create 成功");
+    if (!svc)
+        return;
+    TEST_ASSERT_EQ(airy_svc_init(svc), AIRY_SUCCESS, "init 成功");
+    TEST_ASSERT_EQ(airy_svc_start(svc), AIRY_SUCCESS, "start 成功");
+
+    TEST_ASSERT_EQ(airy_svc_pause(svc), AIRY_EPROTONOSUPPORT, "未声明能力时返回协议不支持");
+    TEST_ASSERT_EQ(airy_svc_get_state(svc), AIRY_SVC_STATE_RUNNING, "拒绝后状态不变");
 
     airy_svc_destroy(svc);
 }
@@ -168,23 +192,28 @@ static void test_svc_state_strings(void)
 
     static const struct {
         airy_svc_state_t state;
-    } cases[] = {{AIRY_SVC_STATE_NONE},     {AIRY_SVC_STATE_CREATED}, {AIRY_SVC_STATE_INITIALIZING},
-                 {AIRY_SVC_STATE_READY},    {AIRY_SVC_STATE_RUNNING}, {AIRY_SVC_STATE_PAUSED},
-                 {AIRY_SVC_STATE_STOPPING}, {AIRY_SVC_STATE_STOPPED}, {AIRY_SVC_STATE_ERROR}};
+        const char *text;
+    } cases[] = {{AIRY_SVC_STATE_NONE, "NONE"},     {AIRY_SVC_STATE_CREATED, "CREATED"},
+                 {AIRY_SVC_STATE_INITIALIZING, "INITIALIZING"},
+                 {AIRY_SVC_STATE_READY, "READY"},   {AIRY_SVC_STATE_RUNNING, "RUNNING"},
+                 {AIRY_SVC_STATE_PAUSED, "PAUSED"}, {AIRY_SVC_STATE_STOPPING, "STOPPING"},
+                 {AIRY_SVC_STATE_STOPPED, "STOPPED"},
+                 {AIRY_SVC_STATE_ZOMBIE, "ZOMBIE"}, {AIRY_SVC_STATE_ERROR, "ERROR"}};
 
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         const char *str = airy_svc_state_to_string(cases[i].state);
-        TEST_ASSERT(str != NULL && strlen(str) > 0, "state_to_string 返回非空字符串");
-
-        if (str) {
-            airy_svc_state_t back = airy_svc_state_from_string(str);
-            TEST_ASSERT_EQ(back, cases[i].state, "往返转换一致");
-        }
+        TEST_ASSERT(str != NULL && strcmp(str, cases[i].text) == 0, cases[i].text);
+        TEST_ASSERT_EQ(airy_svc_state_from_string(str), cases[i].state, "往返转换一致");
     }
 
-    airy_svc_state_t unknown_back = airy_svc_state_from_string("UNKNOWN_STATE_XYZ");
-    TEST_ASSERT(unknown_back >= AIRY_SVC_STATE_NONE && unknown_back <= AIRY_SVC_STATE_ERROR,
-                "未知字符串返回合法枚举值");
+    TEST_ASSERT(strcmp(airy_svc_state_to_string((airy_svc_state_t)(AIRY_SVC_STATE_ERROR + 1)),
+                       "UNKNOWN") == 0,
+                "越界状态给出 UNKNOWN");
+    TEST_ASSERT_EQ(airy_svc_state_from_string("UNKNOWN_STATE_XYZ"), AIRY_SVC_STATE_NONE,
+                   "未知字符串回落到 NONE");
+    TEST_ASSERT_EQ(airy_svc_state_from_string(NULL), AIRY_SVC_STATE_NONE, "空串回落到 NONE");
+    TEST_ASSERT_EQ(airy_svc_state_from_string("running"), AIRY_SVC_STATE_RUNNING,
+                   "大小写不敏感");
 }
 
 static void test_svc_capability_checks(void)
@@ -198,17 +227,13 @@ static void test_svc_capability_checks(void)
                                                 AIRY_SVC_CAP_PAUSEABLE | AIRY_SVC_CAP_BATCH};
 
     airy_svc_t svc = NULL;
-    airy_err_t err = airy_svc_create(&svc, "cap_svc", &iface, &config);
-    if (!svc) {
-        TEST_ASSERT(1, "create返回NULL，跳过能力检查");
+    TEST_ASSERT_EQ(airy_svc_create(&svc, "cap_svc", &iface, &config), AIRY_SUCCESS, "create 成功");
+    if (!svc)
         return;
-    }
 
-    bool has_async = airy_svc_has_capability(svc, AIRY_SVC_CAP_ASYNC);
-    TEST_ASSERT(has_async == true || has_async == false, "has_capability(ASYNC) 返回布尔值");
-
-    bool has_cancel = airy_svc_has_capability(svc, AIRY_SVC_CAP_CANCELABLE);
-    TEST_ASSERT(has_cancel == true || has_cancel == false, "has_capability(CANCELABLE) 返回布尔值");
+    TEST_ASSERT(airy_svc_has_capability(svc, AIRY_SVC_CAP_ASYNC), "声明过的 ASYNC 可见");
+    TEST_ASSERT(airy_svc_has_capability(svc, AIRY_SVC_CAP_BATCH), "声明过的 BATCH 可见");
+    TEST_ASSERT(!airy_svc_has_capability(svc, AIRY_SVC_CAP_CANCELABLE), "未声明的 CANCELABLE 不可见");
 
     airy_svc_destroy(svc);
 }
@@ -221,20 +246,17 @@ static void test_svc_registry_operations(void)
     airy_svc_config_t config = {.name = "reg_svc", .version = "1.0"};
 
     airy_svc_t svc = NULL;
-    airy_err_t err = airy_svc_create(&svc, "reg_svc", &iface, &config);
-    if (!svc) {
-        TEST_ASSERT(1, "create返回NULL，跳过注册表测试");
+    TEST_ASSERT_EQ(airy_svc_create(&svc, "reg_svc", &iface, &config), AIRY_SUCCESS, "create 成功");
+    if (!svc)
         return;
-    }
 
-    err = airy_svc_register(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_register 可调用");
+    TEST_ASSERT_EQ(airy_svc_register(svc), AIRY_SUCCESS, "重复注册按幂等成功");
+    TEST_ASSERT(airy_svc_find("reg_svc") == svc, "find 取回同一句柄");
+    TEST_ASSERT(airy_svc_find("reg_svc_absent") == NULL, "未注册名字不可见");
 
-    airy_svc_t found = airy_svc_find("reg_svc");
-    TEST_ASSERT(found != NULL || found == NULL, "find 返回句柄或NULL");
-
-    err = airy_svc_unregister(svc);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "airy_svc_unregister 可调用");
+    TEST_ASSERT_EQ(airy_svc_unregister(svc), AIRY_SUCCESS, "unregister 成功");
+    TEST_ASSERT(airy_svc_find("reg_svc") == NULL, "注销后不可见");
+    TEST_ASSERT_EQ(airy_svc_unregister(svc), AIRY_ENOENT, "重复注销返回 ENOENT");
 
     airy_svc_destroy(svc);
 }
@@ -247,24 +269,17 @@ static void test_svc_user_data_and_metadata(void)
     airy_svc_config_t config = {.name = "ud_svc"};
 
     airy_svc_t svc = NULL;
-    airy_err_t err = airy_svc_create(&svc, "ud_svc", &iface, &config);
-    if (!svc) {
-        TEST_ASSERT(1, "create返回NULL，跳过用户数据测试");
+    TEST_ASSERT_EQ(airy_svc_create(&svc, "ud_svc", &iface, &config), AIRY_SUCCESS, "create 成功");
+    if (!svc)
         return;
-    }
 
     int my_data = 0xDEAD;
-    err = airy_svc_set_user_data(svc, &my_data);
-    TEST_ASSERT(err == AIRY_SUCCESS || err != 0, "set_user_data 可调用");
+    TEST_ASSERT_EQ(airy_svc_set_user_data(svc, &my_data), AIRY_SUCCESS, "set_user_data 成功");
+    TEST_ASSERT(airy_svc_get_user_data(svc) == &my_data, "get_user_data 取回同一指针");
 
-    void *retrieved = airy_svc_get_user_data(svc);
-    TEST_ASSERT(retrieved == NULL || retrieved == &my_data, "get_user_data 返回设置的指针或NULL");
-
-    const char *name = airy_svc_get_name(svc);
-    TEST_ASSERT(name != NULL, "get_name 返回非空");
-
-    const char *ver = airy_svc_get_version(svc);
-    TEST_ASSERT(ver != NULL || ver == NULL, "get_version 返回值（取决于实现）");
+    TEST_ASSERT(strcmp(airy_svc_get_name(svc), "ud_svc") == 0, "get_name 与入参一致");
+    TEST_ASSERT(strcmp(airy_svc_get_version(svc), AIRYRT_VERSION) == 0,
+                "未配版本时回落编译版本号");
 
     airy_svc_destroy(svc);
 }
@@ -273,6 +288,7 @@ int main(void)
 {
     test_svc_create_destroy();
     test_svc_full_lifecycle();
+    test_svc_pause_requires_capability();
     test_svc_state_strings();
     test_svc_capability_checks();
     test_svc_registry_operations();
