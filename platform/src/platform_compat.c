@@ -301,6 +301,12 @@ airy_sock_t airy_sock_create_unix_server(const char *path)
     struct sockaddr_un addr;
     __builtin_memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
+    /* P1-1：sun_path 是 108 字节定长数组，超长路径不得静默截断——截断后
+     * bind 与 unlink/connect 指向不同 inode，同机多实例会互相踢掉。 */
+    if (strlen(path) >= sizeof(addr.sun_path)) {
+        close(fd);
+        return AIRY_ERR_INVALID_PARAM;
+    }
     AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
     unlink(path);
