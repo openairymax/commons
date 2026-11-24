@@ -53,6 +53,27 @@ static int check_basic_paths(const char *home, const char *want_run)
     return 0;
 }
 
+/* S31-P1-3：用户主目录与安装根是两条独立解析链。输入路径里的 `~` 只按
+ * 登录用户主目录展开，AIRY_HOME 指向分发实例时也不得改变用户语义；宿主
+ * 未提供主目录时返回 NULL，禁止回退 CWD 相对路径（回落由调用方决定）。 */
+static int check_user_home(void)
+{
+#ifdef _WIN32
+    const char *want = getenv("USERPROFILE");
+#else
+    const char *want = getenv("HOME");
+#endif
+    const char *got = airy_user_home_dir();
+    if (!want || want[0] == '\0') {
+        if (got) {
+            fprintf(stderr, "✗FAIL: user home must be NULL without host home\n");
+            return 1;
+        }
+        return 0;
+    }
+    return expect_path(got, want, "user home dir");
+}
+
 /* 0.1.21 A-6：只读快照契约。十项必须与逐项访问器同源（指针同一），
  * 否则医生/门禁与安装器会看到两套根；且查询不得触发目录创建。 */
 static int check_query_view(const char *home, const char *want_run)
@@ -144,6 +165,8 @@ int main(void)
     printf("===========================================\n");
 
     if (check_basic_paths(home, want_run))
+        return 1;
+    if (check_user_home())
         return 1;
     if (check_query_view(home, want_run))
         return 1;
