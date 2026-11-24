@@ -152,11 +152,13 @@
 #define AIRY_RS_STATE_UNVERIFIED "unverified"
 #define AIRY_RS_STATE_NEEDS_CRITERIA "needs_criteria"
 
-/* usage（D-11）：run_end.usage 结构化计量，source 区分 provider 实报与估算。 */
+/* usage（D-11）：run_end/result/run_result 统一结构化计量，source 区分
+ * provider 实报与估算。cost 与 token 同对象下发，避免两套平铺键各说各话。 */
 #define AIRY_RS_K_USAGE       "usage"
 #define AIRY_RS_K_USAGE_PROMPT "prompt"
 #define AIRY_RS_K_USAGE_COMP  "completion"
 #define AIRY_RS_K_USAGE_TOTAL "total"
+#define AIRY_RS_K_USAGE_COST  "cost"
 #define AIRY_RS_K_USAGE_SRC   "source"
 #define AIRY_RS_USAGE_PROVIDER "provider"
 #define AIRY_RS_USAGE_ESTIMATE "estimated"
