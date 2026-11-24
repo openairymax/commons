@@ -27,6 +27,7 @@
 /* UCRT <io.h> is shadowed by this directory's io.h (PUBLIC -I leakage);
  * declare the needed CRT prototype locally until the shadow is removed. */
 int _commit(int fd);
+int _write(int fd, const void *buf, unsigned count);
 #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #else
@@ -133,6 +134,29 @@ ssize_t airy_io_write_all(int fd, const void *buf, size_t len)
     size_t off = 0;
     while (off < len) {
         ssize_t n = write(fd, p + off, len - off);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            return -1;
+        }
+        if (n == 0)
+            return -1;
+        off += (size_t)n;
+    }
+    return (ssize_t)off;
+}
+#else
+/* Windows: fds here are CRT descriptors (pipe ends wrapped with
+ * _open_osfhandle), so the portable write is _write. */
+ssize_t airy_io_write_all(int fd, const void *buf, size_t len)
+{
+    const char *p = (const char *)buf;
+    size_t off = 0;
+    while (off < len) {
+        size_t chunk = len - off;
+        if (chunk > 0x7fffffffU)
+            chunk = 0x7fffffffU;
+        int n = _write(fd, p + off, (unsigned)chunk);
         if (n < 0) {
             if (errno == EINTR)
                 continue;

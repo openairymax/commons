@@ -13,6 +13,16 @@
 #include <stdio.h>
 #ifndef _WIN32
 #include <sys/types.h>
+#else
+/* MSVC has no ssize_t; the Windows implementation of airy_io_write_all needs
+ * it (and callers such as the agent invoke path keep one signature across
+ * platforms). Guarded with the same macro as compat.h to stay a single
+ * definition when both headers are visible. */
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -51,19 +61,18 @@ int airy_io_write_file(const char *path, const void *data, size_t len);
  */
 int airy_io_sync(FILE *f);
 
-#ifndef _WIN32
 /**
  * @brief Write the entire buffer to a file descriptor.
  *
  * Loops over partial writes and retries on EINTR, so a single call
  * never silently truncates a frame (pipes, sockets, child stdin).
+ * Windows uses _write on the CRT fd that wraps the pipe HANDLE.
  * @param fd File descriptor
  * @param buf Data
  * @param len Byte count
  * @return Number of bytes written, or -1 on failure
  */
 ssize_t airy_io_write_all(int fd, const void *buf, size_t len);
-#endif
 
 /**
  * @brief Ensure a directory exists (create it if missing).
