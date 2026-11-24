@@ -138,6 +138,16 @@ extern "C" {
 
 const char *airy_home_dir(void);
 
+/**
+ * @brief 用户主目录（HOME / USERPROFILE 的 SSoT）
+ *
+ * 仅用于展开用户显式输入的 `~`（配置文件里的自定义路径），运行期数据
+ * 根一律经 airy_home_dir()。Windows 以 USERPROFILE 为准（HOME 通常未
+ * 设置），POSIX 取 HOME；无法解析时返回 NULL，调用方须显式兜底，
+ * 禁止回退 CWD 相对路径（daemon 与客户端 cwd 不同会写出两个根）。
+ */
+const char *airy_user_home_dir(void);
+
 const char *airy_bin_dir(void);
 
 const char *airy_lib_dir(void);

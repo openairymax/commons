@@ -298,6 +298,11 @@ const char *airy_home_dir(void)
     return g_home_dir;
 }
 
+const char *airy_user_home_dir(void)
+{
+    return paths_user_home();
+}
+
 const char *airy_bin_dir(void)
 {
     paths_ensure_resolved();
