@@ -92,9 +92,11 @@ foreach(test_source ${UNIT_TEST_SOURCES})
     endif()
 
     # test_jsonrpc 直接断言 cJSON 结构（airy_common 为 PRIVATE 链接 cjson，
-    # 符号不传播），需自链 cjson 并取 cjson_helpers 头路径
+    # 符号不传播），需自链 cjson 并取 cjson_helpers 头路径；
+    # test_hall_event 的读侧压平原语（hall_event_wire.c）同样经 cjson 出符号。
     if(test_source STREQUAL "unit/test_jsonrpc.c" OR
-       test_source STREQUAL "unit/test_err_class.c")
+       test_source STREQUAL "unit/test_err_class.c" OR
+       test_source STREQUAL "unit/test_hall_event.c")
         target_include_directories(${test_name} PRIVATE
             ${COMMONS_ROOT}/utils/cjson)
         if(AIRY_HAS_CJSON)

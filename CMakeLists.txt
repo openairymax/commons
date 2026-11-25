@@ -161,6 +161,13 @@ list(APPEND SOURCES utils/ipc/circuit_breaker.c)
 # 无 POSIX/日志依赖（gateway PEP epoch 观察线程为当前唯一消费方）。
 list(APPEND SOURCES utils/ipc/ipc_backoff.c)
 
+# 0.1.21 S30-P1-5: hall 读侧线上事件形态（磁盘 envelope → 扁平事件）收敛
+# 到 commons 单点。cJSON 依赖只落在本件，写侧对象保持无 cJSON 可编译，
+# 故仅在 AIRY_HAS_CJSON 时入编译单元列表。
+if(AIRY_HAS_CJSON)
+    list(APPEND SOURCES utils/hall/hall_event_wire.c)
+endif()
+
 add_library(airy_common STATIC ${SOURCES})
 
 # 8.2.3 (SSoT): monotonic clock single source — corekern clock.c is compiled

@@ -12,6 +12,7 @@
  */
 
 #include "hall_event.h"
+#include "airy_memory.h"
 #include "io.h"
 
 #include <stdio.h>
@@ -424,6 +425,42 @@ static int test_invalid_params(void)
     return 0;
 }
 
+/* 读侧线上形态：磁盘 envelope 压平后字段名/类型/缺省与三路读接口一致。 */
+static int test_flatten_wire_shape(void)
+{
+#ifdef AIRY_HAS_CJSON
+    const char *task = "he-flat";
+    TEST_ASSERT(hall_evt_write(task, "progress", "node-x", "{\"k\":1}") == 0, "write ok");
+
+    char dir[512];
+    snprintf(dir, sizeof(dir), "%s/default/%s/progress", g_root, task);
+    char fname[256];
+    TEST_ASSERT(he_max_seq_file(dir, fname, sizeof(fname)) == 0, "find event");
+    char path[768];
+    snprintf(path, sizeof(path), "%s/%s", dir, fname);
+
+    char *flat = hall_evt_flat_file(path);
+    TEST_ASSERT(flat != NULL, "flatten ok");
+    TEST_ASSERT(strstr(flat, "\"file_id\":\"default.he-flat.progress.") != NULL,
+                "file_id carries the event id");
+    TEST_ASSERT(strstr(flat, "\"category\":\"progress\"") != NULL, "category lifted");
+    TEST_ASSERT(strstr(flat, "\"task_id\":\"he-flat\"") != NULL, "task_id lifted");
+    TEST_ASSERT(strstr(flat, "\"node_id\":\"node-x\"") != NULL, "node_id lifted");
+    TEST_ASSERT(strstr(flat, "\"tenant_id\":\"default\"") != NULL, "tenant_id lifted");
+    TEST_ASSERT(strstr(flat, "\"seq\":1") != NULL, "seq is numeric");
+    TEST_ASSERT(strstr(flat, "\"gseq\":") != NULL, "gseq is numeric");
+    TEST_ASSERT(strstr(flat, "\"content\":{\"k\":1}") != NULL, "content kept as object");
+    TEST_ASSERT(strstr(flat, "\"access\"") == NULL, "access envelope not leaked");
+    AIRY_FREE(flat);
+
+    TEST_ASSERT(hall_evt_flat_file(NULL) == NULL, "NULL path rejected");
+    TEST_ASSERT(hall_evt_flat_file("") == NULL, "empty path rejected");
+    TEST_ASSERT(hall_evt_flat_file("/nonexistent/airymaxrt-he.json") == NULL,
+                "missing file rejected");
+#endif
+    return 0;
+}
+
 int main(void)
 {
     isolate_data_dir();
@@ -441,6 +478,7 @@ int main(void)
     TEST_RUN(test_prev_file_category_isolated);
     TEST_RUN(test_seq_increments);
     TEST_RUN(test_invalid_params);
+    TEST_RUN(test_flatten_wire_shape);
 
     printf("\n=== Results: %d passed, %d failed ===\n", passed_tests, failed_tests);
     return failed_tests == 0 ? 0 : 1;

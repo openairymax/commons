@@ -176,6 +176,22 @@ int hall_evt_commit(const hall_evt_req_t *req);
 int hall_evt_write(const char *task_id, const char *category, const char *node_id,
                    const char *content_json);
 
+#ifdef AIRY_HAS_CJSON
+/**
+ * @brief 读取一条事件文件并压平为 hall.* 读接口共用的线上事件形态。
+ *
+ * 磁盘 envelope 形如 {"file":{...},"access":{...},"content":{...}}；读侧
+ * （hall.replay / hall.stream / hall.watch）统一对外发扁平事件
+ * {file_id,category,task_id,tenant_id,node_id,ts_utc,seq,gseq,content}。
+ * 字段映射与缺省填充在此单点定义，避免各读端点各写一份而漂移。
+ *
+ * @param path 事件文件路径
+ * @return 新分配的紧凑 JSON 串（调用方 AIRY_FREE 释放）；读取或解析失败
+ *         返回 NULL
+ */
+char *hall_evt_flat_file(const char *path);
+#endif /* AIRY_HAS_CJSON */
+
 #ifdef __cplusplus
 }
 #endif

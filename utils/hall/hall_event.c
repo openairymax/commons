@@ -6,7 +6,7 @@
  * @brief 任务大厅事件磁盘格式唯一真相源（SSoT）写侧实现。
  *
  * 原三份复刻（daemons/common/src/util/hall_writer.c 已消解、
- * gateway/src/gateway/gateway_hall_store.c 写侧、
+ * gateway/src/gateway/hall/gateway_hall_store.c 写侧、
  * atoms/coreloopthree/src/work_hall/hall_store.c）的磁盘格式语义收敛到此：
  * seq 续接、prev_file 决策链、write_roles 策略、目录创建、原子写与写后回读
  * 断言在此单点定义；gseq 编号机制见 hall_evt_gseq.c。磁盘契约见 hall_event.h。
