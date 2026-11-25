@@ -54,6 +54,10 @@ set(UNIT_TEST_SOURCES
     # AIRY_HOME 路径体系（运行时目录覆盖优先级：显式 AIRY_RUNTIME_DIR 权威，
     # 未设置时派生；解析为进程级一次性状态，故下方按环境分两次注册）
     unit/test_platform_paths.c
+    # AF_UNIX 连接/绑定原语（0.1.21 §33.2 #13）：端点建立与权限位、阻塞与
+    # 非阻塞+poll 两条连接路径、错误分流（ENOENT 保留 / ENAMETOOLONG 判非法）、
+    # 陈旧节点回收与 backlog 兜底
+    unit/test_platform_unix_sock.c
     # svc 生命周期机制族（0.1.19 S74 随权威实现自 daemons 迁入；自含测试）
     unit/test_svc_common.c
     unit/test_svc_stop.c
