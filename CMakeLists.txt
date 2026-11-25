@@ -21,6 +21,8 @@ set(SOURCES
     # 0c A 类直搬：平台扩展实现（airy_dl_*/airy_sock_*/进程/线程别名等，
     # 声明在 platform/include/daemon_platform_ext.h，从 daemons 迁入）
     platform/src/platform_compat.c
+    # 出站连接与阻塞整包收发（0.1.21 N-2：A-IPC 客户端唯一平台出口）
+    platform/src/platform_sock_conn.c
     utils/token/counter.c
     utils/token/token_standard.c
     # 0.1.19 §164: UTF-8 词流扫描机制件（mem_d compress/cache 词法 SSoT）

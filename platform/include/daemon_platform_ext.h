@@ -137,6 +137,21 @@ airy_sock_t airy_sock_accept(airy_sock_t server_fd, uint32_t timeout_ms);
 ssize_t airy_sock_recv(airy_sock_t sock, void *buf, size_t len);
 ssize_t airy_sock_send(airy_sock_t sock, const void *buf, size_t len);
 
+/* 阻塞客户端原语（单请求单响应语义，实现见 platform_sock_conn.c）。
+ * 端点：POSIX 为 AF_UNIX 路径，Windows 为 "host:port" TCP 回环；
+ * 解析与连接只此一处，调用方不再按平台分支。失败统一返回
+ * AIRY_INVALID_SOCKET，errno / WSAGetLastError 保留给调用方诊断。 */
+airy_sock_t airy_sock_conn_endpoint(const char *endpoint, uint32_t timeout_ms);
+
+/* 接收超时（ms；0 取消超时）。0 成功，AIRY_ERR_* 失败。 */
+int airy_sock_set_recv_timeout(airy_sock_t sock, uint32_t ms);
+
+/* 阻塞读：>0 字节数，0 对端关闭，<0 失败（EINTR 内部重试，errno 保留）。 */
+ssize_t airy_sock_recv_block(airy_sock_t sock, void *buf, size_t len);
+
+/* 整包发送：短写续发，0 成功，AIRY_ERR_* 失败。 */
+int airy_sock_send_all(airy_sock_t sock, const void *buf, size_t len);
+
 /* Read a complete JSON-RPC request frame from a daemon client socket.
  * Loop poll+recv probing JSON completeness (mirrors the client-side
  * rpc_recv_response), lifting the historical single-recv 64 KiB cap so
