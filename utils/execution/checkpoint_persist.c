@@ -3,15 +3,13 @@
 
 /**
  * @file checkpoint_persist.c
- * @brief AgentRT task checkpoint - persistence and restore domain.
+ * @brief AgentRT task checkpoint - persistence domain.
  *
- * Handles checkpoint save/load: file path and sequence number parsing,
- * directory scanning, JSON serialization write and read-back restore.
+ * Handles checkpoint save: file path construction, sequence number
+ * parsing, directory scanning for task ids and JSON serialization write.
  */
 
 #include "checkpoint_internal.h"
-
-#include "json_key.h"
 
 /* Build the checkpoint file path including the sequence number.
  *
@@ -143,28 +141,6 @@ static void *grow_push(grow_t *g)
 }
 
 typedef struct {
-    const char *want;
-    grow_t buf;
-    bool failed;
-} seq_sink_t;
-
-static bool seq_visitor(const char *task_id, uint64_t seq, void *ctx)
-{
-    seq_sink_t *s = (seq_sink_t *)ctx;
-    if (s->failed)
-        return false;
-    if (strcmp(task_id, s->want) != 0)
-        return true;
-    uint64_t *slot = (uint64_t *)grow_push(&s->buf);
-    if (!slot) {
-        s->failed = true;
-        return false;
-    }
-    *slot = seq;
-    return true;
-}
-
-typedef struct {
     grow_t buf;
     bool failed;
 } id_sink_t;
@@ -195,26 +171,6 @@ static bool id_visitor(const char *task_id, uint64_t seq, void *ctx)
     return true;
 }
 
-/* Collect all sequence numbers for a task. Returns an AIRY_MALLOC-allocated
- * array (caller must AIRY_FREE) with *out_count set; returns NULL and
- * *out_count=0 when nothing matches. Not locked: only reads the directory;
- * stats are updated by the caller under lock. */
-uint64_t *collect_task_seqs(const char *task_id, size_t *out_count)
-{
-    *out_count = 0;
-    if (!task_id)
-        return NULL;
-
-    seq_sink_t s = {task_id, {NULL, 0, 0, sizeof(uint64_t)}, false};
-    scan_cp_entries(seq_visitor, &s);
-    if (s.failed || s.buf.count == 0) {
-        AIRY_FREE(s.buf.items);
-        return NULL;
-    }
-    *out_count = s.buf.count;
-    return (uint64_t *)s.buf.items;
-}
-
 /* Collect the distinct task_ids that own at least one checkpoint. Returns an
  * AIRY_MALLOC-allocated string array (caller frees each entry plus the
  * array) with *out_count set; returns NULL and *out_count=0 when empty. */
@@ -233,25 +189,6 @@ char **collect_task_ids(size_t *out_count)
     }
     *out_count = s.buf.count;
     return (char **)s.buf.items;
-}
-
-/* Find the highest sequence number for a task; 0 means no checkpoint.
- * Note: production code (adapter/loop/engine) always saves with
- * sequence_num > 0, so 0 is a safe "not found" sentinel. */
-static uint64_t find_latest_seq(const char *task_id)
-{
-    size_t cnt = 0;
-    uint64_t *seqs = collect_task_seqs(task_id, &cnt);
-    if (!seqs)
-        return 0;
-
-    uint64_t max_seq = 0;
-    for (size_t i = 0; i < cnt; i++) {
-        if (seqs[i] > max_seq)
-            max_seq = seqs[i];
-    }
-    AIRY_FREE(seqs);
-    return max_seq;
 }
 
 static void write_json_escaped_str(FILE *fp, const char *str)
@@ -293,95 +230,6 @@ static void write_json_value(FILE *fp, const char *str)
     fputc('"', fp);
     write_json_escaped_str(fp, str);
     fputc('"', fp);
-}
-
-static char json_unescape(char c)
-{
-    switch (c) {
-    case 'n':
-        return '\n';
-    case 't':
-        return '\t';
-    case 'r':
-        return '\r';
-    case '"':
-        return '"';
-    default:
-        return '\\';
-    }
-}
-
-static char *json_extract_string(const char *json, const char *key)
-{
-    const char *p;
-    const char *end;
-    size_t n;
-
-    if (airy_json_key_find(json, key, &p, &n) != AIRY_JSON_OK)
-        return NULL;
-    if (n < 2 || *p != '"')
-        return NULL;
-    p++;
-    end = p + n - 2;
-
-    size_t cap = 512;
-    char *val = (char *)AIRY_MALLOC(cap);
-    if (!val) {
-        AIRY_LOG_ERROR("C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (malloc) for key=%s", key);
-        return NULL;
-    }
-    size_t len = 0;
-
-    while (p < end && *p != '\n') {
-        if (*p == '\\' && *(p + 1)) {
-            p++;
-            char esc = json_unescape(*p);
-            if (len + 2 >= cap) {
-                cap *= 2;
-                val = (char *)AIRY_REALLOC(val, cap);
-                if (!val) {
-                    AIRY_LOG_ERROR(
-                        "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc escape) for key=%s",
-                        key);
-                    return NULL;
-                }
-            }
-            val[len++] = esc;
-            p++;
-        } else {
-            if (len + 2 >= cap) {
-                cap *= 2;
-                val = (char *)AIRY_REALLOC(val, cap);
-                if (!val) {
-                    AIRY_LOG_ERROR(
-                        "C-L07: Checkpoint: JSON-EXTRACT-FAIL — OOM (realloc char) for key=%s",
-                        key);
-                    return NULL;
-                }
-            }
-            val[len++] = *p;
-            p++;
-        }
-    }
-    val[len] = '\0';
-    return val;
-}
-
-static uint64_t json_extract_uint64(const char *json, const char *key)
-{
-    const char *p;
-    const char *end;
-    size_t n;
-    uint64_t v = 0;
-
-    if (airy_json_key_find(json, key, &p, &n) != AIRY_JSON_OK)
-        return 0;
-    end = p + n;
-    while (p < end && *p >= '0' && *p <= '9') {
-        v = v * 10 + (uint64_t)(*p - '0');
-        p++;
-    }
-    return v;
 }
 
 airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
@@ -474,120 +322,5 @@ airy_err_t airy_checkpoint_save(airy_task_checkpoint_t *cp)
 
     AIRY_LOG_DEBUG("C-L07: Checkpoint: SAVE-OK task_id=%s seq=%llu size=%zu", cp->task_id,
               (unsigned long long)cp->sequence_num, cp->state_size);
-    return AIRY_SUCCESS;
-}
-
-/* 把 JSON 中的 state/session/seq/timestamp 字段回填到 checkpoint。 */
-static void cp_apply_fields(airy_task_checkpoint_t *cp, const char *json_buf)
-{
-    char *state_str = json_extract_string(json_buf, "state");
-    char *sj = json_extract_string(json_buf, "state_json");
-
-    if (state_str) {
-        cp->state = string_to_state(state_str);
-        AIRY_FREE(state_str);
-    }
-    if (sj) {
-        cp->state_json = sj;
-        cp->state_size = strlen(sj);
-        cp->checksum = calculate_checksum(sj, strlen(sj));
-    }
-
-    char *sid = json_extract_string(json_buf, "session_id");
-    if (sid) {
-        AIRY_STRNCPY_TERM(cp->session_id, sid, sizeof(cp->session_id));
-        AIRY_FREE(sid);
-        sid = NULL;
-    }
-    cp->sequence_num = json_extract_uint64(json_buf, "sequence_num");
-    cp->timestamp = json_extract_uint64(json_buf, "timestamp");
-}
-
-airy_err_t airy_checkpoint_restore(const char *task_id, uint64_t sequence_num,
-                                   airy_task_checkpoint_t **out_cp)
-{
-
-    if (!g_checkpoint_initialized)
-        return AIRY_ENOTINIT;
-    if (!task_id || !out_cp)
-        return AIRY_EINVAL;
-
-    /* sequence_num == 0 means restore the latest checkpoint: scan the
-     * directory for the highest seq. sequence_num > 0 restores the
-     * checkpoint with that specific sequence number. */
-    uint64_t actual_seq = sequence_num;
-    if (actual_seq == 0) {
-        actual_seq = find_latest_seq(task_id);
-        if (actual_seq == 0) {
-            AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — no checkpoint found "
-                     "task_id=%s",
-                     task_id);
-        }
-    }
-    if (actual_seq == 0)
-        return AIRY_ENOENT;
-
-    char filepath[MAX_CHECKPOINT_PATH];
-    if (build_filepath_with_seq(task_id, actual_seq, filepath, sizeof(filepath)) != 0)
-        return AIRY_EINVAL;
-
-    FILE *fp = fopen(filepath, "r");
-    if (!fp) {
-        AIRY_LOG_WARN("C-L07: Checkpoint: RESTORE-FAIL — file not found "
-                 "path=%s task_id=%s seq=%llu errno=%d",
-                 filepath, task_id, (unsigned long long)actual_seq, errno);
-        return AIRY_ENOENT;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    if (file_size <= 0 || file_size > 10 * 1024 * 1024) {
-        fclose(fp);
-        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — invalid file size "
-                  "path=%s size=%ld task_id=%s",
-                  filepath, file_size, task_id);
-        return AIRY_EIO;
-    }
-
-    char *json_buf = (char *)AIRY_MALLOC((size_t)(file_size + 1));
-    if (!json_buf) {
-        fclose(fp);
-        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — OOM "
-                  "path=%s size=%ld task_id=%s",
-                  filepath, file_size, task_id);
-        return AIRY_ENOMEM;
-    }
-
-    size_t read_len = fread(json_buf, 1, (size_t)file_size, fp);
-    if (read_len != (size_t)file_size) {
-        AIRY_FREE(json_buf);
-        fclose(fp);
-        AIRY_LOG_ERROR("C-L07: Checkpoint: RESTORE-FAIL — read error "
-                  "path=%s expected=%ld actual=%zu task_id=%s",
-                  filepath, file_size, read_len, task_id);
-        return AIRY_EIO;
-    }
-    json_buf[read_len] = '\0';
-    fclose(fp);
-
-    airy_task_checkpoint_t *cp =
-        (airy_task_checkpoint_t *)AIRY_CALLOC(1, sizeof(airy_task_checkpoint_t));
-    if (!cp) {
-        AIRY_FREE(json_buf);
-        return AIRY_ENOMEM;
-    }
-
-    init_fields(cp, task_id, "", 0);
-    cp_apply_fields(cp, json_buf);
-
-    AIRY_FREE(json_buf);
-    json_buf = NULL;
-    airy_mtx_lock(&g_checkpoint_mutex);
-    g_checkpoint_stats.total_restore_ops++;
-    airy_mtx_unlock(&g_checkpoint_mutex);
-    *out_cp = cp;
-    AIRY_LOG_DEBUG("C-L07: Checkpoint: RESTORE-OK task_id=%s seq=%llu state=%s", task_id,
-              (unsigned long long)cp->sequence_num, state_to_string(cp->state));
     return AIRY_SUCCESS;
 }

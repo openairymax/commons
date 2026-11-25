@@ -98,10 +98,9 @@ set(SOURCES
     utils/config_unified/yaml_minimal_node.c
     utils/config_unified/yaml_minimal_scalar.c
     utils/config_unified/yaml_minimal_serialize.c
-    # execution/checkpoint 模块按功能域拆分：生命周期/持久化/快照/会话管理
+    # execution/checkpoint 模块按功能域拆分：生命周期/持久化/会话管理
     utils/execution/checkpoint.c
     utils/execution/checkpoint_persist.c
-    utils/execution/checkpoint_snapshot.c
     utils/execution/checkpoint_session.c
     utils/task/task_desc.c
     # 阶段 2: 统一扩展注册表 + 四域 provider 注册辅助（memory/llm/tool/storage/sandbox）

@@ -21,7 +21,6 @@
 #include <types.h> /* AIRY_SUCCESS */
 #include "platform.h" /* AIRY_HOME 权威路径：airy_data_dir() 收敛 checkpoint 落盘；airy_time_ns/airy_mtx_* */
 #include "error.h" /* AIRY_ERROR/airy_err_t/AIRY_ERR_STATE_ERROR */
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,8 +41,6 @@
 #define CHECKPOINT_FILE_EXTENSION ".json"
 #define MAX_CHECKPOINT_PATH 1024
 #define CHECKPOINT_VERSION 1
-#define MAX_LINE_LENGTH 8192
-#define MAX_VALUE_LENGTH 4096
 
 /* 默认 checkpoint 存储目录：收敛到 AIRY_HOME 数据目录（airy_data_dir() →
  * $AIRY_HOME/data/checkpoints），避免落盘到进程 CWD。返回静态缓冲。 */
@@ -63,14 +60,10 @@ uint32_t calculate_checksum(const char *data, size_t len);
 
 const char *state_to_string(airy_checkpoint_state_t state);
 
-airy_checkpoint_state_t string_to_state(const char *s);
-
 void init_fields(airy_task_checkpoint_t *cp, const char *task_id, const char *session_id,
                  uint64_t seq);
 
 int build_filepath_with_seq(const char *task_id, uint64_t seq, char *buf, size_t size);
-
-uint64_t *collect_task_seqs(const char *task_id, size_t *out_count);
 
 char **collect_task_ids(size_t *out_count);
 

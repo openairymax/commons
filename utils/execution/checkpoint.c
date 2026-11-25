@@ -14,7 +14,6 @@
  * - CROSS-01: airy_mtx_t -> airy_mtx_t
  * - CROSS-03: time(NULL) -> airy_time_ns()
  * - New auto-checkpoint hook mechanism (CoreLoopThree integration)
- * - Stronger JSON restore parsing robustness
  *
  * SP02 decoupling: migrated from daemons/common/src/ to
  * commons/utils/execution/, removing atoms/coreloopthree's physical
@@ -52,19 +51,6 @@ const char *state_to_string(airy_checkpoint_state_t state)
     if (state >= 0 && state <= CHECKPOINT_STATE_INVALID)
         return state_strings[state];
     return "unknown";
-}
-
-airy_checkpoint_state_t string_to_state(const char *s)
-{
-    if (!s)
-        return CHECKPOINT_STATE_INVALID;
-    if (strcmp(s, "pending") == 0)
-        return CHECKPOINT_STATE_PENDING;
-    if (strcmp(s, "completed") == 0)
-        return CHECKPOINT_STATE_COMPLETED;
-    if (strcmp(s, "failed") == 0)
-        return CHECKPOINT_STATE_FAILED;
-    return CHECKPOINT_STATE_INVALID;
 }
 
 static char **safe_str_array_dup(char **src, size_t count)
@@ -248,21 +234,6 @@ airy_err_t airy_checkpoint_get_stats(airy_checkpoint_stats_t *stats)
     airy_mtx_lock(&g_checkpoint_mutex);
     __builtin_memcpy(stats, &g_checkpoint_stats, sizeof(airy_checkpoint_stats_t));
     airy_mtx_unlock(&g_checkpoint_mutex);
-    return AIRY_SUCCESS;
-}
-
-airy_err_t airy_checkpoint_verify(const airy_task_checkpoint_t *cp, bool *is_valid)
-{
-
-    if (!cp || !is_valid)
-        return AIRY_EINVAL;
-    *is_valid = false;
-    if (cp->state == CHECKPOINT_STATE_INVALID)
-        return AIRY_SUCCESS;
-    if (!cp->state_json || cp->state_size == 0)
-        return AIRY_SUCCESS;
-    uint32_t calc = calculate_checksum(cp->state_json, cp->state_size);
-    *is_valid = (calc == cp->checksum);
     return AIRY_SUCCESS;
 }
 
