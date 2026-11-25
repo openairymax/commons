@@ -93,6 +93,13 @@
 #define AIRY_RS_K_ROUNDS_USED  "rounds_used"
 #define AIRY_RS_K_ROUNDS_LIMIT "rounds_limit"
 #define AIRY_RS_K_RESUME_TOKEN "resume_token"
+/* 停止原因（N-7）：一次 run 为什么结束。done / cancelled 之外一律复用
+ * AIRY_RS_REASON_* 词表，run_end / result / error 三处必须同源；
+ * rounds_limit 只表示客户端或策略显式给了轮次上限并到点。 */
+#define AIRY_RS_K_STOP_REASON  "stop_reason"
+#define AIRY_RS_STOP_DONE      "done"
+#define AIRY_RS_STOP_CANCELLED "cancelled"
+#define AIRY_RS_STOP_ROUNDS    "rounds_limit"
 
 /* error */
 #define AIRY_RS_K_CODE       "code"
