@@ -83,7 +83,7 @@ static airy_sock_t sock_conn_tcp(const char *endpoint)
 
 #endif
 
-airy_sock_t airy_sock_conn_endpoint(const char *endpoint, uint32_t timeout_ms)
+airy_sock_t airy_sock_conn_ep(const char *endpoint, uint32_t timeout_ms)
 {
     if (!endpoint || !endpoint[0])
         return AIRY_INVALID_SOCKET;
@@ -98,7 +98,7 @@ airy_sock_t airy_sock_conn_endpoint(const char *endpoint, uint32_t timeout_ms)
 #endif
 }
 
-int airy_sock_set_recv_timeout(airy_sock_t sock, uint32_t ms)
+int airy_sock_rcv_tmo(airy_sock_t sock, uint32_t ms)
 {
     if (sock == AIRY_INVALID_SOCKET)
         return AIRY_ERR_INVALID_PARAM;

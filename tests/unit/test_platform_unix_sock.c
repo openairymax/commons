@@ -9,7 +9,7 @@
  *   - airy_sock_conn_unix / airy_sock_bind_unix（POSIX 专有）：端点建立与
  *     往返、权限位、阻塞/超时两条连接路径、错误分流（ENOENT 保留、
  *     ENAMETOOLONG 判非法参数）、陈旧节点回收与 backlog 兜底；
- *   - airy_sock_conn_endpoint / airy_sock_set_recv_timeout /
+ *   - airy_sock_conn_ep / airy_sock_rcv_tmo /
  *     airy_sock_recv_block / airy_sock_send_all（两平台共用）：端点语义按
  *     平台分派（POSIX AF_UNIX 路径、Windows TCP 回环 "host:port"），
  *     整包发送、阻塞读、接收超时与 EOF 三态。
@@ -110,7 +110,7 @@ static int test_endpoint_roundtrip(void)
     for (i = 0; i < (int)sizeof(out); i++)
         out[i] = (char)('a' + i % 26);
 
-    airy_sock_t cli = airy_sock_conn_endpoint(e.ep, 0);
+    airy_sock_t cli = airy_sock_conn_ep(e.ep, 0);
     TEST_ASSERT(cli != AIRY_INVALID_SOCKET, "conn_endpoint should connect");
     airy_sock_t peer = accept(e.srv, NULL, NULL);
     TEST_ASSERT(peer != AIRY_INVALID_SOCKET, "accept should succeed");
@@ -139,12 +139,12 @@ static int test_recv_timeout(void)
 
     TEST_ASSERT(ep_open(&e) == 0, "endpoint should open");
 
-    airy_sock_t cli = airy_sock_conn_endpoint(e.ep, 0);
+    airy_sock_t cli = airy_sock_conn_ep(e.ep, 0);
     TEST_ASSERT(cli != AIRY_INVALID_SOCKET, "conn_endpoint should connect");
     airy_sock_t peer = accept(e.srv, NULL, NULL);
     TEST_ASSERT(peer != AIRY_INVALID_SOCKET, "accept should succeed");
 
-    TEST_ASSERT(airy_sock_set_recv_timeout(cli, 150) == AIRY_SUCCESS,
+    TEST_ASSERT(airy_sock_rcv_tmo(cli, 150) == AIRY_SUCCESS,
                 "recv timeout should install");
     TEST_ASSERT(airy_sock_recv_block(cli, buf, sizeof(buf)) < 0,
                 "idle recv_block should time out instead of blocking");
@@ -164,7 +164,7 @@ static int test_recv_eof(void)
 
     TEST_ASSERT(ep_open(&e) == 0, "endpoint should open");
 
-    airy_sock_t cli = airy_sock_conn_endpoint(e.ep, 0);
+    airy_sock_t cli = airy_sock_conn_ep(e.ep, 0);
     TEST_ASSERT(cli != AIRY_INVALID_SOCKET, "conn_endpoint should connect");
     airy_sock_t peer = accept(e.srv, NULL, NULL);
     TEST_ASSERT(peer != AIRY_INVALID_SOCKET, "accept should succeed");
@@ -184,12 +184,12 @@ static int test_recv_eof(void)
 /* 空端点与不可达端点：统一返回 AIRY_INVALID_SOCKET 哨兵，绝不返回半开句柄。 */
 static int test_endpoint_invalid(void)
 {
-    TEST_ASSERT(airy_sock_conn_endpoint(NULL, 0) == AIRY_INVALID_SOCKET,
+    TEST_ASSERT(airy_sock_conn_ep(NULL, 0) == AIRY_INVALID_SOCKET,
                 "NULL endpoint should be rejected");
-    TEST_ASSERT(airy_sock_conn_endpoint("", 0) == AIRY_INVALID_SOCKET,
+    TEST_ASSERT(airy_sock_conn_ep("", 0) == AIRY_INVALID_SOCKET,
                 "empty endpoint should be rejected");
 #ifndef _WIN32
-    TEST_ASSERT(airy_sock_conn_endpoint("/tmp/airy-unisock-absent.sock", 0) ==
+    TEST_ASSERT(airy_sock_conn_ep("/tmp/airy-unisock-absent.sock", 0) ==
                     AIRY_INVALID_SOCKET,
                 "absent endpoint should fail with the sentinel");
 #endif

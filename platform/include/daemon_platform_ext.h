@@ -141,10 +141,10 @@ ssize_t airy_sock_send(airy_sock_t sock, const void *buf, size_t len);
  * 端点：POSIX 为 AF_UNIX 路径，Windows 为 "host:port" TCP 回环；
  * 解析与连接只此一处，调用方不再按平台分支。失败统一返回
  * AIRY_INVALID_SOCKET，errno / WSAGetLastError 保留给调用方诊断。 */
-airy_sock_t airy_sock_conn_endpoint(const char *endpoint, uint32_t timeout_ms);
+airy_sock_t airy_sock_conn_ep(const char *endpoint, uint32_t timeout_ms);
 
 /* 接收超时（ms；0 取消超时）。0 成功，AIRY_ERR_* 失败。 */
-int airy_sock_set_recv_timeout(airy_sock_t sock, uint32_t ms);
+int airy_sock_rcv_tmo(airy_sock_t sock, uint32_t ms);
 
 /* 阻塞读：>0 字节数，0 对端关闭，<0 失败（EINTR 内部重试，errno 保留）。 */
 ssize_t airy_sock_recv_block(airy_sock_t sock, void *buf, size_t len);
