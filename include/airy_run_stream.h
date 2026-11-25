@@ -53,6 +53,12 @@
 /* C-16：本轮工具目录快照（catalog_source / tools / available / denied）。
  * 静态 bootstrap 与实时目录必须可区分，前端据此提示降级。 */
 #define AIRY_RS_TYPE_CATALOG   "catalog"
+/* N-8：子任务委派帧。start 宣告一次委派（sub_id / goal / depth / budget），
+ * end 收尾（sub_id / status / tokens）；子代理自身的 tool_start、token_delta
+ * 等帧走同一条通道，data 一律带 sub_id 与 depth，客户端按 sub_id 归组成
+ * 子树，depth=0 即顶层 run。 */
+#define AIRY_RS_TYPE_SUBAGENT_START "subagent_start"
+#define AIRY_RS_TYPE_SUBAGENT_END   "subagent_end"
 
 /* execution 层 */
 #define AIRY_RS_TYPE_TOOL_START "tool_start"
@@ -75,6 +81,15 @@
 /* catalog_source 取值：live = list_tools 实时目录；static = 内置 SSoT 回落 */
 #define AIRY_RS_CATALOG_SOURCE_LIVE   "live"
 #define AIRY_RS_CATALOG_SOURCE_STATIC "static"
+
+/* subagent_*（N-8 子任务委派）：sub_id 是本次委派的稳定标识，depth 是委派
+ * 层级（顶层 0），goal/budget 是留给复盘的目标与预算快照，tokens 是子任务
+ * 实耗。 */
+#define AIRY_RS_K_SUB_ID     "sub_id"
+#define AIRY_RS_K_SUB_GOAL   "goal"
+#define AIRY_RS_K_SUB_DEPTH  "depth"
+#define AIRY_RS_K_SUB_BUDGET "budget"
+#define AIRY_RS_K_SUB_TOKENS "tokens"
 
 /* run_start */
 #define AIRY_RS_K_PROMPT     "prompt"
