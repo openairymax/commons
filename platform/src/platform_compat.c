@@ -23,10 +23,12 @@
 #else
 #include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
 #ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
 #include <poll.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #ifdef __APPLE__
 #include <sys/sysctl.h>
@@ -275,52 +277,145 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
 }
 
 #if AIRY_PLATFORM_POSIX
-airy_sock_t airy_sock_create_unix_server(const char *path)
+/* 填充 sockaddr_un 并做超长判定。sun_path 是 108 字节定长数组，超长路径
+ * 不得静默截断——截断后 bind 与 unlink/connect 指向不同 inode，同机多
+ * 实例会互相踢掉。成功返回 0，失败返回 -1 并置 errno（驱动调用方分流）。 */
+static int unix_addr_fill(const char *path, struct sockaddr_un *addr)
 {
-    if (!path)
+    if (!path || !path[0]) {
+        errno = EINVAL;
+        return -1;
+    }
+    __builtin_memset(addr, 0, sizeof(*addr));
+    addr->sun_family = AF_UNIX;
+    if (strlen(path) >= sizeof(addr->sun_path)) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+    AIRY_STRNCPY_TERM(addr->sun_path, path, sizeof(addr->sun_path));
+    return 0;
+}
+
+/* 建端点前逐级补创父目录（尽力而为：失败时由 bind 给出最终判据）。 */
+static void unix_mkdir_parent(const char *path)
+{
+    char dir_buf[256];
+    size_t len = strlen(path);
+    if (len >= sizeof(dir_buf))
+        return;
+    AIRY_MEMCPY(dir_buf, path, len + 1);
+    char *slash = strrchr(dir_buf, '/');
+    if (!slash)
+        return;
+    *slash = '\0';
+    (void)airy_mkdir_p(dir_buf);
+}
+
+/* AF_UNIX 服务端端点：清理同名陈旧节点 → bind →（mode>0 时）chmod → listen。
+ * 返回阻塞态 fd；失败返回 AIRY_ERR_* 负值并回收已占用路径。backlog<=0 时按
+ * 1 兜底，避免 listen(0) 的平台差异。 */
+airy_sock_t airy_sock_bind_unix(const char *path, int backlog, int mode)
+{
+    struct sockaddr_un addr;
+    if (unix_addr_fill(path, &addr) != 0)
         return AIRY_ERR_INVALID_PARAM;
 
-    {
-        char dir_buf[256];
-        size_t len = strlen(path);
-        if (len >= sizeof(dir_buf))
-            return AIRY_ERR_INVALID_PARAM;
-        AIRY_MEMCPY(dir_buf, path, len + 1);
-        char *slash = strrchr(dir_buf, '/');
-        if (slash) {
-            *slash = '\0';
-            airy_mkdir_p(dir_buf);
-        }
-    }
-
-    int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0)
         return AIRY_ERR_IO;
-    airy_sock_tune(fd);
-
-    struct sockaddr_un addr;
-    __builtin_memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    /* P1-1：sun_path 是 108 字节定长数组，超长路径不得静默截断——截断后
-     * bind 与 unlink/connect 指向不同 inode，同机多实例会互相踢掉。 */
-    if (strlen(path) >= sizeof(addr.sun_path)) {
-        close(fd);
-        return AIRY_ERR_INVALID_PARAM;
-    }
-    AIRY_STRNCPY_TERM(addr.sun_path, path, sizeof(addr.sun_path));
 
     unlink(path);
-
-    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0 ||
+        (mode > 0 && chmod(path, (mode_t)mode) != 0) ||
+        listen(fd, backlog > 0 ? backlog : 1) != 0) {
+        int saved = errno;
         close(fd);
+        unlink(path);
+        errno = saved;
         return AIRY_ERR_IO;
     }
+    return fd;
+}
 
-    if (listen(fd, SOMAXCONN) != 0) {
-        close(fd);
+/* 非阻塞 server 面：建目录 + 绑定后补齐非阻塞与 SO_NOSIGPIPE。 */
+airy_sock_t airy_sock_create_unix_server(const char *path)
+{
+    if (!path || !path[0])
+        return AIRY_ERR_INVALID_PARAM;
+    unix_mkdir_parent(path);
+    airy_sock_t fd = airy_sock_bind_unix(path, SOMAXCONN, 0);
+    if (fd >= 0)
+        airy_sock_tune((int)fd);
+    return fd;
+}
+
+/* 非阻塞连接并 poll 等待就绪；成功返回 0 且 fd 恢复原标志，失败返回
+ * AIRY_ERR_IO / AIRY_ERR_TIMEOUT 并置 errno（由调用方统一关闭 fd）。 */
+static int unix_connect_wait(int fd, const struct sockaddr_un *addr,
+                             uint32_t timeout_ms)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags >= 0)
+        (void)fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    int rc;
+    do {
+        rc = connect(fd, (const struct sockaddr *)addr, sizeof(*addr));
+    } while (rc != 0 && errno == EINTR);
+    if (rc != 0 && errno != EINPROGRESS)
         return AIRY_ERR_IO;
-    }
 
+    if (rc != 0) {
+        struct pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = POLLOUT;
+        pfd.revents = 0;
+        do {
+            rc = poll(&pfd, 1, (int)timeout_ms);
+        } while (rc < 0 && errno == EINTR);
+        if (rc == 0) {
+            errno = ETIMEDOUT;
+            return AIRY_ERR_TIMEOUT;
+        }
+        if (rc < 0)
+            return AIRY_ERR_IO;
+        int so_error = 0;
+        socklen_t len = sizeof(so_error);
+        if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &so_error, &len) != 0)
+            return AIRY_ERR_IO;
+        if (so_error != 0) {
+            errno = so_error;
+            return AIRY_ERR_IO;
+        }
+    }
+    if (flags >= 0)
+        (void)fcntl(fd, F_SETFL, flags);
+    return 0;
+}
+
+/* AF_UNIX 客户端连接。timeout_ms==0 走阻塞连接，>0 走非阻塞连接 + poll 等
+ * 就绪；成功返回阻塞态 fd，失败返回 AIRY_ERR_* 负值（errno 保留，便于调用
+ * 方区分「路径超长」与「端点不可达」）。sun_path 的填充与超长判定只留在
+ * 本文件，调用点不再各写一份（此前 9 处生产代码各写一份，超长处理分歧）。 */
+airy_sock_t airy_sock_conn_unix(const char *path, uint32_t timeout_ms)
+{
+    struct sockaddr_un addr;
+    if (unix_addr_fill(path, &addr) != 0)
+        return AIRY_ERR_INVALID_PARAM;
+
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0)
+        return AIRY_ERR_IO;
+
+    int rc = (timeout_ms == 0)
+                 ? connect(fd, (struct sockaddr *)&addr, sizeof(addr))
+                 : unix_connect_wait(fd, &addr, timeout_ms);
+    if (rc != 0) {
+        int saved = errno;
+        close(fd);
+        errno = saved;
+        return rc;
+    }
     return fd;
 }
 #endif

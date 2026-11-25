@@ -122,6 +122,15 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port);
 
 #if AIRY_PLATFORM_POSIX
 airy_sock_t airy_sock_create_unix_server(const char *path);
+
+/* AF_UNIX 客户端连接：timeout_ms==0 阻塞，>0 非阻塞连接 + poll 等待。
+ * 成功返回阻塞态 fd；失败返回 AIRY_ERR_* 负值，errno 保留（ENAMETOOLONG
+ * 表示路径超长）。 */
+airy_sock_t airy_sock_conn_unix(const char *path, uint32_t timeout_ms);
+
+/* AF_UNIX 服务端端点：清理陈旧节点 → bind →（mode>0）chmod → listen。
+ * 成功返回阻塞态 fd；失败返回 AIRY_ERR_* 负值并回收已占用路径。 */
+airy_sock_t airy_sock_bind_unix(const char *path, int backlog, int mode);
 #endif
 
 airy_sock_t airy_sock_accept(airy_sock_t server_fd, uint32_t timeout_ms);
