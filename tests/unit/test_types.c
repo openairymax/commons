@@ -229,7 +229,6 @@ static void test_contract(void **state)
     contract.agent_id = "agent_001";
     contract.agent_name = "demo";
     contract.capability_count = 3;
-    contract.models.system1 = "small";
     contract.cost.token_per_task_avg = 1200;
     contract.cost.level = AIRY_AGENT_VERIFIED;
     contract.trust.verified_provider = true;
@@ -237,7 +236,6 @@ static void test_contract(void **state)
     assert_string_equal(contract.agent_id, "agent_001");
     assert_string_equal(contract.agent_name, "demo");
     assert_int_equal(contract.capability_count, 3);
-    assert_string_equal(contract.models.system1, "small");
     assert_int_equal(contract.cost.token_per_task_avg, 1200);
     assert_int_equal(contract.cost.level, AIRY_AGENT_VERIFIED);
     assert_true(contract.trust.verified_provider);

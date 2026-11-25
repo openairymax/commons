@@ -329,14 +329,6 @@ typedef struct {
 #endif
 
 /**
- * @brief Agent model configuration
- */
-typedef struct {
-    char *system1;
-    char *system2;
-} airy_models_t;
-
-/**
  * @brief Agent cost overview
  */
 typedef struct {
@@ -368,7 +360,6 @@ typedef struct {
     char *description;
     airy_capability_t *capabilities;
     size_t capability_count;
-    airy_models_t models;
     char **required_permissions;
     size_t permission_count;
     airy_cost_profile_t cost;
