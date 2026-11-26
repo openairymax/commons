@@ -327,6 +327,39 @@ static int test_rebind_stale_node(void)
     (void)unlink(path);
     return 0;
 }
+
+/* 端点 inode 归属（0.1.21 N-9）：ident 读 dev/ino，owned 仅对同一节点为真。
+ * 守护退出清理据此只删自己的监听点，避免误删并发接管者的新节点。 */
+static int test_sock_path_ident(void)
+{
+    char path[128];
+    char other[128];
+    uint64_t dev = 0, ino = 0;
+
+    (void)snprintf(path, sizeof(path), "/tmp/airy-sockid-%ld-a.node", (long)getpid());
+    (void)snprintf(other, sizeof(other), "/tmp/airy-sockid-%ld-b.node", (long)getpid());
+    (void)unlink(path);
+    (void)unlink(other);
+
+    TEST_ASSERT(airy_sock_path_ident(path, &dev, &ino) != 0, "missing node should fail");
+    TEST_ASSERT(airy_sock_path_owned(path, dev, ino) == 0, "missing node is not owned");
+
+    FILE *fa = fopen(path, "w");
+    FILE *fb = fopen(other, "w");
+    TEST_ASSERT(fa != NULL && fb != NULL, "temp nodes should be creatable");
+    fclose(fa);
+    fclose(fb);
+
+    TEST_ASSERT(airy_sock_path_ident(path, &dev, &ino) == 0, "ident should succeed on node");
+    TEST_ASSERT(airy_sock_path_owned(path, dev, ino) == 1, "same node should be owned");
+    TEST_ASSERT(airy_sock_path_owned(other, dev, ino) == 0, "other node must not be owned");
+    TEST_ASSERT(airy_sock_path_owned(path, dev, ino + 1) == 0, "stale inode must not be owned");
+
+    (void)unlink(path);
+    (void)unlink(other);
+    TEST_ASSERT(airy_sock_path_owned(path, dev, ino) == 0, "removed node must not be owned");
+    return 0;
+}
 #endif /* _WIN32 */
 
 int main(void)
@@ -346,6 +379,7 @@ int main(void)
     TEST_RUN(test_path_too_long);
     TEST_RUN(test_invalid_params);
     TEST_RUN(test_rebind_stale_node);
+    TEST_RUN(test_sock_path_ident);
 #endif
 
     printf("\n===========================================\n");
