@@ -35,6 +35,10 @@ extern "C" {
 #define JSONRPC_AUTH_FAILED (-32002)
 #define JSONRPC_SESSION_EXPIRED (-32003)
 #define JSONRPC_SERVICE_UNAVAILABLE (-32004)
+/* -32601 的语义是「本端没有这个方法」，供路由层判定方法是否可分发；
+ * 实体缺席（记录/工具/插件/市场条目查不到）是业务结果，必须用独立码，
+ * 否则客户端按 -32601 判路由会把它误当成「未实现」，也会掩盖真实缺陷。 */
+#define JSONRPC_NOT_FOUND (-32005)
 
 AIRY_API char *jsonrpc_build_error(int code, const char *message, int id);
 AIRY_API char *jsonrpc_build_success(cJSON *result, int id);
