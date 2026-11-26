@@ -36,6 +36,8 @@
 #define AIRY_TOOL_STRICT_DESC \
     "POSIX strict semantics: set -e plus pipefail, so a failing command or pipeline stage fails the call (default true; false restores plain sh -c semantics)."
 #define AIRY_TOOL_MKDIRS_DESC "Create missing parent directories (default true)."
+#define AIRY_TOOL_PRIV_DESC \
+    "Run the command through the audited privileged channel (no OS sandbox). Only a single simple command whose program is on the compiled whitelist (dnf/rpm/systemctl) is accepted; pipes, redirections, chaining, quotes and variable expansion are rejected. A local absolute path to an .rpm file is accepted as a package argument."
 
 #define AIRY_TOOL_JSON_FS_READ \
     "{\"type\":\"function\",\"function\":{\"name\":\"fs_read\"," \
@@ -62,7 +64,8 @@
     "\"description\":\"Execute a shell command and capture its output\"," \
     "\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"}," \
     "\"cwd\":{\"type\":\"string\",\"description\":\"" AIRY_TOOL_CWD_DESC "\"}," \
-    "\"shell_strict\":{\"type\":\"boolean\",\"description\":\"" AIRY_TOOL_STRICT_DESC "\"}}," \
+    "\"shell_strict\":{\"type\":\"boolean\",\"description\":\"" AIRY_TOOL_STRICT_DESC "\"}," \
+    "\"privileged\":{\"type\":\"boolean\",\"description\":\"" AIRY_TOOL_PRIV_DESC "\"}}," \
     "\"required\":[\"command\"]}}}"
 
 #define AIRY_TOOL_JSON_WEB_FETCH \
