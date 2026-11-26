@@ -131,6 +131,12 @@ airy_sock_t airy_sock_conn_unix(const char *path, uint32_t timeout_ms);
 /* AF_UNIX 服务端端点：清理陈旧节点 → bind →（mode>0）chmod → listen。
  * 成功返回阻塞态 fd；失败返回 AIRY_ERR_* 负值并回收已占用路径。 */
 airy_sock_t airy_sock_bind_unix(const char *path, int backlog, int mode);
+
+/* 监听节点身份（0.1.21 手册 D）：绑定成功后记录 st_dev/st_ino，退出时用
+ * airy_sock_path_owned 复核，只有路径仍指向自己绑定的 inode 才 unlink，
+ * 防止旧实例延迟退出误删新实例 rebind 的 sock。 */
+int airy_sock_path_ident(const char *path, uint64_t *dev, uint64_t *ino);
+int airy_sock_path_owned(const char *path, uint64_t dev, uint64_t ino);
 #endif
 
 airy_sock_t airy_sock_accept(airy_sock_t server_fd, uint32_t timeout_ms);

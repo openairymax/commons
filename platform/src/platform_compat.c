@@ -358,6 +358,26 @@ airy_sock_t airy_sock_create_unix_server(const char *path)
     return fd;
 }
 
+/* 记录/复核监听节点身份（0.1.21 手册 D）。路径不存在或身份不符都返回
+ * 失败，调用方据此放弃 unlink。 */
+int airy_sock_path_ident(const char *path, uint64_t *dev, uint64_t *ino)
+{
+    if (!path || !path[0] || !dev || !ino)
+        return -1;
+    struct stat st;
+    if (stat(path, &st) != 0)
+        return -1;
+    *dev = (uint64_t)st.st_dev;
+    *ino = (uint64_t)st.st_ino;
+    return 0;
+}
+
+int airy_sock_path_owned(const char *path, uint64_t dev, uint64_t ino)
+{
+    uint64_t d = 0, i = 0;
+    return airy_sock_path_ident(path, &d, &i) == 0 && d == dev && i == ino;
+}
+
 /* 非阻塞连接并 poll 等待就绪；成功返回 0 且 fd 恢复原标志，失败返回
  * AIRY_ERR_IO / AIRY_ERR_TIMEOUT 并置 errno（由调用方统一关闭 fd）。 */
 static int unix_connect_wait(int fd, const struct sockaddr_un *addr,
