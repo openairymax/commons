@@ -173,12 +173,18 @@ void airy_sock_cleanup(void)
 #if AIRY_PLATFORM_POSIX
 /* 新建/接受套接字的统一调优：SOCK_NONBLOCK 在 macOS/BSD 上为空定义，
  * 且 accept() 不继承监听 fd 的非阻塞标志，故此处以 fcntl 统一补齐；
- * SO_NOSIGPIPE 存在时抑制对端关闭引发的 SIGPIPE。 */
+ * SO_NOSIGPIPE 存在时抑制对端关闭引发的 SIGPIPE。
+ * 0.1.21 D1：同时置 FD_CLOEXEC——守护派生子进程（agent_d fork+exec、
+ * 工具执行器等）不得继承守护的 RPC 连接/监听 fd，否则父进程 close 后
+ * 对端收不到 EOF，以 EOF 判完成的客户端会挂到子进程退出。 */
 static void airy_sock_tune(int fd)
 {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags >= 0)
         fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    int fdflags = fcntl(fd, F_GETFD, 0);
+    if (fdflags >= 0)
+        (void)fcntl(fd, F_SETFD, fdflags | FD_CLOEXEC);
 #ifdef SO_NOSIGPIPE
     int nosig_on = 1;
     setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE,
@@ -196,6 +202,9 @@ airy_sock_t airy_sock_create_tcp_server(const char *host, uint16_t port)
     SOCKET fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (fd == INVALID_SOCKET)
         return AIRY_INVALID_SOCKET;
+    /* 0.1.21 D1：守护派生子进程时 CreateProcess 会继承所有可继承句柄，
+     * 这里把监听套接字置为非继承，避免 agent 子进程持有 RPC 监听端。 */
+    (void)SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0);
     {
         u_long mode = 1;
         ioctlsocket(fd, FIONBIO, &mode);
@@ -416,6 +425,12 @@ airy_sock_t airy_sock_conn_unix(const char *path, uint32_t timeout_ms)
         errno = saved;
         return rc;
     }
+    /* 0.1.21 D1：客户端连接同样不得被守护派生的子进程继承。 */
+    {
+        int flags = fcntl(fd, F_GETFD, 0);
+        if (flags >= 0)
+            (void)fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+    }
     return fd;
 }
 #endif
@@ -447,6 +462,8 @@ airy_sock_t airy_sock_accept(airy_sock_t server_fd, uint32_t timeout_ms)
     SOCKET client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
     if (client_fd != INVALID_SOCKET) {
+        /* 0.1.21 D1：同监听套接字，连接句柄亦不得被子进程继承。 */
+        (void)SetHandleInformation((HANDLE)client_fd, HANDLE_FLAG_INHERIT, 0);
         u_long mode = 1;
         ioctlsocket(client_fd, FIONBIO, &mode);
     }
