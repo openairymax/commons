@@ -84,6 +84,9 @@ typedef struct {
      * 0 = 未放行（默认走审批，拒绝则 fail-closed）；1 = 调用方显式声明
      * 接受风险（仍写审计，approval 记为 allow_dangerous）。 */
     int allow_dangerous;
+    /* N-9：调用方预指定的审批请求标识。非空时交互审批用它作 pending 键，
+     * 裁决回帧才能经同一凭据对上本次执行；缺位时由 tool_d 自生成。 */
+    const char *approval_request_id;
 } tool_execute_request_t;
 
 /**
