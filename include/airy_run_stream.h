@@ -40,6 +40,9 @@
 #define AIRY_RS_TYPE_RUN_START "run_start"
 #define AIRY_RS_TYPE_RUN_END   "run_end"
 #define AIRY_RS_TYPE_ERROR     "error"
+/* N-9：高危工具审批请求帧。载荷平铺 request_id/tool/input/timeout_ms，
+ * 与 TUI ctl.rs 的消费契约一致；timeout_ms 缺失按 0（不限时）。 */
+#define AIRY_RS_TYPE_CONTROL_REQUEST "control_request"
 
 /* cognition 层 */
 #define AIRY_RS_TYPE_PLAN      "plan"
@@ -70,6 +73,12 @@
 #define AIRY_RS_TYPE_MESSAGE     "message"
 
 /* ---- 各事件类型 data 负载键名 ---- */
+
+/* control_request（N-9 审批请求）：request_id 是裁决回帧对上的唯一凭据，
+ * tool 是工具名，input 是待执行内容的转义字符串，timeout_ms 是等待上限。 */
+#define AIRY_RS_K_REQUEST_ID "request_id"
+#define AIRY_RS_K_INPUT      "input"
+#define AIRY_RS_K_TIMEOUT_MS "timeout_ms"
 
 /* catalog（C-16 工具目录协商） */
 #define AIRY_RS_K_CATALOG_SOURCE "catalog_source"
