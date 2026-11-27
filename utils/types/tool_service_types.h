@@ -75,7 +75,13 @@ typedef struct {
     const char *tool_id;
     const char *params_json;
     int stream;
+    /* 授权主体：ACL 与审批门按此判定，缺位时由 tool_d 回落 "tool_d"。
+     * 只有明确的代理身份（如 coding_v1）才应填入；运行实例号不得充当主体。 */
     const char *agent_id;
+    /* 审计主体（V-05）：作业台账的 agent 位，通常是会话/运行实例号。与
+     * 授权主体分离——把实例号当主体会因 ACL 无对应条目而 fail-closed。
+     * 缺位时审计回落 agent_id（再缺位回落 "tool_d"）。 */
+    const char *audit_id;
     void *user_data;
     /* C-11：本次执行预算（秒）。0 = 用工具元数据 timeout_sec；>0 时由
      * 服务层按策略上限夹取后覆盖本次执行预算（作业句柄与同步执行共用）。 */
